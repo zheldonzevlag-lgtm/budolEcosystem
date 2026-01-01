@@ -8,3 +8,4 @@ Welcome to the Budol Ecosystem, a comprehensive suite of interconnected applicat
  - **budolpay-0.1.0** : The Wallet. A complex fintech app with microservices (wallet, settlement, payment gateway) and its own admin dashboard. 
  - **budoloan-0.1.0** : The Credit. Likely handles lending or credit lines for sellers and buyers within the ecosystem. 
  - **budolAccounting-0.1.0** : The Ledger. Centralized financial tracking for all transactions across the ecosystem.
+ - **budolExpress** : The Wheels. Future logistics app for delivery tracking and courier management.
