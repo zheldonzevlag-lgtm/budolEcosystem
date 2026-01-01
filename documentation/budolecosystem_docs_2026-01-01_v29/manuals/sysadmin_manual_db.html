@@ -1,0 +1,59 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>System Admin Manual - SSO & Database Operations</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/milligram/1.4.1/milligram.min.css">
+    <style>
+        body { padding: 2rem; max-width: 1000px; margin: auto; }
+        .alert { background: #fffbeb; border-left: 5px solid #f59e0b; padding: 1rem; margin: 1rem 0; }
+        .config-block { background: #2d3436; color: #dfe6e9; padding: 1rem; border-radius: 4px; font-family: monospace; }
+    </style>
+</head>
+<body>
+    <h1>System Admin Manual: SSO & Database Operations</h1>
+    <p>Version: 2026-01-01_v29</p>
+
+    <section>
+        <h2>1. Database Management</h2>
+        <p>The ecosystem uses two primary PostgreSQL databases on the same host:</p>
+        <ul>
+            <li><strong>BudolID DB:</strong> <code>budolid_db</code> (Centralized Users)</li>
+            <li><strong>BudolShap DB:</strong> <code>budolshap_1db</code> (Local Shop Data)</li>
+        </ul>
+
+        <h3>Connection URL Configuration</h3>
+        <p>Ensure the <code>.env</code> file in <code>budolID-0.1.0</code> is configured correctly:</p>
+        <div class="config-block">
+DATABASE_URL="postgresql://postgres:r00t@localhost:5432/budolid_db?schema=public"
+PORT=8000
+        </div>
+    </section>
+
+    <section>
+        <h2>2. Registering New Applications</h2>
+        <p>To allow a new app to use SSO, register it via the API:</p>
+        <div class="config-block">
+POST http://localhost:8000/apps/register
+{
+    "name": "My New App",
+    "redirectUri": "http://localhost:3000/auth/callback"
+}
+        </div>
+        <p>Save the returned <code>apiKey</code> for use in the client application.</p>
+    </section>
+
+    <section>
+        <h2>3. Manual User Sync</h2>
+        <div class="alert">
+            <strong>Warning:</strong> Currently, users created in BudolShap are not automatically synced to BudolID. 
+        </div>
+        <p>To manually sync a user, use the <code>seed-tony-budolid.js</code> script template to upsert users into the <code>budolid_db</code>.</p>
+    </section>
+
+    <footer>
+        <p><a href="../index.html">← Back to Index</a></p>
+    </footer>
+</body>
+</html>

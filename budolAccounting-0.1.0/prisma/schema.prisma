@@ -1,0 +1,45 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// Unified Ledger for all apps
+model ChartOfAccount {
+  id            String        @id @default(uuid())
+  code          String        @unique // e.g., "1000-CASH", "2000-LIABILITY-BUYER"
+  name          String
+  type          AccountType   // ASSET, LIABILITY, EQUITY, REVENUE, EXPENSE
+  description   String?
+  isActive      Boolean       @default(true)
+  createdAt     DateTime      @default(now())
+  ledgerEntries LedgerEntry[]
+}
+
+model LedgerEntry {
+  id            String         @id @default(uuid())
+  accountId     String
+  transactionId String?        // ID from the calling app (budolPay, budolShap, etc.)
+  appId         String         // Name of the app initiating the entry
+  referenceId   String         @unique // Unique business reference
+  description   String
+  debit         Decimal        @default(0.0) @db.Decimal(18, 2)
+  credit        Decimal        @default(0.0) @db.Decimal(18, 2)
+  createdAt     DateTime       @default(now())
+  account       ChartOfAccount @relation(fields: [accountId], references: [id])
+
+  @@index([accountId])
+  @@index([transactionId])
+  @@index([appId])
+}
+
+enum AccountType {
+  ASSET
+  LIABILITY
+  EQUITY
+  REVENUE
+  EXPENSE
+}

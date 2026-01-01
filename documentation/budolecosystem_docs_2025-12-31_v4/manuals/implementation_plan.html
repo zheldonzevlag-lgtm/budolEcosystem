@@ -1,0 +1,102 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Implementation Plan - budolPay & budolShap Integration</title>
+    <style>
+        body { font-family: "Inter", -apple-system, sans-serif; line-height: 1.6; color: #1f2937; max-width: 1000px; margin: 0 auto; padding: 40px 20px; background-color: #f3f4f6; }
+        .card { background: white; padding: 40px; border-radius: 12px; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1); margin-bottom: 30px; }
+        h1 { color: #111827; font-size: 2.5rem; margin-bottom: 10px; }
+        h2 { color: #1f2937; font-size: 1.8rem; border-left: 4px solid #3b82f6; padding-left: 15px; margin-top: 40px; }
+        .phase-meta { display: flex; gap: 20px; margin-bottom: 20px; color: #6b7280; font-size: 0.9rem; }
+        .badge { padding: 4px 12px; border-radius: 9999px; font-weight: 600; font-size: 0.8rem; }
+        .badge-time { background: #dbeafe; color: #1e40af; }
+        .badge-priority { background: #fee2e2; color: #991b1b; }
+        .strategy-box { background: #f8fafc; border: 1px solid #e2e8f0; padding: 20px; border-radius: 8px; margin: 20px 0; }
+        ul { padding-left: 20px; }
+        li { margin-bottom: 10px; }
+        code { background: #f1f5f9; padding: 2px 6px; border-radius: 4px; font-family: monospace; }
+        .nav-links { margin-bottom: 20px; }
+        .nav-links a { color: #3b82f6; text-decoration: none; }
+    </style>
+</head>
+<body>
+    <div class="nav-links">
+        <a href="../index.html">&larr; Back to Documentation Index</a>
+    </div>
+
+    <div class="card">
+        <h1>Implementation Plan: Ecosystem Integration</h1>
+        <p class="lead">Strategic roadmap for merging <strong>budolPay</strong> and <strong>budolShap</strong> into a unified fintech and e-commerce ecosystem.</p>
+
+        <h2>Phase 1: Foundation & Shared Identity (SSO)</h2>
+        <div class="phase-meta">
+            <span class="badge badge-time">Timeframe: 2 Weeks</span>
+            <span class="badge badge-priority">Priority: Critical</span>
+        </div>
+        <p>Establish a single identity system where one account works across all "budol" applications.</p>
+        <div class="strategy-box">
+            <strong>Strategy:</strong> Centralize authentication in <code>auth-service</code> and treat budolShap as an authorized <code>EcosystemApp</code>.
+        </div>
+        <ul>
+            <li><strong>User Model Migration:</strong> Consolidate <code>User</code> models. Add <code>accountType</code> and <code>isMember</code> fields to the central database.</li>
+            <li><strong>SSO Integration:</strong> Configure <code>budolShap</code> to use the <code>/sso/login</code> flow from <code>auth-service</code>.</li>
+            <li><strong>Token Verification:</strong> Implement a shared middleware that verifies JWTs against the central <code>auth-service</code>.</li>
+        </ul>
+
+        <h2>Phase 2: Monorepo Consolidation</h2>
+        <div class="phase-meta">
+            <span class="badge badge-time">Timeframe: 1 Week</span>
+            <span class="badge badge-priority">Priority: High</span>
+        </div>
+        <p>Unify the codebase to share packages and simplify deployment.</p>
+        <div class="strategy-box">
+            <strong>Strategy:</strong> Move <code>budolshap</code> into the <code>budolpay</code> monorepo under <code>apps/shop</code>.
+        </div>
+        <ul>
+            <li><strong>Dependency Sharing:</strong> Link <code>apps/shop</code> to <code>packages/database</code> and <code>packages/security</code>.</li>
+            <li><strong>Prisma Schema Merge:</strong> Combine e-commerce models (Products, Orders) with fintech models (Wallets, Transactions) into a single Prisma schema.</li>
+            <li><strong>Unified CI/CD:</strong> Update GitHub Actions to test and deploy both applications from a single pipeline.</li>
+        </ul>
+
+        <h2>Phase 3: Payment & Wallet Integration</h2>
+        <div class="phase-meta">
+            <span class="badge badge-time">Timeframe: 2 Weeks</span>
+            <span class="badge badge-priority">Priority: High</span>
+        </div>
+        <p>Enable seamless financial transactions between the shopping and payment platforms.</p>
+        <div class="strategy-box">
+            <strong>Strategy:</strong> Implement "Pay with budolPay" as the primary checkout method in budolShap.
+        </div>
+        <ul>
+            <li><strong>Wallet Linkage:</strong> Display the user's <code>budolPay</code> balance directly in the <code>budolShap</code> header.</li>
+            <li><strong>Checkout Integration:</strong> Create a secure API call from <code>budolShap</code> to <code>wallet-service</code> during checkout to process payments.</li>
+            <li><strong>Ledger Transparency:</strong> Ensure every purchase creates a corresponding <code>LedgerEntry</code> in the fintech system for accounting.</li>
+        </ul>
+
+        <h2>Phase 4: Unified Admin & Ecosystem Features</h2>
+        <div class="phase-meta">
+            <span class="badge badge-time">Timeframe: 2 Weeks</span>
+            <span class="badge badge-priority">Priority: Medium</span>
+        </div>
+        <p>Centralize management and provide a cohesive user experience.</p>
+        <div class="strategy-box">
+            <strong>Strategy:</strong> Expand the Admin Dashboard to provide a "God View" of both platforms.
+        </div>
+        <ul>
+            <li><strong>Cross-App Analytics:</strong> Show correlations between wallet activity and shopping trends.</li>
+            <li><strong>Shared Notifications:</strong> Unified notification system for payment alerts and order updates.</li>
+            <li><strong>Ecosystem Loyalty:</strong> Points earned on <code>budolShap</code> can be used for fee discounts on <code>budolPay</code>.</li>
+        </ul>
+
+        <h2>Future Enhancement Recommendations</h2>
+        <ul>
+            <li><strong>budolExpress Integration:</strong> A logistics app integrated with the same SSO and payment system for automated driver payouts.</li>
+            <li><strong>Escrow-as-a-Service:</strong> Automatically hold funds in <code>budolPay</code> until <code>budolShap</code> marks an order as delivered.</li>
+            <li><strong>AI Financial Assistant:</strong> Use shopping data to provide budgeting advice within the payment app.</li>
+            <li><strong>Merchant QR:</strong> Enable <code>budolShap</code> sellers to accept offline payments via <code>budolPay</code> QR codes.</li>
+        </ul>
+    </div>
+</body>
+</html>

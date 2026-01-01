@@ -1,0 +1,68 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Service Management Guide - budolEcosystem</title>
+    <style>
+        body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; line-height: 1.6; color: #333; max-width: 800px; margin: 0 auto; padding: 2rem; background: #f8fafc; }
+        h1 { color: #1e293b; border-bottom: 2px solid #e2e8f0; padding-bottom: 0.5rem; }
+        h2 { color: #334155; margin-top: 2rem; }
+        code { background: #f1f5f9; padding: 0.2rem 0.4rem; border-radius: 4px; font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace; font-size: 0.9em; }
+        pre { background: #1e293b; color: #f8fafc; padding: 1rem; border-radius: 8px; overflow-x: auto; }
+        pre code { background: transparent; color: inherit; padding: 0; }
+        .status-badge { display: inline-block; padding: 0.25rem 0.75rem; border-radius: 9999px; font-size: 0.875rem; font-weight: 600; }
+        .status-running { background: #dcfce7; color: #166534; }
+        .status-stopped { background: #fee2e2; color: #991b1b; }
+        .note { background: #fffbeb; border-left: 4px solid #f59e0b; padding: 1rem; margin: 1.5rem 0; border-radius: 0 4px 4px 0; }
+    </style>
+</head>
+<body>
+    <h1>Service Management Guide</h1>
+    
+    <p>The budolEcosystem relies on a centralized Single Sign-On (SSO) service called <strong>budolID</strong>. If this service is not running, authentication across all applications will fail with a "503 Service Unavailable" or "Internal Server Error".</p>
+
+    <h2>1. Starting budolID SSO Service</h2>
+    <p>The SSO service must be running on port <code>8000</code> for the Admin portal and other apps to authenticate users.</p>
+    
+    <div class="note" style="border-left-color: #4f46e5; background: #eef2ff;">
+        <strong>LAN Access Notice:</strong> To access the ecosystem from other devices, use the host IP address:
+        <ul>
+            <li><strong>budolID:</strong> <code>http://192.168.1.24:8000</code></li>
+            <li><strong>budolShap:</strong> <code>http://192.168.1.24:3001</code></li>
+            <li><strong>budolPay Admin:</strong> <code>http://192.168.1.24:3000</code></li>
+        </ul>
+    </div>
+
+    <pre><code>cd "d:\IT Projects\budolEcosystem\budolID-0.1.0"
+npm run start</code></pre>
+    <p>Verification: Visit <a href="http://localhost:8000/login">http://localhost:8000/login</a> in your browser. You should see the budolID login form.</p>
+
+    <h2>2. Default Admin Credentials</h2>
+    <div class="note">
+        <strong>Important:</strong> The admin user for the budolpay ecosystem has been reset to the following credentials:
+        <ul>
+            <li><strong>Email:</strong> <code>admin@budolpay.com</code></li>
+            <li><strong>Password:</strong> <code>admin123</code></li>
+        </ul>
+    </div>
+
+    <h2>3. Troubleshooting Login Failures</h2>
+    <ul>
+        <li><strong>"SSO Service is offline":</strong> Ensure budolID is running on port 8000.</li>
+        <li><strong>"Invalid Credentials":</strong> If <code>admin123</code> fails, run the password reset script:
+            <pre><code>node verify-fix.js</code></pre>
+        </li>
+        <li><strong>"Unauthorized Application":</strong> Ensure the <code>apiKey</code> in <code>apps/admin/app/api/auth/login/route.ts</code> matches the seeded API key in the budolID database (default: <code>bp_key_2025</code>).</li>
+    </ul>
+
+    <h2>4. Technical Details</h2>
+    <ul>
+        <li><strong>Port:</strong> 8000</li>
+        <li><strong>Database:</strong> PostgreSQL (via Prisma)</li>
+        <li><strong>Auth Type:</strong> JWT (RS256/HS256)</li>
+    </ul>
+
+    <p><a href="../index.html">← Back to Index</a></p>
+</body>
+</html>

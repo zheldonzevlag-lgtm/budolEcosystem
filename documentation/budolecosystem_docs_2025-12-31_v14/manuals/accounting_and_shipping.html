@@ -1,0 +1,84 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Hybrid Accounting & budolExpress Integration - v14</title>
+    <style>
+        body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; line-height: 1.6; max-width: 900px; margin: 0 auto; padding: 2rem; color: #333; }
+        h1, h2, h3 { color: #1a202c; }
+        .badge { background: #ebf8ff; color: #2b6cb0; padding: 0.2rem 0.5rem; border-radius: 4px; font-size: 0.8rem; font-weight: bold; }
+        code { background: #f7fafc; padding: 0.2rem 0.4rem; border-radius: 4px; font-family: "SFMono-Regular", Consolas, monospace; }
+        pre { background: #2d3748; color: #fff; padding: 1rem; border-radius: 8px; overflow-x: auto; }
+        .note { border-left: 4px solid #4299e1; padding-left: 1rem; margin: 1.5rem 0; color: #4a5568; }
+        .status-success { color: #48bb78; font-weight: bold; }
+    </style>
+</head>
+<body>
+    <header>
+        <span class="badge">v14.0.0</span>
+        <h1>Hybrid Accounting & budolshap Shipping Integration</h1>
+        <p><em>Date: 2025-12-31</em></p>
+    </header>
+
+    <section id="overview">
+        <h2>System Architecture Overview</h2>
+        <p>In Phase 14, we bridged the gap between the <strong>budolshap</strong> marketplace, the <strong>budolpay</strong> gateway, and the <strong>budolAccounting</strong> observer. This fulfills the "Hybrid Accounting" model where each app maintains its local ledger while syncing critical business events to a centralized auditor.</p>
+    </section>
+
+    <section id="hybrid-accounting">
+        <h2>1. Hybrid Accounting Implementation</h2>
+        <p>We implemented a non-blocking sync utility in <code>budolshap</code> that records double-entry bookkeeping records in <code>budolAccounting</code> whenever a payment is credited.</p>
+        
+        <h3>Key Components:</h3>
+        <ul>
+            <li><strong>Utility:</strong> <code>lib/accounting.js</code> - Standardized fetch client for the accounting service.</li>
+            <li><strong>Entry Builder:</strong> Logic to map order totals to Debit (Cash) and Credit (Revenue + Liability) accounts.</li>
+            <li><strong>Integration:</strong> <code>lib/escrow.js</code> - Automatically triggers a ledger sync upon <code>creditPendingBalance()</code>.</li>
+        </ul>
+
+        <pre><code>// Example Ledger Entry Structure
+[
+  { accountCode: '1000', debit: 1000, credit: 0, desc: 'Order #123 Payment' },
+  { accountCode: '4000', debit: 0, credit: 50, desc: 'Platform Fee' },
+  { accountCode: '2000', debit: 0, credit: 950, desc: 'Seller Earnings' }
+]</code></pre>
+    </section>
+
+    <section id="budolexpress">
+        <h2>2. budolshap Shipping Logic</h2>
+        <p>We enhanced the <code>ordersService.js</code> to explicitly handle the <strong>budolshap</strong> (Internal) provider, distinguishing it from external providers like Lalamove.</p>
+        
+        <h3>Business Rules:</h3>
+        <ul>
+            <li><strong>Flat Rate:</strong> ₱50.00 for all standard deliveries.</li>
+            <li><strong>Free Shipping:</strong> Automatically applied if the store order total is ₱1,000.00 or more.</li>
+            <li><strong>Provider ID:</strong> <code>budolshap</code> (mapped from the cart UI).</li>
+        </ul>
+    </section>
+
+    <section id="configuration">
+        <h2>3. Environment Configuration</h2>
+        <p>To enable these integrations locally, ensure the following variables are set in your <code>.env</code>:</p>
+        <pre><code># Accounting Sync
+BUDOLACCOUNTING_URL=http://localhost:8002
+
+# budolpay Gateway
+BUDOLPAY_GATEWAY_URL=http://localhost:8000
+BUDOLPAY_API_KEY=bs_key_2025</code></pre>
+    </section>
+
+    <section id="verification">
+        <h2>Verification Status</h2>
+        <p class="status-success">✅ SSO Handshake Verified</p>
+        <p class="status-success">✅ budolpay Adapter Mapped</p>
+        <p class="status-success">✅ Accounting Sync Hooks Implemented</p>
+        <p class="status-success">✅ budolshap Rate Logic Active</p>
+    </section>
+
+    <footer>
+        <hr>
+        <p><a href="../../index.html">← Back to Project Index</a></p>
+    </footer>
+</body>
+</html>

@@ -1,0 +1,93 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SSO Validation and Fixes - BudolEcosystem</title>
+    <style>
+        body { font-family: system-ui, -apple-system, sans-serif; line-height: 1.6; max-width: 800px; margin: 0 auto; padding: 2rem; color: #333; }
+        h1 { color: #2563eb; border-bottom: 2px solid #e5e7eb; padding-bottom: 0.5rem; }
+        h2 { color: #1e40af; margin-top: 2rem; }
+        h3 { color: #4b5563; }
+        code { background: #f3f4f6; padding: 0.2rem 0.4rem; border-radius: 4px; font-family: monospace; font-size: 0.9em; }
+        pre { background: #1f2937; color: #f9fafb; padding: 1rem; border-radius: 8px; overflow-x: auto; }
+        .alert { background: #fef2f2; border: 1px solid #fecaca; color: #991b1b; padding: 1rem; border-radius: 8px; margin: 1rem 0; }
+        .success { background: #f0fdf4; border: 1px solid #bbf7d0; color: #166534; padding: 1rem; border-radius: 8px; margin: 1rem 0; }
+        .metadata { color: #6b7280; font-size: 0.9rem; margin-bottom: 2rem; }
+    </style>
+</head>
+<body>
+    <h1>SSO Validation and Fixes Report</h1>
+    <div class="metadata">
+        <strong>Date:</strong> 2025-12-31<br>
+        <strong>Version:</strong> v16<br>
+        <strong>Scope:</strong> budolID, budolShap, budolPay Admin
+    </div>
+
+    <div class="success">
+        <strong>Status:</strong> All SSO flows verified and operational.
+    </div>
+
+    <h2>1. Developer Manual Updates</h2>
+    
+    <h3>1.1 Issue Resolution: JWT Malformed Error</h3>
+    <p>
+        <strong>Problem:</strong> Intermittent "jwt malformed" errors were observed during rapid SSO login attempts (e.g., during automated testing).
+    </p>
+    <p>
+        <strong>Root Cause:</strong> <code>budolID</code> generates JWTs based on user data and timestamps (seconds). If two login requests occurred within the same second, the generated token was identical. The <code>Session</code> table in Prisma enforces a unique constraint on the <code>token</code> column, causing the second write to fail with a Unique Constraint Violation. This resulted in a 500 error, returning an undefined token to the client.
+    </p>
+    <p>
+        <strong>Fix Implementation:</strong> Added a unique JWT ID (<code>jti</code>) using <code>crypto.randomUUID()</code> to the token payload. This ensures every token is unique, even if generated for the same user at the exact same timestamp.
+    </p>
+    <pre><code>// budolID-0.1.0/index.js
+const token = jwt.sign(
+    { 
+        // ... other fields
+        jti: require('crypto').randomUUID() // Added for uniqueness
+    }, 
+    JWT_SECRET, 
+    { expiresIn: '7d' }
+);</code></pre>
+
+    <h3>1.2 budolShap Robustness</h3>
+    <p>
+        Updated <code>budolshap-0.1.0/app/api/auth/sso/callback/route.js</code> to explicitly handle string literal <code>"undefined"</code> tokens, which could occur if the upstream provider fails gracefully.
+    </p>
+
+    <h3>1.3 Automated Validation Script</h3>
+    <p>
+        Created <code>scripts/test_scripts/test-sso-flow.mjs</code> to validate the end-to-end flow.
+    </p>
+    <pre><code>node scripts/test_scripts/test-sso-flow.mjs</code></pre>
+    <p>The script verifies:</p>
+    <ul>
+        <li>Service availability (budolID, budolShap, budolPay Admin)</li>
+        <li>Token generation and verification</li>
+        <li>SSO Callback redirects and Session Cookie setting</li>
+    </ul>
+
+    <h2>2. System Admin Manual Updates</h2>
+
+    <h3>2.1 Service Dependencies</h3>
+    <p>Ensure the following services are running for SSO to function:</p>
+    <ul>
+        <li><strong>budolID:</strong> Port 8000 (SSO Provider)</li>
+        <li><strong>budolShap:</strong> Port 3001 (E-commerce)</li>
+        <li><strong>budolPay Admin:</strong> Port 3000 (Admin Dashboard)</li>
+    </ul>
+
+    <h3>2.2 Troubleshooting Logs</h3>
+    <p>If SSO fails, check <code>budolID</code> logs for:</p>
+    <ul>
+        <li><code>Unique constraint failed on the fields: (`token`)</code> - <em>(Fixed in v16)</em></li>
+        <li><code>[Verify] Error: jwt malformed</code> - Indicates the client is sending an invalid or undefined token.</li>
+    </ul>
+
+    <h2>3. User Manual Updates</h2>
+    <p>
+        No visible changes to the user interface. Login reliability has been improved, preventing occasional "Invalid Token" errors during sign-in.
+    </p>
+
+</body>
+</html>

@@ -1,0 +1,145 @@
+services:
+  postgres:
+    image: postgres:15-alpine
+    container_name: budolpay-db
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: r00t
+      POSTGRES_DB: budolpay
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  pgbouncer:
+    image: edoburu/pgbouncer:latest
+    container_name: budolpay-pgbouncer
+    environment:
+      - DB_USER=postgres
+      - DB_PASSWORD=r00t
+      - DB_HOST=postgres
+      - DB_PORT=5432
+      - DB_NAME=budolpay
+      - AUTH_TYPE=any
+      - POOL_MODE=transaction
+      - MAX_CLIENT_CONN=100
+      - DEFAULT_POOL_SIZE=20
+    ports:
+      - "6432:6432"
+    depends_on:
+      postgres:
+        condition: service_healthy
+
+  api-gateway:
+    build: ./services/api-gateway
+    container_name: budolpay-gateway
+    ports:
+      - "8000:8000"
+    environment:
+      - DATABASE_URL=postgresql://postgres:r00t@pgbouncer:6432/budolpay
+      - AUTH_SERVICE_URL=http://auth-service:8001
+      - WALLET_SERVICE_URL=http://wallet-service:8002
+      - TRANSACTION_SERVICE_URL=http://transaction-service:8003
+      - PAYMENT_GATEWAY_URL=http://payment-gateway:8004
+    depends_on:
+      pgbouncer:
+        condition: service_started
+
+  auth-service:
+    build: ./services/auth-service
+    container_name: budolpay-auth
+    ports:
+      - "8001:8001"
+    environment:
+      - DATABASE_URL=postgresql://postgres:r00t@pgbouncer:6432/budolpay
+      - JWT_SECRET=budolpay-secret-key-123
+    depends_on:
+      pgbouncer:
+        condition: service_started
+
+  wallet-service:
+    build: ./services/wallet-service
+    container_name: budolpay-wallet
+    ports:
+      - "8002:8002"
+    environment:
+      - DATABASE_URL=postgresql://postgres:r00t@pgbouncer:6432/budolpay
+    depends_on:
+      pgbouncer:
+        condition: service_started
+
+  transaction-service:
+    build: ./services/transaction-service
+    container_name: budolpay-transaction
+    ports:
+      - "8003:8003"
+    environment:
+      - DATABASE_URL=postgresql://postgres:r00t@pgbouncer:6432/budolpay
+    depends_on:
+      pgbouncer:
+        condition: service_started
+
+  payment-gateway:
+    build: ./services/payment-gateway-service
+    container_name: budolpay-payment
+    ports:
+      - "8004:8004"
+    environment:
+      - DATABASE_URL=postgresql://postgres:r00t@pgbouncer:6432/budolpay
+    depends_on:
+      pgbouncer:
+        condition: service_started
+
+  settlement-service:
+    build: ./services/settlement-service
+    container_name: budolpay-settlement
+    ports:
+      - "8005:8005"
+    environment:
+      - DATABASE_URL=postgresql://postgres:r00t@pgbouncer:6432/budolpay
+    depends_on:
+      pgbouncer:
+        condition: service_started
+
+  admin-dashboard:
+    build: ./apps/admin
+    container_name: budolpay-admin
+    ports:
+      - "3000:3000"
+    environment:
+      - DATABASE_URL=postgresql://postgres:r00t@pgbouncer:6432/budolpay
+    depends_on:
+      pgbouncer:
+        condition: service_started
+
+  prometheus:
+    image: prom/prometheus:latest
+    container_name: budolpay-prometheus
+    volumes:
+      - ./monitoring/prometheus.yml:/etc/prometheus/prometheus.yml
+    ports:
+      - "9090:9090"
+    depends_on:
+      - api-gateway
+      - auth-service
+      - wallet-service
+      - transaction-service
+      - payment-gateway
+
+  grafana:
+    image: grafana/grafana:latest
+    container_name: budolpay-grafana
+    ports:
+      - "3001:3000"
+    environment:
+      - GF_SECURITY_ADMIN_PASSWORD=admin
+    depends_on:
+      - prometheus
+
+volumes:
+  postgres_data:

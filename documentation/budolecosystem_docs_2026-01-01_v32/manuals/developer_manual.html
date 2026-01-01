@@ -1,0 +1,178 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Developer Manual - v32</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <style>
+        body { font-family: 'Inter', sans-serif; background-color: #f8f9fa; }
+        .sidebar { background: #fff; border-right: 1px solid #dee2e6; height: 100vh; position: sticky; top: 0; padding-top: 2rem; }
+        .content { padding: 3rem; }
+        pre { background: #212529; color: #f8f9fa; padding: 1.5rem; border-radius: 8px; overflow-x: auto; }
+        code { color: #e83e8c; }
+        .nav-link { color: #495057; border-radius: 6px; margin-bottom: 0.5rem; }
+        .nav-link.active { background-color: #e9ecef; font-weight: 600; }
+        .back-link { color: #6c757d; text-decoration: none; display: flex; align-items: center; gap: 0.5rem; margin-bottom: 2rem; }
+    </style>
+</head>
+<body>
+    <div class="container-fluid">
+        <div class="row">
+            <nav class="col-md-3 col-lg-2 sidebar d-none d-md-block">
+                <div class="position-sticky">
+                    <a href="../index.html" class="back-link ms-3">← Back to v32 Index</a>
+                    <ul class="nav flex-column px-3">
+                        <li class="nav-item"><a class="nav-link active" href="#overview">Overview</a></li>
+                        <li class="nav-item"><a class="nav-link" href="#sso-repositioning">SSO Repositioning</a></li>
+                        <li class="nav-item"><a class="nav-link" href="#service-orchestration">Service Orchestration</a></li>
+                        <li class="nav-item"><a class="nav-link" href="#lan-access">LAN Access Configuration</a></li>
+                        <li class="nav-item"><a class="nav-link" href="#dynamic-user-display">Dynamic User Display (budolPay)</a></li>
+                        <li class="nav-item"><a class="nav-link" href="#impact-analysis">Impact Analysis</a></li>
+                    </ul>
+                </div>
+            </nav>
+
+            <main class="col-md-9 col-lg-10 content">
+                <h1>Developer Manual: Ecosystem Orchestration</h1>
+                <p class="lead">Technical details for the repositioned SSO interface and full ecosystem service integration.</p>
+
+                <div class="alert alert-info">
+                    <strong>Version:</strong> 2026-01-01_v32<br>
+                    <strong>Update:</strong> SSO button moved to the top of the login form for better visibility.
+                </div>
+
+                <h2 id="sso-repositioning" class="mt-5">1. SSO Button Repositioning</h2>
+                <p>To address issues where the "Login with budolID" button was obscured by longer forms or small viewports, the entry point has been moved <em>above</em> the primary login fields.</p>
+                
+                <h3 class="mt-4">Code Implementation (AuthForm.jsx)</h3>
+                <p>The conditional rendering block for the SSO button was moved to the beginning of the form content, preceding the username and password fields.</p>
+
+                <pre><code>// Location: budolshap-0.1.0/components/auth/AuthForm.jsx
+
+{isLogin && (
+    &lt;div className="mb-2"&gt;
+        &lt;div className="relative mb-4"&gt;
+            &lt;div className="absolute inset-0 flex items-center"&gt;
+                &lt;span className="w-full border-t border-slate-200"&gt;&lt;/span&gt;
+            &lt;/div&gt;
+            &lt;div className="relative flex justify-center text-[10px] uppercase"&gt;
+                &lt;span className="bg-white px-2 text-slate-400 font-medium"&gt;Quick Access&lt;/span&gt;
+            &lt;/div&gt;
+        &lt;/div&gt;
+
+        &lt;a
+            href={`${process.env.NEXT_PUBLIC_SSO_URL || (typeof window !== 'undefined' ? `http://${window.location.hostname}:8000` : 'http://localhost:8000')}/login?apiKey=${process.env.NEXT_PUBLIC_BUDOLID_API_KEY || 'bs_key_2025'}`}
+            className="w-full flex justify-center items-center gap-3 py-3 border rounded-lg shadow-sm text-sm font-semibold transition-all"
+        &gt;
+            &lt;div className="w-5 h-5 bg-indigo-600 rounded flex items-center justify-center text-[10px] text-white font-bold"&gt;B&lt;/div&gt;
+            &lt;span&gt;Login with budolID&lt;/span&gt;
+        &lt;/a&gt;
+    &lt;/div&gt;
+)}</code></pre>
+
+                <h2 id="service-orchestration" class="mt-5">2. Service Orchestration</h2>
+                <p>The ecosystem now runs multiple services simultaneously. Developers should ensure the following port mappings are maintained in their local <code>.env</code> files:</p>
+                <table class="table table-bordered mt-3">
+                    <thead class="table-light">
+                        <tr>
+                            <th>Service</th>
+                            <th>Port</th>
+                            <th>Description</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td><code>budolID</code></td>
+                            <td>8000</td>
+                            <td>SSO Provider & Auth Authority</td>
+                        </tr>
+                        <tr>
+                            <td><code>budolShap</code></td>
+                            <td>3001</td>
+                            <td>Main E-commerce Application</td>
+                        </tr>
+                        <tr>
+                            <td><code>budolAccounting</code></td>
+                            <td>8002</td>
+                            <td>Core Accounting Service</td>
+                        </tr>
+                        <tr>
+                            <td><code>budolpay</code></td>
+                            <td>3002</td>
+                            <td>Payment & Wallet Service</td>
+                        </tr>
+                    </tbody>
+                </table>
+
+                <h2 id="lan-access" class="mt-5">3. LAN Access Configuration</h2>
+                <p>When developing over a Local Area Network (LAN), Next.js may detect cross-origin requests from your current network IP. To ensure this works seamlessly across different networks (home, office, or public), the <code>allowedDevOrigins</code> property is now dynamically configured in <code>next.config.mjs</code>.</p>
+                
+                <pre><code>// Location: budolshap-0.1.0/next.config.mjs
+import os from 'os';
+
+const getLocalExternalIPs = () => {
+    const interfaces = os.networkInterfaces();
+    const ips = ['localhost', '127.0.0.1', '0.0.0.0'];
+    for (const name of Object.keys(interfaces)) {
+        for (const iface of interfaces[name]) {
+            if (iface.family === 'IPv4' && !iface.internal) {
+                ips.push(iface.address);
+            }
+        }
+    }
+    return ips;
+};
+
+const nextConfig = {
+    reactStrictMode: false,
+    allowedDevOrigins: getLocalExternalIPs(),
+    // ...
+}</code></pre>
+
+                <p>This implementation automatically detects all active IPv4 addresses on your machine and adds them to the allowed list, making the development environment network-agnostic.</p>
+
+                <h2 id="dynamic-user-display" class="mt-5">4. Dynamic User Display (budolPay)</h2>
+                <p>The budolPay admin sidebar now dynamically displays the currently logged-in user's information, replacing previously hardcoded values. This is achieved through a new authentication endpoint and client-side fetching.</p>
+                
+                <h3 class="mt-4">New Endpoint: <code>/api/auth/me</code></h3>
+                <p>A new server-side route was created to bridge the budolPay application with the budolID SSO service. It retrieves the <code>budolpay_token</code> from cookies and verifies it against the SSO provider.</p>
+                
+                <pre><code>// Location: budolpay-0.1.0/apps/admin/app/api/auth/me/route.ts
+export async function GET() {
+    const token = cookies().get('budolpay_token')?.value;
+    const verifyResponse = await fetch(`${process.env.SSO_URL}/auth/verify`, {
+        headers: { 'Authorization': `Bearer ${token}` }
+    });
+    // ... returns user data
+}</code></pre>
+
+                <h3 class="mt-4">Frontend Integration (Sidebar.tsx)</h3>
+                <p>The <code>Sidebar</code> component uses <code>useEffect</code> to fetch user data on mount and updates the UI accordingly. It also includes a robust loading state and smart fallback for display names.</p>
+                <ul>
+                    <li><strong>Loading State:</strong> Implements an <code>isLoading</code> state to prevent the "Flash of Unauthenticated Content" (FOUC). While loading, the profile section shows a spinner and skeleton animation instead of default placeholders.</li>
+                    <li><strong>Dynamic Name:</strong> Displays <code>firstName</code> and <code>lastName</code> from the SSO profile.</li>
+                    <li><strong>Smart Fallback:</strong> If names are missing in the database, the system derives the name from the email prefix (e.g., <code>tony.stark@...</code> becomes <code>Tony Stark</code>).</li>
+                    <li><strong>Dynamic Email:</strong> Displays the authenticated email address.</li>
+                    <li><strong>Dynamic Avatar:</strong> Generates a letter avatar based on the resolved display name once loading is complete.</li>
+                </ul>
+
+                <h2 id="compact-dashboard-ui" class="mt-5">5. Compact Dashboard UI (budolPay)</h2>
+                <p>The main dashboard has been redesigned to be more compact, reducing excessive white space and improving information density for better visibility on various screen sizes.</p>
+                <ul>
+                    <li><strong>Stat Cards:</strong> Reduced padding from <code>p-8</code> to <code>p-5</code>, icon container padding from <code>p-4</code> to <code>p-3</code>, and value font size from <code>text-3xl</code> to <code>text-2xl</code>.</li>
+                    <li><strong>Transaction Pulse:</strong> Reduced minimum height to <code>400px</code>, header padding to <code>p-5</code>, and individual transaction item padding to <code>p-4</code>. The card width was increased from 2/3 to 3/4 of the container.</li>
+                    <li><strong>Compliance Shield:</strong> Significant reduction in padding (<code>p-10</code> to <code>p-6</code>) and spacing between compliance items. The card width was reduced from 1/3 to 1/4 of the container.</li>
+                </ul>
+
+                <h2 id="impact-analysis" class="mt-5">5. Impact Analysis</h2>
+                <ul>
+                    <li><strong>UI/UX:</strong> Higher conversion rate for ecosystem users due to prioritized login options.</li>
+                    <li><strong>Reliability:</strong> Reduced dependency on manual URL configuration via dynamic hostname resolution.</li>
+                    <li><strong>Performance:</strong> No significant impact; UI changes are CSS/HTML-only.</li>
+                </ul>
+            </main>
+        </div>
+    </div>
+</body>
+</html>

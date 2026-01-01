@@ -1,0 +1,75 @@
+import { NextResponse } from 'next/server';
+import { prisma } from '@/lib/prisma';
+
+export async function GET(request: Request) {
+    const { searchParams } = new URL(request.url);
+    const token = searchParams.get('token');
+
+    if (!token) {
+        return NextResponse.redirect(new URL('/login?error=no_token', request.url));
+    }
+
+    try {
+        // 1. Verify token with budolID
+        // In this ecosystem, budolID is at port 8000
+        const ssoUrl = process.env.SSO_URL || 'http://localhost:8000';
+        const verifyResponse = await fetch(`${ssoUrl}/auth/verify`, {
+            headers: {
+                'Authorization': `Bearer ${token}`
+            }
+        });
+
+        const verificationData = await verifyResponse.json();
+
+        if (!verifyResponse.ok || !verificationData.valid) {
+            return NextResponse.redirect(new URL('/login?error=invalid_token', request.url));
+        }
+
+        const { user: ssoUser } = verificationData;
+
+        // 2. Sync user with local budolPay database
+        let localUser = await prisma.user.findUnique({
+            where: { email: ssoUser.email }
+        });
+
+        if (!localUser) {
+            // Create local user if they don't exist
+            localUser = await prisma.user.create({
+                data: {
+                    email: ssoUser.email,
+                    firstName: ssoUser.firstName || 'SSO',
+                    lastName: ssoUser.lastName || 'User',
+                    passwordHash: 'SSO_MANAGED',
+                    phoneNumber: ssoUser.phoneNumber || `SSO_${Date.now()}`,
+                    role: 'STAFF', // Default role for new SSO users in Admin
+                    kycStatus: 'VERIFIED'
+                }
+            });
+        }
+
+        // 3. Set local session cookie
+        const protocol = request.headers.get('x-forwarded-proto') || 'http';
+        const host = request.headers.get('host');
+        const appUrl = process.env.NEXT_PUBLIC_APP_URL && !process.env.NEXT_PUBLIC_APP_URL.includes('localhost:3000') 
+            ? process.env.NEXT_PUBLIC_APP_URL 
+            : `${protocol}://${host}`;
+
+        const response = NextResponse.redirect(new URL('/', appUrl));
+        
+        console.log(`[SSO Callback] Setting budolpay_token cookie and redirecting to / via ${appUrl}`);
+        // Use the same token for the local cookie so the middleware can verify it
+        response.cookies.set('budolpay_token', token, {
+            httpOnly: true,
+            secure: process.env.NODE_ENV === 'production', // Secure in production (HTTPS), false in dev (HTTP)
+            sameSite: 'lax',
+            path: '/',
+            maxAge: 60 * 60 * 24 * 7 // 7 days
+        });
+
+        return response;
+
+    } catch (error) {
+        console.error('SSO Callback Error:', error);
+        return NextResponse.redirect(new URL('/login?error=sso_failed', request.url));
+    }
+}

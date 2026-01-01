@@ -1,0 +1,44 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Developer Manual - v25</title>
+    <style>
+        body { font-family: -apple-system, sans-serif; line-height: 1.6; color: #333; max-width: 900px; margin: 0 auto; padding: 40px 20px; background-color: #f8fafc; }
+        .container { background-color: #fff; padding: 40px; border-radius: 8px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); }
+        h1, h2, h3 { color: #1e293b; border-bottom: 1px solid #e2e8f0; padding-bottom: 8px; }
+        code { background-color: #f1f5f9; color: #1e293b; padding: 2px 4px; border-radius: 4px; font-family: monospace; }
+        pre { background-color: #1e293b; color: #f8fafc; padding: 15px; border-radius: 6px; overflow-x: auto; }
+        .back-link { display: inline-block; margin-bottom: 20px; color: #2563eb; text-decoration: none; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <a href="../index.html" class="back-link">← Back to Version Index</a>
+        <h1>Developer Manual Update (v25)</h1>
+        <p><strong>Topic:</strong> Network Portability & Auto-Sync IP</p>
+
+        <h2>Problem: Dynamic Local IP</h2>
+        <p>In a LAN environment, your machine's local IP address (e.g., <code>192.168.1.24</code>) is usually assigned dynamically by the router. If you switch to a different Wi-Fi network or the router restarts, your IP might change to <code>192.168.1.50</code>, breaking all hardcoded SSO redirects and environment variables.</p>
+
+        <h2>Solution: Automated Network Sync</h2>
+        <p>We've implemented a <code>sync-network.js</code> script in the root directory that automates the reconfiguration of the entire ecosystem.</p>
+
+        <h3>1. IP Detection Logic</h3>
+        <p>The script uses Node's <code>os.networkInterfaces()</code> to scan for physical network adapters (Wi-Fi, Ethernet) while ignoring virtual ones (vEthernet, VMware). It prioritizes the standard home network range (<code>192.168.x.x</code>).</p>
+
+        <h3>2. Dynamic Login Pages</h3>
+        <p>Frontend code in <code>budolPay</code> and <code>budolShap</code> has been updated to use <code>window.location.hostname</code>. This allows the login pages to work regardless of whether you access them via <code>localhost</code> or a specific IP address.</p>
+        <pre><code>// Example of dynamic redirection in page.tsx
+href={`http://\${typeof window !== 'undefined' ? window.location.hostname : 'localhost'}:8000/login?apiKey=...`}</code></pre>
+
+        <h3>3. Database & Env Sync</h3>
+        <p>The script automatically performs the following:</p>
+        <ul>
+            <li>Updates <code>budolID</code> database <code>redirectUri</code> entries for all registered apps.</li>
+            <li>Updates <code>.env</code> files in <code>budolshap-0.1.0</code> with the new IP.</li>
+        </ul>
+    </div>
+</body>
+</html>
