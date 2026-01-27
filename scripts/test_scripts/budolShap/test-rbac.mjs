@@ -1,0 +1,1 @@
+runTests().catch(console.error);

@@ -58,7 +58,8 @@ async function verifyOrders() {
                 console.log(`  Status: ${order.status}`);
                 console.log(`  Paid: ${order.isPaid ? '✅ YES' : '❌ NO'}`);
                 console.log(`  Payment Method: ${order.paymentMethod}`);
-                console.log(`  Created At: ${order.createdAt.toLocaleString()}`);
+                console.log(`  Payment Status: ${order.paymentStatus}`);
+                console.log(`  Created At: ${new Date(order.createdAt).toLocaleString()}`);
                 console.log(`  Items (${order.orderItems.length}):`);
                 order.orderItems.forEach(item => {
                     console.log(`    * ${item.product?.name || 'Unknown Product'} x${item.quantity} (₱${item.price.toFixed(2)})`);
