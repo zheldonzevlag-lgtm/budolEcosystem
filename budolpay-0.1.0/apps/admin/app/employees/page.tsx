@@ -1,28 +1,121 @@
-import { prisma } from "@/lib/prisma";
-import React from "react";
+'use client';
 
-export default async function EmployeesPage() {
-  const employees = await prisma.user.findMany({
-    where: {
-      role: { in: ['STAFF', 'ADMIN'] }
-    },
-    orderBy: { createdAt: 'desc' },
-    include: {
-      _count: {
-        select: { auditLogs: true }
-      }
-    }
-  });
+import React, { useState, useEffect } from "react";
+import PermissionsMatrix from "@/components/PermissionsMatrix";
+import ProvisionAccountModal from "@/components/ProvisionAccountModal";
+import { realtime } from "@/lib/realtime";
+import { 
+  Users, 
+  Search, 
+  Filter, 
+  Download, 
+  MoreVertical, 
+  Shield, 
+  ShieldAlert, 
+  ShieldCheck,
+  Mail,
+  Phone,
+  Calendar,
+  Loader2,
+  Plus,
+  Trash2,
+  UserPlus,
+  Check,
+  X,
+  AlertCircle,
+  History
+} from "lucide-react";
+import { formatManilaTime } from "@/lib/utils";
 
-  const auditLogs = await prisma.auditLog.findMany({
-    take: 15,
-    orderBy: { createdAt: 'desc' },
-    include: {
-      user: {
-        select: { firstName: true, lastName: true, role: true }
-      }
+export default function EmployeesPage() {
+  const [employees, setEmployees] = useState<any[]>([]);
+  const [auditLogs, setAuditLogs] = useState<any[]>([]);
+  const [isMatrixOpen, setIsMatrixOpen] = useState(false);
+  const [isProvisionModalOpen, setIsProvisionModalOpen] = useState(false);
+  const [selectedEmployee, setSelectedEmployee] = useState<any>(null);
+  const [isRoleModalOpen, setIsRoleModalOpen] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
+
+  async function fetchData() {
+    setIsLoading(true);
+    try {
+      const [empRes, logsRes] = await Promise.all([
+        fetch('/api/employees'),
+        fetch('/api/audit-logs?limit=15')
+      ]);
+      
+      if (empRes.ok) setEmployees(await empRes.json());
+      if (logsRes.ok) setAuditLogs(await logsRes.json());
+    } catch (error) {
+      console.error("Failed to fetch data:", error);
+    } finally {
+      setIsLoading(false);
     }
-  });
+  }
+
+  useEffect(() => {
+    fetchData();
+  }, []);
+
+  useEffect(() => {
+    let isMounted = true;
+    const initRealtime = async () => {
+      try {
+        console.log("[Employees] Connecting to realtime...");
+        await realtime.init();
+        
+        realtime.on("AUDIT_LOG_CREATED", (newLog) => {
+          if (!isMounted) return;
+          console.log("[Realtime] New audit log received in Employees:", newLog.action);
+          
+          setAuditLogs(prevLogs => {
+            // Avoid duplicates
+            if (prevLogs.some(log => log.id === newLog.id)) return prevLogs;
+            // Employees page usually shows all logs or a subset, here we show latest 15 as per initial fetch
+            return [newLog, ...prevLogs.slice(0, 14)];
+          });
+        });
+      } catch (err) {
+        console.error("[Realtime] Init failed in Employees:", err);
+      }
+    };
+
+    initRealtime();
+
+    return () => {
+      isMounted = false;
+      realtime.disconnect();
+    };
+  }, []);
+
+  const handleUpdateRole = async (userId: string, newRole: string) => {
+    try {
+      const adminRes = await fetch('/api/auth/me');
+      const adminData = await adminRes.json();
+      
+      const res = await fetch('/api/employees', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          action: 'UPDATE_ROLE',
+          userId,
+          newRole,
+          adminId: adminData.user.id
+        })
+      });
+
+      if (res.ok) {
+        setIsRoleModalOpen(false);
+        fetchData(); // Refresh data
+      }
+    } catch (error) {
+      console.error("Failed to update role:", error);
+    }
+  };
+
+  if (isLoading) {
+    return <div className="p-8 text-center text-slate-500 font-bold animate-pulse">Initializing Secure Workforce Registry...</div>;
+  }
 
   return (
     <div className="space-y-6">
@@ -32,14 +125,74 @@ export default async function EmployeesPage() {
           <p className="text-sm text-slate-500">Access control, role assignment, and comprehensive activity monitoring.</p>
         </div>
         <div className="flex gap-3">
-          <button className="bg-white border border-slate-200 text-slate-700 px-4 py-2 rounded-lg shadow-sm hover:bg-slate-50 transition font-bold text-sm">
+          <button 
+            onClick={() => setIsMatrixOpen(true)}
+            className="bg-white border border-slate-200 text-slate-700 px-4 py-2 rounded-lg shadow-sm hover:bg-slate-50 transition font-bold text-sm"
+          >
             Permissions Matrix
           </button>
-          <button className="bg-budolshap-primary text-white px-4 py-2 rounded-lg shadow-sm hover:opacity-90 transition font-bold text-sm">
+          <button 
+            onClick={() => setIsProvisionModalOpen(true)}
+            className="bg-budolshap-primary text-white px-4 py-2 rounded-lg shadow-sm hover:opacity-90 transition font-bold text-sm"
+          >
             + Provision New Account
           </button>
         </div>
       </div>
+
+      <PermissionsMatrix isOpen={isMatrixOpen} onClose={() => setIsMatrixOpen(false)} />
+      <ProvisionAccountModal 
+        isOpen={isProvisionModalOpen} 
+        onClose={() => setIsProvisionModalOpen(false)} 
+        onSuccess={fetchData}
+      />
+
+      {/* Role Assignment Modal */}
+      {isRoleModalOpen && selectedEmployee && (
+        <div className="fixed inset-0 z-[110] flex items-center justify-center bg-slate-900/50 backdrop-blur-sm p-4">
+          <div className="bg-white w-full max-w-md rounded-2xl shadow-2xl p-6 border border-slate-200">
+            <h3 className="text-lg font-bold text-slate-800 mb-2">Modify Authorization</h3>
+            <p className="text-xs text-slate-500 mb-6">Updating access for <span className="font-bold text-slate-700">{selectedEmployee.firstName} {selectedEmployee.lastName}</span></p>
+            
+            <div className="space-y-3 mb-8">
+              {['ADMIN', 'STAFF'].map((role) => (
+                <button
+                  key={role}
+                  onClick={() => handleUpdateRole(selectedEmployee.id, role)}
+                  className={`w-full p-4 rounded-xl border-2 transition-all flex justify-between items-center ${
+                    selectedEmployee.role === role 
+                    ? 'border-budolshap-primary bg-budolshap-primary/5' 
+                    : 'border-slate-100 hover:border-slate-200'
+                  }`}
+                >
+                  <div className="text-left">
+                    <div className={`font-bold text-sm ${selectedEmployee.role === role ? 'text-budolshap-primary' : 'text-slate-700'}`}>
+                      {role}
+                    </div>
+                    <div className="text-[10px] text-slate-400">
+                      {role === 'ADMIN' ? 'Full system access & root privileges' : 'Operations access with limited visibility'}
+                    </div>
+                  </div>
+                  {selectedEmployee.role === role && (
+                    <div className="w-5 h-5 bg-budolshap-primary rounded-full flex items-center justify-center text-white">
+                      <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="3" d="M5 13l4 4L19 7"></path></svg>
+                    </div>
+                  )}
+                </button>
+              ))}
+            </div>
+
+            <div className="flex gap-3">
+              <button 
+                onClick={() => setIsRoleModalOpen(false)}
+                className="flex-1 px-4 py-2.5 rounded-lg border border-slate-200 text-slate-600 font-bold text-sm hover:bg-slate-50 transition"
+              >
+                Cancel
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
         {/* Workforce Stats */}
@@ -141,7 +294,7 @@ export default async function EmployeesPage() {
                         }`}>
                           {emp.role}
                         </span>
-                        <span className="text-[9px] text-slate-400">Joined {new Date(emp.createdAt).toLocaleDateString()}</span>
+                        <span className="text-[9px] text-slate-400">Joined {formatManilaTime(emp.createdAt)}</span>
                       </div>
                     </td>
                     <td className="px-6 py-4">
@@ -158,7 +311,14 @@ export default async function EmployeesPage() {
                     </td>
                     <td className="px-6 py-4 text-right">
                       <div className="flex justify-end gap-2">
-                        <button className="p-1.5 text-slate-400 hover:text-budolshap-primary transition" title="Edit Permissions">
+                        <button 
+                          onClick={() => {
+                            setSelectedEmployee(emp);
+                            setIsRoleModalOpen(true);
+                          }}
+                          className="p-1.5 text-slate-400 hover:text-budolshap-primary transition" 
+                          title="Edit Authorization"
+                        >
                           <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"></path></svg>
                         </button>
                         <button className="p-1.5 text-slate-400 hover:text-slate-900 transition" title="View Audit Logs">
@@ -200,7 +360,7 @@ export default async function EmployeesPage() {
                 {auditLogs.map((log) => (
                   <tr key={log.id} className="hover:bg-slate-50 transition-colors">
                     <td className="px-6 py-3 font-mono text-slate-400 whitespace-nowrap">
-                      {new Date(log.createdAt).toLocaleString()}
+                      {formatManilaTime(log.createdAt)}
                     </td>
                     <td className="px-6 py-3">
                       <div className="flex items-center gap-2">

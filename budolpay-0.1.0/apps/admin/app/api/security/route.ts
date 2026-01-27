@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
+import { getNowUTC } from "@/lib/utils";
 
 export async function GET(request: Request) {
   try {
@@ -8,11 +9,37 @@ export async function GET(request: Request) {
 
     let where = {};
     if (filter === "Security") {
-      where = { action: { contains: "SECURITY" } };
+      where = {
+        OR: [
+          { entity: "Security" },
+          { action: { contains: "SECURITY" } },
+          { action: { contains: "LOGIN" } },
+          { action: { contains: "LOGOUT" } },
+          { action: { contains: "OTP" } },
+          { action: { contains: "AUTH" } }
+        ]
+      };
     } else if (filter === "Financial") {
-      where = { entity: "Financial" };
+      where = {
+        OR: [
+          { entity: "Financial" },
+          { entity: "Dispute" },
+          { action: { contains: "TRANSFER" } },
+          { action: { contains: "PAYMENT" } },
+          { action: { contains: "SETTLEMENT" } },
+          { action: { contains: "CASH_IN" } },
+          { action: { contains: "CASH_OUT" } }
+        ]
+      };
     } else if (filter === "System") {
-      where = { entity: "System" };
+      where = {
+        OR: [
+          { entity: "System" },
+          { entity: "Regulatory" },
+          { action: { contains: "AUDIT" } },
+          { action: { contains: "REPORT" } }
+        ]
+      };
     }
 
     const logs = await prisma.auditLog.findMany({
@@ -34,7 +61,7 @@ export async function POST(request: Request) {
     if (action === "RUN_AUDIT") {
       // Simulate a comprehensive security audit scan
       const scanResults = {
-        timestamp: new Date().toISOString(),
+        timestamp: getNowUTC().toISOString(),
         vulnerabilities: [],
         integrityCheck: "PASS",
         encryptionStatus: "VERIFIED (AES-256-CBC)",
@@ -51,7 +78,7 @@ export async function POST(request: Request) {
           entity: "SecurityGateway",
           entityId: `AUDIT-${Date.now()}`,
           newValue: scanResults as any,
-          ipAddress: "127.0.0.1",
+          ipAddress: process.env.LOCAL_IP || "localhost",
         },
       });
 
@@ -63,7 +90,8 @@ export async function POST(request: Request) {
       const transactions = await prisma.transaction.findMany({ take: 100 });
       const totalVolume = transactions.reduce((acc, tx) => acc + Number(tx.amount), 0);
       
-      const reportId = `BSP-${new Date().getFullYear()}-Q4-${Math.random().toString(36).substring(7).toUpperCase()}`;
+      const now = getNowUTC();
+      const reportId = `BSP-${now.getFullYear()}-Q4-${Math.random().toString(36).substring(7).toUpperCase()}`;
       
       const reportData = {
         reportId,
@@ -71,32 +99,26 @@ export async function POST(request: Request) {
         totalVolume,
         transactionCount: transactions.length,
         amlFlags: 0,
-        generatedAt: new Date().toISOString(),
-        status: "FINAL",
+        generatedAt: now.toISOString(),
       };
 
+      // Log report generation
       await prisma.auditLog.create({
         data: {
-          action: "BSP_REPORT_GENERATED",
-          entity: "Regulatory",
+          action: "REGULATORY_REPORT_GENERATED",
+          entity: "Compliance",
           entityId: reportId,
           newValue: reportData as any,
-          ipAddress: "Internal",
+          ipAddress: process.env.LOCAL_IP || "localhost",
         },
       });
 
-      // In a real app, we'd generate an actual XML file here.
-      // For now, we return the metadata and success status.
-      return NextResponse.json({ 
-        success: true, 
-        report: reportData,
-        downloadUrl: `/api/security/download?id=${reportId}`
-      });
+      return NextResponse.json({ success: true, report: reportData });
     }
 
     return NextResponse.json({ error: "Invalid action" }, { status: 400 });
   } catch (error) {
-    console.error("Security API Error:", error);
-    return NextResponse.json({ error: "Internal Server Error" }, { status: 500 });
+    console.error("[SecurityAPI] Error:", error);
+    return NextResponse.json({ error: "Operation failed" }, { status: 500 });
   }
 }

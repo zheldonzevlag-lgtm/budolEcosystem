@@ -10,7 +10,8 @@ export async function GET() {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    const ssoUrl = process.env.SSO_URL || 'http://192.168.1.24:8000';
+    const LOCAL_IP = process.env.LOCAL_IP || 'localhost';
+    const ssoUrl = process.env.SSO_URL || `http://${LOCAL_IP}:8000`;
 
     const verifyResponse = await fetch(`${ssoUrl}/auth/verify`, {
       headers: { 'Authorization': `Bearer ${token}` }

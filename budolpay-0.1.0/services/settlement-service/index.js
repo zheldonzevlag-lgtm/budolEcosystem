@@ -1,20 +1,100 @@
 const express = require('express');
 const { prisma } = require('@budolpay/database');
 const { Decimal } = require('decimal.js');
-const dotenv = require('dotenv');
+const path = require('path');
 
-dotenv.config();
+/**
+ * Date Utilities for Asia/Manila Standard
+ */
+const getNowUTC = () => new Date();
+const getLegacyManilaISO = () => new Date().toISOString();
+const getLegacyManilaDate = () => new Date();
+require('dotenv').config({ path: path.resolve(__dirname, '../../.env'), override: true });
 
 const app = express();
-const PORT = process.env.PORT || 8005;
+const PORT = process.env.PORT || 8007;
+
+const LOCAL_IP = process.env.LOCAL_IP;
+
+if (!LOCAL_IP) {
+    console.error('[Settlement] CRITICAL: LOCAL_IP environment variable is not set. Service may not be network-aware.');
+}
+
+const GATEWAY_URL = process.env.NODE_ENV === 'development' 
+    ? `http://${LOCAL_IP || 'localhost'}:8080` 
+    : (process.env.GATEWAY_URL || `http://${LOCAL_IP || 'localhost'}:8080`);
+
+const notifyAdmin = async (event, data) => {
+    try {
+        const axios = require('axios');
+        console.log(`[Settlement] Attempting to notify Admin (${event}) at ${GATEWAY_URL}/internal/notify`);
+        const response = await axios.post(`${GATEWAY_URL}/internal/notify`, {
+            isAdmin: true,
+            event,
+            data
+        });
+        console.log(`[Settlement] Admin notification (${event}) response:`, response.data);
+    } catch (err) {
+        console.error(`[Settlement] Failed to notify Admin (${event}): ${err.message}`);
+    }
+};
+
+// Helper to create forensic audit logs (PCI DSS 10.2.2 & BSP Circular 808 Aligned)
+const createAuditLog = async (req, userId, action, metadata = {}, entity = 'Financial', entityId = null) => {
+    try {
+        const ipAddress = req ? (req.headers['x-forwarded-for'] || req.socket.remoteAddress) : 'SYSTEM';
+        const userAgent = req ? req.headers['user-agent'] : 'SYSTEM_PROCESS';
+        
+        const log = await prisma.auditLog.create({
+            data: {
+                userId,
+                action,
+                entity,
+                entityId: entityId || userId,
+                ipAddress,
+                userAgent,
+                device: req?.body?.deviceId || 'SYSTEM',
+                metadata: {
+                    ...metadata,
+                    compliance: {
+                        pci_dss: '10.2.2',
+                        bsp: 'Circular 808'
+                    },
+                    timestamp: getLegacyManilaISO()
+                }
+            },
+            include: {
+                user: {
+                    select: {
+                        id: true,
+                        firstName: true,
+                        lastName: true,
+                        email: true
+                    }
+                }
+            }
+        });
+        console.log(`[Audit] Logged action: ${action} for user: ${userId} (Entity: ${entity})`);
+        
+        // Notify Admin in Real-time
+        await notifyAdmin('AUDIT_LOG_CREATED', log);
+    } catch (err) {
+        console.error(`[Audit] Failed to create audit log: ${err.message}`);
+    }
+};
+
+// Vercel Support: Handle API prefix
+const router = express.Router();
+app.use('/api/settlement', router);
+app.use('/', router); // Fallback for direct calls
 
 app.use(express.json());
 
 // Health Check
-app.get('/health', (req, res) => {
+router.get('/health', (req, res) => {
     res.status(200).json({ 
         status: 'Settlement Service is healthy', 
-        timestamp: new Date(),
+        timestamp: getNowUTC().toISOString(),
         version: '1.0.0'
     });
 });
@@ -23,7 +103,7 @@ app.get('/health', (req, res) => {
  * Generate Settlement for a Merchant
  * POST /settle/:merchantId
  */
-app.post('/settle/:merchantId', async (req, res) => {
+router.post('/settle/:merchantId', async (req, res) => {
     const { merchantId } = req.params;
     const { periodStart, periodEnd } = req.body;
 
@@ -73,15 +153,12 @@ app.post('/settle/:merchantId', async (req, res) => {
             }
         });
 
-        // 4. Log Action
-        await prisma.auditLog.create({
-            data: {
-                action: 'GENERATE_SETTLEMENT',
-                entity: 'Settlement',
-                entityId: settlement.id,
-                newValue: { merchantId, netAmount: netAmount.toNumber() }
-            }
-        });
+        // 4. Create Audit Log via standardized helper
+        await createAuditLog(req, merchantId, 'GENERATE_SETTLEMENT', {
+            netAmount: netAmount.toNumber(),
+            periodStart,
+            periodEnd
+        }, 'Financial', settlement.id);
 
         res.status(201).json({
             message: 'Settlement generated successfully',
@@ -97,7 +174,7 @@ app.post('/settle/:merchantId', async (req, res) => {
 /**
  * Get Settlement History for a Merchant
  */
-app.get('/history/:merchantId', async (req, res) => {
+router.get('/history/:merchantId', async (req, res) => {
     const { merchantId } = req.params;
     try {
         const history = await prisma.settlement.findMany({
@@ -116,7 +193,7 @@ app.get('/history/:merchantId', async (req, res) => {
  */
 
 // Open a Dispute
-app.post('/disputes/open', async (req, res) => {
+router.post('/disputes/open', async (req, res) => {
     const { transactionId, reason, evidenceUrl } = req.body;
     try {
         const dispute = await prisma.dispute.create({
@@ -128,14 +205,11 @@ app.post('/disputes/open', async (req, res) => {
             }
         });
 
-        await prisma.auditLog.create({
-            data: {
-                action: 'OPEN_DISPUTE',
-                entity: 'Dispute',
-                entityId: dispute.id,
-                newValue: { transactionId, reason }
-            }
-        });
+        // Create Audit Log via standardized helper
+        await createAuditLog(req, transactionId, 'OPEN_DISPUTE', {
+            reason,
+            evidenceUrl
+        }, 'Dispute', dispute.id);
 
         res.status(201).json(dispute);
     } catch (error) {
@@ -144,7 +218,7 @@ app.post('/disputes/open', async (req, res) => {
 });
 
 // Resolve a Dispute
-app.patch('/disputes/:id/resolve', async (req, res) => {
+router.patch('/disputes/:id/resolve', async (req, res) => {
     const { id } = req.params;
     const { status, resolutionNotes } = req.body; // RESOLVED_REFUNDED or RESOLVED_DECLINED
 
@@ -154,7 +228,7 @@ app.patch('/disputes/:id/resolve', async (req, res) => {
             data: { 
                 status, 
                 resolutionNotes,
-                updatedAt: new Date()
+                updatedAt: getLegacyManilaDate()
             }
         });
 
@@ -168,14 +242,32 @@ app.patch('/disputes/:id/resolve', async (req, res) => {
             console.log(`Triggering refund for transaction ${originalTx.id}`);
         }
 
-        await prisma.auditLog.create({
+        const auditLog = await prisma.auditLog.create({
             data: {
                 action: 'RESOLVE_DISPUTE',
                 entity: 'Dispute',
                 entityId: id,
-                newValue: { status, resolutionNotes }
+                newValue: { status, resolutionNotes },
+                metadata: {
+                    compliance: 'BSP Circular No. 808',
+                    standard: 'Dispute Resolution Audit',
+                    timestamp: getLegacyManilaISO()
+                }
+            },
+            include: {
+                user: {
+                    select: {
+                        id: true,
+                        firstName: true,
+                        lastName: true,
+                        email: true
+                    }
+                }
             }
         });
+
+        // Notify Admin in Real-time (AUDIT_LOG_CREATED)
+        await notifyAdmin('AUDIT_LOG_CREATED', auditLog);
 
         res.json(dispute);
     } catch (error) {
@@ -184,7 +276,7 @@ app.patch('/disputes/:id/resolve', async (req, res) => {
 });
 
 // List Disputes
-app.get('/disputes', async (req, res) => {
+router.get('/disputes', async (req, res) => {
     try {
         const disputes = await prisma.dispute.findMany({
             include: { transaction: true },
@@ -199,7 +291,7 @@ app.get('/disputes', async (req, res) => {
 /**
  * Reconciliation Reporting API
  */
-app.get('/reconciliation/summary', async (req, res) => {
+router.get('/reconciliation/summary', async (req, res) => {
     try {
         const [txCount, settlementCount, disputeCount, revenue] = await Promise.all([
             prisma.transaction.count({ where: { status: 'COMPLETED' } }),
@@ -212,7 +304,7 @@ app.get('/reconciliation/summary', async (req, res) => {
         ]);
 
         const report = {
-            generatedAt: new Date(),
+            generatedAt: getLegacyManilaDate(),
             metrics: {
                 completedTransactions: txCount,
                 paidSettlements: settlementCount,
@@ -223,14 +315,32 @@ app.get('/reconciliation/summary', async (req, res) => {
             forensicHash: require('crypto').createHash('sha256').update(Date.now().toString()).digest('hex')
         };
 
-        await prisma.auditLog.create({
+        const auditLog = await prisma.auditLog.create({
             data: {
                 action: 'GENERATE_RECONCILIATION_REPORT',
                 entity: 'System',
                 entityId: 'GLOBAL',
-                newValue: report
+                newValue: report,
+                metadata: {
+                    compliance: 'BSP Circular No. 808',
+                    standard: 'Financial Reconciliation Audit',
+                    timestamp: getLegacyManilaISO()
+                }
+            },
+            include: {
+                user: {
+                    select: {
+                        id: true,
+                        firstName: true,
+                        lastName: true,
+                        email: true
+                    }
+                }
             }
         });
+
+        // Notify Admin in Real-time (AUDIT_LOG_CREATED)
+        await notifyAdmin('AUDIT_LOG_CREATED', auditLog);
 
         res.json(report);
     } catch (error) {
@@ -239,6 +349,19 @@ app.get('/reconciliation/summary', async (req, res) => {
     }
 });
 
-app.listen(PORT, () => {
-    console.log(`Settlement Service running on port ${PORT}`);
+// Global Error Handler
+app.use((err, req, res, next) => {
+    console.error(`[Settlement Service Error] ${err.stack}`);
+    res.status(err.status || 500).json({
+        error: err.name || 'InternalServerError',
+        message: err.message || 'An unexpected error occurred in the Settlement Service',
+        timestamp: getLegacyManilaISO(),
+        path: req.path
+    });
 });
+
+app.listen(PORT, '0.0.0.0', () => {
+    console.log(`[Settlement] Service running on http://0.0.0.0:${PORT} (LAN-accessible)`);
+});
+
+module.exports = app;

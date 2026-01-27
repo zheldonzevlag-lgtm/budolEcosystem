@@ -5,24 +5,43 @@ export async function GET(request: Request) {
     const { searchParams } = new URL(request.url);
     const token = searchParams.get('token');
 
+    // Base URL for redirects, ensuring we don't use 0.0.0.0
+    const baseUrl = new URL(request.url);
+    if (baseUrl.hostname === '0.0.0.0') {
+        baseUrl.hostname = process.env.LOCAL_IP || 'localhost';
+    }
+
     if (!token) {
-        return NextResponse.redirect(new URL('/login?error=no_token', request.url));
+        return NextResponse.redirect(new URL('/login?error=no_token', baseUrl));
     }
 
     try {
         // 1. Verify token with budolID
         // In this ecosystem, budolID is at port 8000
-        const ssoUrl = process.env.SSO_URL || 'http://localhost:8000';
+        const LOCAL_IP = process.env.LOCAL_IP || 'localhost';
+        const ssoUrl = process.env.NEXT_PUBLIC_SSO_URL || process.env.SSO_URL || `http://${LOCAL_IP}:8000`;
+        
+        console.log(`[SSO Callback] Verifying token with: ${ssoUrl}/auth/verify`);
+        
         const verifyResponse = await fetch(`${ssoUrl}/auth/verify`, {
             headers: {
                 'Authorization': `Bearer ${token}`
-            }
+            },
+            cache: 'no-store'
         });
 
-        const verificationData = await verifyResponse.json();
+        if (!verifyResponse.ok) {
+            const errorText = await verifyResponse.text();
+            console.error(`[SSO Callback] Verification failed with status ${verifyResponse.status}:`, errorText);
+            return NextResponse.redirect(new URL(`/login?error=verification_failed&status=${verifyResponse.status}`, baseUrl));
+        }
 
-        if (!verifyResponse.ok || !verificationData.valid) {
-            return NextResponse.redirect(new URL('/login?error=invalid_token', request.url));
+        const verificationData = await verifyResponse.json();
+        console.log('[SSO Callback] Verification data:', JSON.stringify(verificationData));
+
+        if (!verificationData.valid) {
+            console.error('[SSO Callback] Token marked as invalid by budolID');
+            return NextResponse.redirect(new URL('/login?error=invalid_token', baseUrl));
         }
 
         const { user: ssoUser } = verificationData;
@@ -69,7 +88,17 @@ export async function GET(request: Request) {
         return response;
 
     } catch (error) {
-        console.error('SSO Callback Error:', error);
-        return NextResponse.redirect(new URL('/login?error=sso_failed', request.url));
+        console.error('SSO Callback Error Details:', {
+            error,
+            url: request.url
+        });
+        
+        // Base URL for redirects, ensuring we don't use 0.0.0.0
+        const baseUrl = new URL(request.url);
+        if (baseUrl.hostname === '0.0.0.0') {
+            baseUrl.hostname = process.env.LOCAL_IP || 'localhost';
+        }
+        
+        return NextResponse.redirect(new URL('/login?error=sso_failed', baseUrl));
     }
 }

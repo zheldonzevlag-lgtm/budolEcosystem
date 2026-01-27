@@ -1,5 +1,22 @@
 import { prisma } from "@/lib/prisma";
 import React from "react";
+import { 
+  BarChart3, 
+  TrendingUp, 
+  TrendingDown, 
+  ArrowRightLeft, 
+  Download,
+  Calendar,
+  Filter,
+  Search,
+  CheckCircle2,
+  Clock,
+  AlertCircle,
+  Loader2,
+  PieChart,
+  Wallet
+} from "lucide-react";
+import { formatManilaTime } from "@/lib/utils";
 
 export default async function AccountingPage() {
   const accounts = await prisma.chartOfAccount.findMany({
@@ -63,7 +80,7 @@ export default async function AccountingPage() {
         </div>
         <div className="text-right">
           <div className="text-sm font-medium text-slate-600">System Integrity: <span className="text-budolshap-primary font-bold">Verified</span></div>
-          <div className="text-xs text-slate-400">Last Audit: {new Date().toLocaleTimeString()}</div>
+          <div className="text-xs text-slate-400">Last Audit: {formatManilaTime(new Date())}</div>
         </div>
       </div>
 
@@ -128,7 +145,7 @@ export default async function AccountingPage() {
                         {Number(entry.credit) > 0 ? `₱${Number(entry.credit).toLocaleString()}` : '-'}
                       </td>
                       <td className="px-6 py-4 text-slate-500 text-xs">
-                        {new Date(entry.createdAt).toLocaleString()}
+                        {formatManilaTime(entry.createdAt)}
                       </td>
                     </tr>
                   ))

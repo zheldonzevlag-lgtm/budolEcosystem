@@ -1,12 +1,13 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { 
-  ArrowUpRight, 
-  ArrowDownLeft, 
+import { io } from "socket.io-client";
+import {
+  ArrowUpRight,
+  ArrowDownLeft,
   ArrowLeftRight,
-  Search, 
-  Filter, 
+  Search,
+  Filter,
   Download,
   Clock,
   CheckCircle2,
@@ -15,6 +16,8 @@ import {
   Loader2,
   Calendar
 } from "lucide-react";
+import { formatManilaTime, getManilaDateString } from "@/lib/utils";
+import { toast } from "react-hot-toast";
 
 export default function TransactionsPage() {
   const [transactions, setTransactions] = useState<any[]>([]);
@@ -23,8 +26,60 @@ export default function TransactionsPage() {
   const [typeFilter, setTypeFilter] = useState("ALL");
   const [searchTerm, setSearchTerm] = useState("");
 
+  const handleExportCSV = () => {
+    if (filteredTransactions.length === 0) {
+      toast.error("No transactions to export");
+      return;
+    }
+
+    const exportData = filteredTransactions.map(tx => ({
+      'Reference ID': tx.referenceId,
+      'Type': tx.type,
+      'Sender': tx.sender?.email || 'SYSTEM',
+      'Receiver': tx.receiver?.email || 'EXTERNAL',
+      'Amount': tx.amount,
+      'Fee': tx.fee,
+      'Status': tx.status,
+      'Date': formatManilaTime(tx.createdAt)
+    }));
+
+    const csv = [
+      Object.keys(exportData[0]).join(','),
+      ...exportData.map(row => Object.values(row).map(field => 
+        typeof field === 'string' && field.includes(',') ? `"${field}"` : field
+      ).join(','))
+    ].join('\n');
+
+    const blob = new Blob([csv], { type: 'text/csv' });
+    const url = window.URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `transactions_${getManilaDateString()}.csv`;
+    a.click();
+    window.URL.revokeObjectURL(url);
+    toast.success('Transactions exported successfully!');
+  };
+
   useEffect(() => {
     fetchTransactions();
+
+    // Socket.io Real-time Setup
+    const GATEWAY_URL = process.env.NEXT_PUBLIC_GATEWAY_URL || "http://localhost:8080";
+    const socket = io(GATEWAY_URL);
+
+    socket.on("connect", () => {
+      console.log("[Socket] Connected to Gateway");
+      socket.emit("join", "admin");
+    });
+
+    socket.on("new_transaction", (newTx) => {
+      console.log("[Socket] New transaction received:", newTx);
+      setTransactions((prev) => [newTx, ...prev]);
+    });
+
+    return () => {
+      socket.disconnect();
+    };
   }, [statusFilter, typeFilter]);
 
   const fetchTransactions = async () => {
@@ -45,7 +100,7 @@ export default function TransactionsPage() {
   };
 
   const filteredTransactions = transactions.filter(tx => 
-    tx.referenceId.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    (tx.referenceId && tx.referenceId.toLowerCase().includes(searchTerm.toLowerCase())) ||
     (tx.sender?.email && tx.sender.email.toLowerCase().includes(searchTerm.toLowerCase())) ||
     (tx.receiver?.email && tx.receiver.email.toLowerCase().includes(searchTerm.toLowerCase()))
   );
@@ -74,11 +129,14 @@ export default function TransactionsPage() {
     <div className="space-y-8">
       <div className="flex justify-between items-end">
         <div>
-          <h2 className="text-3xl font-bold text-slate-800">Global Transactions</h2>
+          <h2 className="text-xl font-bold text-slate-800">Global Transactions</h2>
           <p className="text-slate-600">Real-time monitoring of all ecosystem financial flows.</p>
         </div>
         <div className="flex gap-3">
-          <button className="flex items-center gap-2 px-4 py-2 bg-slate-800 text-white rounded-lg text-sm font-bold hover:bg-slate-700 transition-colors">
+          <button 
+            onClick={handleExportCSV}
+            className="flex items-center gap-2 px-4 py-2 bg-slate-800 text-white rounded-lg text-sm font-bold hover:bg-slate-700 transition-colors"
+          >
             <Download size={16} />
             Export CSV
           </button>
@@ -153,7 +211,7 @@ export default function TransactionsPage() {
                   <tr key={tx.id} className="hover:bg-slate-50/50 transition-colors">
                     <td className="px-6 py-4">
                       <div className="font-mono text-xs font-bold text-slate-900">{tx.referenceId}</div>
-                      <div className="text-[10px] text-slate-400 font-mono mt-0.5">{tx.id.substring(0, 8)}...</div>
+                      <div className="text-[10px] text-slate-400 font-mono mt-0.5">{tx.id}</div>
                     </td>
                     <td className="px-6 py-4">
                       <div className="flex items-center gap-2">
@@ -190,7 +248,7 @@ export default function TransactionsPage() {
                       </div>
                     </td>
                     <td className="px-6 py-4 text-slate-500 text-xs font-medium">
-                      {new Date(tx.createdAt).toLocaleString()}
+                      {formatManilaTime(tx.createdAt)}
                     </td>
                   </tr>
                 ))

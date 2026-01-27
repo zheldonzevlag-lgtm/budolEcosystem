@@ -6,9 +6,12 @@ export async function POST(request: Request) {
         const { email, password } = await request.json();
 
         // 1. Authenticate against budolID API (Server-to-Server)
-        const ssoUrl = process.env.SSO_URL || 'http://192.168.1.24:8000';
+        const LOCAL_IP = process.env.LOCAL_IP || 'localhost';
+        const ssoUrl = process.env.SSO_URL || `http://${LOCAL_IP}:8000`;
         const apiKey = 'bp_key_2025'; // This should be in env
 
+        console.log(`[Login API] Attempting SSO login via: ${ssoUrl}/auth/sso/login`);
+        
         const ssoResponse = await fetch(`${ssoUrl}/auth/sso/login`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },

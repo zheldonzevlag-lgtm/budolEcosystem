@@ -1,6 +1,22 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import { 
+  AlertCircle, 
+  Search, 
+  Filter, 
+  Download, 
+  MessageSquare, 
+  CheckCircle2, 
+  XCircle,
+  Clock,
+  ArrowRightLeft,
+  ChevronRight,
+  ShieldAlert,
+  Loader2,
+  Calendar
+} from "lucide-react";
+import { formatManilaTime, getNowUTC } from "@/lib/utils";
 
 export default function DisputesPage() {
     const [disputes, setDisputes] = useState([]);
@@ -20,7 +36,15 @@ export default function DisputesPage() {
             ]);
             const disputesData = await disputesRes.json();
             const reconData = await reconRes.json();
-            setDisputes(disputesData);
+            
+            // Fix: Handle error objects and ensure disputes is an array
+            if (disputesData.error) {
+                console.error('Disputes API Error:', disputesData.error);
+                setDisputes([]);
+            } else {
+                setDisputes(Array.isArray(disputesData) ? disputesData : []);
+            }
+            
             setRecon(reconData);
         } catch (error) {
             console.error('Failed to fetch data:', error);
@@ -36,7 +60,7 @@ export default function DisputesPage() {
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ 
                     status, 
-                    resolutionNotes: `Resolved via Admin Dashboard on ${new Date().toISOString()}` 
+                    resolutionNotes: `Resolved via Admin Dashboard on ${getNowUTC().toISOString()}` 
                 })
             });
             fetchData();
@@ -49,8 +73,8 @@ export default function DisputesPage() {
         <div className="space-y-6">
             <header className="flex justify-between items-center">
                 <div>
-                    <h1 className="text-3xl font-black text-slate-900 tracking-tight">Disputes & Reconciliation</h1>
-                    <p className="text-slate-500">Manage transaction conflicts and financial integrity reports</p>
+                    <h1 className="text-xl font-black text-slate-900 tracking-tight">Disputes & Reconciliation</h1>
+                    <p className="text-sm text-slate-500">Manage transaction conflicts and financial integrity reports</p>
                 </div>
                 <button 
                     onClick={fetchData}
@@ -64,7 +88,7 @@ export default function DisputesPage() {
                 <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
                     <div className="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm">
                         <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1">Total Revenue (Fees)</p>
-                        <p className="text-2xl font-black text-slate-900">₱{recon.metrics?.totalRevenue}</p>
+                        <p className="text-2xl font-black text-slate-900">₱{Number(recon.metrics?.totalRevenue || 0).toLocaleString()}</p>
                     </div>
                     <div className="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm">
                         <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1">Paid Settlements</p>
@@ -103,10 +127,10 @@ export default function DisputesPage() {
                             <tr><td colSpan={6} className="px-6 py-12 text-center text-slate-400">No active disputes found</td></tr>
                         ) : disputes.map((dispute) => (
                             <tr key={dispute.id} className="hover:bg-slate-50/50 transition-colors">
-                                <td className="px-6 py-4 font-mono text-[10px] text-slate-400">{dispute.id.slice(0, 8)}...</td>
+                                <td className="px-6 py-4 font-mono text-[10px] text-slate-400">{dispute.id}</td>
                                 <td className="px-6 py-4">
-                                    <p className="text-sm font-bold text-slate-900">₱{dispute.transaction?.amount}</p>
-                                    <p className="text-[10px] text-slate-500 font-mono">{dispute.transactionId.slice(0, 8)}...</p>
+                                    <p className="text-sm font-bold text-slate-900">₱{Number(dispute.transaction?.amount || 0).toLocaleString()}</p>
+                                    <p className="text-[10px] text-slate-500 font-mono">{dispute.transactionId}</p>
                                 </td>
                                 <td className="px-6 py-4 text-sm text-slate-600">{dispute.reason}</td>
                                 <td className="px-6 py-4">
@@ -119,7 +143,7 @@ export default function DisputesPage() {
                                     </span>
                                 </td>
                                 <td className="px-6 py-4 text-xs text-slate-500">
-                                    {new Date(dispute.createdAt).toLocaleDateString()}
+                                    {formatManilaTime(dispute.createdAt)}
                                 </td>
                                 <td className="px-6 py-4">
                                     {dispute.status === 'OPEN' && (

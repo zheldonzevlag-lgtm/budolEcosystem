@@ -1,17 +1,73 @@
-const express = require('express');
-const { PrismaClient } = require('@prisma/client');
-const cors = require('cors');
 require('dotenv').config();
+const { prisma } = require('@budolpay/database');
 
-const prisma = new PrismaClient();
+// Safety Check: Prevent development from connecting to production
+const PRODUCTION_DB_KEYWORDS = [
+    'db.prisma.io',
+    'supabase.co',
+    'elephantsql.com',
+    'aws.com',
+    'google.com',
+    'rds.amazonaws.com'
+];
+
+function validateAndConfigureEnvironment() {
+    const isProd = process.env.NODE_ENV === 'production' || process.env.VERCEL === '1';
+    
+    // Automatic Configuration for Production (Vercel)
+    if (isProd) {
+        if (!process.env.DATABASE_URL && process.env.POSTGRES_PRISMA_URL) {
+            process.env.DATABASE_URL = process.env.POSTGRES_PRISMA_URL;
+            console.log('🔵 [budolAccounting] Automatically configured DATABASE_URL from Vercel Postgres');
+        }
+    }
+
+    const databaseUrl = process.env.DATABASE_URL || '';
+    
+    if (!isProd) {
+        const isConnectingToProd = PRODUCTION_DB_KEYWORDS.some(keyword => databaseUrl.includes(keyword));
+        if (isConnectingToProd) {
+            console.error('\n❌ [budolAccounting] SAFETY CRITICAL ERROR:');
+            console.error('   The app is running in DEVELOPMENT mode but is attempting to connect to a PRODUCTION database!');
+            console.error(`   DATABASE_URL: ${databaseUrl.substring(0, 30)}...`);
+            console.error('\n   ACTION REQUIRED:');
+            console.error('   Run "npm run db:local" in the project root to switch to local configuration.\n');
+            process.exit(1);
+        }
+    }
+}
+
+validateAndConfigureEnvironment();
+
+/**
+ * Date Utilities for Asia/Manila Standard
+ */
+const getNowUTC = () => new Date();
+
+const express = require('express');
+const cors = require('cors');
+
 const app = express();
-const PORT = process.env.PORT || 8002;
+const PORT = process.env.PORT || 8005;
+
+// Vercel Support: Handle API prefix
+const router = express.Router();
+app.use('/api/accounting', router);
+app.use('/', router); // Fallback for direct calls
 
 app.use(cors());
 app.use(express.json());
 
+// Health Check
+router.get('/health', (req, res) => {
+    res.status(200).json({ 
+        status: 'Accounting Service is healthy', 
+        timestamp: getNowUTC().toISOString() 
+    });
+});
+
 // 1. Create Ledger Entry (The Core Accounting Function)
-app.post('/ledger/entry', async (req, res) => {
+router.post('/ledger/entry', async (req, res) => {
     const { appId, transactionId, referenceId, entries } = req.body;
     
     // entries example: [
@@ -57,7 +113,7 @@ app.post('/ledger/entry', async (req, res) => {
 });
 
 // 2. Get Account Balance
-app.get('/balance/:accountCode', async (req, res) => {
+router.get('/balance/:accountCode', async (req, res) => {
     const { accountCode } = req.params;
     try {
         const account = await prisma.chartOfAccount.findUnique({ 
@@ -80,6 +136,10 @@ app.get('/balance/:accountCode', async (req, res) => {
     }
 });
 
-app.listen(PORT, () => {
-    console.log(`budolAccounting Core Service running on port ${PORT}`);
+app.listen(PORT, '0.0.0.0', () => {
+    const LOCAL_IP = process.env.LOCAL_IP || 'localhost';
+    console.log(`budolAccounting Service running on http://0.0.0.0:${PORT}`);
+    console.log(`Local LAN access at http://${LOCAL_IP}:${PORT}`);
 });
+
+module.exports = app;

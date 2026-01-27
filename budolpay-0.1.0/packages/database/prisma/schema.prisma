@@ -35,40 +35,90 @@ model LedgerEntry {
 }
 
 model User {
-  id            String        @id @default(uuid())
-  email         String        @unique
-  phoneNumber   String        @unique
-  passwordHash  String
-  firstName     String?
-  lastName      String?
-  role          UserRole      @default(USER)
-  kycStatus     KYCStatus     @default(NONE)
-  kycData       Json?
-  createdAt     DateTime      @default(now())
-  updatedAt     DateTime      @updatedAt
-  auditLogs     AuditLog[]
-  sessions      Session[]
-  receivedTrans Transaction[] @relation("ReceivedTransactions")
-  transactions  Transaction[] @relation("UserTransactions")
-  wallet        Wallet?
+  id                 String                 @id @default(uuid())
+  email              String                 @unique
+  passwordHash       String
+  phoneNumber        String                 @unique
+  firstName          String?
+  lastName           String?
+  role               UserRole               @default(USER)
+  createdAt          DateTime               @default(now())
+  updatedAt          DateTime               @updatedAt
+  isFaceVerified     Boolean                @default(false)
+  kycData            Json?
+  kycStatus          KYCStatus              @default(NONE)
+  kycTier            KYCTier                @default(BASIC)
+  otpCode            String?
+  otpExpiresAt       DateTime?
+  emailVerified      Boolean                @default(false)
+  phoneVerified      Boolean                @default(false)
+  avatarUrl          String?
+  faceTemplate       String?
+  lastLoginAt        DateTime?
+  pinHash            String?
+  biometricKeyId     String?
+  biometricPublicKey Bytes?
+  trustedDevices     String?
+  auditLogs          AuditLog[]
+  favoritedBy        FavoriteRecipient[]    @relation("RecipientFavorites")
+  favorites          FavoriteRecipient[]    @relation("UserFavorites")
+  sessions           Session[]
+  receivedTrans      Transaction[]          @relation("ReceivedTransactions")
+  transactions       Transaction[]          @relation("UserTransactions")
+  verificationDocs   VerificationDocument[]
+  wallet             Wallet?
+}
+
+model FavoriteRecipient {
+  id          String   @id @default(uuid())
+  userId      String
+  recipientId String
+  alias       String?
+  createdAt   DateTime @default(now())
+  recipient   User     @relation("RecipientFavorites", fields: [recipientId], references: [id])
+  user        User     @relation("UserFavorites", fields: [userId], references: [id])
+
+  @@unique([userId, recipientId])
+  @@index([userId])
+}
+
+model VerificationDocument {
+  id           String   @id @default(uuid())
+  userId       String
+  type         String
+  documentType String
+  faceTemplate String?
+  status       String   @default("PENDING")
+  blobData     Bytes?
+  remoteUrl    String?
+  ocrData      Json?
+  rotation     Int      @default(0)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+  user         User     @relation(fields: [userId], references: [id])
+
+  @@index([userId])
 }
 
 model Session {
-  id        String   @id @default(uuid())
+  id        String        @id @default(uuid())
   userId    String
-  token     String   @unique
   appId     String?
+  token     String        @unique
   expiresAt DateTime
-  createdAt DateTime @default(now())
-  user      User     @relation(fields: [userId], references: [id])
+  createdAt DateTime      @default(now())
+  app       EcosystemApp? @relation(fields: [appId], references: [id])
+  user      User          @relation(fields: [userId], references: [id])
 }
 
 model EcosystemApp {
-  id          String   @id @default(uuid())
-  name        String   @unique
-  apiKey      String   @unique
+  id          String    @id @default(uuid())
+  name        String    @unique
+  apiKey      String    @unique
+  apiSecret   String    @unique
   redirectUri String
-  createdAt   DateTime @default(now())
+  createdAt   DateTime  @default(now())
+  sessions    Session[]
 }
 
 model Wallet {
@@ -88,7 +138,10 @@ model Transaction {
   description  String?
   senderId     String?
   receiverId   String?
+  storeId      String?
+  storeName    String?
   referenceId  String            @unique
+  metadata     String?
   fee          Decimal           @default(0.0) @db.Decimal(18, 2)
   createdAt    DateTime          @default(now())
   completedAt  DateTime?
@@ -102,89 +155,69 @@ model Transaction {
   @@index([receiverId])
   @@index([referenceId])
   @@index([settlementId])
+  @@index([storeId])
 }
 
 model Settlement {
-  id            String           @id @default(uuid())
-  merchantId    String
-  amount        Decimal          @db.Decimal(18, 2)
-  feeDeducted   Decimal          @db.Decimal(18, 2)
-  netAmount     Decimal          @db.Decimal(18, 2)
-  status        SettlementStatus @default(PENDING)
-  bankReference String?
-  periodStart   DateTime
-  periodEnd     DateTime
-  createdAt     DateTime         @default(now())
-  updatedAt     DateTime         @updatedAt
-  transactions  Transaction[]
+  id           String        @id @default(uuid())
+  merchantId   String
+  amount       Decimal       @db.Decimal(18, 2)
+  feeDeducted  Decimal       @db.Decimal(18, 2)
+  netAmount    Decimal       @db.Decimal(18, 2)
+  status       String        @default("PENDING")
+  periodStart  DateTime
+  periodEnd    DateTime
+  createdAt    DateTime      @default(now())
+  updatedAt    DateTime      @updatedAt
+  transactions Transaction[]
 
   @@index([merchantId])
-  @@index([status])
 }
 
 model Dispute {
-  id              String        @id @default(uuid())
-  transactionId   String        @unique
-  reason          String
-  status          DisputeStatus @default(OPEN)
-  evidenceUrl     String?
-  resolutionNotes String?
-  createdAt       DateTime      @default(now())
-  updatedAt       DateTime      @updatedAt
-  transaction     Transaction   @relation(fields: [transactionId], references: [id])
-}
-
-model SystemSetting {
-  id          String   @id @default(uuid())
-  key         String   @unique
-  value       String
-  isSecret    Boolean  @default(false)
-  description String?
-  updatedAt   DateTime @updatedAt
-  updatedBy   String?
+  id            String        @id @default(uuid())
+  transactionId String        @unique
+  reason        String
+  status        DisputeStatus @default(OPEN)
+  createdAt     DateTime      @default(now())
+  resolvedAt    DateTime?
+  transaction   Transaction   @relation(fields: [transactionId], references: [id])
 }
 
 model AuditLog {
   id        String   @id @default(uuid())
   userId    String?
   action    String
+  metadata  Json?
+  createdAt DateTime @default(now())
+  city      String?
+  country   String?
+  device    String?
   entity    String?
   entityId  String?
-  oldValue  Json?
-  newValue  Json?
   ipAddress String?
+  latitude  String?
+  longitude String?
+  newValue  Json?
+  oldValue  Json?
   userAgent String?
-  createdAt DateTime @default(now())
   user      User?    @relation(fields: [userId], references: [id])
+
+  @@index([userId])
+  @@index([entity])
 }
 
-enum UserRole {
-  USER
-  STAFF
-  ADMIN
-  SYSTEM
-}
-
-enum KYCStatus {
-  PENDING
-  VERIFIED
-  REJECTED
-  NONE
-}
-
-enum TransactionStatus {
-  PENDING
-  COMPLETED
-  FAILED
-  CANCELLED
-}
-
-enum TransactionType {
-  CASH_IN
-  CASH_OUT
-  P2P_TRANSFER
-  MERCHANT_PAYMENT
-  REFUND
+model SystemSetting {
+  id          String   @id @default(uuid())
+  key         String   @unique
+  value       String
+  group       String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  appId       String?
+  description String?
+  isActive    Boolean  @default(true)
+  isSecret    Boolean  @default(false)
 }
 
 enum AccountType {
@@ -195,16 +228,46 @@ enum AccountType {
   EXPENSE
 }
 
-enum SettlementStatus {
+enum UserRole {
+  USER
+  ADMIN
+  MERCHANT
+  DRIVER
+  STAFF
+}
+
+enum KYCStatus {
+  NONE
   PENDING
-  PROCESSING
-  PAID
+  VERIFIED
+  REJECTED
+}
+
+enum KYCTier {
+  BASIC
+  SEMI_VERIFIED
+  FULLY_VERIFIED
+}
+
+enum TransactionType {
+  CASH_IN
+  CASH_OUT
+  P2P_TRANSFER
+  MERCHANT_PAYMENT
+  FEE
+  REFUND
+}
+
+enum TransactionStatus {
+  PENDING
+  COMPLETED
   FAILED
+  CANCELLED
 }
 
 enum DisputeStatus {
   OPEN
-  UNDER_REVIEW
-  RESOLVED_REFUNDED
-  RESOLVED_DECLINED
+  IN_PROGRESS
+  RESOLVED
+  CLOSED
 }

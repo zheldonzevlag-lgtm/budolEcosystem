@@ -16,7 +16,7 @@ export default function LoginPage() {
     // Prevent usage of 0.0.0.0 which is a bind address, not a visitable address
     useEffect(() => {
         if (typeof window !== 'undefined' && window.location.hostname === '0.0.0.0') {
-            const newUrl = window.location.href.replace('0.0.0.0', 'localhost');
+            const newUrl = window.location.href.replace('0.0.0.0', window.location.hostname === '0.0.0.0' ? 'localhost' : window.location.hostname);
             window.location.replace(newUrl);
         }
     }, []);
@@ -100,41 +100,38 @@ export default function LoginPage() {
                         </div>
 
                         <button 
-                            type="submit"
+                            type="submit" 
                             disabled={isLoading}
-                            className="w-full bg-slate-900 text-white p-3 rounded-xl font-bold hover:bg-slate-800 transition-colors flex items-center justify-center gap-2 disabled:opacity-50"
+                            className="w-full bg-slate-900 hover:bg-slate-800 text-white font-bold py-3 px-4 rounded-xl transition-all active:scale-[0.98] flex items-center justify-center gap-2 disabled:opacity-70"
                         >
-                            {isLoading ? (
-                                <Loader2 className="w-5 h-5 animate-spin" />
-                            ) : (
-                                <>
-                                    Sign In
-                                    <ArrowRight className="w-4 h-4" />
-                                </>
-                            )}
+                            {isLoading ? <Loader2 className="w-5 h-5 animate-spin" /> : 'Sign In'}
                         </button>
                     </form>
 
                     <div className="mt-6">
                         <div className="relative">
                             <div className="absolute inset-0 flex items-center">
-                                <div className="w-full border-t border-slate-200"></div>
+                                <span className="w-full border-t border-slate-200"></span>
                             </div>
-                            <div className="relative flex justify-center text-sm">
-                                <span className="px-2 bg-white text-slate-500">Or continue with</span>
+                            <div className="relative flex justify-center text-xs uppercase">
+                                <span className="bg-white px-2 text-slate-500">Or continue with</span>
                             </div>
                         </div>
 
                         <div className="mt-6">
-                            <a 
-                                href={`${process.env.NEXT_PUBLIC_SSO_URL || `http://${typeof window !== 'undefined' ? window.location.hostname : 'localhost'}:8000`}/login?apiKey=bp_key_2025`}
-                                className="w-full flex items-center justify-center gap-3 px-4 py-3 border border-slate-200 rounded-xl text-sm font-bold text-slate-700 hover:bg-slate-50 transition-all"
+                            <button
+                                onClick={() => {
+                                    const localIP = typeof window !== 'undefined' ? (window.location.hostname !== '0.0.0.0' ? window.location.hostname : 'localhost') : 'localhost';
+                                    const ssoUrl = process.env.NEXT_PUBLIC_SSO_URL || `http://${localIP}:8000`;
+                                    const appUrl = process.env.NEXT_PUBLIC_APP_URL || (typeof window !== 'undefined' ? window.location.origin : '');
+                                    const redirectUri = `${appUrl}/api/auth/callback`;
+                                    window.location.href = `${ssoUrl}/login?apiKey=bp_key_2025&redirect_uri=${encodeURIComponent(redirectUri)}`;
+                                }}
+                                className="w-full flex justify-center items-center gap-3 px-4 py-3 border border-slate-200 rounded-xl shadow-sm bg-white text-sm font-medium text-slate-700 hover:bg-slate-50 transition-all active:scale-[0.98]"
                             >
-                                <div className="w-5 h-5 bg-rose-500 rounded-full flex items-center justify-center">
-                                    <div className="w-2 h-2 bg-white rounded-full"></div>
-                                </div>
-                                Sign in with budolID
-                            </a>
+                                <div className="w-5 h-5 bg-indigo-600 rounded flex items-center justify-center text-[10px] text-white font-bold">B</div>
+                                <span>Login with budolID</span>
+                            </button>
                         </div>
                     </div>
                 </div>

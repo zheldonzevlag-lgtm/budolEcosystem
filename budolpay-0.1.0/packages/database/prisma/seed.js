@@ -23,49 +23,44 @@ async function main() {
 
   console.log('Admin user created:', admin.email);
 
+  const localIP = process.env.LOCAL_IP || 'localhost';
+
   // Initial Settings
   const initialSettings = [
     {
       key: 'AUTH_SERVICE_URL',
-      value: 'http://localhost:8001',
-      description: 'Internal endpoint for Auth microservice',
-      isSecret: false,
+      value: `http://${localIP}:8001`,
+      group: 'SYSTEM',
     },
     {
       key: 'WALLET_SERVICE_URL',
-      value: 'http://localhost:8002',
-      description: 'Internal endpoint for Wallet microservice',
-      isSecret: false,
+      value: `http://${localIP}:8002`,
+      group: 'SYSTEM',
     },
     {
       key: 'TRANSACTION_SERVICE_URL',
-      value: 'http://localhost:8003',
-      description: 'Internal endpoint for Transaction microservice',
-      isSecret: false,
+      value: `http://${localIP}:8003`,
+      group: 'SYSTEM',
     },
     {
       key: 'ACTIVE_PAYMENT_PROVIDER',
       value: 'paymongo',
-      description: 'Active gateway (paymongo, xendit, dragonpay, internal)',
-      isSecret: false,
+      group: 'PAYMENT',
     },
     {
       key: 'PAYMONGO_SECRET_KEY',
       value: 'sk_test_placeholder',
-      description: 'PayMongo API Secret Key',
-      isSecret: true,
+      group: 'PAYMENT',
     },
     {
       key: 'XENDIT_SECRET_KEY',
       value: 'xnd_test_placeholder',
-      description: 'Xendit API Secret Key',
-      isSecret: true,
+      group: 'PAYMENT',
     },
     {
       key: 'DRAGONPAY_MERCHANT_ID',
       value: 'example_id',
-      description: 'Dragonpay Merchant ID',
-      isSecret: false,
+      group: 'PAYMENT',
     },
   ];
 
@@ -81,9 +76,9 @@ async function main() {
 
   // SSO Ecosystem Apps
   const apps = [
-    { name: 'budolPay', apiKey: 'bp_key_2025', redirectUri: 'http://localhost:3000/auth/callback' },
-    { name: 'budolShap', apiKey: 'bs_key_2025', redirectUri: 'http://localhost:3001/auth/callback' },
-    { name: 'budolExpress', apiKey: 'be_key_2025', redirectUri: 'http://localhost:3002/auth/callback' },
+    { name: 'budolPay', apiKey: 'bp_key_2025', apiSecret: 'bp_secret_2025', redirectUri: `http://${localIP}:3000/auth/callback` },
+    { name: 'budolShap', apiKey: 'bs_key_2025', apiSecret: 'bs_secret_2025', redirectUri: `http://${localIP}:3001/auth/callback` },
+    { name: 'budolExpress', apiKey: 'be_key_2025', apiSecret: 'be_secret_2025', redirectUri: `http://${localIP}:3002/auth/callback` },
   ];
 
   for (const app of apps) {
@@ -115,6 +110,29 @@ async function main() {
   }
 
   console.log('Chart of Accounts seeded.');
+
+  // Additional Test Users for SSO testing
+  const testUsers = [
+    {
+      email: 'test@example.com',
+      phoneNumber: '09123456789',
+      passwordHash: await bcrypt.hash('password123', 10),
+      firstName: 'Test',
+      lastName: 'User',
+      role: 'USER',
+      kycStatus: 'VERIFIED',
+    }
+  ];
+
+  for (const user of testUsers) {
+    await prisma.user.upsert({
+      where: { email: user.email },
+      update: { passwordHash: user.passwordHash },
+      create: user,
+    });
+  }
+
+  console.log('Additional test users seeded.');
 }
 
 main()

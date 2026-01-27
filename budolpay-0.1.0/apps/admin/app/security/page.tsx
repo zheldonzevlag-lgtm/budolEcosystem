@@ -11,8 +11,11 @@ import {
   ShieldCheck,
   AlertTriangle,
   UserCheck,
-  Loader2
+  Loader2,
+  RefreshCw
 } from "lucide-react";
+import { formatManilaTime } from "@/lib/utils";
+import { realtime } from "@/lib/realtime";
 
 export default function SecurityPage() {
   const [logs, setLogs] = useState<any[]>([]);
@@ -23,6 +26,44 @@ export default function SecurityPage() {
   useEffect(() => {
     fetchLogs();
   }, [filter]);
+
+  useEffect(() => {
+    let isMounted = true;
+    const initRealtime = async () => {
+      try {
+        console.log("[Security] Connecting to realtime...");
+        await realtime.init();
+        
+        realtime.on("AUDIT_LOG_CREATED", (newLog) => {
+          if (!isMounted) return;
+          console.log("[Realtime] New audit log received:", newLog.action);
+          
+          // Check if it matches current filter
+          const matchesFilter = filter === "All Actions" || 
+            (filter === "Security" && (newLog.entity === "Security" || newLog.action.includes("SECURITY") || newLog.action.includes("LOGIN") || newLog.action.includes("LOGOUT") || newLog.action.includes("OTP") || newLog.action.includes("AUTH"))) ||
+            (filter === "Financial" && (newLog.entity === "Financial" || newLog.entity === "Dispute" || newLog.action.includes("TRANSFER") || newLog.action.includes("PAYMENT") || newLog.action.includes("SETTLEMENT") || newLog.action.includes("CASH_IN") || newLog.action.includes("CASH_OUT"))) ||
+            (filter === "System" && (newLog.entity === "System" || newLog.entity === "Regulatory" || newLog.action.includes("AUDIT") || newLog.action.includes("REPORT")));
+
+          if (matchesFilter) {
+            setLogs(prevLogs => {
+              // Avoid duplicates (if polling and realtime overlap)
+              if (prevLogs.some(log => log.id === newLog.id)) return prevLogs;
+              return [newLog, ...prevLogs.slice(0, 49)];
+            });
+          }
+        });
+      } catch (err) {
+        console.error("[Realtime] Init failed:", err);
+      }
+    };
+
+    initRealtime();
+
+    return () => {
+      isMounted = false;
+      realtime.disconnect();
+    };
+  }, [filter]); // Re-bind listener when filter changes to ensure closure has correct filter value (though we check filter inside)
 
   const fetchLogs = async () => {
     setLoading(true);
@@ -96,7 +137,7 @@ export default function SecurityPage() {
     <div className="space-y-8">
       <div className="flex justify-between items-end">
         <div>
-          <h2 className="text-3xl font-bold text-slate-800">Security & Compliance</h2>
+          <h2 className="text-xl font-bold text-slate-800">Security & Compliance</h2>
           <p className="text-slate-600">Forensic audit logs and regulatory reporting tools.</p>
         </div>
         <div className="flex gap-3">
@@ -232,20 +273,21 @@ export default function SecurityPage() {
                     log.action.includes('AUDIT') || log.action.includes('REPORT') ? 'bg-green-100 text-green-600' :
                     'bg-slate-100 text-slate-600'
                   }`}>
-                    {log.user?.name?.[0] || 'S'}
+                    {log.user?.firstName?.[0] || log.user?.name?.[0] || 'S'}
                   </div>
                 </div>
                 <div className="col-span-3">
                   <p className="text-sm font-bold text-slate-800">{log.action}</p>
-                  <p className="text-[10px] text-slate-400 font-medium">{log.user?.name || 'System'}</p>
+                  <p className="text-[10px] text-slate-400 font-medium">
+                    {log.user ? `${log.user.firstName || ''} ${log.user.lastName || ''}`.trim() || log.user.name || log.user.email : 'System'}
+                  </p>
                 </div>
                 <div className="col-span-4">
                   <p className="text-[10px] text-slate-500 font-mono truncate">{log.entity}: {log.entityId}</p>
                   <p className="text-[9px] text-slate-400">{log.ipAddress || 'Internal'}</p>
                 </div>
                 <div className="col-span-3 text-right">
-                  <p className="text-[10px] text-slate-400 font-bold uppercase">{new Date(log.createdAt).toLocaleDateString()}</p>
-                  <p className="text-[10px] text-slate-400">{new Date(log.createdAt).toLocaleTimeString()}</p>
+                  <p className="text-[10px] text-slate-400 font-bold uppercase">{formatManilaTime(log.createdAt)}</p>
                 </div>
                 <div className="col-span-1 text-right">
                   <button className="p-1.5 hover:bg-slate-200 rounded-md transition-colors text-slate-400">
