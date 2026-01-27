@@ -8,7 +8,12 @@ const prisma =
 
 if (process.env.NODE_ENV !== 'production') globalForPrisma.prisma = prisma;
 
+const auth = require('./auth');
+const rbac = require('./rbac-config');
+
 module.exports = {
   prisma,
-  PrismaClient
+  PrismaClient,
+  ...auth,
+  ...rbac
 };
