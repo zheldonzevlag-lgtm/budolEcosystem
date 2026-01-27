@@ -1,0 +1,105 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Developer Manual - v389</title>
+    <style>
+        body { font-family: sans-serif; line-height: 1.6; color: #333; max-width: 1000px; margin: 0 auto; padding: 40px; background: #f8fafc; }
+        .code-block { background: #1e293b; color: #f8f8f2; padding: 20px; border-radius: 8px; overflow-x: auto; margin: 20px 0; font-family: 'Consolas', monospace; }
+        .file-link { color: #f43f5e; font-weight: bold; text-decoration: none; }
+        .file-link:hover { text-decoration: underline; }
+        h1, h2, h3 { color: #0f172a; }
+        .compliance { background: #e0f2fe; padding: 15px; border-left: 5px solid #0ea5e9; margin: 20px 0; }
+    </style>
+</head>
+<body>
+    <a href="index.html">← Back to Index</a>
+    <h1>Developer Manual - v389</h1>
+    
+    <h2>1. Technical Explanation: Face Login UX Refinement</h2>
+    <p>The core change in v389 is the introduction of a confirmation dialog within <code>_handleFaceRecognitionLogin</code> when a custom face template is missing. This prevents unexpected redirects to native Face ID and aligns with user expectations.</p>
+    
+    <h3>Key Logic Change</h3>
+    <p>File: <a class="file-link" href="file:///d:/IT%20Projects/budolEcosystem/budolPayMobile/lib/screens/login_screen.dart">login_screen.dart</a></p>
+    <div class="code-block">
+<pre>
+// v389 Refined Logic with Confirmation Dialog
+Future&lt;void&gt; _handleFaceRecognitionLogin() async {
+  // 1. Check for stored custom template first
+  final storedTemplate = await biometricService.getStoredFaceTemplate();
+  
+  // 2. If no custom template, handle fallback with user choice
+  if (storedTemplate == null) {
+    final hasNativeFace = await biometricService.hasEnrolledFace();
+    if (hasNativeFace) {
+      if (mounted) {
+        final useNative = await showDialog&lt;bool&gt;(
+          context: context,
+          builder: (context) =&gt; AlertDialog(
+            title: const Text('Face Login'),
+            content: const Text('Your custom face profile was not found. Would you like to use your device\'s native Face ID instead?'),
+            actions: [
+              TextButton(
+                onPressed: () =&gt; Navigator.pop(context, false),
+                child: const Text('Cancel'),
+              ),
+              ElevatedButton(
+                onPressed: () =&gt; Navigator.pop(context, true),
+                child: const Text('Use Native Face ID'),
+              ),
+            ],
+          ),
+        );
+        
+        if (useNative == true) {
+          return _handleBiometricLogin();
+        }
+        return;
+      }
+    }
+    _showError('No face profile found. Please re-enable face login in Settings.');
+    return;
+  }
+}
+</pre>
+    </div>
+
+    <h2>2. Version Synchronization</h2>
+    <p>File: <a class="file-link" href="file:///d:/IT%20Projects/budolEcosystem/budolPayMobile/pubspec.yaml">pubspec.yaml</a></p>
+    <div class="code-block">
+<pre>
+version: 1.2.86+86
+</pre>
+    </div>
+    <p>File: <a class="file-link" href="file:///d:/IT%20Projects/budolEcosystem/budolPayMobile/lib/services/api_service.dart">api_service.dart</a></p>
+    <div class="code-block">
+<pre>
+String _appVersion = '1.2.86'; // Custom Face Login Prioritization Fix
+</pre>
+    </div>
+
+    <h2>3. Dependencies</h2>
+    <ul>
+        <li><code>google_mlkit_face_detection</code>: Used for liveness and bounding box detection.</li>
+        <li><code>FaceEmbeddingService</code>: Custom service for TFLite inference.</li>
+        <li><code>BiometricService</code>: Handles secure storage of templates and native auth fallbacks.</li>
+    </ul>
+
+    <div class="compliance">
+        <h2>3. Compliance & Security</h2>
+        <ul>
+            <li><strong>NPC Data Privacy Act:</strong> Biometric templates are stored locally in Encrypted Shared Preferences (Android) / Keychain (iOS) via <code>flutter_secure_storage</code>. No biometric data is sent to the server.</li>
+            <li><strong>BSP Circular 808:</strong> Implementation of strong authentication for mobile payments.</li>
+            <li><strong>Liveness Detection:</strong> Uses ML Kit to check eye-opening and smile probabilities to prevent spoofing with photos.</li>
+        </ul>
+    </div>
+
+    <h2>4. Testing Procedures</h2>
+    <p>Verification script: <code>\budolEcosystem\scripts\test_scripts\verify_face_login_flow.ps1</code></p>
+    <ul>
+        <li>Test Case 1: Custom face registered -> Tap Face icon -> Camera should open.</li>
+        <li>Test Case 2: No custom face, native Face ID enrolled -> Tap Face icon -> Native biometric prompt should show.</li>
+        <li>Test Case 3: No face at all -> Tap Face icon -> Error "No face profile found" should show.</li>
+    </ul>
+</body>
+</html>

@@ -1,0 +1,80 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Developer Manual - budolEcosystem v98</title>
+    <style>
+        body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; line-height: 1.6; color: #333; max-width: 800px; margin: 0 auto; padding: 20px; background-color: #f4f7f6; }
+        header { background: #2c3e50; color: white; padding: 1.5rem; border-radius: 8px; margin-bottom: 2rem; }
+        h1, h2, h3 { color: #2c3e50; }
+        header h1 { color: white; margin: 0; }
+        code { background: #e0e0e0; padding: 2px 5px; border-radius: 4px; font-family: "SFMono-Regular", Consolas, "Liberation Mono", Menlo, monospace; }
+        pre { background: #2d3436; color: #dfe6e9; padding: 1rem; border-radius: 8px; overflow-x: auto; }
+        .success { color: #27ae60; font-weight: bold; }
+        .back-link { display: inline-block; margin-bottom: 1rem; color: #3498db; text-decoration: none; }
+        .back-link:hover { text-decoration: underline; }
+    </style>
+</head>
+<body>
+    <a href="../index.html" class="back-link">← Back to Index</a>
+    <header>
+        <h1>Developer Manual</h1>
+        <p>Centralized Transaction Logging Logic</p>
+    </header>
+
+    <main>
+        <section>
+            <h2>Architecture Overview</h2>
+            <p>The <code>budolPay Admin</code> application serves as the central source of truth for all financial transactions in the ecosystem. It achieves this by reading directly from the <code>Transaction</code> table in the shared <code>budolpay_db</code>.</p>
+        </section>
+
+        <section>
+            <h2>Data Flow</h2>
+            <h3>1. Intent Logging</h3>
+            <p>Every time a checkout is initiated (via PayMongo, BudolPay, etc.), the <code>payment-gateway-service</code> creates a <code>PENDING</code> record in the <code>Transaction</code> table.</p>
+            <pre><code>// payment-gateway-service/index.js
+const transaction = await prisma.transaction.create({
+  data: {
+    amount: parseFloat(amount),
+    type: 'MERCHANT_PAYMENT',
+    status: 'PENDING',
+    referenceId: `INTENT-${Date.now()}`,
+    metadata: JSON.stringify(metadata)
+  }
+});</code></pre>
+
+            <h3>2. Webhook Updates</h3>
+            <p>Regardless of the provider, all completion signals (webhooks) are routed through the gateway, which updates the record to <code>COMPLETED</code>.</p>
+            <pre><code>// Webhook handler in Gateway
+const transaction = await prisma.transaction.update({
+  where: { referenceId: referenceId },
+  data: { 
+    status: 'COMPLETED',
+    completedAt: new Date()
+  }
+});</code></pre>
+
+            <h3>3. Admin Display</h3>
+            <p>The <code>budolPay Admin</code> fetches these records using a standardized API route that filters by status, type, and date.</p>
+            <pre><code>// apps/admin/app/api/transactions/route.ts
+const transactions = await prisma.transaction.findMany({
+  where,
+  orderBy: { createdAt: "desc" },
+  include: { sender: true, receiver: true }
+});</code></pre>
+        </section>
+
+        <section>
+            <h2>Verification</h2>
+            <p class="success">✅ All PayMongo intents are logged before redirection.</p>
+            <p class="success">✅ All internal BudolPay wallet payments are logged.</p>
+            <p class="success">✅ Transaction history in Admin app reflects real-time status updates from webhooks.</p>
+        </section>
+    </main>
+
+    <footer style="margin-top: 2rem; border-top: 1px solid #ddd; padding-top: 1rem; color: #7f8c8d;">
+        <p>&copy; 2026 budolEcosystem Team</p>
+    </footer>
+</body>
+</html>

@@ -1,0 +1,207 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Implementation Plan - v322 - Biometric Login Strategy (Open-Source First)</title>
+    <style>
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; line-height: 1.6; color: #333; max-width: 1000px; margin: 0 auto; padding: 40px; background-color: #f8fafc; }
+        header { border-bottom: 2px solid #F43F5E; margin-bottom: 30px; padding-bottom: 20px; }
+        h1, h2, h3 { color: #1e293b; }
+        h1 { color: #F43F5E; font-size: 2.4rem; margin-bottom: 10px; }
+        h2 { border-left: 5px solid #F43F5E; padding-left: 15px; margin-top: 38px; }
+        h3 { margin-top: 22px; }
+        code { background: #e2e8f0; padding: 2px 5px; border-radius: 4px; font-family: 'Consolas', monospace; font-size: 0.9em; }
+        pre { background: #1e293b; color: #f8fafc; padding: 16px; border-radius: 8px; overflow-x: auto; font-family: 'Consolas', monospace; line-height: 1.4; }
+        .nav { margin-bottom: 22px; display: flex; gap: 12px; flex-wrap: wrap; }
+        .nav a { text-decoration: none; color: #F43F5E; font-weight: bold; padding: 8px 14px; border: 1px solid #F43F5E; border-radius: 6px; }
+        .section { background: #fff; padding: 22px; border-radius: 12px; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.08); margin-bottom: 18px; }
+        .tag { display: inline-block; background: #fee2e2; color: #991b1b; padding: 2px 10px; border-radius: 999px; font-size: 0.8rem; font-weight: 700; text-transform: uppercase; margin-bottom: 10px; }
+        table { width: 100%; border-collapse: collapse; margin-top: 10px; }
+        th, td { border: 1px solid #e2e8f0; padding: 10px; text-align: left; vertical-align: top; }
+        th { background: #f8fafc; }
+        .note { background: #fff7ed; border-left: 5px solid #f59e0b; padding: 12px 14px; border-radius: 10px; }
+        .ok { background: #ecfdf5; border-left: 5px solid #10b981; padding: 12px 14px; border-radius: 10px; }
+        ul { margin: 0; padding-left: 18px; }
+        ol { margin: 0; padding-left: 18px; }
+    </style>
+</head>
+<body>
+    <div class="nav">
+        <a href="../index.html">Main Index</a>
+        <a href="../../budolecosystem_docs_2026-01-11_v321/index.html">Previous (v321)</a>
+        <a href="../../index.html">Next (Latest)</a>
+    </div>
+
+    <header>
+        <span class="tag">Version 322</span>
+        <h1>Biometric Login Implementation Plan & Strategy</h1>
+        <p>Phase-by-phase plan to implement biometric login using OS biometrics (open-source first) while maintaining PCI DSS, BSP, BIR, NPC, DTI, and cybersecurity best practices.</p>
+    </header>
+
+    <div class="section">
+        <h2>Purpose</h2>
+        <p>To define a phased, executable strategy for enabling biometric login in budolPay Mobile in a way that is secure, compliant, testable, and maintainable.</p>
+    </div>
+
+    <div class="section">
+        <h2>Key Clarification: “Capture fingerprint” vs OS biometric verification</h2>
+        <div class="note">
+            <strong>Important:</strong> Standard Android/iOS apps cannot access or “capture” raw fingerprint images/templates. The OS biometric subsystem (Android BiometricPrompt / iOS LocalAuthentication) only returns a yes/no result and never exposes biometric data to apps.
+        </div>
+        <p>Given financial compliance and modern mobile OS security models, the correct approach is to use OS biometrics for <strong>user verification</strong>, then unlock a device-bound secret (token/PIN surrogate) stored in the secure enclave/keystore.</p>
+        <p>If you truly need raw fingerprint capture, it requires external fingerprint hardware and a vendor SDK, and it significantly increases privacy and regulatory risk under NPC. This plan focuses on OS biometrics (recommended).</p>
+    </div>
+
+    <div class="section">
+        <h2>Current Baseline (Already Present in Codebase)</h2>
+        <ul>
+            <li>Biometric service wrapper: <a href="file:///d:/IT%20Projects/budolEcosystem/budolPayMobile/lib/services/biometric_service.dart">biometric_service.dart</a></li>
+            <li>PIN-step biometric trigger and enable dialog: <a href="file:///d:/IT%20Projects/budolEcosystem/budolPayMobile/lib/screens/login_screen.dart">login_screen.dart</a></li>
+            <li>Settings toggle (enable flag + clear stored PIN on disable): <a href="file:///d:/IT%20Projects/budolEcosystem/budolPayMobile/lib/screens/settings_screen.dart">settings_screen.dart</a></li>
+            <li>E2E checklist script: <a href="file:///d:/IT%20Projects/budolEcosystem/scripts/test_scripts/test_biometric_login.dart">test_biometric_login.dart</a></li>
+        </ul>
+        <div class="ok">
+            <strong>Status:</strong> Biometric login currently uses OS biometrics plus secure storage to retrieve a stored PIN. The following phases strengthen security, reduce risk, and improve operational behavior.
+        </div>
+    </div>
+
+    <div class="section">
+        <h2>Strategy Overview</h2>
+        <table>
+            <tr>
+                <th>Track</th>
+                <th>Open-source approach</th>
+                <th>Primary goal</th>
+            </tr>
+            <tr>
+                <td>Track A: OS biometrics + secure storage</td>
+                <td><code>local_auth</code> + <code>flutter_secure_storage</code></td>
+                <td>Fast login by unlocking a device-bound secret after biometric verification</td>
+            </tr>
+            <tr>
+                <td>Track B: Passwordless (FIDO2/Passkeys)</td>
+                <td>Passkeys / WebAuthn (client + server challenge flow)</td>
+                <td>Eliminate stored PIN reuse risk and improve phishing resistance</td>
+            </tr>
+        </table>
+        <p>This plan implements Track A first (fastest, least intrusive), then evolves toward Track B for higher assurance.</p>
+    </div>
+
+    <div class="section">
+        <h2>Phased Implementation Plan</h2>
+
+        <h3>Phase 1 — Security Model Hardening (No raw PIN-at-rest)</h3>
+        <p><strong>Goal:</strong> Replace “store raw PIN for biometric login” with a biometric-unlocked session secret while keeping PIN as fallback.</p>
+        <p><strong>Approach:</strong> After successful manual OTP+PIN login, request a backend-issued <strong>device-bound refresh token</strong> (or a biometric login token) and store it in secure storage. On biometric login, exchange the token for a session without ever storing the PIN.</p>
+        <p><strong>Dependencies:</strong> Gateway/auth-service endpoint for token issuance & exchange, device binding identifier, secure storage, OS biometrics.</p>
+
+        <p><strong>Entry criteria:</strong> Existing biometric flow is working (v319) and stable.</p>
+        <p><strong>Exit criteria:</strong> Biometric login works without storing a raw PIN in secure storage.</p>
+
+        <h3>Phase 2 — Backend Device Binding & Policy Controls</h3>
+        <p><strong>Goal:</strong> Make biometric login enforceable and auditable.</p>
+        <ul>
+            <li>Introduce per-device binding: userId + deviceId + public metadata (model/OS) + token.</li>
+            <li>Introduce global policy flags (enable/disable biometrics, max attempts, forced fallback).</li>
+            <li>Add server-side monitoring and anomaly detection hooks (failed biometric exchanges, token reuse).</li>
+        </ul>
+        <p><strong>Compliance alignment:</strong> Supports PCI DSS access controls, supports audit evidence for BSP/NPC incident analysis.</p>
+
+        <h3>Phase 3 — UX & Reliability Improvements</h3>
+        <p><strong>Goal:</strong> Reduce user support tickets and improve deterministic behavior across devices.</p>
+        <ul>
+            <li>Expose a “Biometric status” screen: supported, enrolled, enabled, token present.</li>
+            <li>Clear, localized user messaging when biometrics are unavailable (not enrolled / no screen lock).</li>
+            <li>Implement timeout rules (require biometric re-auth after background idle).</li>
+        </ul>
+        <p><strong>Exit criteria:</strong> Support can diagnose 90% of biometric issues using in-app status + logs (without collecting secrets).</p>
+
+        <h3>Phase 4 — High Assurance Path (Open Standards: Passkeys / FIDO2)</h3>
+        <p><strong>Goal:</strong> Move toward passwordless authentication using device biometrics as the local user verification for key operations.</p>
+        <ul>
+            <li>Implement WebAuthn/FIDO2 challenge-response with server stored public keys.</li>
+            <li>Allow passkey registration after successful OTP+PIN login.</li>
+            <li>Biometric unlock triggers signing, not secret retrieval.</li>
+        </ul>
+        <p><strong>Risk reduction:</strong> Removes reliance on PIN reuse and reduces phishing susceptibility.</p>
+    </div>
+
+    <div class="section">
+        <h2>Issues, Fixes, Risks, and Mitigations</h2>
+        <table>
+            <tr>
+                <th>Item</th>
+                <th>Risk/Issue</th>
+                <th>Mitigation/Fix</th>
+            </tr>
+            <tr>
+                <td>Raw fingerprint capture</td>
+                <td>Not supported by OS APIs; privacy/regulatory exposure under NPC</td>
+                <td>Use OS biometric verification only; do not store/process biometric templates</td>
+            </tr>
+            <tr>
+                <td>Storing raw PIN</td>
+                <td>Increases blast radius if device is compromised</td>
+                <td>Phase 1 shifts to biometric-unlocked refresh token instead of PIN</td>
+            </tr>
+            <tr>
+                <td>Biometric enrollment variability</td>
+                <td>Users expect it to work without enrollment</td>
+                <td>Phase 3 adds status screen and clear user messages</td>
+            </tr>
+            <tr>
+                <td>Replay of token</td>
+                <td>Stolen token could be abused</td>
+                <td>Phase 2 device binding + rotation + server-side anomaly detection</td>
+            </tr>
+        </table>
+    </div>
+
+    <div class="section">
+        <h2>Testing Protocol (Quality Gates Per Phase)</h2>
+        <h3>Unit tests</h3>
+        <ul>
+            <li>Biometric availability and enabled flag logic</li>
+            <li>Secure storage read/write/delete behaviors (mocked)</li>
+        </ul>
+
+        <h3>Integration tests</h3>
+        <ul>
+            <li>Token exchange endpoints (Phase 1/2)</li>
+            <li>Device binding enforcement and failure modes</li>
+        </ul>
+
+        <h3>End-to-end tests</h3>
+        <p>Use the existing checklist script (manual E2E):</p>
+        <pre><code>cd \budolEcosystem
+dart run scripts\test_scripts\test_biometric_login.dart
+</code></pre>
+        <p><strong>Acceptance criteria:</strong> biometric login works without exposing secrets; fallback PIN login always works; disabling biometrics revokes stored materials.</p>
+    </div>
+
+    <div class="section">
+        <h2>Rollback Strategy</h2>
+        <ul>
+            <li>Phase 1: keep PIN login intact; if token exchange fails, disable biometric token usage and fall back to PIN.</li>
+            <li>Phase 2: server-side policy flag to disable biometric login instantly (feature kill switch).</li>
+            <li>Phase 3: UX-only; safe to roll back via feature flags.</li>
+            <li>Phase 4: introduce as opt-in; retain OTP+PIN as fallback for account recovery.</li>
+        </ul>
+    </div>
+
+    <div class="section">
+        <h2>Recommendations for Future Enhancement (Consolidated)</h2>
+        <ul>
+            <li>Adopt token-based biometric login (no PIN storage) as the default security model.</li>
+            <li>Add in-app biometric diagnostics for support (no secrets, no biometric data).</li>
+            <li>Implement passkeys (WebAuthn/FIDO2) for high assurance, phishing-resistant authentication.</li>
+            <li>Centralize policy controls (disable biometrics globally, max attempts, forced re-auth intervals).</li>
+        </ul>
+    </div>
+
+    <div class="nav">
+        <a href="../index.html">Back: Documentation Home →</a>
+    </div>
+</body>
+</html>

@@ -1,0 +1,72 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Developer Manual - v141</title>
+    <style>
+        body { font-family: system-ui, sans-serif; line-height: 1.6; max-width: 800px; margin: 0 auto; padding: 40px; color: #1e293b; }
+        code { background: #f1f5f9; padding: 2px 4px; border-radius: 4px; font-family: monospace; }
+        pre { background: #1e293b; color: #f8fafc; padding: 20px; border-radius: 8px; overflow-x: auto; }
+        .success { color: #059669; font-weight: bold; }
+    </style>
+</head>
+<body>
+    <a href="../index.html">← Back to v141 Index</a>
+    <h1>Developer Manual: Environment Isolation & SSO Fixes</h1>
+
+    <h2>1. Purpose</h2>
+    <p>To ensure that all services in the ecosystem can connect to their respective databases without interference from the central runner's environment variables.</p>
+
+    <h2>2. Technical Details & Code Logic</h2>
+    <h3>Database Password Synchronization</h3>
+    <p>We identified a mismatch where some services expected <code>postgres</code> as the password, while the local environment actually requires <code>r00t</code>. We synchronized the following files:</p>
+    <ul>
+        <li><code>budolID-0.1.0/.env.connection.local</code></li>
+        <li><code>budolAccounting-0.1.0/.env.connection.local</code></li>
+        <li><code>budolpay-0.1.0/.env.connection.local</code></li>
+    </ul>
+
+    <h3>Refined Environment Isolation</h3>
+    <p>The <code>start-ecosystem.js</code> script now uses a "Clean Spawn" strategy:</p>
+    <pre><code>// start-ecosystem.js
+const cleanEnv = { ...process.env };
+delete cleanEnv.DATABASE_URL;
+delete cleanEnv.NODE_ENV;
+delete cleanEnv.VERCEL;
+delete cleanEnv.PORT;
+
+const env = { 
+    ...cleanEnv, 
+    PORT: app.port.toString(),
+    LOCAL_IP: localIP,
+    // ... global service URLs
+};
+
+spawn(app.command, app.args, { cwd: app.cwd, shell: true, env });</code></pre>
+
+    <h2>3. Issues & Fixes</h2>
+    <table border="1" cellpadding="10" style="width: 100%; border-collapse: collapse;">
+        <tr>
+            <th>Issue</th>
+            <th>Fix</th>
+            <th>Reason</th>
+        </tr>
+        <tr>
+            <td>Authentication failed (Local DB)</td>
+            <td>Changed password to <code>r00t</code></td>
+            <td>Local Postgres instance was configured with <code>r00t</code> password.</td>
+        </tr>
+        <tr>
+            <td>Prisma Protocol Error</td>
+            <td>Environment Isolation</td>
+            <td>Parent <code>process.env</code> was overriding child <code>.env</code> with empty/invalid strings.</td>
+        </tr>
+    </table>
+
+    <h2>4. Test Results</h2>
+    <ul>
+        <li><span class="success">Verified:</span> <code>budolID</code> successfully connects to local DB with <code>r00t</code> password.</li>
+        <li><span class="success">Verified:</span> SSO Login API responds correctly without initialization errors.</li>
+    </ul>
+</body>
+</html>

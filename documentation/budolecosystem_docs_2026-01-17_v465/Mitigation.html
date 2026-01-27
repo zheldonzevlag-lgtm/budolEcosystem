@@ -1,0 +1,40 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Mitigation Strategy v465</title>
+    <style>
+        body { font-family: sans-serif; padding: 20px; line-height: 1.6; }
+        .mitigation-card { border: 1px solid #ddd; padding: 15px; margin-bottom: 15px; border-radius: 8px; }
+        .mitigation-card h3 { margin-top: 0; color: #F43F5E; }
+    </style>
+</head>
+<body>
+    <h1>v465 Mitigation Report</h1>
+    
+    <div class="mitigation-card">
+        <h3>1. Encrypted Storage (PCI DSS Requirement 3)</h3>
+        <p><strong>Risk:</strong> Unauthorized access to JWT tokens from device backups or physical access.</p>
+        <p><strong>Mitigation:</strong> Implementation of <code>FlutterSecureStorage</code>. On Android, this uses the <code>KeyStore</code> system with AES-256 encryption. On iOS, it uses the <code>Keychain</code>. This ensures tokens are never stored in plaintext.</p>
+    </div>
+
+    <div class="mitigation-card">
+        <h3>2. Session Locking (BSP Circular 808)</h3>
+        <p><strong>Risk:</strong> Session exposure during app switching or backgrounding.</p>
+        <p><strong>Mitigation:</strong> <code>SessionService</code> monitors <code>AppLifecycleState</code>. Any transition to background for >30 seconds triggers an <code>isLocked</code> state, requiring biometric verification to resume.</p>
+    </div>
+
+    <div class="mitigation-card">
+        <h3>3. Anti-Screen Capture (NPC Compliance)</h3>
+        <p><strong>Risk:</strong> Sensitive financial data capture via malicious screen recording apps.</p>
+        <p><strong>Mitigation:</strong> Programmatic addition of <code>FLAG_SECURE</code> to the window layout. This is enforced globally via the <code>SessionService</code> during initialization.</p>
+    </div>
+
+    <div class="mitigation-card">
+        <h3>4. Inactivity Cleanup</h3>
+        <p><strong>Risk:</strong> Long-lived sessions on shared or unattended devices.</p>
+        <p><strong>Mitigation:</strong> Global <code>Timer</code> in <code>SessionService</code>, reset by a <code>Listener</code> in <code>SessionOverlay</code> that wraps the entire app. 5 minutes of no touch interaction triggers <code>apiService.logout()</code>.</p>
+    </div>
+</body>
+</html>

@@ -1,0 +1,100 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Developer Manual - v501</title>
+    <style>
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; line-height: 1.6; color: #333; max-width: 1200px; margin: 0 auto; padding: 20px; background-color: #f4f7f6; }
+        .sidebar { position: fixed; width: 250px; height: 100%; background: #0052cc; color: white; padding: 20px; left: 0; top: 0; }
+        .content { margin-left: 280px; background: white; padding: 40px; border-radius: 8px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); }
+        h1, h2 { color: #0052cc; }
+        pre { background: #1e1e1e; color: #d4d4d4; padding: 20px; border-radius: 8px; overflow-x: auto; border-left: 5px solid #0052cc; }
+        code { font-family: 'Consolas', 'Monaco', monospace; }
+        .file-link { color: #0052cc; text-decoration: none; font-weight: bold; }
+        .file-link:hover { text-decoration: underline; }
+    </style>
+</head>
+<body>
+    <div class="content">
+        <h1>Developer Manual - v501</h1>
+        
+        <h2>Objective</h2>
+        <p>Eliminate the 1-minute latency between status updates in external services (Lalamove, PayMongo) and the user interface.</p>
+
+        <h2>Technical Implementation Details</h2>
+        
+        <h3>1. Real-time Trigger Optimization</h3>
+        <p>Modified <a href="file:///D:/IT%20Projects/budolEcosystem/budolshap-0.1.0/lib/realtime.js" class="file-link">realtime.js</a> to improve connection efficiency and settings retrieval.</p>
+        <pre><code>// Singleton pattern for Pusher to avoid re-initializing on every request
+function getPusher(settings) {
+    const configFingerprint = `${settings.pusherAppId}:${settings.pusherKey}:${settings.pusherCluster}`;
+    if (pusherInstance && lastPusherConfig === configFingerprint) {
+        return pusherInstance;
+    }
+    pusherInstance = new Pusher({...});
+    return pusherInstance;
+}
+
+// Reduced cache TTL from 60s to 10s
+if (settingsCache && (now - lastFetch < 10000)) {
+    return settingsCache;
+}</code></pre>
+
+        <h3>2. Parallel Event Dispatching</h3>
+        <p>Refactored webhook handlers to dispatch events in parallel using <code>Promise.all</code>.</p>
+        <p>Referenced Files:</p>
+        <ul>
+            <li><a href="file:///D:/IT%20Projects/budolEcosystem/budolshap-0.1.0/app/api/webhooks/lalamove/route.js" class="file-link">Lalamove Webhook Handler</a></li>
+            <li><a href="file:///D:/IT%20Projects/budolEcosystem/budolshap-0.1.0/app/api/webhooks/paymongo/route.js" class="file-link">PayMongo Webhook Handler</a></li>
+            <li><a href="file:///D:/IT%20Projects/budolEcosystem/budolshap-0.1.0/app/api/webhooks/budolpay/route.js" class="file-link">BudolPay Webhook Handler</a></li>
+        </ul>
+        <pre><code>// Example from Lalamove Webhook
+await Promise.all([
+    triggerRealtimeEvent(`store-${order.storeId}`, 'order-updated', eventData),
+    triggerRealtimeEvent(`user-${order.userId}`, 'order-updated', eventData)
+]);</code></pre>
+
+        <h3>3. Cache Invalidation & Provider-Agnostic Hooks</h3>
+        <p>Added <code>clearSettingsCache</code> to <a href="file:///D:/IT%20Projects/budolEcosystem/budolshap-0.1.0/app/api/system/realtime/route.js" class="file-link">realtime config API</a> and refactored hooks to be provider-agnostic.</p>
+        <pre><code>// useRealtimeOrders.js
+// Provider-agnostic check: if no provider is set or set to POLLING, use SWR polling
+const provider = config?.provider || config?.realtimeProvider || 'POLLING';
+const isPolling = provider === 'POLLING';
+
+// 2. Main Orders Fetching with SWR
+const { data, error, mutate, isLoading } = useSWR(ordersUrl, fetcher, {
+    refreshInterval: isPolling ? 5000 : 0,
+    fallbackData: initialData
+});</code></pre>
+
+        <p>Referenced Hooks:</p>
+        <ul>
+            <li><a href="file:///D:/IT%20Projects/budolEcosystem/budolshap-0.1.0/hooks/useRealtimeOrders.js" class="file-link">useRealtimeOrders.js</a></li>
+            <li><a href="file:///D:/IT%20Projects/budolEcosystem/budolshap-0.1.0/hooks/useRealtimeBuyerOrders.js" class="file-link">useRealtimeBuyerOrders.js</a></li>
+            <li><a href="file:///D:/IT%20Projects/budolEcosystem/budolshap-0.1.0/components/RealtimeProvider.jsx" class="file-link">RealtimeProvider.jsx</a></li>
+        </ul>
+
+        <h2>Dependencies</h2>
+        <ul>
+            <li><strong>Pusher SDK:</strong> Used for WebSocket management. Chosen for reliability and global low-latency.</li>
+            <li><strong>Prisma ORM:</strong> Used for database operations. Chosen for type safety and efficient querying.</li>
+        </ul>
+
+        <h2>Compliance</h2>
+        <p>The real-time synchronization logic adheres to the following regulatory standards:</p>
+        <ul>
+            <li><strong>PCI DSS:</strong> Secure handling of payment status webhooks from PayMongo.</li>
+            <li><strong>BSP (Bangko Sentral ng Pilipinas):</strong> Real-time reporting of transaction statuses for financial transparency.</li>
+            <li><strong>BIR:</strong> Accurate timestamping of order fulfillment (Delivered status) for tax compliance.</li>
+            <li><strong>NPC (Data Privacy Act):</strong> Masking of sensitive user data in real-time payloads.</li>
+            <li><strong>DTI:</strong> Ensuring consumer protection through accurate delivery status tracking.</li>
+            <li><strong>Cybersecurity Law:</strong> Implementation of secure WebSocket (WSS) and signature verification for all webhooks.</li>
+        </ul>
+
+        <div style="margin-top: 40px;">
+            <a href="index.html">Back to Index</a>
+        </div>
+    </div>
+</body>
+</html>

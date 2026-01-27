@@ -1,0 +1,106 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>System Admin Manual - v211 - budolEcosystem</title>
+    <style>
+        body { font-family: 'Inter', -apple-system, sans-serif; line-height: 1.6; color: #334155; max-width: 1000px; margin: 0 auto; padding: 40px; background: #f1f5f9; }
+        .container { background: white; padding: 40px; border-radius: 12px; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.1); border: 1px solid #e2e8f0; }
+        h1, h2, h3 { color: #0f172a; border-bottom: 2px solid #e2e8f0; padding-bottom: 8px; margin-top: 30px; }
+        .section { margin-bottom: 30px; }
+        .label { font-weight: bold; color: #0891b2; text-transform: uppercase; font-size: 0.85rem; display: block; margin-bottom: 5px; }
+        .admin-note { background: #fff7ed; border-left: 4px solid #f97316; padding: 15px; border-radius: 4px; margin: 20px 0; }
+        .nav-links { display: flex; justify-content: space-between; margin-bottom: 30px; font-size: 0.9rem; }
+        .nav-links a { color: #0891b2; text-decoration: none; font-weight: 600; }
+    </style>
+</head>
+<body>
+    <div class="nav-links">
+        <a href="../index.html">← v211 Index</a>
+        <div>
+            <a href="../../budolecosystem_docs_2026-01-05_v210/index.html">Previous (v210)</a> | 
+            <span>Next: None</span>
+        </div>
+    </div>
+
+    <div class="container">
+        <h1>System Admin Manual: Auth Service Infrastructure</h1>
+
+        <div class="section">
+            <span class="label">Purpose</span>
+            <p>To provide operational guidelines for managing the upgraded GoTyme-aligned <code>auth-service</code>, including database schema changes and environment configuration.</p>
+        </div>
+
+        <div class="section">
+            <span class="label">Explanation</span>
+            <p>The <code>auth-service</code> now manages critical security metadata (PIN hashes, device trust lists). Admins must ensure high availability of the database to prevent login lockouts.</p>
+        </div>
+
+        <div class="section">
+            <span class="label">Reason</span>
+            <p>Correct infrastructure configuration is vital for maintaining "Bank-Grade" security. Misconfigured environment variables or exposed database ports could compromise user credentials.</p>
+        </div>
+
+        <div class="section">
+            <span class="label">Infrastructure Changes</span>
+            <ul>
+                <li><strong>Database:</strong> Prisma schema updated with <code>pinHash</code>, <code>trustedDevices</code>, and <code>biometricKeyId</code> fields.</li>
+                <li><strong>Environment Variables:</strong> Ensure <code>JWT_SECRET</code> and <code>DATABASE_URL</code> are securely managed in production (e.g., via HashiCorp Vault or Vercel Secrets).</li>
+            </ul>
+        </div>
+
+        <div class="section">
+            <span class="label">Operational Runbook</span>
+            <p><strong>Deployment Procedure:</strong></p>
+            <ol>
+                <li>Run <code>npx prisma generate</code> to update the client.</li>
+                <li>Run <code>npx prisma db push</code> to apply schema changes to the target DB.</li>
+                <li>Restart <code>auth-service</code> using <code>pm2 restart auth-service</code> or similar process manager.</li>
+            </ol>
+        </div>
+
+        <div class="section">
+            <span class="label">Issues & Fixes</span>
+            <p><strong>Issue:</strong> Database connection timeouts during high registration volume.<br>
+            <strong>Fix:</strong> Increase connection pool size in <code>DATABASE_URL</code> (e.g., <code>&connection_limit=20</code>).</p>
+        </div>
+
+        <div class="section">
+            <span class="label">Risk & Mitigation</span>
+            <p><strong>Risk:</strong> Exposure of <code>trustedDevices</code> JSON blob in logs.<br>
+            <strong>Mitigation:</strong> Ensure log sanitization filters are active for the <code>auth-service</code> output.</p>
+        </div>
+
+        <div class="section">
+            <span class="label">Dependencies</span>
+            <ul>
+                <li>PostgreSQL 14+ (Required for JSONB support).</li>
+                <li>Node.js 18+ LTS.</li>
+            </ul>
+        </div>
+
+        <div class="section">
+            <span class="label">Technical Details</span>
+            <p>The <code>trustedDevices</code> field is stored as a JSON string for flexibility. Admins can manually reset a user's trusted devices by clearing this field in the <code>User</code> table if a device is stolen.</p>
+        </div>
+
+        <div class="section">
+            <span class="label">Test Results</span>
+            <p>Verified that <code>prisma db push</code> successfully adds new columns without data loss for existing users.</p>
+        </div>
+
+        <div class="section">
+            <span class="label">Recommendation for Future Enhancement</span>
+            <p><strong>Purpose:</strong> Proactive security monitoring.<br>
+            <strong>Explanation:</strong> Implement real-time alerting for failed PIN attempts across multiple devices for a single account.<br>
+            <strong>Reason:</strong> Helps detect distributed brute-force attacks.<br>
+            <strong>Issues:</strong> High volume of false positives.<br>
+            <strong>Fixes:</strong> Use a threshold of 5 failed attempts within 10 minutes.<br>
+            <strong>Risk:</strong> Alert fatigue for admins.<br>
+            <strong>Mitigation:</strong> Route alerts to a dedicated security Slack channel.<br>
+            <strong>Dependencies:</strong> Redis for rate limiting/event counting.</p>
+        </div>
+    </div>
+</body>
+</html>

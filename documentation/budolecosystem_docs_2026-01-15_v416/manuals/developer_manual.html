@@ -1,0 +1,91 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Developer Manual - v416</title>
+    <style>
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; line-height: 1.6; padding: 40px; background: #f4f7f6; color: #333; }
+        .code-block { background: #2d2d2d; color: #f8f8f2; padding: 20px; border-radius: 12px; overflow-x: auto; margin: 20px 0; font-family: 'Consolas', monospace; }
+        .path-box { background: #e9ecef; padding: 10px; border-left: 5px solid #0747A6; margin-bottom: 10px; font-weight: bold; }
+        h2 { color: #0747A6; border-bottom: 2px solid #0747A6; padding-bottom: 10px; }
+        .file-link { color: #F43F5E; text-decoration: none; font-weight: bold; }
+        .file-link:hover { text-decoration: underline; }
+    </style>
+</head>
+<body>
+    <header>
+        <a href="../index.html" style="text-decoration: none; color: #0747A6;">← Back to v416 Overview</a>
+        <h2>Developer Manual: Modal Keyboard Responsiveness</h2>
+    </header>
+
+    <h3>1. Implementation Overview</h3>
+    <p>This update addresses the issue where the system keyboard overlaps modal dialogs (specifically the MPIN verification dialog in <code>SettingsScreen</code>), preventing users from clicking "Verify" or "Cancel" buttons. The fix involves wrapping the dialog content in a <code>SingleChildScrollView</code> and applying dynamic bottom padding based on <code>MediaQuery.of(context).viewInsets.bottom</code>.</p>
+
+    <h3>2. UI Code Changes</h3>
+    
+    <div class="path-box">File: budolPayMobile/lib/screens/settings_screen.dart</div>
+    <div class="code-block">
+<pre style="background-color: #2d2d2d; color: #f8f8f2; padding: 15px; border-radius: 5px;">
+// Updated _showPinDialog to handle keyboard insets
+builder: (context) => Dialog(
+  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+  child: SingleChildScrollView(
+    child: Padding(
+      padding: EdgeInsets.only(
+        top: 24,
+        left: 24,
+        right: 24,
+        bottom: 24 + MediaQuery.of(context).viewInsets.bottom,
+      ),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          // ... dialog content ...
+        ],
+      ),
+    ),
+  ),
+),
+</pre>
+    </div>
+
+    <h3>3. Key Technical Changes</h3>
+    <ul>
+        <li><strong>Dynamic Insets:</strong> Utilized <code>MediaQuery.of(context).viewInsets.bottom</code> to calculate the space occupied by the keyboard and adjust padding accordingly.</li>
+        <li><strong>Scrollable Content:</strong> Wrapped the dialog body in a <code>SingleChildScrollView</code> to ensure that if the content (including the keyboard offset) exceeds the screen height, the user can still scroll to access the action buttons.</li>
+        <li><strong>Constraint Management:</strong> Used <code>mainAxisSize: MainAxisSize.min</code> in the <code>Column</code> to maintain the compact look of the dialog when the keyboard is hidden.</li>
+    </ul>
+
+    <h3>4. Version Increment</h3>
+    <p>The application version has been incremented to <code>1.3.0</code>.</p>
+
+    <div class="path-box">File: budolPayMobile/pubspec.yaml</div>
+    <div class="code-block">
+<pre style="background-color: #2d2d2d; color: #f8f8f2; padding: 15px; border-radius: 5px;">
+version: 1.3.0+100
+</pre>
+    </div>
+
+    <h3>5. Phase 8: Dependencies and Software Choice</h3>
+    <p>The following software and dependencies were utilized in this version:</p>
+    <ul>
+        <li><strong>Flutter SDK:</strong> Chosen for its robust layout system and <code>MediaQuery</code> API which simplifies handling device-specific UI states like keyboard visibility.</li>
+        <li><strong>SingleChildScrollView:</strong> A critical widget for handling overflow in small viewports or when the effective viewport is reduced by the system keyboard.</li>
+        <li><strong>Dialog Widget:</strong> Used as the base for custom MPIN verification to maintain a consistent look and feel across the platform.</li>
+    </ul>
+
+    <h3>6. Compliance Verification</h3>
+    <p>This implementation adheres to the following standards:</p>
+    <ul>
+        <li><strong>Cybersecurity Law:</strong> Ensures that secure MPIN verification is accessible and usable, preventing security bypasses due to UI failures.</li>
+        <li><strong>NPC (National Privacy Commission):</strong> Maintains the integrity of the MPIN input process by ensuring the UI remains stable during sensitive data entry.</li>
+        <li><strong>PCI DSS:</strong> The MPIN input field remains masked and secure, even when the layout shifts for keyboard visibility.</li>
+    </ul>
+
+    <h3>7. Code Reference Links</h3>
+    <ul>
+        <li><strong>Settings Screen:</strong> <a class="file-link" href="file:///d:/IT Projects/budolEcosystem/budolPayMobile/lib/screens/settings_screen.dart">settings_screen.dart</a></li>
+        <li><strong>API Service:</strong> <a class="file-link" href="file:///d:/IT Projects/budolEcosystem/budolPayMobile/lib/services/api_service.dart">api_service.dart</a></li>
+    </ul>
+</body>
+</html>

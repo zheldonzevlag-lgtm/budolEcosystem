@@ -1,0 +1,46 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>v216 - Developer Manual</title>
+    <style>
+        body { font-family: sans-serif; line-height: 1.6; padding: 40px; color: #333; max-width: 900px; margin: 0 auto; }
+        code { background: #f1f1f1; padding: 2px 5px; border-radius: 3px; }
+        pre { background: #1e293b; color: #e2e8f0; padding: 20px; border-radius: 8px; overflow-x: auto; }
+        .back-link { margin-bottom: 20px; display: block; color: #4f46e5; text-decoration: none; }
+    </style>
+</head>
+<body>
+    <a href="../index.html" class="back-link">← Back to v216 Index</a>
+    <h1>Developer Manual: SSO User Sync</h1>
+    
+    <h2>Technical Details</h2>
+    <p>The synchronization process involves mapping user data from the application database (budolShap) to the central identity provider (budolID). In this ecosystem, <code>budolID</code> acts as the SSO gateway.</p>
+
+    <h3>Database Schema Mapping</h3>
+    <ul>
+        <li><strong>budolShap:</strong> Uses <code>password</code> field (hashed).</li>
+        <li><strong>budolID:</strong> Uses <code>passwordHash</code> field.</li>
+    </ul>
+
+    <h3>Sync Script (Node.js/Prisma)</h3>
+    <p>The script uses <code>upsert</code> to ensure the user is either created or updated with the correct hash.</p>
+    <pre><code>const user = await prisma.user.upsert({
+    where: { email: 'galvezjon59@gmail.com' },
+    update: { passwordHash: hashedPassword },
+    create: {
+        email: 'galvezjon59@gmail.com',
+        passwordHash: hashedPassword,
+        role: 'ADMIN',
+        isVerified: true
+    }
+});</code></pre>
+
+    <h2>Dependencies</h2>
+    <ul>
+        <li><code>@prisma/client</code>: For database operations.</li>
+        <li><code>bcryptjs</code>: For hashing passwords (10 salt rounds).</li>
+        <li><code>dotenv</code>: For environment configuration.</li>
+    </ul>
+</body>
+</html>

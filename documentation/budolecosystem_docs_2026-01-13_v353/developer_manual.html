@@ -1,0 +1,88 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Developer Manual - v353</title>
+    <style>
+        body { font-family: sans-serif; line-height: 1.6; padding: 20px; max-width: 1000px; margin: 0 auto; background: #f0f2f5; }
+        .code-block { background: #1e1e1e; color: #d4d4d4; padding: 15px; border-radius: 5px; overflow-x: auto; font-family: 'Consolas', monospace; margin: 10px 0; }
+        .file-link { color: #3b82f6; text-decoration: none; font-weight: bold; }
+        .file-link:hover { text-decoration: underline; }
+        h2 { border-bottom: 2px solid #ccc; padding-bottom: 10px; margin-top: 30px; }
+    </style>
+</head>
+<body>
+    <h1>Developer Manual - Version 1.2.63</h1>
+    <p><a href="index.html">Back to Index</a></p>
+
+    <h2>Technical Explanation</h2>
+    <p>The persistent black screen on Web was caused by a combination of factors:</p>
+    <ol>
+        <li>Residual <code>lucide_icons</code> dependency in <code>pubspec.yaml</code> causing potential font load failures on Web.</li>
+        <li>Missing <code>Material</code> context in the custom <code>builder</code> in <code>main.dart</code> for Web rendering.</li>
+        <li>Potential race conditions in <code>MarketingAdsScreen</code> timer during page transitions.</li>
+    </ol>
+
+    <h2>Code Changes</h2>
+
+    <h3>1. Main Entry Point</h3>
+    <p>File: <a class="file-link" href="file:///d:/IT Projects/budolEcosystem/budolPayMobile/lib/main.dart">lib/main.dart</a></p>
+    <div class="code-block">
+<pre>
+// Added Material wrapper and version overlay for debugging
+child: Material(
+  color: const Color(0xFF0F172A),
+  child: Stack(
+    children: [
+      child ?? const SplashScreen(),
+      if (kDebugMode)
+        Positioned(
+          top: 10, left: 10,
+          child: Text('v${apiService.appVersion}', style: TextStyle(color: Colors.white24, fontSize: 10)),
+        ),
+    ],
+  ),
+),
+</pre>
+    </div>
+
+    <h3>2. Marketing Ads Screen</h3>
+    <p>File: <a class="file-link" href="file:///d:/IT Projects/budolEcosystem/budolPayMobile/lib/screens/marketing_ads_screen.dart">lib/screens/marketing_ads_screen.dart</a></p>
+    <div class="code-block">
+<pre>
+// Added SafeArea and mounted checks
+@override
+Widget build(BuildContext context) {
+  debugPrint('MarketingAdsScreen: build context, page: $_currentPage');
+  return Scaffold(
+    backgroundColor: const Color(0xFF0F172A),
+    body: SafeArea(
+      child: Stack(
+        children: [
+          PageView.builder(
+            controller: _pageController,
+            onPageChanged: (index) {
+              if (mounted) setState(() { _currentPage = index; });
+            },
+            // ...
+          ),
+          // ...
+        ],
+      ),
+    ),
+  );
+}
+</pre>
+    </div>
+
+    <h3>3. Dependency Cleanup</h3>
+    <p>File: <a class="file-link" href="file:///d:/IT Projects/budolEcosystem/budolPayMobile/pubspec.yaml">pubspec.yaml</a></p>
+    <p>Removed <code>lucide_icons</code> to prevent font loading issues on Web.</p>
+
+    <h2>Build Information</h2>
+    <ul>
+        <li><strong>Web Build:</strong> <code>flutter build web --release --base-href /</code></li>
+        <li><strong>Android Build:</strong> <code>flutter build apk --release</code></li>
+    </ul>
+</body>
+</html>

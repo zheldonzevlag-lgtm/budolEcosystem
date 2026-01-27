@@ -1,0 +1,78 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Developer Manual - v396</title>
+    <style>
+        :root { --primary: #F43F5E; --bg: #0F172A; --card-bg: #1E293B; --text: #F8FAFC; }
+        body { font-family: 'Inter', sans-serif; background: var(--bg); color: var(--text); margin: 0; display: flex; }
+        .sidebar { width: 280px; background: var(--card-bg); height: 100vh; padding: 20px; border-right: 1px solid #334155; position: fixed; }
+        .main-content { margin-left: 320px; padding: 40px; max-width: 900px; }
+        .nav-link { display: block; padding: 12px; color: #94a3b8; text-decoration: none; border-radius: 8px; margin-bottom: 4px; }
+        .nav-link:hover { background: #334155; color: white; }
+        .nav-link.active { background: var(--primary); color: white; }
+        .card { background: var(--card-bg); padding: 30px; border-radius: 16px; border: 1px solid #334155; margin-bottom: 24px; }
+        pre { background: #0F172A; padding: 16px; border-radius: 8px; overflow-x: auto; color: #E2E8F0; border: 1px solid #334155; }
+        code { font-family: 'Fira Code', monospace; }
+        .file-link { color: var(--primary); text-decoration: none; font-weight: 500; }
+        .file-link:hover { text-decoration: underline; }
+    </style>
+</head>
+<body>
+    <div class="sidebar">
+        <h2 style="color: white; margin-bottom: 30px;">budolPay Docs</h2>
+        <a href="index.html" class="nav-link">Overview</a>
+        <a href="developer_manual.html" class="nav-link active">Developer Manual</a>
+        <a href="user_manual.html" class="nav-link">User Manual</a>
+        <a href="risk_register.html" class="nav-link">Risk Register</a>
+        <a href="test_results.html" class="nav-link">Test Results</a>
+        <a href="future_recommendations.html" class="nav-link">Future Recommendations</a>
+    </div>
+    <div class="main-content">
+        <h1>Developer Manual - v396</h1>
+        
+        <div class="card">
+            <h2>Version Management</h2>
+            <p>Application version updated to <strong>1.2.87+87</strong>.</p>
+            <p>Relevant files:</p>
+            <ul>
+                <li><a href="file:///d:/IT Projects/budolEcosystem/budolPayMobile/pubspec.yaml" class="file-link">pubspec.yaml</a></li>
+                <li><a href="file:///d:/IT Projects/budolEcosystem/budolPayMobile/lib/services/api_service.dart" class="file-link">api_service.dart</a></li>
+            </ul>
+        </div>
+
+        <div class="card">
+            <h2>Biometric Fallback Implementation</h2>
+            <p>The <code>_handleFaceRecognitionLogin</code> function in <a href="file:///d:/IT Projects/budolEcosystem/budolPayMobile/lib/screens/login_screen.dart" class="file-link">login_screen.dart</a> was modified to prioritize the app-level face profile while maintaining a fallback to OS-level biometrics.</p>
+            <pre><code>
+// login_screen.dart snippet
+Future&lt;void&gt; _handleFaceRecognitionLogin() async {
+  final biometricService = context.read&lt;BiometricService&gt;();
+  
+  // 1. Check for stored custom template FIRST
+  final storedTemplate = await biometricService.getStoredFaceTemplate();
+  
+  if (storedTemplate != null) {
+    debugPrint('[FaceLogin] Prioritizing custom TFLite recognition flow');
+    // ... custom recognition logic ...
+  } else if (_isBiometricEnabled) {
+    // 2. Fallback to Native OS Biometrics if no custom profile exists
+    final hasNativeFace = await biometricService.hasEnrolledFace();
+    if (hasNativeFace) {
+      debugPrint('[FaceLogin] Falling back to native OS biometric flow');
+      return _handleBiometricLogin();
+    }
+  }
+}
+            </code></pre>
+        </div>
+
+        <div class="card">
+            <h2>Build Process</h2>
+            <p>Release APK generated using:</p>
+            <pre><code>flutter build apk --release --build-name=1.2.87 --build-number=87</code></pre>
+            <p>Output path: <code>\budolEcosystem\android-installer\budolPay 1.2.87.apk</code></p>
+        </div>
+    </div>
+</body>
+</html>

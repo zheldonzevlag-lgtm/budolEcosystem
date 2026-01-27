@@ -1,0 +1,167 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Developer Manual - v432</title>
+    <style>
+        :root {
+            --primary: #F43F5E;
+            --secondary: #172B4D;
+            --text-main: #172B4D;
+            --bg-light: #F4F5F7;
+            --border: #DFE1E6;
+            --code-bg: #272822;
+            --code-text: #F8F8F2;
+        }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            color: var(--text-main);
+            line-height: 1.6;
+            margin: 0;
+            display: flex;
+        }
+        .sidebar {
+            width: 280px;
+            background: var(--bg-light);
+            height: 100vh;
+            position: sticky;
+            top: 0;
+            border-right: 1px solid var(--border);
+            padding: 24px;
+        }
+        .content {
+            flex: 1;
+            padding: 40px;
+            max-width: 900px;
+        }
+        h1, h2, h3 { color: var(--secondary); }
+        .nav-item {
+            display: block;
+            padding: 10px 16px;
+            text-decoration: none;
+            color: var(--text-main);
+            border-radius: 4px;
+            margin-bottom: 4px;
+        }
+        .nav-item:hover { background: #ebecf0; }
+        .nav-item.active { background: #DEEBFF; color: #0747A6; font-weight: 600; }
+        pre {
+            background: var(--code-bg);
+            color: var(--code-text);
+            padding: 16px;
+            border-radius: 8px;
+            overflow-x: auto;
+            font-size: 14px;
+        }
+        code { font-family: "SFMono-Regular", Consolas, "Liberation Mono", Menlo, monospace; }
+        .file-link {
+            color: #0052CC;
+            text-decoration: none;
+            font-weight: bold;
+        }
+        .file-link:hover { text-decoration: underline; }
+    </style>
+</head>
+<body>
+    <div class="sidebar">
+        <div class="version-info">
+            <h2>BudolPay v432</h2>
+        </div>
+        <nav>
+            <a href="index.html" class="nav-item">Index</a>
+            <a href="developer_manual.html" class="nav-item active">Developer Manual</a>
+            <a href="system_admin_manual.html" class="nav-item">System Admin Manual</a>
+            <a href="user_manual.html" class="nav-item">User Manual</a>
+            <a href="risk_register.html" class="nav-item">Risk Register</a>
+            <a href="Mitigation.html" class="nav-item">Mitigation Plan</a>
+            <a href="issues.html" class="nav-item">Issues Log</a>
+            <a href="fixes.html" class="nav-item">Fixes Log</a>
+            <a href="test_results.html" class="nav-item">Test Results</a>
+            <a href="future_recommendations.html" class="nav-item">Future Recommendations</a>
+        </nav>
+    </div>
+    <div class="content">
+        <h1>Developer Manual - v432</h1>
+        
+        <h2>Technical Overview</h2>
+        <p>This release introduces a branding update that replaces all instances of "BUDOL_PAY" with "budolPay", where "Pay" is colored rose red (#F43F5E). This is achieved via a reusable utility function that handles dynamic text splitting and styling.</p>
+
+        <h3>Core Implementation</h3>
+
+        <h4>1. Branding Utility Function</h4>
+        <p>A static method <code>formatBudolPayText</code> was added to <code>UIUtils</code>. It uses <code>RichText</code> to apply different styles to different parts of the string.</p>
+        <p>File: <a class="file-link" href="file:///d:/IT Projects/budolEcosystem/budolPayMobile/lib/utils/ui_utils.dart">ui_utils.dart</a></p>
+        <pre><code>static Widget formatBudolPayText(String text, {TextStyle? baseStyle, bool useColors = true}) {
+  if (!text.contains('BUDOL_PAY')) {
+    return Text(text, style: baseStyle);
+  }
+
+  final List<TextSpan> spans = [];
+  final parts = text.split('BUDOL_PAY');
+
+  for (int i = 0; i < parts.length; i++) {
+    if (parts[i].isNotEmpty) {
+      spans.add(TextSpan(text: parts[i], style: baseStyle));
+    }
+    
+    if (i < parts.length - 1) {
+      spans.add(TextSpan(
+        children: [
+          TextSpan(
+            text: 'budol',
+            style: (baseStyle ?? const TextStyle()).copyWith(fontWeight: FontWeight.bold),
+          ),
+          TextSpan(
+            text: 'Pay',
+            style: (baseStyle ?? const TextStyle()).copyWith(
+              color: useColors ? const Color(0xFFF43F5E) : null,
+              fontWeight: FontWeight.bold,
+            ),
+          ),
+        ],
+      ));
+    }
+  }
+
+  return RichText(
+    text: TextSpan(
+      style: baseStyle ?? const TextStyle(color: Colors.black),
+      children: spans,
+    ),
+  );
+}</code></pre>
+
+        <h4>2. Integration in Transaction Screens</h4>
+        <p>The utility was integrated into <code>HomeScreen</code>, <code>TransactionHistoryScreen</code>, and <code>TransactionDetailsScreen</code>.</p>
+        
+        <p>Example from <code>TransactionHistoryScreen</code>:</p>
+        <p>File: <a class="file-link" href="file:///d:/IT Projects/budolEcosystem/budolPayMobile/lib/screens/transaction_history_screen.dart">transaction_history_screen.dart</a></p>
+        <pre><code>title: UIUtils.formatBudolPayText(
+  tx['description'] ?? (isIncome ? 'Money Received' : 'Money Sent'),
+  baseStyle: const TextStyle(fontWeight: FontWeight.bold),
+),</code></pre>
+
+        <h2>Dependencies & Software Choice Rationale</h2>
+        <div style="background: #ebecf0; padding: 20px; border-radius: 8px; margin-bottom: 24px;">
+            <h3>1. Flutter (Cross-Platform Framework)</h3>
+            <p><strong>Choice:</strong> Flutter was chosen for its high-performance rendering engine and single-codebase approach for both Mobile and Web. It allows for rapid UI development and consistent branding across platforms.</p>
+            
+            <h3>2. RichText & TextSpan (Branding Implementation)</h3>
+            <p><strong>Choice:</strong> Using Flutter's native <code>RichText</code> and <code>TextSpan</code> was preferred over creating multiple <code>Text</code> widgets in a <code>Row</code>. This approach is more efficient, ensures better text alignment, and allows for precise control over individual word styling within a single block of text.</p>
+            
+            <h3>3. Shared Preferences (Persistence)</h3>
+            <p><strong>Choice:</strong> <code>shared_preferences</code> is used for simple key-value storage of flags like <code>hasSeenAds</code>. It is chosen for its ease of use and cross-platform reliability for small amounts of persistent state.</p>
+            
+            <h3>4. Web-JavaScript Interop</h3>
+            <p><strong>Choice:</strong> To handle the native browser splash screen, we use <code>dart:js</code>. This is necessary because Flutter's lifecycle does not automatically manage external DOM elements created by the index.html bootstrapper.</p>
+        </div>
+
+        <h2>Dependencies</h2>
+        <ul>
+            <li>Flutter SDK</li>
+            <li><code>ui_utils.dart</code> (internal utility)</li>
+        </ul>
+    </div>
+</body>
+</html>

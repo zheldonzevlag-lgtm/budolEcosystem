@@ -1,0 +1,127 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Developer Manual - v412</title>
+    <style>
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; line-height: 1.6; padding: 40px; background: #f4f7f6; color: #333; }
+        .code-block { background: #1e1e1e; color: #d4d4d4; padding: 20px; border-radius: 5px; overflow-x: auto; font-family: 'Consolas', monospace; margin: 20px 0; border-left: 5px solid #0747A6; }
+        .file-link { color: #0747A6; font-weight: bold; text-decoration: none; border-bottom: 1px dashed #0747A6; }
+        h2 { color: #0747A6; border-bottom: 2px solid #0747A6; padding-bottom: 10px; }
+        h3 { color: #2c3e50; margin-top: 30px; }
+        .path-box { background: #e9ecef; padding: 10px; border-radius: 4px; font-size: 0.9rem; margin: 10px 0; font-family: monospace; }
+    </style>
+</head>
+<body>
+    <header>
+        <a href="../index.html" style="text-decoration: none; color: #0747A6;">← Back to v412 Overview</a>
+        <h2>Developer Manual: Session Persistence & Endpoint Correction</h2>
+    </header>
+
+    <h3>1. Session Initialization & Listener Notification</h3>
+    <p>To ensure that the UI reflects the user's session state immediately upon app startup, the <code>_initialize()</code> method in <code>ApiService</code> now calls <code>notifyListeners()</code> as soon as session data is retrieved from <code>SharedPreferences</code>. This prevents the "User" placeholder from appearing while the background verification process is running.</p>
+
+    <div class="path-box">File: budolPayMobile/lib/services/api_service.dart</div>
+    <div class="code-block">
+<pre>
+// Added notifyListeners() in _initialize() to trigger UI update with local session data
+_hasSeenAds = prefs.getBool(_hasSeenAdsKey) ?? false;
+
+// Notify listeners that we've loaded the session from SharedPreferences
+notifyListeners();
+
+// Non-blocking background initialization for network-dependent tasks
+_backgroundInit();
+</pre>
+    </div>
+
+    <h3>2. Profile Verification Endpoint Correction</h3>
+    <p>The <code>_fetchUserProfile()</code> method was incorrectly targeting <code>/auth/verify</code>, which resulted in 404 errors for mobile session validation. The backend (<code>auth-service</code>) exposes the verification logic at the root <code>/verify</code> endpoint for universal propagation.</p>
+
+    <div class="path-box">File: budolPayMobile/lib/services/api_service.dart</div>
+    <div class="code-block">
+<pre>
+// Fixed endpoint URL in _fetchUserProfile()
+Future<void> _fetchUserProfile() async {
+  if (token == null) return;
+  
+  // The auth service has /verify at the root for mobile/universal sync
+  final url = '$authUrl/verify';
+  try {
+    final response = await http.get(
+      Uri.parse(url),
+      headers: {
+        'Authorization': 'Bearer $token',
+        'Content-Type': 'application/json',
+      },
+    );
+    // ...
+  }
+}
+</pre>
+    </div>
+
+    <h3>3. Version Increment (v1.2.96)</h3>
+    <p>The application version has been incremented to <code>1.2.96</code> in both <code>pubspec.yaml</code> and the internal <code>ApiService</code> version constant to track the deployment of these critical session fixes.</p>
+
+    <div class="path-box">File: budolPayMobile/pubspec.yaml</div>
+    <div class="code-block">
+<pre>
+version: 1.2.96+96
+</pre>
+    </div>
+
+    <h3>4. Precision Amount Input Formatter</h3>
+    <p>To ensure financial accuracy and fulfill the requirement for 2-decimal precision during entry, the <code>CurrencyInputFormatter</code> was enhanced to treat all digit inputs as cents. This forces the UI to always display two decimal places and includes thousand separators (commas) for better readability.</p>
+
+    <div class="path-box">File: budolPayMobile/lib/utils/formatters.dart</div>
+    <div class="code-block">
+<pre>
+class CurrencyInputFormatter extends TextInputFormatter {
+  @override
+  TextEditingValue formatEditUpdate(
+      TextEditingValue oldValue, TextEditingValue newValue) {
+    if (newValue.text.isEmpty) return newValue.copyWith(text: '');
+
+    // Handle backspace or empty - extract digits only
+    String text = newValue.text.replaceAll(RegExp(r'[^\d]'), '');
+    if (text.isEmpty) return const TextEditingValue(text: '', selection: TextSelection.collapsed(offset: 0));
+
+    // Convert digits to double (treating as cents)
+    double value = double.parse(text) / 100;
+    
+    // Format with commas and 2 decimals using NumberFormat
+    final formatter = NumberFormat("#,##0.00", "en_US");
+    String formatted = formatter.format(value);
+
+    return TextEditingValue(
+      text: formatted,
+      selection: TextSelection.collapsed(offset: formatted.length),
+    );
+  }
+}
+</pre>
+    </div>
+
+    <h3>5. Code Reference Links</h3>
+    <ul>
+        <li><strong>ApiService Implementation:</strong> <a class="file-link" href="file:///d:/IT Projects/budolEcosystem/budolPayMobile/lib/services/api_service.dart">api_service.dart</a></li>
+        <li><strong>Currency Formatter:</strong> <a class="file-link" href="file:///d:/IT Projects/budolEcosystem/budolPayMobile/lib/utils/formatters.dart">formatters.dart</a></li>
+        <li><strong>Send Money Screen:</strong> <a class="file-link" href="file:///d:/IT Projects/budolEcosystem/budolPayMobile/lib/screens/send_money_screen.dart">send_money_screen.dart</a></li>
+        <li><strong>Auth Service Backend:</strong> <a class="file-link" href="file:///d:/IT Projects/budolEcosystem/budolpay-0.1.0/services/auth-service/index.js">index.js</a></li>
+    </ul>
+
+    <h3>5. Technical Rationale</h3>
+    <p>The combination of immediate state notification (via <code>notifyListeners</code>) and corrected API targeting ensures a seamless "logged-in" experience for mobile users. Even if the network verification is still in progress, the UI will display the cached user profile from the previous session, fulfilling the requirement for persistent identity (e.g., Peter Parker).</p>
+
+    <h3>6. Phase 8: Dependencies & Software Choices</h3>
+    <div class="path-box">Ecosystem Dependencies Analysis</div>
+    <ul>
+        <li><strong>Flutter (3.24.x):</strong> Chosen for its rapid development cycle and consistent UI rendering across Android and iOS. Its "Provider" pattern is utilized here for efficient state management of user sessions.</li>
+        <li><strong>Node.js & Express:</strong> Powers the <code>auth-service</code>. Chosen for its asynchronous non-blocking I/O, which is ideal for handling concurrent authentication requests and session verifications.</li>
+        <li><strong>Prisma ORM:</strong> Used for database interactions. Its type-safe client ensures that user and wallet data are handled consistently across the backend services, reducing runtime errors.</li>
+        <li><strong>SharedPreferences:</strong> Selected for local session persistence on mobile. While simple, it provides the low-latency retrieval required to show the "Welcome back" message immediately on app startup.</li>
+        <li><strong>JWT (JSON Web Tokens):</strong> Used for secure, stateless authentication. The 30-day expiry for mobile tokens balances user convenience with security best practices, aligning with PCI DSS recommendations for session management.</li>
+    </ul>
+</body>
+</html>

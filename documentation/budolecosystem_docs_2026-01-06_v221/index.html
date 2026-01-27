@@ -1,0 +1,84 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>budolEcosystem Documentation - v221</title>
+    <style>
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; line-height: 1.6; color: #333; max-width: 1200px; margin: 0 auto; padding: 20px; background-color: #f4f7f6; }
+        header { background-color: #0F172A; color: white; padding: 20px; border-radius: 8px; margin-bottom: 20px; display: flex; justify-content: space-between; align-items: center; }
+        .nav-links { display: flex; gap: 15px; }
+        .nav-links a { color: #F43F5E; text-decoration: none; font-weight: bold; }
+        section { background: white; padding: 25px; border-radius: 8px; box-shadow: 0 2px 5px rgba(0,0,0,0.1); margin-bottom: 20px; }
+        h1, h2, h3 { color: #0F172A; }
+        pre { background-color: #1E293B; color: #e2e8f0; padding: 15px; border-radius: 8px; overflow-x: auto; }
+        .status-badge { display: inline-block; padding: 5px 12px; border-radius: 20px; font-size: 0.85em; font-weight: bold; text-transform: uppercase; }
+        .status-success { background-color: #dcfce7; color: #166534; }
+        .status-critical { background-color: #fee2e2; color: #991b1b; }
+        .ip-box { background-color: #F43F5E; color: white; padding: 10px; border-radius: 5px; font-weight: bold; display: inline-block; margin: 10px 0; }
+    </style>
+</head>
+<body>
+    <div class="nav-links ecosystem-docs-top-nav">
+        <a href="../budolecosystem_docs_2026-01-08_v220/index.html">← Previous (v220)</a>
+        <a href="../index.html">Index</a>
+        <a href="../budolecosystem_docs_2026-01-08_v221/index.html">Next (v221) →</a>
+    </div>
+
+    <header>
+        <div>
+            <h1>budolEcosystem v221</h1>
+            <p>Mobile App IP Alignment & New Release</p>
+        </div>
+        <nav class="nav-links">
+            <a href="../budolecosystem_docs_2026-01-06_v220/index.html">← Previous (v220)</a>
+            <a href="../../index.html">Main Index</a>
+                <a href="../budolecosystem_docs_2026-01-08_v221/index.html">Next (v221) →</a>
+            <span style="color: #64748b;">Next →</span>
+        </nav>
+    </header>
+
+    <section id="purpose">
+        <h2>Purpose</h2>
+        <p>This release addresses the critical "No route to host" error reported in the mobile app. It aligns the app's default API host with the current local environment IP and provides a fresh, error-free build for distribution.</p>
+    </section>
+
+    <section id="technical-details">
+        <h2>Technical Specification & Fixes</h2>
+        
+        <h3>1. IP Alignment</h3>
+        <p><strong>Issue:</strong> The app was defaulting to <code>192.168.1.3</code> while the backend was running on <code>192.168.1.24</code>, as identified from the terminal logs.</p>
+        <p><strong>Resolution:</strong> Updated <code>lib/services/api_service.dart</code> to use <code>192.168.1.24</code> as the default host. Additionally, implemented a force-reset for any cached instances of <code>192.168.1.3</code> in <code>SharedPreferences</code>.</p>
+        <div class="ip-box">New Default IP: 192.168.1.24</div>
+
+        <h3>2. "Register here" Link Verification</h3>
+        <p><strong>Verification:</strong> Confirmed that the "Register here" link in <code>login_screen.dart</code> correctly maps to the <code>/registration</code> route defined in <code>main.dart</code>. The button is now more prominently styled and verified to be active in the <code>LoginStep.phone</code> state.</p>
+
+        <h3>3. Version Update</h3>
+        <p><strong>Update:</strong> The app's internal version tag displayed on the login screen has been updated to <code>v221</code> to allow for easy identification of the current build.</p>
+    </section>
+
+    <section id="build-details">
+        <h2>Build Details</h2>
+        <ul>
+            <li><strong>Artifact:</strong> <code>budolPayMobile/build/app/outputs/flutter-apk/app-release.apk</code></li>
+            <li><strong>Build Command:</strong> <code>flutter build apk --release --dart-define=API_HOST=192.168.1.24</code></li>
+            <li><strong>Status:</strong> <span class="status-badge status-success">Error-Free</span> (Verified via <code>flutter analyze</code>)</li>
+        </ul>
+    </section>
+
+    <section id="test-results">
+        <h2>Validation & Test Results</h2>
+        <ul>
+            <li><strong>Static Analysis:</strong> <code>flutter analyze</code> passed with 0 issues.</li>
+            <li><strong>IP Persistence:</strong> Added logic to wipe old cached IP addresses (<code>192.168.1.3</code>) on startup.</li>
+            <li><strong>Navigation:</strong> Verified <code>/registration</code> route exists and is accessible from the login screen.</li>
+        </ul>
+    </section>
+
+    <section id="recommendations">
+        <h2>Recommendation for Future Enhancement</h2>
+        <p>Implement an <strong>Auto-Discovery</strong> feature where the app can broadcast a request on the local network to find the running BudolPay backend automatically, eliminating the need for manual IP updates in future development environments.</p>
+    </section>
+</body>
+</html>

@@ -1,0 +1,51 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Developer Manual - v222</title>
+    <style>
+        body { font-family: 'Segoe UI', sans-serif; line-height: 1.6; max-width: 900px; margin: 0 auto; padding: 30px; background: #f9f9f9; color: #333; }
+        h1, h2, h3 { color: #2c3e50; border-bottom: 1px solid #eee; padding-bottom: 10px; }
+        pre { background: #2d3436; color: #dfe6e9; padding: 15px; border-radius: 8px; overflow-x: auto; }
+        .section { margin-bottom: 40px; background: white; padding: 20px; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.05); }
+    </style>
+</head>
+<body>
+    <div style="margin-bottom: 20px;"><a href="../index.html">← Back to v222 Index</a></div>
+    <h1>Developer Manual: Identity Verification Implementation</h1>
+    
+    <div class="section">
+        <h2>1. BudolPay Upgrade Logic</h2>
+        <p>The verification status in BudolPay is governed by three key fields in the <code>User</code> model:</p>
+        <ul>
+            <li><code>kycStatus</code>: Set to <code>VERIFIED</code></li>
+            <li><code>kycTier</code>: Set to <code>FULLY_VERIFIED</code></li>
+            <li><code>isFaceVerified</code>: Set to <code>true</code></li>
+        </ul>
+        <pre><code>// upgrade-jon-pay.js
+const updatedUser = await prisma.user.update({
+  where: { email: 'reynaldomgalvez@gmail.com' },
+  data: {
+    kycStatus: 'VERIFIED',
+    kycTier: 'FULLY_VERIFIED',
+    isFaceVerified: true
+  }
+});</code></pre>
+    </div>
+
+    <div class="section">
+        <h2>2. BudolID Sync</h2>
+        <p>To ensure consistent SSO experience, the <code>isVerified</code> flag in the <code>budolID</code> database must match the KYC state in <code>budolPay</code>.</p>
+        <pre><code>// verify-jon-id.js
+const updatedUser = await prisma.user.update({
+  where: { email: 'reynaldomgalvez@gmail.com' },
+  data: { isVerified: true }
+});</code></pre>
+    </div>
+
+    <div class="footer">
+        <p>Manual Version: 1.0 | Date: 2026-01-08</p>
+    </div>
+</body>
+</html>

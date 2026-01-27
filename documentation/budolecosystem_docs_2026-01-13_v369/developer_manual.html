@@ -1,0 +1,41 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Developer Manual - v369</title>
+    <style>
+        :root { --primary: #F43F5E; --bg: #0F172A; --card-bg: #1E293B; --text: #F8FAFC; --code-bg: #2D3748; }
+        body { font-family: sans-serif; background: var(--bg); color: var(--text); padding: 40px; line-height: 1.6; }
+        .card { background: var(--card-bg); padding: 25px; border-radius: 12px; margin-bottom: 25px; }
+        h1, h2 { color: var(--primary); }
+        pre { background: var(--code-bg); padding: 15px; border-radius: 8px; overflow-x: auto; border: 1px solid #4A5568; }
+        code { color: #E2E8F0; }
+        .file-link { color: #3B82F6; text-decoration: none; font-family: monospace; }
+    </style>
+</head>
+<body>
+    <div class="card">
+        <h1>Developer Manual - v369</h1>
+        <h2>Robust TFLite Inference</h2>
+        <p>This version focuses on the low-level stability of the FaceNet TFLite integration.</p>
+        
+        <h3>1. Input Reshaping</h3>
+        <p>The interpreter's <code>run</code> method is sensitive to the input's shape. We now explicitly reshape the flat <code>Float32List</code> into the 4D tensor expected by FaceNet.</p>
+
+        <pre><code>// Correcting shape to [Batch, Height, Width, Channels]
+var inputReshaped = input.reshape([1, 160, 160, 3]);
+_interpreter!.run(inputReshaped, output);</code></pre>
+
+        <h3>2. Typed Data Buffers</h3>
+        <p>Using <code>List&lt;double&gt;</code> can sometimes cause issues with TFLite because Dart doubles are 64-bit. We've switched to <code>Float32List</code> for the output buffer to ensure binary compatibility with the model's output layer.</p>
+
+        <pre><code>var output = Float32List(1 * 128).reshape([1, 128]);</code></pre>
+
+        <h3>3. Improved Diagnostics</h3>
+        <p>The <a href="file:///d:/IT Projects/budolEcosystem/budolPayMobile/lib/screens/settings_screen.dart" class="file-link">settings_screen.dart</a> now includes explicit logs for the face detection and embedding stages, making it easier to identify if a failure is due to detection or inference.</p>
+    </div>
+    <div class="card">
+        <a href="index.html" style="color: #3B82F6; text-decoration: none;">← Back to Index</a>
+    </div>
+</body>
+</html>

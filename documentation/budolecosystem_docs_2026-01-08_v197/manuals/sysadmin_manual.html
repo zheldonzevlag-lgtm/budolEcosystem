@@ -1,0 +1,41 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>System Admin Manual - v197</title>
+    <style>
+        body { font-family: sans-serif; line-height: 1.6; color: #333; max-width: 900px; margin: 0 auto; padding: 20px; }
+        .cmd { background: #2c3e50; color: #ecf0f1; padding: 10px; border-radius: 5px; font-family: monospace; }
+        .note { background: #e8f4fd; border: 1px solid #d1e9f9; padding: 15px; border-radius: 5px; }
+    </style>
+</head>
+<body>
+    <h1>System Admin Manual Updates - v197</h1>
+
+    <h2>Database Management</h2>
+    <p>This version required a schema update for the core <code>budolpay</code> database. Admins should ensure that all environments (Local, Staging, Production) are synchronized.</p>
+
+    <h3>Synchronization Procedure</h3>
+    <div class="cmd">
+        cd budolpay-0.1.0/packages/database<br>
+        npx prisma db push
+    </div>
+    <p>This command will compare the <code>schema.prisma</code> with the target database and apply missing columns or tables. <strong>Warning:</strong> Review the output for potential data loss warnings if columns are being dropped.</p>
+
+    <h2>Prisma Client Generation</h2>
+    <p>After a schema sync, the Prisma Client must be regenerated to be available for all microservices:</p>
+    <div class="cmd">npx prisma generate</div>
+    <div class="note">
+        <strong>Note:</strong> If you encounter <code>EPERM</code> errors during generation on Windows, ensure all Node.js services are stopped, as they may be locking the generated client files in <code>node_modules</code>.
+    </div>
+
+    <h2>Health Monitoring</h2>
+    <p>Post-deployment, monitor the Auth Service logs for <code>500</code> errors during login. A successful identification should result in a <code>200 OK</code> or <code>201 Created</code> response, even if an OTP is required.</p>
+
+    <h2>Risk Mitigation</h2>
+    <ul>
+        <li><strong>Risk:</strong> Database locking during <code>db push</code>.</li>
+        <li><strong>Mitigation:</strong> Perform synchronization during maintenance windows or low-traffic periods. Ensure <code>DATABASE_URL</code> is correctly scoped to the target environment.</li>
+    </ul>
+</body>
+</html>

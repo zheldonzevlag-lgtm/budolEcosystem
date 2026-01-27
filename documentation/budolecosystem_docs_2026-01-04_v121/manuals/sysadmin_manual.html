@@ -1,0 +1,72 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>System Admin Manual - v121</title>
+    <style>
+        body { font-family: system-ui, -apple-system, sans-serif; line-height: 1.6; max-width: 900px; margin: 0 auto; padding: 2rem; color: #333; }
+        h1, h2 { color: #f43f5e; }
+        section { margin-bottom: 2rem; border-bottom: 1px solid #eee; padding-bottom: 1rem; }
+        .nav { margin-bottom: 2rem; display: flex; justify-content: space-between; }
+        .tag { display: inline-block; padding: 0.2rem 0.6rem; border-radius: 20px; font-size: 0.8rem; font-weight: bold; color: white; margin-right: 0.5rem; }
+        .tag-admin { background: #0f172a; }
+    </style>
+</head>
+<body>
+    <div class="nav">
+        <a href="../budolecosystem_docs_2026-01-04_v120/manuals/sysadmin_manual.html">← Previous Version (v120)</a>
+        <a href="../index.html">Back to Root Index</a>
+        <a href="../index.html">Next Version (TBD) →</a>
+    </div>
+
+    <header>
+        <h1>System Admin Manual: Payment Flow Stability</h1>
+        <p><span class="tag tag-admin">Operations</span> Version 121 | 2026-01-04</p>
+    </header>
+
+    <section>
+        <h2>Purpose</h2>
+        <p>This version addresses mobile-side payment stability and UI layout issues to ensure consistent operation across various device screen sizes.</p>
+    </section>
+
+    <section>
+        <h2>Infrastructure Changes</h2>
+        <p>No backend infrastructure changes were required for this version. The updates are strictly within the <code>budolPayMobile</code> application layer.</p>
+    </section>
+
+    <section>
+        <h2>Environment Variables</h2>
+        <p>Ensure the following variables are correctly passed during the mobile build process if targeting production:</p>
+        <ul>
+            <li><code>GATEWAY_URL</code>: Should point to the <code>wallet-service</code> or gateway endpoint.</li>
+            <li><code>AUTH_URL</code>: Should point to the <code>budolID</code> service.</li>
+        </ul>
+    </section>
+
+    <section>
+        <h2>Deployment Procedures</h2>
+        <ol>
+            <li>Navigate to <code>budolPayMobile</code> directory.</li>
+            <li>Run <code>flutter clean</code> and <code>flutter pub get</code> to ensure fresh dependencies.</li>
+            <li>Build the application: <code>flutter build apk --release</code>.</li>
+            <li>The generated installer is located at <code>android-installer/budolPay 1.0.5.apk</code>.</li>
+        </ol>
+    </section>
+
+    <section>
+        <h2>Risk & Mitigation</h2>
+        <ul>
+            <li><strong>Risk:</strong> Session timeout during the scanning process.<br>
+                <strong>Mitigation:</strong> Implemented clearer "Session expired" messaging to guide the user back to login rather than showing generic errors.</li>
+            <li><strong>Risk:</strong> UI clipping on smaller devices.<br>
+                <strong>Mitigation:</strong> Added <code>SafeArea</code> and converted critical text links into high-visibility buttons.</li>
+        </ul>
+    </section>
+
+    <section>
+        <h2>Recommendation for Future Enhancement</h2>
+        <p>Enable server-side session heartbeats or longer-lived JWT tokens for internal testing to reduce the frequency of re-logins during manual QA cycles.</p>
+    </section>
+</body>
+</html>

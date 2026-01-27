@@ -1,0 +1,121 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Developer Manual - v211 - GoTyme-Aligned Auth</title>
+    <style>
+        body { font-family: 'Inter', -apple-system, sans-serif; line-height: 1.6; color: #334155; max-width: 1000px; margin: 0 auto; padding: 40px; background: #f8fafc; }
+        .container { background: white; padding: 40px; border-radius: 12px; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.1); border: 1px solid #e2e8f0; }
+        h1, h2, h3 { color: #1e293b; border-bottom: 2px solid #e2e8f0; padding-bottom: 8px; margin-top: 30px; }
+        .section { margin-bottom: 30px; }
+        .label { font-weight: bold; color: #2563eb; text-transform: uppercase; font-size: 0.85rem; display: block; margin-bottom: 5px; }
+        .code-block { background: #1e293b; color: #f8fafc; padding: 20px; border-radius: 8px; font-family: 'Fira Code', monospace; overflow-x: auto; font-size: 0.9rem; margin: 15px 0; }
+        .nav-links { display: flex; justify-content: space-between; margin-bottom: 30px; font-size: 0.9rem; }
+        .nav-links a { color: #2563eb; text-decoration: none; font-weight: 600; }
+        table { width: 100%; border-collapse: collapse; margin: 20px 0; }
+        th, td { text-align: left; padding: 12px; border-bottom: 1px solid #e2e8f0; }
+        th { background: #f1f5f9; }
+    </style>
+</head>
+<body>
+    <div class="nav-links">
+        <a href="../index.html">← v211 Index</a>
+        <div>
+            <a href="../../budolecosystem_docs_2026-01-05_v210/index.html">Previous (v210)</a> | 
+            <span>Next: None</span>
+        </div>
+    </div>
+
+    <div class="container">
+        <h1>Developer Manual: GoTyme-Aligned Auth Implementation</h1>
+
+        <div class="section">
+            <span class="label">Purpose</span>
+            <p>To implement a bank-grade, mobile-centric authentication system for budolPay, aligning with GoTyme's security standards. This includes transitioning to 6-digit PINs, device-bound sessions, and biometric integration hooks.</p>
+        </div>
+
+        <div class="section">
+            <span class="label">Explanation</span>
+            <p>The system shifts from email/password to using the mobile number as the primary identity. It uses a multi-phase login flow: Identification -> Device Trust Check -> Challenge (OTP/PIN/Biometric). This ensures that only trusted devices can bypass OTP, mimicking high-security banking apps.</p>
+        </div>
+
+        <div class="section">
+            <span class="label">Reason</span>
+            <p>Traditional email-password flows are vulnerable to credential stuffing and phishing. Mobile-centric auth with device binding provides a higher security ceiling and a more seamless user experience for mobile users.</p>
+        </div>
+
+        <div class="section">
+            <span class="label">Issues & Fixes</span>
+            <table>
+                <tr>
+                    <th>Issue</th>
+                    <th>Fix</th>
+                </tr>
+                <tr>
+                    <td>Initial 4-digit MPIN had low entropy.</td>
+                    <td>Upgraded to 6-digit PIN enforced by regex and logic in <code>/register</code>.</td>
+                </tr>
+                <tr>
+                    <td>No way to identify if a device was previously used.</td>
+                    <td>Implemented <code>trustedDevices</code> JSON field in User model and device identification logic.</td>
+                </tr>
+            </table>
+        </div>
+
+        <div class="section">
+            <span class="label">Risk & Mitigation</span>
+            <p><strong>Risk:</strong> Users losing access to their registered phone number.<br>
+            <strong>Mitigation:</strong> Implement a secondary recovery flow via verified email or manual support (planned for v212).</p>
+        </div>
+
+        <div class="section">
+            <span class="label">Dependencies</span>
+            <ul>
+                <li><code>bcryptjs</code>: For PIN hashing.</li>
+                <li><code>jsonwebtoken</code>: For session management.</li>
+                <li><code>prisma</code>: For database persistence.</li>
+                <li>Express.js: Core service framework.</li>
+            </ul>
+        </div>
+
+        <div class="section">
+            <span class="label">Technical Details</span>
+            <p>The <code>auth-service</code> was modified to include new routes for mobile identification and biometric challenges. The database schema was updated to support <code>pinHash</code>, <code>trustedDevices</code>, and <code>biometricKeyId</code>.</p>
+        </div>
+
+        <div class="section">
+            <span class="label">Code Details</span>
+            <p>Key logic for device trust in <code>/login/mobile/identify</code>:</p>
+            <div class="code-block">
+const devices = user.trustedDevices ? JSON.parse(user.trustedDevices) : [];
+const device = devices.find(d => d.deviceId === deviceId && d.isVerified);
+if (!device) {
+    // Trigger OTP for untrusted device
+}
+            </div>
+        </div>
+
+        <div class="section">
+            <span class="label">Test Results</span>
+            <ul>
+                <li><strong>Registration:</strong> Successfully validates 6-digit numeric PINs.</li>
+                <li><strong>Login:</strong> Correctly identifies untrusted devices and triggers OTP.</li>
+                <li><strong>Biometrics:</strong> Challenge/Verify simulation returns valid JWTs.</li>
+            </ul>
+        </div>
+
+        <div class="section">
+            <span class="label">Recommendation for Future Enhancement</span>
+            <p><strong>Purpose:</strong> Strengthen PIN security.<br>
+            <strong>Explanation:</strong> Replace BCrypt with Argon2id for PIN hashing.<br>
+            <strong>Reason:</strong> Argon2id provides better resistance against GPU-based brute-force attacks.<br>
+            <strong>Issues:</strong> Higher CPU/Memory usage during login.<br>
+            <strong>Fixes:</strong> Fine-tune cost parameters (time=1, memory=64MB).<br>
+            <strong>Risk:</strong> Potential latency on low-end servers.<br>
+            <strong>Mitigation:</strong> Horizontal scaling of auth-service.<br>
+            <strong>Dependencies:</strong> <code>argon2</code> library.</p>
+        </div>
+    </div>
+</body>
+</html>

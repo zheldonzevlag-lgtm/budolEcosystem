@@ -1,0 +1,72 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>System Admin Manual - v526 | Budol Ecosystem</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --primary: #0052CC;
+            --bg-sidebar: #F4F5F7;
+            --text-main: #091E42;
+            --text-subtle: #6B778C;
+            --border: #DFE1E6;
+        }
+        body { font-family: 'Inter', sans-serif; color: var(--text-main); line-height: 1.6; margin: 0; display: flex; }
+        .sidebar { width: 280px; background: var(--bg-sidebar); height: 100vh; position: sticky; top: 0; padding: 24px; border-right: 1px solid var(--border); }
+        .main-content { flex-grow: 1; padding: 40px 60px; max-width: 1000px; }
+        .nav-item { display: block; padding: 8px 12px; text-decoration: none; color: var(--text-main); border-radius: 4px; margin-bottom: 4px; }
+        .nav-item:hover { background: #EBECF0; }
+        .nav-item.active { background: #DEEBFF; color: var(--primary); font-weight: 600; }
+        
+        h2 { border-bottom: 2px solid var(--border); padding-bottom: 8px; margin-top: 40px; }
+        .admin-card { border: 1px solid var(--border); padding: 20px; border-radius: 8px; margin-bottom: 24px; background: #fff; }
+        .alert-info { background: #DEEBFF; color: #0747A6; padding: 16px; border-radius: 4px; border-left: 4px solid #0052CC; }
+    </style>
+</head>
+<body>
+    <aside class="sidebar">
+        <div style="font-weight: 700; font-size: 1.2rem; margin-bottom: 32px;">v526 Admin</div>
+        <nav>
+            <a href="index.html" class="nav-item">Overview</a>
+            <a href="system_admin_manual.html" class="nav-item active">Admin Operations</a>
+            <a href="#monitoring" class="nav-item" style="padding-left: 24px;">Sync Monitoring</a>
+            <a href="#troubleshooting" class="nav-item" style="padding-left: 24px;">Troubleshooting</a>
+            <hr style="margin: 24px 0; border: none; border-top: 1px solid var(--border);">
+            <a href="risk_register.html" class="nav-item">Risk Management</a>
+        </nav>
+    </aside>
+
+    <main class="main-content">
+        <h1>System Admin Operations: v526</h1>
+        <p>As of v526, the admin dashboard features enhanced real-time visibility into all ecosystem transactions, powered by the <code>TransactionPulse</code> component.</p>
+
+        <h2 id="monitoring">Real-Time Transaction Monitoring</h2>
+        <div class="admin-card">
+            <h3>TransactionPulse Dashboard</h3>
+            <p>The <code>TransactionPulse</code> component in the admin dashboard listens for <code>new_transaction</code> events across the entire ecosystem. Admins can now see payments from budolShap appearing instantly as they are processed by budolPay.</p>
+            <ul>
+                <li><strong>Channel:</strong> <code>admin-transactions</code></li>
+                <li><strong>Event:</strong> <code>new_transaction</code></li>
+                <li><strong>Data Included:</strong> Reference ID, Amount, Status, and Source (budolShap/Mobile).</li>
+            </ul>
+        </div>
+
+        <h2 id="troubleshooting">Sync Troubleshooting</h2>
+        <div class="alert-info">
+            <strong>Pro Tip:</strong> If a user reports a "Payment Successful" screen on mobile but "Pending" on budolShap, check the <code>payment-gateway-service</code> logs for webhook delivery status to the <code>/api/webhooks/budolpay</code> endpoint.
+        </div>
+
+        <h3>Common Checks:</h3>
+        <ul>
+            <li><strong>Pusher Connectivity:</strong> Ensure the Pusher credentials in <code>.env</code> are consistent across <code>wallet-service</code>, <code>payment-gateway-service</code>, and <code>budolshap</code>.</li>
+            <li><strong>Webhook Latency:</strong> Monitor the response time of the budolShap webhook endpoint. It must return a 200 OK within 5 seconds to avoid retries.</li>
+            <li><strong>Redis Cache:</strong> The <code>ordersService.js</code> uses SWR for caching. If status doesn't update, verify that the <code>order-updated</code> event successfully triggered a cache revalidation on the frontend.</li>
+        </ul>
+
+        <h2 id="compliance">Audit Compliance</h2>
+        <p>Administrators can export transaction logs that include the <code>realtime_delivered_at</code> flag, which confirms that the user was notified of the payment status within the 2-second SLA required by internal compliance standards.</p>
+    </main>
+</body>
+</html>

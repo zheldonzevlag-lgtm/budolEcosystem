@@ -1,0 +1,143 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>BudolEcosystem Documentation - v223</title>
+    <style>
+        :root {
+            --primary: #2c3e50;
+            --secondary: #34495e;
+            --accent: #3498db;
+            --success: #27ae60;
+            --warning: #f39c12;
+            --danger: #e74c3c;
+            --bg: #f4f7f6;
+            --text: #333;
+        }
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; line-height: 1.6; color: var(--text); background: var(--bg); margin: 0; padding: 20px; }
+        .container { max-width: 1000px; margin: 0 auto; background: white; padding: 40px; border-radius: 8px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); }
+        h1, h2, h3 { color: var(--primary); border-bottom: 2px solid #eee; padding-bottom: 10px; }
+        .nav { margin-bottom: 30px; display: flex; justify-content: space-between; }
+        .nav a { color: var(--accent); text-decoration: none; font-weight: bold; }
+        .compliance-table { width: 100%; border-collapse: collapse; margin: 20px 0; }
+        .compliance-table th, .compliance-table td { padding: 12px; border: 1px solid #ddd; text-align: left; }
+        .compliance-table th { background: var(--secondary); color: white; }
+        .code-block { background: #282c34; color: #abb2bf; padding: 15px; border-radius: 5px; overflow-x: auto; font-family: 'Courier New', Courier, monospace; }
+        .tag { display: inline-block; padding: 3px 8px; border-radius: 4px; font-size: 0.85em; font-weight: bold; text-transform: uppercase; margin-right: 5px; }
+        .tag-success { background: #e8f8f5; color: var(--success); }
+        .tag-info { background: #ebf5fb; color: var(--accent); }
+    </style>
+</head>
+<body>
+    <div class="nav-links ecosystem-docs-top-nav">
+        <a href="../budolecosystem_docs_2026-01-06_v223/index.html">← Previous (v223)</a>
+        <a href="../index.html">Index</a>
+        <a href="../budolecosystem_docs_2026-01-06_v224/index.html">Next (v224) →</a>
+    </div>
+
+    <div class="container">
+        <div class="nav">
+            <a href="../index.html">← Back to Index</a>
+            <div>
+                <a href="../budolecosystem_docs_2026-01-08_v222/index.html">Previous (v222)</a> | 
+                <span>Next (v224)</span>
+            </div>
+        </div>
+
+        <h1>v223: RBAC Compliance & Implementation</h1>
+        <p><strong>Date:</strong> 2026-01-08 | <strong>Status:</strong> <span class="tag tag-success">Implemented</span></p>
+
+        <h2>Purpose</h2>
+        <p>To address compliance requirements (PCI DSS, BSP Circular 808, NPC DPA 2012) by implementing Role-Based Access Control (RBAC) across the BudolPay ecosystem. This ensures the principle of "Least Privilege" and "Segregation of Duties" (SoD).</p>
+
+        <h2>Compliance Analysis & Justification</h2>
+        <div style="background: #fdfefe; border-left: 5px solid var(--accent); padding: 20px; margin: 20px 0;">
+            <p>The implementation of Role-Based Access Control (RBAC) within the <code>budolPay</code> Admin and Gateway is a critical security mandate. Far from being a violation, it serves as the cornerstone for institutional-grade financial compliance in the Philippines.</p>
+            
+            <h3>1. PCI DSS v4.0 (Requirement 7)</h3>
+            <p><strong>Standard:</strong> Restrict access to system components and cardholder data by business need-to-know.</p>
+            <p><strong>Justification:</strong> RBAC is the primary mechanism to ensure that only authorized roles (e.g., <code>STAFF</code> handling disputes) can access transaction details, while general users or unrelated roles are blocked from sensitive data exposure.</p>
+
+            <h3>2. BSP Circular No. 808</h3>
+            <p><strong>Standard:</strong> IT Risk Management - Segregation of Duties (SoD).</p>
+            <p><strong>Justification:</strong> In financial systems, a single individual should not have the power to both initiate and approve a high-value transaction or KYC status. RBAC enforces these boundaries, preventing internal fraud and operational errors.</p>
+
+            <h3>3. NPC Data Privacy Act (DPA 2012)</h3>
+            <p><strong>Standard:</strong> Technical Security Measures - Access Control Policy.</p>
+            <p><strong>Justification:</strong> The DPA requires that personal data (KYC documents, addresses, full names) be protected from unauthorized access. RBAC ensures that <code>KYC_READ_ALL</code> permissions are strictly limited to verified administrative roles.</p>
+
+            <h3>4. BIR Tax Integration Compliance</h3>
+            <p><strong>Standard:</strong> Data Integrity and Auditability.</p>
+            <p><strong>Justification:</strong> To maintain the integrity of tax-related reporting (VAT, withholding tax), the system must restrict access to invoicing and accounting adjustments. RBAC ensures that only authorized accounting personnel can modify financial records, providing a clear audit trail.</p>
+        </div>
+
+        <h2>Compliance Mapping</h2>
+        <table class="compliance-table">
+            <thead>
+                <tr>
+                    <th>Standard</th>
+                    <th>Requirement</th>
+                    <th>Implementation Detail</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td><strong>PCI DSS v4.0</strong></td>
+                    <td>Requirement 7: Restrict access by business need-to-know.</td>
+                    <td>Defined <code>ROLE_PERMISSIONS</code> mapping in <code>rbac-config.js</code> to restrict cardholder data access.</td>
+                </tr>
+                <tr>
+                    <td><strong>BSP Circular 808</strong></td>
+                    <td>Section 2.1.2: Segregation of Duties (SoD).</td>
+                    <td>Implemented <code>authorize</code> middleware to prevent standard users from performing admin actions.</td>
+                </tr>
+                <tr>
+                    <td><strong>NPC DPA 2012</strong></td>
+                    <td>Rule VII, Sec 28: Policy on access to personal data.</td>
+                    <td>Restricted <code>KYC_READ_ALL</code> permissions to <code>STAFF</code> and <code>ADMIN</code> roles only.</td>
+                </tr>
+                <tr>
+                    <td><strong>BIR Tax Integration</strong></td>
+                    <td>Data Integrity & Reporting Controls.</td>
+                    <td>Restricted accounting and invoicing adjustments to authorized roles.</td>
+                </tr>
+            </tbody>
+        </table>
+
+        <h2>Technical Implementation</h2>
+        
+        <h3>1. RBAC Configuration</h3>
+        <p>Created <code>packages/database/rbac-config.js</code> to centralize role-permission mappings.</p>
+        <div class="code-block">
+            const ROLE_PERMISSIONS = {<br>
+            &nbsp;&nbsp;USER: ['wallet:read', 'wallet:transfer', ...],<br>
+            &nbsp;&nbsp;STAFF: ['kyc:approve', 'transaction:read_all', ...],<br>
+            &nbsp;&nbsp;ADMIN: ['*'] // All permissions<br>
+            };
+        </div>
+
+        <h3>2. Authorization Middleware</h3>
+        <p>Implemented <code>packages/database/authorize.js</code> as a reusable Express middleware for microservices.</p>
+
+        <h3>3. Gateway Enforcement</h3>
+        <p>Updated <code>services/api-gateway/index.js</code> to block unauthorized access to <code>/admin</code> routes with descriptive compliance alerts.</p>
+        <div class="code-block">
+            if (req.originalUrl.includes('/admin') && !hasPermission(role, PERMISSIONS.TRANSACTION_READ_ALL)) {<br>
+            &nbsp;&nbsp;return res.status(403).json({ error: 'Forbidden', message: 'Admin privileges required' });<br>
+            }
+        </div>
+
+        <h2>Issues & Mitigations</h2>
+        <ul>
+            <li><strong>Risk:</strong> Potential for "Privilege Escalation" if JWT is compromised.</li>
+            <li><strong>Mitigation:</strong> Combined RBAC with existing PIN/Biometric verification (GoTyme style) for sensitive operations.</li>
+            <li><strong>Risk:</strong> Microservice isolation bypassing Gateway checks.</li>
+            <li><strong>Mitigation:</strong> Deployed <code>authorize</code> middleware directly within internal microservices as "Defense in Depth."</li>
+        </ul>
+
+        <h2>Recommendation for Future Enhancement</h2>
+        <p>Consolidated in <a href="../recommendations.html">Future Enhancements</a>.</p>
+    </div>
+</body>
+</html>

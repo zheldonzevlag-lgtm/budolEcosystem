@@ -1,0 +1,72 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SysAdmin Manual - v164</title>
+    <style>
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; line-height: 1.6; color: #333; max-width: 1000px; margin: 0 auto; padding: 20px; background-color: #f4f7f6; }
+        header { background-color: #F43F5E; color: white; padding: 20px; border-radius: 8px 8px 0 0; }
+        main { background: white; padding: 30px; border-radius: 0 0 8px 8px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); }
+        h2 { color: #F43F5E; border-bottom: 2px solid #eee; padding-bottom: 10px; }
+        .back-link { display: inline-block; margin-bottom: 20px; color: #F43F5E; text-decoration: none; font-weight: bold; }
+        .config-block { background: #2d3436; color: #dfe6e9; padding: 15px; border-radius: 8px; font-family: monospace; }
+    </style>
+</head>
+<body>
+    <header>
+        <div style="padding: 20px;">
+            <h1>SysAdmin Manual v164</h1>
+            <p>Deployment & Operational Resilience</p>
+        </div>
+    </header>
+    <main>
+        <a href="../index.html" class="back-link">← Back to v164 Index</a>
+
+        <h2>Initialization & Timeouts</h2>
+        <p>In v164, the mobile app now includes a 5-second hard timeout for initial session loading. This prevents the app from being stuck on a splash/white screen if the local storage (SharedPreferences) or network initialization hangs.</p>
+        
+        <h2>Session Verification Policy</h2>
+        <p>The <code>ApiService</code> now performs a more robust session check. If the <code>/auth/verify</code> endpoint returns a <code>401 Unauthorized</code> or indicates an invalid session, the app will automatically clear local storage and redirect to the login screen. This prevents "Ghost Sessions" where the app thinks it's logged in but the backend rejects all tokens.</p>
+
+        <h2>Network Requirements</h2>
+        <p>Admins should ensure the following ports are open for mobile connectivity:</p>
+        <ul>
+            <li><strong>Port 8000:</strong> Auth Service (SSO, Login, Verify)</li>
+            <li><strong>Port 8080:</strong> Gateway API (Transactions, Wallet, Socket.io)</li>
+        </ul>
+
+        <h2>Risk & Mitigation</h2>
+        <table>
+            <thead>
+                <tr>
+                    <th>Risk</th>
+                    <th>Mitigation in v164</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td>App hangs on start</td>
+                    <td>5s Timeout on initialization.</td>
+                </tr>
+                <tr>
+                    <td>Malformed DB data crashes UI</td>
+                    <td>Defensive parsing and try-catch blocks in Widget build.</td>
+                </tr>
+                <tr>
+                    <td>Network instability</td>
+                    <td>Socket.io auto-reconnection with fallback transports.</td>
+                </tr>
+            </tbody>
+        </table>
+
+        <h2>Operational Runbook: Resolving persistent white screens</h2>
+        <ol>
+            <li>If a user reports a white screen, ask them to check their internet connection.</li>
+            <li>With the new v164 update, they should see an "Oops" screen instead of a blank white one.</li>
+            <li>Instruct the user to tap <strong>"Reset App & Logout"</strong> on the error screen. This clears the local cache and allows a fresh login.</li>
+            <li>Verify the Server IP in the Login Screen settings (Gear icon) matches the current backend IP.</li>
+        </ol>
+    </main>
+</body>
+</html>

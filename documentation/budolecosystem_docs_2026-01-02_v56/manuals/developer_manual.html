@@ -1,0 +1,55 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Developer Manual - v56</title>
+    <style>
+        body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, 'Open Sans', 'Helvetica Neue', sans-serif; line-height: 1.6; color: #333; max-width: 800px; margin: 0 auto; padding: 40px; }
+        code { background: #f4f4f4; padding: 2px 5px; border-radius: 4px; font-family: monospace; }
+        pre { background: #f4f4f4; padding: 15px; border-radius: 8px; overflow-x: auto; }
+        h1, h2 { color: #2c3e50; }
+        .nav { margin-bottom: 20px; }
+    </style>
+</head>
+<body>
+    <div class="nav"><a href="../index.html">← Back to v56 Index</a></div>
+    <h1>Developer Manual - Version 56</h1>
+    
+    <h2>Session Stability Improvements</h2>
+    <p>Version 56 introduces a multi-layered authentication strategy to resolve session persistence issues, particularly during the checkout flow and when testing on local IP addresses.</p>
+
+    <h3>1. Multi-Layered Auth in OrderSummary</h3>
+    <p>We've moved away from a cookie-only authentication strategy for critical checkout API calls. The <code>OrderSummary.jsx</code> component now explicitly sends the JWT token in the <code>Authorization</code> header.</p>
+    <pre><code>// OrderSummary.jsx enhancement
+const token = getToken();
+const response = await fetch('/api/orders', {
+    method: 'POST',
+    headers: {
+        'Content-Type': 'application/json',
+        ...(token ? { 'Authorization': `Bearer ${token}` } : {})
+    },
+    body: JSON.stringify(orderData)
+});</code></pre>
+
+    <h3>2. Resilient Session Synchronization</h3>
+    <p>The <code>AuthContext.jsx</code> and <code>auth-client.js</code> have been updated to distinguish between "Unauthorized" (401/403) and "Server/Network Errors" (5xx/Fetch failures).</p>
+    <ul>
+        <li><strong>Explicit Logout:</strong> Only occurs if the server returns 401 or 403.</li>
+        <li><strong>Session Persistence:</strong> If a 500 error or network glitch occurs during background sync, the existing client-side session is preserved instead of being cleared.</li>
+    </ul>
+
+    <h3>3. Implementation Details</h3>
+    <ul>
+        <li><code>lib/auth-client.js</code>: Updated <code>getCurrentUser()</code> to return <code>null</code> for auth failures and <code>undefined</code> for other errors.</li>
+        <li><code>context/AuthContext.jsx</code>: Updated <code>loadUser()</code> to only trigger logout logic when <code>result === null</code>.</li>
+    </ul>
+
+    <h2>Impact Analysis</h2>
+    <p>These changes significantly reduce "unexpected logouts" during the transition from order creation to payment gateway redirection. It also makes the platform more compatible with local network testing where cookie behavior might be inconsistent.</p>
+
+    <div style="margin-top: 40px; border-top: 1px solid #eee; padding-top: 20px;">
+        <p><strong>Version:</strong> 56 | <strong>Date:</strong> 2026-01-02</p>
+    </div>
+</body>
+</html>

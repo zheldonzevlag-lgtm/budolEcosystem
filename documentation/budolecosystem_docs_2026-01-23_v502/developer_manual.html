@@ -1,0 +1,92 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Developer Manual - v502</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --primary: #0052CC;
+            --bg-main: #FFFFFF;
+            --bg-sidebar: #F4F5F7;
+            --text-main: #091E42;
+            --border: #DFE1E6;
+            --code-bg: #1e1e1e;
+            --code-text: #d4d4d4;
+        }
+        body { font-family: 'Inter', sans-serif; background: var(--bg-main); color: var(--text-main); margin: 0; display: flex; }
+        .sidebar { width: 280px; background: var(--bg-sidebar); border-right: 1px solid var(--border); height: 100vh; position: sticky; top: 0; padding: 24px; }
+        .main-content { flex: 1; padding: 48px; max-width: 900px; }
+        .nav-item { display: block; padding: 8px 12px; text-decoration: none; color: var(--text-main); border-radius: 4px; margin-bottom: 4px; }
+        .nav-item:hover { background: #EBECF0; }
+        .code-block { background: var(--code-bg); color: var(--code-text); padding: 16px; border-radius: 8px; font-family: 'Consolas', monospace; overflow-x: auto; margin-bottom: 24px; }
+        .code-link { color: var(--primary); text-decoration: none; font-weight: 600; }
+        .code-link:hover { text-decoration: underline; }
+    </style>
+</head>
+<body>
+    <div class="sidebar">
+        <div class="nav-group">
+            <a href="index.html" class="nav-item">← Back to Overview</a>
+        </div>
+        <div class="nav-group">
+            <a href="#architecture" class="nav-item">Architecture</a>
+            <a href="#realtime-sync" class="nav-item">Real-time Sync Logic</a>
+            <a href="#payload-standard" class="nav-item">Payload Standardization</a>
+        </div>
+    </div>
+    <div class="main-content">
+        <h1>Developer Manual</h1>
+        
+        <section id="architecture">
+            <h2>Technical Architecture</h2>
+            <p>The real-time synchronization system uses a provider-agnostic approach, supporting Pusher, Socket.io, or Polling. The frontend uses SWR for data fetching and cache management.</p>
+        </section>
+
+        <section id="realtime-sync">
+            <h2>Real-time Sync Implementation</h2>
+            <p>Key changes were made to [RealtimeProvider.jsx](file:///d:/IT Projects/budolEcosystem/budolshap-0.1.0/components/RealtimeProvider.jsx) to handle tab-specific filtering.</p>
+            <div class="code-block">
+// Tab-specific filter logic in patchOrderCache
+const isCancelledTabFilter = url.searchParams.get('isCancelledTab') === 'true';
+if (isCancelledTabFilter) {
+    const isCancelled = 
+        newStatus === 'CANCELLED' || 
+        data.paymentStatus === 'cancelled' || 
+        (data.shipping?.failureReason || data.failureReason);
+    
+    const isTerminalSuccess = ['DELIVERED', 'COMPLETED'].includes(newStatus);
+    shouldBeInList = isCancelled && !isTerminalSuccess;
+}
+            </div>
+            <p>We also implemented deduplication to prevent rapid-fire event triggers from multiple channels.</p>
+        </section>
+
+        <section id="payload-standard">
+            <h2>Payload Standardization</h2>
+            <p>All <code>order-updated</code> events must now include <code>isPaid</code>, <code>paymentStatus</code>, and <code>shipping</code> data to allow the frontend to correctly filter orders into tabs (e.g., "To Pay", "To Ship", "Cancelled").</p>
+            <p>Reference: [shippingService.js](file:///d:/IT Projects/budolEcosystem/budolshap-0.1.0/lib/services/shippingService.js)</p>
+            <div class="code-block">
+await triggerRealtimeEvent(`store-${updatedOrder.storeId}`, 'order-updated', {
+    orderId: updatedOrder.id,
+    status: updatedOrder.status,
+    isPaid: updatedOrder.isPaid,
+    paymentStatus: updatedOrder.paymentStatus,
+    shipping: updatedOrder.shipping
+});
+            </div>
+        </section>
+
+        <section id="dependencies">
+            <h2>Dependencies & Rationale</h2>
+            <ul>
+                <li><strong>Next.js:</strong> Chosen for its server-side rendering (SSR) capabilities, which improve SEO and initial load performance for the BudolShap marketplace. API routes provide a unified backend-frontend development experience.</li>
+                <li><strong>Prisma:</strong> Selected as the ORM because of its type-safety and auto-generated client, which reduces runtime errors and accelerates development of complex order/shipping schemas.</li>
+                <li><strong>Pusher:</strong> Utilized for real-time event broadcasting due to its managed infrastructure, which handles scale and reliability (e.g., connection fallbacks) better than a custom-built WebSocket server.</li>
+                <li><strong>SWR:</strong> Integrated for React state management and data fetching. Its built-in cache mutation (<code>mutate</code>) is essential for the "flicker-free" UI updates implemented in this release.</li>
+            </ul>
+        </section>
+    </div>
+</body>
+</html>

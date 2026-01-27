@@ -1,0 +1,105 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>budolPay v378 Developer Manual – Face Recognition Interpreter Reliability</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <style>
+    body { font-family: system-ui, sans-serif; margin: 2rem; background:#f7f7f7; color:#222; }
+    h1, h2 { color:#0b57d0; }
+    code, pre { background:#eef; padding:2px 4px; border-radius:4px; font-family: ui-monospace, monospace; }
+    pre { padding:1rem; overflow-x:auto; }
+    .nav { margin-bottom:2rem; }
+    .nav a { margin-right:1rem; text-decoration:none; color:#0b57d0; }
+    .nav a:hover { text-decoration:underline; }
+  </style>
+</head>
+<body>
+  <div class="nav">
+    <a href="index.html">Release Notes</a>
+    <a href="developer_manual.html">Developer Manual</a>
+    <a href="system_admin_manual.html">Admin Manual</a>
+    <a href="user_manual.html">User Manual</a>
+    <a href="risk_register.html">Risk Register</a>
+    <a href="Mitigation.html">Mitigations</a>
+    <a href="test_results.html">Test Results</a>
+    <a href="future_recommendations.html">Future</a>
+  </div>
+
+  <h1>Developer Manual – Face Recognition Interpreter Reliability (v378)</h1>
+
+  <h2>1. Problem Statement</h2>
+  <p>Intermittent <code>Exception: TFLite Interpreter is unavailable (null) after initialization</code> on Android devices caused by native-side race conditions and asset-manager limitations.</p>
+
+  <h2>2. Root Cause</h2>
+  <ul>
+    <li><code>Interpreter.fromAsset()</code> sometimes returns an invalid handle on Android API 30+.</li>
+    <li>Single-attempt loading without health validation.</li>
+    <li>No retry or fallback path when temp file is locked.</li>
+  </ul>
+
+  <h2>3. Solution Overview</h2>
+  <p>File-based extraction + retry loop + interpreter health check.</p>
+
+  <h2>4. Code Changes</h2>
+  <p><strong>File:</strong> <a href="file:///d:/IT%20Projects/budolEcosystem/budolPayMobile/lib/services/face_embedding_service.dart" target="_blank">face_embedding_service.dart</a></p>
+
+  <h3>4.1 Retry Loop</h3>
+  <pre><code>const maxRetries = 2;
+for (int attempt = 1; attempt <= maxRetries; attempt++) {
+  try {
+    ...
+    return; // success
+  } catch (e, stack) {
+    if (attempt == maxRetries) {
+      _loadingCompleter!.completeError(e);
+    } else {
+      await Future.delayed(const Duration(milliseconds: 200));
+    }
+  }
+}</code></pre>
+
+  <h3>4.2 Unique Temp File per Attempt</h3>
+  <pre><code>final modelFile = File('${tempDir.path}/facenet_attempt_$attempt.tflite');</code></pre>
+  <p>Avoids stale file locks between retries.</p>
+
+  <h3>4.3 Interpreter Health Check</h3>
+  <pre><code>final newInterpreter = Interpreter.fromFile(modelFile, options: options);
+try {
+  newInterpreter.getInputTensors(); // native call
+} catch (e) {
+  throw Exception('Interpreter health check failed: $e');
+}</code></pre>
+  <p>Immediately validates the native handle before assignment.</p>
+
+  <h3>4.4 File Verification</h3>
+  <pre><code>if (!await modelFile.exists() || await modelFile.length() != bytes.length) {
+  throw Exception('Failed to write or verify model temporary file');
+}</code></pre>
+
+  <h2>5. Usage</h2>
+  <p>No API change; consumers still call:</p>
+  <pre><code>final embedding = await faceService.generateEmbedding(imageFile);</code></pre>
+  <p>Internally the service now self-heals or throws a descriptive exception after 2 attempts.</p>
+
+  <h2>6. Testing</h2>
+  <ul>
+    <li><code>flutter analyze lib/services/face_embedding_service.dart</code> – 0 issues.</li>
+    <li>Manual stress-test: rapid successive registrations on Android 12/13 devices.</li>
+  </ul>
+
+  <h2>7. Dependencies</h2>
+  <ul>
+    <li><code>path_provider</code> – already in pubspec; used for temp directory.</li>
+    <li><code>tflite_flutter</code> – unchanged.</li>
+  </ul>
+
+  <h2>8. Compliance Notes</h2>
+  <p>Biometric reliability improvement satisfies BSP Circular 1108 and NPC advisory on accuracy. No new PII flows.</p>
+
+  <h2>9. Future Work</h2>
+  <p>Consider migrating to <code>tflite_flutter_helper</code>’s <code>Interpreter.fromBuffer()</code> once stable to skip disk I/O.</p>
+
+  <p><em>Back to <a href="index.html">Release Notes</a></em></p>
+</body>
+</html>

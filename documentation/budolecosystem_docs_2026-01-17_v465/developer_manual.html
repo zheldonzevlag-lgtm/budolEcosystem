@@ -1,0 +1,91 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Developer Manual v465 - Secure Session</title>
+    <style>
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; line-height: 1.6; color: #333; max-width: 1000px; margin: 0 auto; padding: 20px; background-color: #fff; }
+        h1, h2, h3 { color: #0F172A; border-bottom: 2px solid #F43F5E; padding-bottom: 8px; }
+        .code-block { background: #1e293b; color: #f8fafc; padding: 20px; border-radius: 8px; margin: 20px 0; font-family: 'Cascadia Code', monospace; font-size: 14px; overflow-x: auto; }
+        .file-link { color: #F43F5E; font-weight: bold; text-decoration: none; }
+        .file-link:hover { text-decoration: underline; }
+    </style>
+</head>
+<body>
+    <h1>Developer Manual - v465 Secure Session Management</h1>
+
+    <section>
+        <h2>1. Session Persistence Migration</h2>
+        <p>The <code>ApiService</code> has been upgraded from <code>SharedPreferences</code> to <code>FlutterSecureStorage</code> for sensitive credentials. This ensures that tokens are encrypted at rest using the device's secure enclave (KeyChain on iOS, KeyStore on Android).</p>
+        
+        <div class="code-block">
+// api_service.dart migration
+final FlutterSecureStorage _secureStorage = const FlutterSecureStorage(
+  aOptions: AndroidOptions(encryptedSharedPreferences: true),
+);
+
+Future&lt;void&gt; _saveSession() async {
+  if (token != null) await _secureStorage.write(key: _tokenKey, value: token!);
+  if (user != null) await _secureStorage.write(key: _userKey, value: json.encode(user));
+}
+        </div>
+        <p>Reference: <a class="file-link" href="file:///d:/IT Projects/budolEcosystem/budolPayMobile/lib/services/api_service.dart">api_service.dart</a></p>
+    </section>
+
+    <section>
+        <h2>2. Session Lifecycle Orchestration</h2>
+        <p>A new <code>SessionService</code> manages the application's security state. It observes the <code>WidgetsBinding</code> lifecycle and handles transitions between <code>resumed</code> and <code>paused</code> states.</p>
+        
+        <h3>Idle Timeout Logic</h3>
+        <p>A 5-minute inactivity timer is reset on every touch interaction via the <code>SessionOverlay</code>'s <code>Listener</code>. If the timer expires, the user is logged out automatically.</p>
+        
+        <h3>Background Locking</h3>
+        <p>If the app is backgrounded for more than 30 seconds (grace period), the session is locked. Upon return, the <code>SessionOverlay</code> displays a blurred UI and requests biometric authentication.</p>
+        
+        <p>Reference: <a class="file-link" href="file:///d:/IT Projects/budolEcosystem/budolPayMobile/lib/services/session_service.dart">session_service.dart</a></p>
+    </section>
+
+    <section>
+        <h2>3. Screen Security</h2>
+        <p>To prevent sensitive information from being leaked via screenshots or screen recordings (as required by PCI DSS), we have enabled <code>FLAG_SECURE</code> on Android.</p>
+        
+        <div class="code-block">
+Future&lt;void&gt; _enableScreenSecurity() async {
+  await FlutterWindowManager.addFlags(FlutterWindowManager.FLAG_SECURE);
+}
+        </div>
+    </section>
+
+    <section>
+        <h2>4. Global Integration</h2>
+        <p>The <code>SessionOverlay</code> is injected into the <code>MaterialApp.builder</code>, ensuring that the security layer sits above all navigation routes and captures all user interactions.</p>
+        
+        <p>Reference: <a class="file-link" href="file:///d:/IT Projects/budolEcosystem/budolPayMobile/lib/main.dart">main.dart</a></p>
+    </section>
+
+    <section>
+        <h2>5. Dependencies & Software Choice Rationale</h2>
+        <p>The following libraries were selected to meet banking-grade security standards:</p>
+        
+        <ul>
+            <li>
+                <strong>flutter_secure_storage (v9.0.0):</strong>
+                <em>Rationale:</em> Standard SharedPreferences stores data in XML files accessible to root users. SecureStorage uses Android KeyStore and iOS KeyChain, providing hardware-level encryption (AES/RSA) compliant with PCI DSS Requirement 3.
+            </li>
+            <li>
+                <strong>local_auth (v2.1.6):</strong>
+                <em>Rationale:</em> Essential for biometric re-authentication (FaceID/Fingerprint). It provides a native experience for session resumption, aligning with BSP Circular 808 requirements for multi-factor authentication.
+            </li>
+            <li>
+                <strong>flag_secure (v2.0.2):</strong>
+                <em>Rationale:</em> Modern replacement for flutter_windowmanager that supports Android V2 embedding. It interfaces with native Android window flags to enforce <code>FLAG_SECURE</code>, blocking screenshots and screen recording.
+            </li>
+            <li>
+                <strong>provider (v6.1.1):</strong>
+                <em>Rationale:</em> Used for reactive state management. It allows the <code>SessionService</code> to notify the UI globally when a lock state changes without complex callback chains.
+            </li>
+        </ul>
+    </section>
+</body>
+</html>

@@ -1,0 +1,75 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Developer Manual - Universal Identity & Trust</title>
+    <style>
+        body { font-family: sans-serif; line-height: 1.6; max-width: 900px; margin: 0 auto; padding: 20px; }
+        code { background: #f4f4f4; padding: 2px 5px; border-radius: 3px; font-family: monospace; }
+        pre { background: #f4f4f4; padding: 15px; border-radius: 5px; overflow-x: auto; }
+        .feature { border-left: 5px solid #4a90e2; padding-left: 15px; margin: 20px 0; }
+    </style>
+</head>
+<body>
+    <h1>Developer Manual: Universal Identity & Trust</h1>
+    
+    <section>
+        <h2>Overview</h2>
+        <p>The "Eco-Sync" system ensures that every user in the Budol Ecosystem has a single, verifiable identity managed by <code>budolID</code>. This implementation covers registration synchronization, anti-fraud scoring, and universal KYC/KYB state management.</p>
+    </section>
+
+    <section class="feature">
+        <h2>Eco-Sync Registration Flow</h2>
+        <p>When a user registers in <code>budolShap</code>, the following synchronous handshake occurs:</p>
+        <ol>
+            <li><strong>Data Capture</strong>: <code>budolShap</code> captures email, password, <strong>phoneNumber</strong>, and an optional <strong>profile picture</strong>.</li>
+            <li><strong>budolID Handshake</strong>: <code>budolShap</code> calls <code>budolID</code> API to create the master identity.</li>
+            <li><strong>Fraud Analysis</strong>: <code>budolID</code> performs velocity, phone duplication, and reputation checks. Providing a <strong>profile picture</strong> during registration reduces the initial fraud score.</li>
+            <li><strong>Local Sync</strong>: If <code>budolID</code> succeeds and the risk is acceptable, <code>budolShap</code> creates a local shadow record with the <strong>same ID</strong>.</li>
+        </ol>
+    </section>
+
+    <section>
+        <h2>Face Verification Infrastructure</h2>
+        <p>A new field <code>isFaceVerified</code> has been added to the <code>User</code> model. This serves as the foundation for high-trust apps:</p>
+        <ul>
+            <li><strong>budolPay</strong>: Requires <code>isFaceVerified = true</code> for wallet withdrawals and high-value transfers.</li>
+            <li><strong>budoloan</strong>: Mandatory face verification before loan application processing.</li>
+            <li><strong>budolExpress</strong>: Drivers must complete a liveness check (photo + ID) to activate their account.</li>
+        </ul>
+    </section>
+
+    <section>
+        <h2>Universal Identity Requirements</h2>
+        <p>To maintain ecosystem integrity, all registration endpoints must enforce the following:</p>
+        <ul>
+            <li><strong>Email</strong>: Must be unique and not from a disposable domain.</li>
+            <li><strong>Phone Number</strong>: Must be unique across the entire ecosystem. Duplicates are blocked at the <code>budolID</code> layer.</li>
+        </ul>
+    </section>
+
+    <section>
+        <h2>Universal KYC/KYB</h2>
+        <p>Trust status is now "Universal". If a user is verified as a merchant in <code>budolShap</code>, their status is pushed to <code>budolID</code>, making them instantly eligible for merchant features in <code>budolPay</code> and <code>budoloan</code>.</p>
+        <pre>
+// Example Trust Update Call
+await updateTrustStatus(userId, {
+    kybStatus: 'APPROVED'
+});
+        </pre>
+    </section>
+
+    <section>
+        <h2>Anti-Fraud Measures</h2>
+        <ul>
+            <li><strong>Registration Velocity</strong>: Limits multiple accounts from the same IP within 24 hours.</li>
+            <li><strong>Reputation Scoring</strong>: Detects disposable email domains and suspicious device patterns.</li>
+            <li><strong>Risk Gates</strong>: "CRITICAL" risk accounts are automatically blacklisted and prevented from registering.</li>
+        </ul>
+    </section>
+
+    <footer>
+        <p><a href="../index.html">← Back to v33 Index</a></p>
+    </footer>
+</body>
+</html>

@@ -1,0 +1,153 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>budolEcosystem Documentation v241</title>
+    <style>
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; line-height: 1.6; color: #333; max-width: 1200px; margin: 0 auto; padding: 20px; background-color: #f4f7f6; }
+        header { background-color: #f43f5e; color: white; padding: 2rem; border-radius: 10px; margin-bottom: 2rem; box-shadow: 0 4px 6px rgba(0,0,0,0.1); }
+        .nav-links { display: flex; justify-content: space-between; margin-bottom: 2rem; }
+        .nav-links a { color: #f43f5e; text-decoration: none; font-weight: bold; padding: 10px 20px; background: white; border-radius: 5px; box-shadow: 0 2px 4px rgba(0,0,0,0.05); transition: all 0.3s ease; }
+        .nav-links a:hover { transform: translateY(-2px); box-shadow: 0 4px 8px rgba(0,0,0,0.1); }
+        .section { background: white; padding: 2rem; border-radius: 10px; margin-bottom: 2rem; box-shadow: 0 2px 10px rgba(0,0,0,0.05); }
+        h2 { color: #f43f5e; border-bottom: 2px solid #fecdd3; padding-bottom: 0.5rem; margin-top: 0; }
+        h3 { color: #475569; margin-top: 1.5rem; }
+        code { background-color: #f1f5f9; padding: 2px 5px; border-radius: 4px; font-family: 'Courier New', Courier, monospace; font-size: 0.9em; color: #e11d48; }
+        pre { background-color: #1e293b; color: #f8fafc; padding: 1.5rem; border-radius: 8px; overflow-x: auto; font-size: 0.9em; }
+        .compliance-box { background-color: #eff6ff; border-left: 5px solid #3b82f6; padding: 1rem; margin: 1rem 0; border-radius: 0 8px 8px 0; }
+        .tag { display: inline-block; padding: 4px 12px; border-radius: 20px; font-size: 0.8em; font-weight: bold; margin-right: 10px; }
+        .tag-mobile { background-color: #dcfce7; color: #166534; }
+        .tag-backend { background-color: #dbeafe; color: #1e40af; }
+        .tag-compliance { background-color: #fef3c7; color: #92400e; }
+        table { width: 100%; border-collapse: collapse; margin: 1rem 0; }
+        th, td { text-align: left; padding: 12px; border-bottom: 1px solid #e2e8f0; }
+        th { background-color: #f8fafc; color: #64748b; }
+    </style>
+</head>
+<body>
+    <div class="nav-links ecosystem-docs-top-nav">
+        <a href="../budolecosystem_docs_2026-01-08_v240/index.html">← Previous (v240)</a>
+        <a href="../index.html">Index</a>
+        <a href="../budolecosystem_docs_2026-01-08_v242/index.html">Next (v242) →</a>
+    </div>
+
+    <div class="nav-links">
+        <a href="../budolecosystem_docs_2026-01-08_v240/index.html">← Previous: v240</a>
+        <a href="../index.html">Main Index</a>
+        <a href="../budolecosystem_docs_2026-01-08_v242/index.html">Next: v242 →</a>
+    </div>
+
+    <header>
+        <h1>v241: Profile Management & Regulatory Compliance</h1>
+        <p>Implementing functional profile editing with built-in safeguards for Philippine financial regulations.</p>
+    </header>
+
+    <div class="section">
+        <h2>Purpose</h2>
+        <p>This update activates the "Edit Profile" (pencil) button in the mobile app, allowing users to manage their personal information while maintaining strict adherence to <strong>BSP Circular 950/1011</strong> and the <strong>Data Privacy Act (RA 10173)</strong>.</p>
+    </div>
+
+    <div class="section">
+        <h2>Technical Implementation</h2>
+        
+        <h3>1. Backend: Profile Update API</h3>
+        <p><span class="tag tag-backend">Backend</span> Added a secure <code>PATCH /profile</code> endpoint in the <code>auth-service</code>.</p>
+        <div class="compliance-box">
+            <strong>Compliance Logic:</strong> The endpoint checks the user's <code>kycTier</code>. If the user is <code>FULLY_VERIFIED</code>, it rejects changes to <code>firstName</code> and <code>lastName</code> to preserve the integrity of the verified identity.
+        </div>
+        <pre><code>// auth-service/index.js
+app.patch('/profile', authenticate, async (req, res) => {
+    const { firstName, lastName, email } = req.body;
+    if (req.user.kycTier === 'FULLY_VERIFIED') {
+        if (firstName !== req.user.firstName || lastName !== req.user.lastName) {
+            return res.status(400).json({ error: 'Legal name cannot be changed for verified accounts.' });
+        }
+    }
+    // Update logic...
+});</code></pre>
+
+        <h3>2. Mobile: Edit Profile Screen</h3>
+        <p><span class="tag tag-mobile">Mobile</span> Created <code>EditProfileScreen.dart</code> and integrated it into the app routing.</p>
+        <ul>
+            <li><strong>Read-only Fields:</strong> Legal name fields are disabled for verified users.</li>
+            <li><strong>Informative UI:</strong> Added a Blue Info Box explaining why certain fields are restricted under KYC regulations.</li>
+            <li><strong>Dynamic Validation:</strong> Email validation and real-time feedback for field changes.</li>
+        </ul>
+    </div>
+
+    <div class="section">
+        <h2>Regulatory Alignment</h2>
+        <table>
+            <thead>
+                <tr>
+                    <th>Regulation</th>
+                    <th>Requirement</th>
+                    <th>Implementation Detail</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td><strong>RA 10173 (DPA)</strong></td>
+                    <td>Right to Rectification</td>
+                    <td>Users can update their contact email and display information at any time.</td>
+                </tr>
+                <tr>
+                    <td><strong>BSP Circular 950</strong></td>
+                    <td>KYC/CDD Integrity</td>
+                    <td>Legal names are locked once <code>FULLY_VERIFIED</code> to prevent unauthorized identity modification.</td>
+                </tr>
+                <tr>
+                    <td><strong>AMLA (RA 9160)</strong></td>
+                    <td>Identity Traceability</td>
+                    <td>Ensures that the person performing transactions matches the identity verified during onboarding.</td>
+                </tr>
+            </tbody>
+        </table>
+    </div>
+
+    <div class="section">
+        <h2>Test Results</h2>
+        <ul>
+            <li><strong>Basic User Test:</strong> Successfully updated First Name, Last Name, and Email. Changes reflected immediately in Settings.</li>
+            <li><strong>Verified User Test:</strong> Name fields correctly shown as disabled. Attempting to bypass via API (mocked) returns 400 Bad Request.</li>
+            <li><strong>Validation Test:</strong> Invalid email format triggers "Please enter a valid email" error message.</li>
+            <li><strong>Navigation Test:</strong> Pencil button in Settings correctly navigates to Edit Profile screen.</li>
+        </ul>
+    </div>
+
+    <div class="section">
+        <h2>Issues & Mitigations</h2>
+        <table>
+            <thead>
+                <tr>
+                    <th>Issue</th>
+                    <th>Risk</th>
+                    <th>Mitigation</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td>Verified user needs legal name change</td>
+                    <td>User frustration/Inability to use app</td>
+                    <td>UI provides a clear message to "Contact Support" for manual verification of legal documents (e.g., Marriage Certificate).</td>
+                </tr>
+                <tr>
+                    <td>Unauthorized profile modification</td>
+                    <td>Account Takeover (ATO)</td>
+                    <td>Endpoint is protected by <code>authenticate</code> middleware requiring a valid JWT.</td>
+                </tr>
+            </tbody>
+        </table>
+    </div>
+
+    <div class="section">
+        <h2>Recommendations for Future Enhancement</h2>
+        <ul>
+            <li><strong>Audit Logging:</strong> Implement a <code>UserAuditLog</code> table to track <em>who</em> changed <em>what</em> and <em>when</em> (Critical for BSP audits).</li>
+            <li><strong>OTP for Email Change:</strong> Require a one-time password sent to the new email address before finalizing the change.</li>
+            <li><strong>Profile Picture Upload:</strong> Integrate <code>image_picker</code> and S3/Cloudinary for actual profile image management.</li>
+        </ul>
+    </div>
+</body>
+</html>

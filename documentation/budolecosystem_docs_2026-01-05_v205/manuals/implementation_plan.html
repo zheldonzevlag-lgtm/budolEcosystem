@@ -1,0 +1,179 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Comparative Analysis & Integration Plan - v205 - GoTyme Bank-Grade Security</title>
+    <style>
+        body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; line-height: 1.6; color: #333; max-width: 950px; margin: 0 auto; padding: 20px; }
+        h1, h2, h3 { color: #0070f3; border-bottom: 2px solid #0070f3; padding-bottom: 5px; }
+        .nav { margin-bottom: 20px; display: flex; justify-content: space-between; border-bottom: 1px solid #eee; padding-bottom: 10px; }
+        .comparison-table { width: 100%; border-collapse: collapse; margin: 20px 0; font-size: 0.9em; }
+        .comparison-table th, .comparison-table td { border: 1px solid #ddd; padding: 10px; text-align: left; }
+        .comparison-table th { background: #f8f9fa; font-weight: 600; }
+        .tech-stack { background: #f1f3f4; padding: 15px; border-radius: 8px; border-left: 5px solid #0070f3; margin: 20px 0; }
+        .flow-diagram { background: #fff; border: 1px solid #ddd; padding: 20px; border-radius: 8px; font-family: monospace; overflow-x: auto; white-space: pre; }
+        .section-box { background: #fff; border: 1px solid #eee; padding: 20px; margin: 20px 0; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.05); }
+        .code-block { background: #2d2d2d; color: #ccc; padding: 15px; border-radius: 5px; font-family: 'Consolas', monospace; overflow-x: auto; margin: 10px 0; }
+        .recommendation { background: #e8f5e9; border-left: 5px solid #2e7d32; padding: 15px; margin: 20px 0; }
+    </style>
+</head>
+<body>
+    <div class="nav">
+        <a href="../index.html">← Back to v205 Index</a>
+        <div>
+            <a href="../../budolecosystem_docs_2026-01-05_v204/manuals/implementation_plan.html">Previous Version (v204)</a> | 
+            <a href="../../budolecosystem_docs_2026-01-05_v206/manuals/security_compliance_analysis.html">Next Version (v206)</a>
+        </div>
+    </div>
+
+    <h1>GoTyme vs budolPay: Comparative Analysis & Integration Strategy</h1>
+    
+    <div class="section-box">
+        <h3>1. Purpose</h3>
+        <p>The purpose of this document is to provide a comprehensive technical roadmap for upgrading budolPay's authentication security to "Bank-Grade" standards, using GoTyme Philippines as the primary benchmark. This transition moves budolPay from a traditional mobile wallet security model to a stricter, biometric-first digital bank model.</p>
+    </div>
+
+    <div class="section-box">
+        <h3>2. Explanation & Reason</h3>
+        <p><strong>Explanation:</strong> GoTyme Philippines utilizes a highly secure, mobile-centric authentication flow where biometrics are the primary login method and a 6-digit PIN serves as a fallback. Unlike typical wallets that use 4-digit MPINs and conditional OTPs, GoTyme enforces strong device binding and mandatory OTP verification for risk-based sessions.</p>
+        <p><strong>Reason:</strong> As budolPay expands into more complex financial ecosystems (including budolLoan), it must meet BSP (Bangko Sentral ng Pilipinas) digital banking security standards. Upgrading to a 6-digit PIN and WebAuthn-based biometrics significantly reduces phishing risks and SIM-swapping vulnerabilities.</p>
+    </div>
+
+    <div class="section-box">
+        <h3>3. Comparative Analysis</h3>
+        <table class="comparison-table">
+            <thead>
+                <tr>
+                    <th>Feature</th>
+                    <th>budolPay (Current)</th>
+                    <th>GoTyme (Benchmark)</th>
+                    <th>Integration Impact</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td><strong>Primary Identity</strong></td>
+                    <td>Mobile Number / Email</td>
+                    <td>Mobile Number Only</td>
+                    <td>Strict mobile-centricity for all accounts.</td>
+                </tr>
+                <tr>
+                    <td><strong>OTP Enforcement</strong></td>
+                    <td>Conditional (New Device)</td>
+                    <td>Mandatory (Strongly Enforced)</td>
+                    <td>OTP required on every login from new session.</td>
+                </tr>
+                <tr>
+                    <td><strong>Primary Auth</strong></td>
+                    <td>4-digit MPIN</td>
+                    <td>Biometrics (Face ID/Touch ID)</td>
+                    <td>Shift biometrics to the default login method.</td>
+                </tr>
+                <tr>
+                    <td><strong>Fallback Auth</strong></td>
+                    <td>Forgot Password / OTP</td>
+                    <td>6-digit PIN</td>
+                    <td>Replace 4-digit MPIN with 6-digit PIN.</td>
+                </tr>
+                <tr>
+                    <td><strong>Device Binding</strong></td>
+                    <td>Basic JWT tracking</td>
+                    <td>Hardware-level trust</td>
+                    <td>Implement WebAuthn for secure hardware binding.</td>
+                </tr>
+            </tbody>
+        </table>
+    </div>
+
+    <div class="section-box">
+        <h3>4. Issues, Risks & Mitigations</h3>
+        <p><strong>Issues Identified:</strong> Current 4-digit MPIN is susceptible to brute-force and social engineering. Lack of hardware-backed biometric verification allows for easier session hijacking.</p>
+        <table class="comparison-table">
+            <tr>
+                <th>Risk</th>
+                <th>Mitigation</th>
+            </tr>
+            <tr>
+                <td>User friction due to mandatory OTP</td>
+                <td>Implement risk-based authentication; only trigger OTP when device fingerprint or location changes significantly.</td>
+            </tr>
+            <tr>
+                <td>Device incompatibility</td>
+                <td>Provide the 6-digit PIN as a robust and equally secure fallback for devices without secure enclaves.</td>
+            </tr>
+            <tr>
+                <td>Production Costs (SMS)</td>
+                <td>Implement strict rate limiting and explore WhatsApp/Email fallbacks for non-critical alerts.</td>
+            </tr>
+        </table>
+    </div>
+
+    <div class="section-box">
+        <h3>5. Dependencies & Technical Details</h3>
+        <div class="tech-stack">
+            <ul>
+                <li><strong>Biometrics:</strong> <code>SimpleWebAuthn</code> (FIDO2/WebAuthn library).</li>
+                <li><strong>PIN Hashing:</strong> <code>Argon2id</code> for superior resistance against GPU-based cracking.</li>
+                <li><strong>State Management:</strong> Redis for high-speed OTP and session challenge storage.</li>
+                <li><strong>Database:</strong> PostgreSQL with Prisma ORM for managing device-to-user mappings.</li>
+            </ul>
+        </div>
+        <div class="flow-diagram">
+Open App
+   ↓
+Enter Mobile Number (+63)
+   ↓
+Check Device Trust (via Device Fingerprint + WebAuthn)
+   ├─ [NOT TRUSTED] → Send OTP (SMS) → Verify OTP → Register Biometrics (WebAuthn)
+   └─ [TRUSTED] → Proceed
+   ↓
+Biometric Prompt (Face ID / Fingerprint)
+   ├─ [SUCCESS] → Issue Session Token → Access Wallet
+   └─ [FAIL / NOT SUPPORTED] → Fallback to 6-digit PIN
+        ↓
+        Enter 6-digit PIN
+        ├─ [SUCCESS] → Access Wallet
+        └─ [FAIL] → Lock Account (after 3 attempts) → Requires OTP Reset
+        </div>
+    </div>
+
+    <div class="section-box">
+        <h3>6. Code Details (Implementation)</h3>
+        <p><strong>Prisma Schema Changes:</strong> Upgrading the User model to support 6-digit PINs and WebAuthn credentials.</p>
+        <div class="code-block">
+model User {
+  id             String        @id @default(uuid())
+  // ... existing fields ...
+  pinHash        String?       // 6-digit hashed PIN (Argon2id)
+  biometricKeyId String?       // WebAuthn Credential ID
+  biometricPublicKey Bytes?    // WebAuthn Public Key
+  trustedDevices String?       // JSON metadata of verified hardware
+}
+        </div>
+        <p><strong>Verification Logic:</strong> 6-digit PIN validation must reject common sequences.</p>
+        <div class="code-block">
+const isWeakPin = (pin) => {
+  const commonPins = ['123456', '111111', '654321', '000000'];
+  return commonPins.includes(pin);
+};
+        </div>
+    </div>
+
+    <div class="section-box">
+        <h3>7. Test Results (Verification)</h3>
+        <ul>
+            <li><strong>Schema Sync:</strong> Completed. <code>npx prisma generate</code> successful with new fields.</li>
+            <li><strong>OTP Delivery:</strong> Integrated with dual-channel (Email/SMS) provider (v203).</li>
+            <li><strong>Rate Limiting:</strong> Mock test successful (3 failed PIN attempts triggers lock).</li>
+        </ul>
+    </div>
+
+    <div class="recommendation">
+        <h3>Recommendation for Future Enhancement</h3>
+        <p>Integrate <strong>Device Health Attestation</strong> to detect rooted or jailbroken devices, further aligning budolPay with GoTyme's strict digital bank security standards. Also consider implementing <strong>Silent Network Authentication</strong> for seamless mobile number verification without SMS OTPs.</p>
+    </div>
+
+    <p>Detailed interlinking and consolidated recommendations are available in the <a href="../../consolidated_recommendations.html">Consolidated Recommendations</a>.</p>
+</body>
+</html>

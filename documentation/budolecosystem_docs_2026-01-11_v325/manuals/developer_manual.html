@@ -1,0 +1,77 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>BudolEcosystem Developer Manual - v325</title>
+    <style>
+        body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; line-height: 1.6; color: #333; max-width: 800px; margin: 0 auto; padding: 20px; }
+        h1 { color: #2c3e50; border-bottom: 2px solid #3498db; padding-bottom: 10px; }
+        h2 { color: #2980b9; margin-top: 30px; }
+        code { background: #f4f4f4; padding: 2px 5px; border-radius: 3px; font-family: "SFMono-Regular", Consolas, "Liberation Mono", Menlo, monospace; }
+        pre { background: #f4f4f4; padding: 15px; border-radius: 5px; overflow-x: auto; }
+        .file-path { color: #e67e22; font-weight: bold; }
+        .status-badge { display: inline-block; padding: 3px 10px; border-radius: 12px; font-size: 0.85em; font-weight: bold; text-transform: uppercase; }
+        .status-fixed { background: #2ecc71; color: white; }
+        .status-info { background: #3498db; color: white; }
+        .nav-links { margin-bottom: 20px; display: flex; justify-content: space-between; }
+        .nav-links a { text-decoration: none; color: #3498db; font-weight: bold; }
+        .nav-links a:hover { text-decoration: underline; }
+    </style>
+</head>
+<body>
+    <div class="nav-links">
+        <a href="../../budolecosystem_docs_2026-01-11_v324/manuals/developer_manual.html">← Previous (v324)</a>
+        <a href="../index.html">v325 Index</a>
+        <span>Next (TBD) →</span>
+    </div>
+
+    <h1>Developer Manual - v325</h1>
+    
+    <section>
+        <h2>Prisma EPERM Fix & Ecosystem Stability</h2>
+        <p>This version focuses on resolving a critical <code>EPERM</code> (Operation Not Permitted) error encountered during the <code>npm start</code> process, specifically within the Prisma engine generation phase on Windows environments.</p>
+        
+        <div class="status-badge status-fixed">Fixed</div>
+        <h3>Issue: Prisma Engine File Locking</h3>
+        <p>On Windows, the Prisma engine (<code>query_engine-windows.dll.node</code>) can become locked by background Node.js processes or antivirus software during a rename operation. This prevents <code>npx prisma generate</code> from completing, which in turn blocks the database package and dependent services.</p>
+        
+        <h3>Resolution Strategy</h3>
+        <ol>
+            <li><strong>Process Cleanup:</strong> Forcefully terminating all <code>node</code> processes to ensure no active handles are held on the <code>node_modules</code> files.</li>
+            <li><strong>Manual Cache Purge:</strong> Deleting the <code>@prisma</code> folder within the root <code>node_modules</code> to clear corrupted or locked engine binaries.</li>
+            <li><strong>Re-generation:</strong> Manually triggering <code>npx prisma generate</code> in the <code>packages/database</code> directory to recreate the Prisma Client with fresh engines.</li>
+        </ol>
+
+        <h3>Technical Details</h3>
+        <p>The fix was applied to the following package:</p>
+        <ul>
+            <li><span class="file-path">budolpay-0.1.0/packages/database</span></li>
+        </ul>
+        <pre><code># Command executed to resolve:
+Remove-Item -Path "D:\IT Projects\budolEcosystem\budolpay-0.1.0\node_modules\@prisma" -Recurse -Force
+cd "D:\IT Projects\budolEcosystem\budolpay-0.1.0\packages\database"
+npx prisma generate</code></pre>
+    </section>
+
+    <section>
+        <h2>Service Startup Verification</h2>
+        <p>After resolving the Prisma issue, the ecosystem services were verified for successful startup.</p>
+        <ul>
+            <li><strong>API Gateway:</strong> Running on <code>http://192.168.1.17:8080</code> (mDNS advertised).</li>
+            <li><strong>Auth Service:</strong> Running on port <code>8001</code>.</li>
+            <li><strong>Wallet Service:</strong> Running on port <code>8002</code>.</li>
+            <li><strong>Transaction Service:</strong> Running on port <code>8003</code>.</li>
+        </ul>
+        <p><em>Note: The Admin app requires a production build (<code>npm run build</code>) before it can be started in production mode.</em></p>
+    </section>
+
+    <section>
+        <h2>Impact Analysis</h2>
+        <ul>
+            <li><strong>System Stability:</strong> High. Backend services are now operational and reachable by the mobile app.</li>
+            <li><strong>Build Process:</strong> No changes to build scripts, but troubleshooting steps are now documented.</li>
+        </ul>
+    </section>
+</body>
+</html>

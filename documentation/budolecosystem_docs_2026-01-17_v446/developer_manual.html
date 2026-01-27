@@ -1,0 +1,58 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Developer Manual - v446</title>
+    <style>
+        body { font-family: sans-serif; padding: 40px; line-height: 1.6; }
+        .code-block { background: #1E1E1E; color: #D4D4D4; padding: 20px; border-radius: 8px; font-family: 'Courier New', monospace; overflow-x: auto; margin-bottom: 20px; }
+        .file-link { color: #0052CC; text-decoration: none; font-weight: bold; }
+        .file-link:hover { text-decoration: underline; }
+    </style>
+</head>
+<body>
+    <h1>Developer Manual - v446</h1>
+    <h2>Flutter Web Rendering Fixes</h2>
+    <p>This version addresses the "black screen" issue on Flutter Web where the Marketing Ads screen failed to render after the splash screen was removed.</p>
+
+    <h3>1. Navigation Timing Adjustment</h3>
+    <p>Modified <a href="file:///d:/IT%20Projects/budolEcosystem/budolPayMobile/lib/screens/splash_screen.dart" class="file-link">splash_screen.dart</a> to increase the delay before removing the web splash overlay. This ensures the target screen has enough time to mount and prepare its first frame.</p>
+    <div class="code-block">
+<pre>
+// splash_screen.dart
+if (kIsWeb) {
+  debugPrint('SplashScreen: Removing web splash in 500ms...');
+  await Future.delayed(const Duration(milliseconds: 500));
+  callJsMethod('removeSplashFromWeb');
+  await Future.delayed(const Duration(milliseconds: 100));
+}
+</pre>
+    </div>
+
+    <h3>2. Rendering Guards & Layout Optimization</h3>
+    <p>Enhanced <a href="file:///d:/IT%20Projects/budolEcosystem/budolPayMobile/lib/screens/marketing_ads_screen.dart" class="file-link">marketing_ads_screen.dart</a> with layout guards and explicit constraints to force rendering on web engines.</p>
+    <div class="code-block">
+<pre>
+// marketing_ads_screen.dart
+body: RepaintBoundary(
+  child: LayoutBuilder(
+    builder: (context, constraints) {
+      return Stack(
+        children: [
+          Positioned.fill(
+            child: PageView.builder(
+              key: const ValueKey('marketing_page_view'),
+              // ...
+</pre>
+    </div>
+
+    <h3>3. Key Changes Summary</h3>
+    <ul>
+        <li><strong>RepaintBoundary:</strong> Forces the creation of a separate compositing layer, often fixing rendering glitches on web.</li>
+        <li><strong>LayoutBuilder:</strong> Ensures the screen receives explicit constraints and provides debug logging for web environment analysis.</li>
+        <li><strong>ValueKey:</strong> Added to PageView to ensure a clean state upon navigation.</li>
+    </ul>
+
+    <p><a href="index.html">← Back to Index</a></p>
+</body>
+</html>

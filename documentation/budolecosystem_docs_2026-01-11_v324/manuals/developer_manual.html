@@ -1,0 +1,102 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Developer Manual - budolPay v1.2.49</title>
+    <style>
+        body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; line-height: 1.6; color: #333; max-width: 800px; margin: 0 auto; padding: 20px; }
+        h1, h2, h3 { color: #0F172A; }
+        code { background: #f4f4f4; padding: 2px 4px; border-radius: 4px; font-family: monospace; }
+        pre { background: #f4f4f4; padding: 15px; border-radius: 8px; overflow-x: auto; }
+        .tag { display: inline-block; padding: 2px 8px; border-radius: 12px; font-size: 0.8em; font-weight: bold; margin-right: 5px; }
+        .tag-feature { background: #e0f2fe; color: #0369a1; }
+        .tag-fix { background: #fef2f2; color: #991b1b; }
+        .link-box { border: 1px solid #e2e8f0; padding: 10px; border-radius: 8px; margin: 10px 0; background: #f8fafc; }
+    </style>
+</head>
+<body>
+    <nav>
+        <a href="../index.html">v324 Index</a> | 
+        <a href="../../budolecosystem_docs_2026-01-11_v322/manuals/developer_manual.html">Previous (v322)</a>
+    </nav>
+
+    <h1>Developer Manual - budolPay v1.2.49</h1>
+    
+    <section>
+        <h2>Release Overview</h2>
+        <p>This release focuses on improving the user experience for initial app setup by providing API Host Configuration directly on the Login screen, and consolidating UI logic for better maintainability.</p>
+    </section>
+
+    <section>
+        <h2>Technical Implementation Details</h2>
+        
+        <h3>1. Reusable UI Components <span class="tag tag-feature">Feature</span></h3>
+        <p>Extracted the API Host Configuration dialog from <code>settings_screen.dart</code> into a reusable utility class to support multiple entry points (Settings and Login).</p>
+        <div class="link-box">
+            <strong>File:</strong> <a href="file:///d:/IT Projects/budolEcosystem/budolPayMobile/lib/utils/ui_utils.dart">budolPayMobile/lib/utils/ui_utils.dart</a>
+        </div>
+        <p><strong>Logic:</strong> Implemented <code>UIUtils.showHostConfigDialog(BuildContext context)</code> which encapsulates:</p>
+        <ul>
+            <li>Manual host entry text field.</li>
+            <li>mDNS network scanning via <code>ApiService.discoverAndSetHost()</code>.</li>
+            <li>Loading state management during network discovery.</li>
+            <li>Persistence via <code>ApiService.setHost()</code>.</li>
+        </ul>
+
+        <h3>2. Login Screen Integration <span class="tag tag-feature">Feature</span></h3>
+        <p>Added a settings icon to the Login Screen AppBar to allow users to configure the API host before attempting to identify their mobile number. This is critical for environments where the default host is not reachable.</p>
+        <div class="link-box">
+            <strong>File:</strong> <a href="file:///d:/IT Projects/budolEcosystem/budolPayMobile/lib/screens/login_screen.dart">budolPayMobile/lib/screens/login_screen.dart</a>
+        </div>
+        <p><strong>Changes:</strong></p>
+        <ul>
+            <li>Added <code>AppBar</code> with <code>Icons.settings</code> action.</li>
+            <li>Set <code>extendBodyBehindAppBar: true</code> to maintain the full-screen background effect.</li>
+            <li>Integrated <code>UIUtils.showHostConfigDialog</code> call.</li>
+        </ul>
+
+        <h3>3. Version Synchronization <span class="tag tag-feature">Maintenance</span></h3>
+        <p>Incremented version to 1.2.49+49 to track the new UI capability.</p>
+        <div class="link-box">
+            <strong>Files:</strong> 
+            <a href="file:///d:/IT Projects/budolEcosystem/budolPayMobile/pubspec.yaml">pubspec.yaml</a>, 
+            <a href="file:///d:/IT Projects/budolEcosystem/budolPayMobile/lib/services/api_service.dart">api_service.dart</a>
+        </div>
+    </section>
+
+    <section>
+        <h2>Code Details</h2>
+        <pre><code>
+// Reusable Dialog Call
+IconButton(
+  icon: const Icon(Icons.settings, color: Colors.white70),
+  onPressed: () => UIUtils.showHostConfigDialog(context),
+  tooltip: 'API Configuration',
+),
+        </code></pre>
+    </section>
+
+    <section>
+        <h2>Test Results</h2>
+        <ul>
+            <li><strong>Unit Tests:</strong> <code>flutter test</code> passed (2 tests).</li>
+            <li><strong>Linter:</strong> <code>flutter analyze</code> passed (No issues).</li>
+            <li><strong>E2E Manual Verification:</strong> Verified that the settings icon appears on the login screen, opens the dialog, allows host updates, and correctly updates the footer API display.</li>
+        </ul>
+    </section>
+
+    <section>
+        <h2>Future Enhancements</h2>
+        <ul>
+            <li>Implement auto-discovery on first app launch if host is not configured.</li>
+            <li>Add "Check Connection" button in the host config dialog to verify connectivity before saving.</li>
+        </ul>
+    </section>
+
+    <footer>
+        <hr>
+        <p><em>Last updated: 2026-01-11</em></p>
+    </footer>
+</body>
+</html>

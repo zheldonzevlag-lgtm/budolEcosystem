@@ -1,0 +1,71 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Developer Manual - v429</title>
+    <style>
+        body { font-family: sans-serif; line-height: 1.5; color: #333; max-width: 900px; margin: 0 auto; padding: 20px; }
+        .code-block { background: #2d3436; color: #dfe6e9; padding: 15px; border-radius: 5px; overflow-x: auto; font-family: 'Courier New', Courier, monospace; margin: 15px 0; }
+        .file-link { color: #0984e3; text-decoration: none; font-weight: bold; }
+        h2 { border-left: 5px solid #0984e3; padding-left: 10px; margin-top: 30px; }
+    </style>
+</head>
+<body>
+    <h1>Developer Manual - v429 Fixes</h1>
+
+    <h2>Issue Description</h2>
+    <p>A <code>TypeError: Cannot read properties of undefined (reading 'slice')</code> occurred in <code>OrderHeader.jsx</code> when <code>order.id</code> was not present. This typically happened when an API error (e.g., 403 Forbidden) was returned as a JSON object but not caught as an error state.</p>
+
+    <h2>Technical Fixes</h2>
+
+    <h3>1. Defensive Programming in UI</h3>
+    <p>File: <a class="file-link" href="file:///d:/IT Projects/budolEcosystem/budolshap-0.1.0/components/OrderHeader.jsx">OrderHeader.jsx</a></p>
+    <div class="code-block">
+<pre>
+// Before
+Order #{order.id.slice(-12)}
+
+// After
+Order #{order?.id ? order.id.slice(-12) : '---'}
+</pre>
+    </div>
+
+    <h3>2. SWR Fetcher Enhancement</h3>
+    <p>File: <a class="file-link" href="file:///d:/IT Projects/budolEcosystem/budolshap-0.1.0/hooks/useRealtimeOrderDetail.js">useRealtimeOrderDetail.js</a></p>
+    <div class="code-block">
+<pre>
+const fetcher = async (url) => {
+    const res = await fetch(url);
+    if (!res.ok) {
+        const error = new Error('An error occurred');
+        error.info = await res.json();
+        error.status = res.status;
+        throw error;
+    }
+    return res.json();
+};
+</pre>
+    </div>
+
+    <h3>3. Error Propagation</h3>
+    <p>File: <a class="file-link" href="file:///d:/IT Projects/budolEcosystem/budolshap-0.1.0/app/(public)/orders/[orderId]/page.jsx">page.jsx</a></p>
+    <div class="code-block">
+<pre>
+useEffect(() => {
+    if (swrError) {
+        setError(swrError.info?.error || swrError.message);
+    } else if (order?.error) {
+        setError(order.error);
+    }
+}, [swrError, order]);
+</pre>
+    </div>
+
+    <h2>Verification</h2>
+    <ul>
+        <li>Simulated 403 error from <code>/api/orders/[orderId]</code>.</li>
+        <li>Verified page displays "Forbidden" error UI instead of crashing.</li>
+        <li>Verified valid orders still render correctly.</li>
+    </ul>
+</body>
+</html>

@@ -1,0 +1,100 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>System Admin Manual - v503</title>
+    <style>
+        :root { --primary: #F43F5E; --secondary: #0F172A; --bg: #F8FAFC; --text: #1E293B; --sidebar-width: 280px; }
+        body { font-family: 'Segoe UI', sans-serif; margin: 0; display: flex; background-color: var(--bg); color: var(--text); }
+        .sidebar { width: var(--sidebar-width); background-color: var(--secondary); color: white; height: 100vh; position: fixed; padding: 2rem 1rem; box-sizing: border-box; }
+        .sidebar h2 { color: var(--primary); text-align: center; margin-bottom: 2rem; }
+        .sidebar nav ul { list-style: none; padding: 0; }
+        .sidebar nav ul li { margin-bottom: 0.5rem; }
+        .sidebar nav ul li a { color: #94A3B8; text-decoration: none; display: block; padding: 0.75rem 1rem; border-radius: 8px; transition: all 0.3s; }
+        .sidebar nav ul li a:hover { background: rgba(255,255,255,0.05); color: white; }
+        .sidebar nav ul li a.active { background: var(--primary); color: white; }
+        .main-content { margin-left: var(--sidebar-width); padding: 3rem; width: calc(100% - var(--sidebar-width)); box-sizing: border-box; }
+        .card { background: white; padding: 2.5rem; border-radius: 16px; box-shadow: 0 10px 15px -3px rgba(0,0,0,0.1); margin-bottom: 2rem; }
+        .admin-note { background: #FFFBEB; border-left: 4px solid #F59E0B; padding: 1.5rem; border-radius: 8px; margin: 1rem 0; }
+    </style>
+</head>
+<body>
+    <div class="sidebar">
+        <h2>Budol Ecosystem</h2>
+        <nav>
+            <ul>
+                <li><a href="index.html">Overview</a></li>
+                <li><a href="developer_manual.html">Developer Manual</a></li>
+                <li><a href="system_admin_manual.html" class="active">System Admin Manual</a></li>
+                <li><a href="user_manual.html">User Manual</a></li>
+                <li><a href="risk_register.html">Risk Register</a></li>
+                <li><a href="Mitigation.html">Mitigation</a></li>
+                <li><a href="issues.html">Issues Log</a></li>
+                <li><a href="fixes.html">Fixes Log</a></li>
+                <li><a href="test_results.html">Test Results</a></li>
+                <li><a href="future_recommendations.html">Future Recommendations</a></li>
+            </ul>
+        </nav>
+    </div>
+
+    <main class="main-content">
+        <div class="card">
+            <h1>System Admin Manual</h1>
+            <p>Administration and maintenance guide for v503 update.</p>
+
+            <section>
+                <h2>1. Real-time Provider Configuration</h2>
+                <p>Ensure that Pusher or Socket.io is correctly configured in the System Settings. Admin-configured providers are now prioritized over SWR polling to reduce server load and improve latency.</p>
+                <div class="admin-note">
+                    <strong>Critical:</strong> If using Pusher, ensure the Cluster and Key are correct. The system will automatically fallback to SWR polling (every 10 seconds) if the provider fails to connect.
+                </div>
+            </section>
+
+            <section style="margin-top: 3rem;">
+                <h2>2. Webhook Monitoring</h2>
+                <p>Lalamove webhooks are now mapped to the <code>UNIVERSAL_STATUS</code> set. If an order status does not update, check the logs for "Webhook signature missing" or "Invalid signature" errors.</p>
+                <ul>
+                    <li><strong>Endpoint:</strong> <code>/api/webhooks/lalamove</code></li>
+                    <li><strong>Required Secret:</strong> <code>LALAMOVE_WEBHOOK_SECRET</code> in <code>.env</code></li>
+                </ul>
+            </section>
+
+            <section style="margin-top: 3rem;">
+                <h2>3. Cache Management</h2>
+                <p>The system settings cache has been optimized with a reduced TTL of 10 seconds (down from 60s) to ensure that administrative changes (like switching real-time providers) take effect almost immediately across all server instances.</p>
+            </section>
+
+            <section style="margin-top: 3rem;">
+                <h2>4. Compliance Verification</h2>
+                <table style="width: 100%; border-collapse: collapse; margin-top: 1rem;">
+                    <thead>
+                        <tr style="background: #F8FAFC; border-bottom: 2px solid #E2E8F0;">
+                            <th style="padding: 1rem; text-align: left;">Standard</th>
+                            <th style="padding: 1rem; text-align: left;">Compliance Action in v503</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr style="border-bottom: 1px solid #E2E8F0;">
+                            <td style="padding: 1rem; font-weight: 600;">PCI DSS</td>
+                            <td style="padding: 1rem;">Search logic excludes sensitive payment data (tokens, full CVVs) from indexing and query results.</td>
+                        </tr>
+                        <tr style="border-bottom: 1px solid #E2E8F0;">
+                            <td style="padding: 1rem; font-weight: 600;">BSP & NPC</td>
+                            <td style="padding: 1rem;">Customer data in search results is filtered based on administrative permissions (RBAC).</td>
+                        </tr>
+                        <tr style="border-bottom: 1px solid #E2E8F0;">
+                            <td style="padding: 1rem; font-weight: 600;">BIR</td>
+                            <td style="padding: 1rem;">Real-time sync ensures that order statuses for tax-relevant transactions (Paid/Delivered) are accurately recorded in the audit log.</td>
+                        </tr>
+                        <tr style="border-bottom: 1px solid #E2E8F0;">
+                            <td style="padding: 1rem; font-weight: 600;">Cybersecurity Law</td>
+                            <td style="padding: 1rem;">Mandatory signature verification for all incoming Lalamove webhooks to prevent spoofing.</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </section>
+        </div>
+    </main>
+</body>
+</html>

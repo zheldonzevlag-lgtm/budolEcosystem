@@ -1,0 +1,81 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Fixes Log - v503</title>
+    <style>
+        :root { --primary: #F43F5E; --secondary: #0F172A; --bg: #F8FAFC; --text: #1E293B; --sidebar-width: 280px; }
+        body { font-family: 'Segoe UI', sans-serif; margin: 0; display: flex; background-color: var(--bg); color: var(--text); }
+        .sidebar { width: var(--sidebar-width); background-color: var(--secondary); color: white; height: 100vh; position: fixed; padding: 2rem 1rem; box-sizing: border-box; }
+        .sidebar h2 { color: var(--primary); text-align: center; margin-bottom: 2rem; }
+        .sidebar nav ul { list-style: none; padding: 0; }
+        .sidebar nav ul li { margin-bottom: 0.5rem; }
+        .sidebar nav ul li a { color: #94A3B8; text-decoration: none; display: block; padding: 0.75rem 1rem; border-radius: 8px; transition: all 0.3s; }
+        .sidebar nav ul li a:hover { background: rgba(255,255,255,0.05); color: white; }
+        .sidebar nav ul li a.active { background: var(--primary); color: white; }
+        .main-content { margin-left: var(--sidebar-width); padding: 3rem; width: calc(100% - var(--sidebar-width)); box-sizing: border-box; }
+        .card { background: white; padding: 2.5rem; border-radius: 16px; box-shadow: 0 10px 15px -3px rgba(0,0,0,0.1); margin-bottom: 2rem; }
+        .fix-item { border-left: 4px solid #10B981; padding-left: 1rem; margin-bottom: 1.5rem; }
+        .fix-item h3 { margin-top: 0; color: #059669; }
+    </style>
+</head>
+<body>
+    <div class="sidebar">
+        <h2>Budol Ecosystem</h2>
+        <nav>
+            <ul>
+                <li><a href="index.html">Overview</a></li>
+                <li><a href="developer_manual.html">Developer Manual</a></li>
+                <li><a href="system_admin_manual.html">System Admin Manual</a></li>
+                <li><a href="user_manual.html">User Manual</a></li>
+                <li><a href="risk_register.html">Risk Register</a></li>
+                <li><a href="Mitigation.html">Mitigation</a></li>
+                <li><a href="issues.html">Issues Log</a></li>
+                <li><a href="fixes.html" class="active">Fixes Log</a></li>
+                <li><a href="test_results.html">Test Results</a></li>
+                <li><a href="future_recommendations.html">Future Recommendations</a></li>
+            </ul>
+        </nav>
+    </div>
+
+    <main class="main-content">
+        <div class="card">
+            <h1>Fixes Log</h1>
+            <p>Solutions implemented to resolve issues in v503.</p>
+            
+            <div class="fix-item">
+                <h3>F503-01: Enhanced SWR Cache Mutation</h3>
+                <p><strong>Description:</strong> Refactored <code>RealtimeProvider</code> to include <code>isPaid</code>, <code>paymentStatus</code>, and <code>shipping</code> metadata in Pusher events. This allows SWR to match orders against tab filters (e.g., <code>isCancelledTab</code>) and update the UI correctly without a reload.</p>
+                <p><strong>Impact:</strong> Instant UI updates across all order filter tabs.</p>
+            </div>
+
+            <div class="fix-item">
+                <h3>F503-04: Dynamic Page-Specific Search Implementation Plan</h3>
+                <p><strong>Description:</strong> Implemented a unified search system that adapts to the current page context. This was achieved by migrating local search states to a global <code>SearchContext</code> and updating backend API handlers to support standardized search parameters.</p>
+                <p><strong>Implementation Steps:</strong></p>
+                <ul style="color: #475569; font-size: 0.9rem; line-height: 1.6;">
+                    <li><strong>Infrastructure:</strong> Created <code>SearchContext.jsx</code> to hold global <code>searchQuery</code> and <code>placeholder</code> state.</li>
+                    <li><strong>Dynamic Routing:</strong> Integrated <code>usePathname</code> in <code>SearchContext</code> to reset search and update placeholders automatically on navigation.</li>
+                    <li><strong>Global Layout:</strong> Wrapped the application in <code>SearchProvider</code> and updated <code>Navbar</code> to use the global state.</li>
+                    <li><strong>Backend Standardization:</strong> Refactored <code>ordersService</code> and various API routes (Products, Users, Stores, Returns, Coupons, Payouts, Memberships) to support case-insensitive Prisma <code>contains</code> filtering via a common <code>search</code> parameter.</li>
+                    <li><strong>Frontend Migration:</strong> Updated 10+ frontend pages to consume <code>searchQuery</code> from context and trigger re-fetches on change.</li>
+                </ul>
+                <p><strong>Impact:</strong> A seamless, intuitive search experience that works across all administrative and customer-facing lists without state conflicts.</p>
+            </div>
+
+            <div class="fix-item">
+                <h3>F503-02: Dynamic Pathname-Based Search Context</h3>
+                <p><strong>Description:</strong> Updated <code>SearchContext</code> to use Next.js <code>usePathname</code>. The search query is now reset on navigation, and placeholders are dynamically updated based on the current route.</p>
+                <p><strong>Impact:</strong> Prevents search term "leakage" between different sections of the app.</p>
+            </div>
+
+            <div class="fix-item">
+                <h3>F503-03: Webhook Environment Isolation</h3>
+                <p><strong>Description:</strong> Corrected the signature verification logic to handle local development environment differences and ensured that the <code>BASE_URL</code> in test scripts matches the running instance (3000 vs 3001).</p>
+                <p><strong>Impact:</strong> Reliable testing and production security.</p>
+            </div>
+        </div>
+    </main>
+</body>
+</html>

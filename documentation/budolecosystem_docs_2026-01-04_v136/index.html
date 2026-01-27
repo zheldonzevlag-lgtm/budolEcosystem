@@ -1,0 +1,119 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>budolEcosystem Documentation v136 - Network-Aware Local Environment</title>
+    <style>
+        :root {
+            --primary: #4f46e5;
+            --secondary: #64748b;
+            --success: #22c55e;
+            --danger: #ef4444;
+            --warning: #f59e0b;
+            --info: #3b82f6;
+            --dark: #0f172a;
+            --light: #f8fafc;
+        }
+        body { font-family: 'Inter', system-ui, -apple-system, sans-serif; line-height: 1.6; color: var(--dark); background: var(--light); margin: 0; padding: 0; }
+        .container { max-width: 1000px; margin: 2rem auto; padding: 2rem; background: white; border-radius: 1rem; shadow: 0 10px 15px -3px rgba(0,0,0,0.1); border: 1px solid #e2e8f0; }
+        header { border-bottom: 2px solid #f1f5f9; padding-bottom: 2rem; margin-bottom: 2rem; }
+        h1 { font-size: 2.25rem; font-weight: 800; color: var(--dark); margin: 0; letter-spacing: -0.025em; }
+        .version-badge { display: inline-block; padding: 0.25rem 0.75rem; background: var(--primary); color: white; border-radius: 9999px; font-size: 0.875rem; font-weight: 600; margin-top: 0.5rem; }
+        h2 { font-size: 1.5rem; font-weight: 700; color: var(--dark); margin-top: 2.5rem; border-left: 4px solid var(--primary); padding-left: 1rem; }
+        h3 { font-size: 1.25rem; font-weight: 600; color: var(--dark); margin-top: 1.5rem; }
+        p { margin-bottom: 1rem; color: var(--secondary); }
+        code { font-family: 'Fira Code', monospace; background: #f1f5f9; padding: 0.2rem 0.4rem; border-radius: 0.25rem; font-size: 0.9em; color: var(--danger); }
+        pre { background: #1e293b; color: #f8fafc; padding: 1.5rem; border-radius: 0.75rem; overflow-x: auto; margin: 1.5rem 0; position: relative; }
+        pre code { background: transparent; color: inherit; padding: 0; }
+        .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 1.5rem; margin: 1.5rem 0; }
+        .card { padding: 1.5rem; border-radius: 0.75rem; border: 1px solid #e2e8f0; background: #fff; }
+        .card.success { border-left: 4px solid var(--success); }
+        .card.warning { border-left: 4px solid var(--warning); }
+        .card.danger { border-left: 4px solid var(--danger); }
+        .nav-links { display: flex; justify-content: space-between; margin-top: 4rem; padding-top: 2rem; border-top: 1px solid #e2e8f0; }
+        .nav-links a { color: var(--primary); text-decoration: none; font-weight: 600; transition: all 0.2s; }
+        .nav-links a:hover { text-decoration: underline; opacity: 0.8; }
+        .feature-tag { display: inline-block; padding: 0.1rem 0.5rem; background: #e0e7ff; color: #4338ca; border-radius: 0.25rem; font-size: 0.75rem; font-weight: 600; margin-right: 0.5rem; }
+    </style>
+</head>
+<body>
+    <div class="nav-links ecosystem-docs-top-nav">
+        <a href="../budolecosystem_docs_2026-01-04_v135/index.html">← Previous (v135)</a>
+        <a href="../index.html">Index</a>
+        <a href="../budolecosystem_docs_2026-01-04_v137/index.html">Next (v137) →</a>
+    </div>
+
+    <div class="container">
+        <header>
+            <h1>Network-Aware Local Environment</h1>
+            <div class="version-badge">v136 - 2026-01-04</div>
+            <p style="margin-top: 1rem;">Automated network discovery and cross-device connectivity system for the budolEcosystem.</p>
+        </header>
+
+        <section id="purpose">
+            <h2>Purpose</h2>
+            <p>The manual configuration of IP addresses for local development, especially when testing with physical mobile devices, was error-prone and tedious. This update introduces an automated network discovery system that detects the machine's local IP and propagates it throughout the ecosystem.</p>
+        </section>
+
+        <section id="technical-details">
+            <h2>Technical Implementation</h2>
+            <h3>1. Network Discovery Utility</h3>
+            <p>A new script <code>scripts/network-util.js</code> uses the Node.js <code>os</code> module to find the primary IPv4 address of the host machine. It automatically updates the root <code>.env</code> file and generates a <code>MOBILE_CONFIG.txt</code> helper.</p>
+            
+            <h3>2. Dynamic Injection in start-ecosystem.js</h3>
+            <p>The central runner now calls the network utility at startup and injects the detected IP into all services via environment variables:</p>
+            <pre><code>LOCAL_IP=172.16.0.2
+API_GATEWAY_URL=http://172.16.0.2:8080
+AUTH_SERVICE_URL=http://172.16.0.2:8001
+...</code></pre>
+
+            <h3>3. Standardized Service Binding</h3>
+            <p>All microservices and Next.js applications now bind to <code>0.0.0.0</code> instead of <code>localhost</code>, allowing them to accept connections from other devices on the same network.</p>
+        </section>
+
+        <section id="impact">
+            <h2>System Impact</h2>
+            <div class="grid">
+                <div class="card success">
+                    <h3>Mobile Connectivity</h3>
+                    <p>Physical devices can now connect to the local server seamlessly by using the <code>--dart-define=API_HOST=[IP]</code> flag, which is documented in the auto-generated <code>MOBILE_CONFIG.txt</code>.</p>
+                </div>
+                <div class="card success">
+                    <h3>Zero Configuration</h3>
+                    <p>Developers no longer need to manually update IP addresses in multiple <code>.env</code> files when moving between different Wi-Fi networks (Home, Office, Cafe).</p>
+                </div>
+            </div>
+        </section>
+
+        <section id="test-results">
+            <h2>Verification & Testing</h2>
+            <div class="card">
+                <p><strong>Test Scenario:</strong> Run ecosystem on a new network interface.</p>
+                <ul>
+                    <li><strong>Action:</strong> Run <code>npm start</code> in root.</li>
+                    <li><strong>Observation:</strong> <code>network-util.js</code> correctly detected <code>172.16.0.2</code>.</li>
+                    <li><strong>Observation:</strong> Root <code>.env</code> updated automatically.</li>
+                    <li><strong>Observation:</strong> <code>MOBILE_CONFIG.txt</code> generated with correct instructions.</li>
+                    <li><strong>Result:</strong> <span style="color: var(--success); font-weight: bold;">PASSED</span></li>
+                </ul>
+            </div>
+        </section>
+
+        <section id="future-enhancements">
+            <h2>Future Enhancements</h2>
+            <ul>
+                <li><strong>mDNS / Bonjour Support:</strong> Implement service discovery so mobile apps can find the server without typing an IP.</li>
+                <li><strong>QR Code Discovery:</strong> Generate a QR code in the terminal at startup that the mobile app can scan to auto-configure its API host.</li>
+                <li><strong>Network Change Listener:</strong> Automatically restart services or update configs if the Wi-Fi network changes while the apps are running.</li>
+            </ul>
+        </section>
+
+        <div class="nav-links">
+            <a href="../budolecosystem_docs_2026-01-04_v135/index.html">← Previous (v135: Ecosystem UI)</a>
+            <a href="../index.html">Main Index</a>
+            <a href="../budolecosystem_docs_2026-01-04_v137/index.html">Next (v137: Intelligent Runner) →</a>
+        </div>
+    </div>
+</body>
+</html>

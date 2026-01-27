@@ -1,0 +1,76 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Developer Manual - v488</title>
+    <style>
+        body { font-family: sans-serif; line-height: 1.6; padding: 2rem; max-width: 1000px; margin: auto; background: #f8fafc; }
+        h1, h2, h3 { color: #1e293b; }
+        pre { background: #0f172a; color: #f8fafc; padding: 1rem; border-radius: 0.5rem; overflow-x: auto; }
+        .code-ref { color: #3b82f6; text-decoration: none; font-weight: bold; }
+        .code-ref:hover { text-decoration: underline; }
+        .section { background: white; padding: 2rem; border-radius: 0.75rem; box-shadow: 0 1px 3px rgba(0,0,0,0.1); margin-bottom: 2rem; }
+    </style>
+</head>
+<body>
+    <h1>Developer Manual - v488</h1>
+    <p><a href="index.html">&larr; Back to Overview</a></p>
+
+    <div class="section">
+        <h2>Technical Explanation</h2>
+        <p>
+            The core improvement in v488 is the normalization of QR data between different providers (budolPay vs PayMongo) 
+            to allow a single component, <code>QRCodeModal</code>, to handle all payment displays.
+        </p>
+        <h3>QR Data Normalization</h3>
+        <p>
+            When an order is initiated, the backend now returns either a raw QR string (for budolPay) or a structured object (for PayMongo). 
+            The frontend normalizes these into a consistent object structure containing an <code>imageUrl</code>.
+        </p>
+    </div>
+
+    <div class="section">
+        <h2>Code References</h2>
+        <ul>
+            <li>
+                <strong>Payment Gateway Service:</strong> 
+                <a class="code-ref" href="file:///d:/IT%20Projects/budolEcosystem/budolpay-0.1.0/services/payment-gateway-service/index.js">budolpay-0.1.0/services/payment-gateway-service/index.js</a>
+                <p>Added <code>qrCode</code> field to the response for internal budolPay transactions.</p>
+            </li>
+            <li>
+                <strong>Orders Page:</strong> 
+                <a class="code-ref" href="file:///d:/IT%20Projects/budolEcosystem/budolshap-0.1.0/app/(public)/orders/page.jsx">budolshap-0.1.0/app/(public)/orders/page.jsx</a>
+                <p>Implemented <code>handleRepay</code> with QR normalization and prioritized modal display over redirection.</p>
+            </li>
+            <li>
+                <strong>Order Item Component:</strong> 
+                <a class="code-ref" href="file:///d:/IT%20Projects/budolEcosystem/budolshap-0.1.0/components/OrderItem.jsx">budolshap-0.1.0/components/OrderItem.jsx</a>
+                <p>Added <code>e.stopPropagation()</code> to the "Pay Now" button to prevent unintended row navigation.</p>
+            </li>
+        </ul>
+    </div>
+
+    <div class="section">
+        <h2>Implementation Details</h2>
+        <pre><code>
+// Priority Logic in handleRepay
+if (data.qrCode) {
+    // Priority 1: Show Modal if QR data exists
+    setQrData({ ...normalizedData });
+} else if (data.checkoutUrl) {
+    // Priority 2: Fallback to Redirection
+    window.location.href = data.checkoutUrl;
+}
+        </code></pre>
+    </div>
+
+    <div class="section">
+        <h2>Compliance</h2>
+        <p>
+            <strong>BSP Circular 808:</strong> All payment intents are now audited with metadata linking to the specific order and customer ID.
+            <strong>Cybersecurity Law:</strong> Payment data is transmitted over secure internal channels with HMAC verification.
+        </p>
+    </div>
+</body>
+</html>

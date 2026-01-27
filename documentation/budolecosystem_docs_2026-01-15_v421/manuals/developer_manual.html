@@ -1,0 +1,62 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Developer Manual - v421</title>
+    <style>
+        body { font-family: sans-serif; line-height: 1.6; padding: 20px; max-width: 900px; margin: auto; background: #f4f7f6; }
+        .code-block { background: #1e1e1e; color: #d4d4d4; padding: 15px; border-radius: 5px; overflow-x: auto; margin: 20px 0; }
+        .file-link { color: #0747A6; font-weight: bold; text-decoration: none; }
+        .file-link:hover { text-decoration: underline; }
+    </style>
+</head>
+<body>
+    <h1>Developer Manual - Version 421</h1>
+    
+    <section>
+        <h2>Technical Overview</h2>
+        <p>This version focuses on fixing a hydration mismatch in Next.js. Hydration mismatches occur when the HTML generated on the server (SSR) differs from what the client (React) expects to render on its first pass.</p>
+        
+        <h3>The Problem</h3>
+        <p>The <code>AuthForm</code> component was rendering a <code>&lt;button&gt;</code> that depended on client-side state or was being misinterpreted by the browser's initial render, leading to a "Recoverable Error".</p>
+        
+        <h3>The Solution</h3>
+        <p>We implemented a standard Next.js pattern: the <code>isMounted</code> state. This ensures that any content that might differ between server and client is only rendered after the component has "hydrated" on the client side.</p>
+    </section>
+
+    <section>
+        <h2>Code Changes</h2>
+        <p>File modified: <a class="file-link" href="file:///d:/IT Projects/budolEcosystem/budolshap-0.1.0/components/auth/AuthForm.jsx">AuthForm.jsx</a></p>
+        
+        <div class="code-block">
+<pre>
+// Added state and effect
+const [isMounted, setIsMounted] = useState(false);
+
+useEffect(() => {
+    setIsMounted(true);
+}, []);
+
+// Conditional rendering in JSX
+{isMounted ? (
+    &lt;button onClick={...}&gt;Login with budolID&lt;/button&gt;
+) : (
+    &lt;div className="animate-pulse"&gt;...&lt;/div&gt;
+)}
+</pre>
+        </div>
+    </section>
+
+    <section>
+        <h2>Dependencies</h2>
+        <ul>
+            <li>Next.js 16.0.7</li>
+            <li>React 19.2.1</li>
+        </ul>
+    </section>
+
+    <footer>
+        <p><a href="../index.html">Back to Index</a></p>
+    </footer>
+</body>
+</html>

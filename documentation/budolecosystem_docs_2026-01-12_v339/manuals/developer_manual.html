@@ -1,0 +1,171 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Developer Manual - Admin Stability & RBAC (v339)</title>
+    <style>
+        :root {
+            --primary: #f43f5e;
+            --secondary: #3b82f6;
+            --dark: #0f172a;
+            --code-bg: #0d1117;
+            --code-text: #e6edf3;
+            --border: #d0d7de;
+        }
+        body { font-family: 'Inter', system-ui, sans-serif; line-height: 1.6; color: #1f2328; max-width: 1000px; margin: 0 auto; padding: 40px; background: #ffffff; }
+        .nav-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 32px; padding-bottom: 16px; border-bottom: 1px solid #d0d7de; }
+        .back-link { color: var(--secondary); text-decoration: none; font-weight: 600; font-size: 14px; }
+        h1 { font-size: 2rem; margin-bottom: 24px; color: var(--dark); letter-spacing: -0.02em; }
+        h2 { font-size: 1.5rem; margin-top: 48px; margin-bottom: 16px; border-bottom: 1px solid var(--border); padding-bottom: 8px; color: var(--dark); }
+        h3 { font-size: 1.25rem; margin-top: 32px; color: var(--dark); }
+        .section { margin-bottom: 40px; }
+        .code-container { 
+            background: var(--code-bg); 
+            color: var(--code-text); 
+            padding: 24px; 
+            border-radius: 12px; 
+            overflow-x: auto; 
+            margin: 16px 0; 
+            font-family: 'SFMono-Regular', Consolas, 'Liberation Mono', Menlo, monospace; 
+            font-size: 13px;
+            line-height: 1.5;
+            border: 1px solid #30363d;
+            box-shadow: inset 0 1px 0 rgba(255,255,255,0.05);
+        }
+        .code-link { 
+            display: inline-block;
+            margin-top: 8px;
+            color: var(--secondary);
+            text-decoration: none;
+            font-size: 14px;
+            font-weight: 500;
+        }
+        .code-link:hover { text-decoration: underline; }
+        .tag { padding: 4px 8px; border-radius: 6px; font-size: 12px; font-weight: 600; }
+        .tag-security { background: #dafbe1; color: #1a7f37; }
+        .tag-cloud { background: #ddf4ff; color: #0969da; }
+        table { width: 100%; border-collapse: collapse; margin: 24px 0; font-size: 14px; }
+        th, td { text-align: left; padding: 12px; border: 1px solid var(--border); }
+        th { background: #f6f8fa; font-weight: 600; }
+    </style>
+</head>
+<body>
+    <div class="nav-header">
+        <a href="../index.html" class="back-link">← Back to v339 Index</a>
+        <span style="color: #636c76; font-size: 14px;">Budol Ecosystem | Developer Manual v339</span>
+    </div>
+
+    <h1>Developer Manual: Admin Build Stability & LAN Compliance</h1>
+
+    <div class="section">
+        <h2>Purpose & Rationale</h2>
+        <p><strong>Objective:</strong> Restore the ecosystem to a functional state with stable Admin Service builds, LAN IP compliance (192.168.1.17), and RBAC integration.</p>
+        <p><strong>Rationale:</strong> The Admin service required build optimizations for Prisma and dynamic rendering to prevent prerendering errors. LAN compliance is critical for cross-device connectivity (mobile app to backend) in a local network environment. RBAC provides the foundation for secure administrative access.</p>
+    </div>
+
+    <div class="section">
+        <h2>Technical Implementation</h2>
+        
+        <h3>1. Admin Service Build Optimization</h3>
+        <p>To resolve build-time errors related to Prisma paths and static generation in Next.js 14, the following changes were implemented:</p>
+        
+        <p>File: <a href="file:///d:/IT Projects/budolEcosystem/budolpay-0.1.0/apps/admin/next.config.mjs" class="code-link">next.config.mjs</a></p>
+        <div class="code-container">
+<pre>
+import path from 'path';
+import { fileURLToPath } from 'url';
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+
+/** @type {import('next').NextConfig} */
+const nextConfig = {
+  transpilePackages: ['@budolpay/database'],
+  experimental: {
+    serverComponentsExternalPackages: ['@prisma/client'],
+  },
+  env: {
+    DATABASE_URL: process.env.DATABASE_URL || `file:${path.join(__dirname, '../../packages/database/prisma/dev.db')}`,
+  },
+  output: 'standalone',
+};
+
+export default nextConfig;
+</pre>
+        </div>
+
+        <p>Forced dynamic rendering for Prisma-dependent pages:</p>
+        <p>File: <a href="file:///d:/IT Projects/budolEcosystem/budolpay-0.1.0/apps/admin/app/settings/realtime/page.tsx" class="code-link">page.tsx</a></p>
+        <div class="code-container">
+<pre>
+export const dynamic = 'force-dynamic';
+
+export default async function RealtimeSettingsPage() {
+  const allSettings = await prisma.systemSetting.findMany({ ... });
+  // ...
+}
+</pre>
+        </div>
+
+        <h3>2. LAN IP Compliance (192.168.1.17)</h3>
+        <p>Standardized all microservices and frontend applications to use the LAN IP <code>192.168.1.17</code> instead of <code>127.0.0.1</code> or <code>localhost</code> to enable mobile app connectivity.</p>
+        
+        <p>Services Updated:</p>
+        <ul>
+            <li><a href="file:///d:/IT Projects/budolEcosystem/budolpay-0.1.0/services/auth-service/index.js" class="code-link">auth-service/index.js</a></li>
+            <li><a href="file:///d:/IT Projects/budolEcosystem/budolpay-0.1.0/services/transaction-service/index.js" class="code-link">transaction-service/index.js</a></li>
+            <li><a href="file:///d:/IT Projects/budolEcosystem/budolpay-0.1.0/services/api-gateway/index.js" class="code-link">api-gateway/index.js</a></li>
+            <li><a href="file:///d:/IT Projects/budolEcosystem/budolpay-0.1.0/services/wallet-service/index.js" class="code-link">wallet-service/index.js</a></li>
+        </ul>
+
+        <h3>3. SSO & Auth Route Restoration</h3>
+        <p>Fixed SSO callback and login routes in the Admin app to correctly handle the LAN IP for authentication redirects.</p>
+        <p>File: <a href="file:///d:/IT Projects/budolEcosystem/budolpay-0.1.0/apps/admin/app/api/auth/login/route.ts" class="code-link">login/route.ts</a></p>
+        <p>File: <a href="file:///d:/IT Projects/budolEcosystem/budolpay-0.1.0/apps/admin/app/api/auth/callback/route.ts" class="code-link">callback/route.ts</a></p>
+
+        <h3>4. RBAC Phase 1 Integration</h3>
+        <p>Integrated basic Role-Based Access Control middleware and configuration in the <code>@budolpay/database</code> package.</p>
+        <p>File: <a href="file:///d:/IT Projects/budolEcosystem/budolpay-0.1.0/packages/database/auth-middleware.js" class="code-link">auth-middleware.js</a></p>
+    </div>
+
+    <div class="section">
+        <h2>Dependencies</h2>
+        <table>
+            <tr>
+                <th>Package</th>
+                <th>Version</th>
+                <th>Purpose</th>
+            </tr>
+            <tr>
+                <td>Next.js</td>
+                <td>14.2.3</td>
+                <td>Admin & Frontend Framework</td>
+            </tr>
+            <tr>
+                <td>Prisma</td>
+                <td>6.2.1</td>
+                <td>ORM for Database Access</td>
+            </tr>
+            <tr>
+                <td>cross-env</td>
+                <td>^7.0.3</td>
+                <td>Environment Variable Management</td>
+            </tr>
+        </table>
+    </div>
+
+    <div class="section">
+        <h2>Compliance</h2>
+        <ul>
+            <li><strong>PCI DSS:</strong> Requirement 4.1 (Strong cryptography for data in transit).</li>
+            <li><strong>BSP:</strong> Technology Risk Management Framework (Secure communication channels).</li>
+            <li><strong>NPC:</strong> Data Privacy Act compliance through secure local network isolation.</li>
+        </ul>
+    </div>
+
+    <footer>
+        <p>Budol Ecosystem Developer Manual | Version 339 | 2026-01-12</p>
+    </footer>
+</body>
+</html>

@@ -1,0 +1,82 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Developer Manual v257 - budolEcosystem</title>
+    <style>
+        body { font-family: sans-serif; line-height: 1.6; max-width: 900px; margin: 0 auto; padding: 20px; color: #333; }
+        h1, h2, h3 { color: #2c3e50; }
+        pre { background: #f4f4f4; border: 1px solid #ddd; padding: 10px; border-radius: 5px; overflow-x: auto; }
+        code { font-family: Consolas, monospace; background: #f4f4f4; padding: 2px 4px; border-radius: 3px; }
+        .back-link { margin-bottom: 20px; display: block; color: #3498db; text-decoration: none; }
+        .section { margin-bottom: 40px; }
+        table { width: 100%; border-collapse: collapse; margin-bottom: 20px; }
+        th, td { border: 1px solid #ddd; padding: 10px; text-align: left; }
+        th { background: #f8f9fa; }
+    </style>
+</head>
+<body>
+    <a href="index.html" class="back-link">← Back to Index</a>
+    <h1>Developer Manual v257</h1>
+
+    <div class="section">
+        <h2>Purpose</h2>
+        <p>This version addresses the inability of the Admin Panel to switch real-time providers and ensures the mobile app correctly initializes real-time listeners using dynamic server configuration.</p>
+    </div>
+
+    <div class="section">
+        <h2>Technical Implementation Details</h2>
+
+        <h3>1. Admin Panel: Real-Time Method Selector</h3>
+        <p><strong>Issue:</strong> The real-time method selection in the Admin Panel was "stuck" because the radio buttons were not interactive within a Server Component.</p>
+        <p><strong>Fix:</strong> Created <code>RealtimeMethodSelector.tsx</code> as a <code>"use client"</code> component to handle UI state and radio button selection. It properly propagates the selected value to the parent form.</p>
+        <pre><code>// RealtimeMethodSelector.tsx
+"use client";
+import { useState } from "react";
+// ...
+export default function RealtimeMethodSelector({ initialMethod }) {
+  const [selectedMethod, setSelectedMethod] = useState(initialMethod);
+  // ... radio button implementation
+}</code></pre>
+
+        <h3>2. Mobile App: Socket.io Dynamic Initialization</h3>
+        <p><strong>Issue:</strong> The <code>RealtimeService</code> was defaulting to the base API URL for Socket.io connections, ignoring the <code>SOCKETIO_URL</code> setting from the database.</p>
+        <p><strong>Fix:</strong> Updated <code>RealtimeService.dart</code> to check the system settings for a custom Socket.io URL.</p>
+        <pre><code>// RealtimeService.dart
+final socketioConfig = settings?['realtime']?['socketio'];
+final socketUrl = (socketioConfig != null && socketioConfig['url'] != null && socketioConfig['url'].isNotEmpty)
+    ? socketioConfig['url']
+    : _apiService.baseUrl;
+
+_socketService.init(baseUrl: socketUrl, userId: userId);</code></pre>
+
+        <h3>3. Transaction Service: Cash-In Notifications</h3>
+        <p><strong>Issue:</strong> Users were not receiving real-time updates when a cash-in was completed.</p>
+        <p><strong>Fix:</strong> Added <code>notifyUpdate</code> call to the <code>/cash-in</code> route in <code>transaction-service/index.js</code>.</p>
+        <pre><code>// transaction-service/index.js
+notifyUpdate(userId, 'transaction_update', { 
+    message: `Successfully cashed in PHP ${amount}`, 
+    transaction: completedTransaction 
+});</code></pre>
+    </div>
+
+    <div class="section">
+        <h2>Test Results</h2>
+        <ul>
+            <li><strong>Admin Switching:</strong> Verified radio buttons are clickable and persist to database upon saving.</li>
+            <li><strong>Mobile Real-time:</strong> Verified Socket.io connects to the URL specified in the Admin Panel.</li>
+            <li><strong>Transaction Notification:</strong> Verified <code>transaction_update</code> event is received by the mobile app after a successful cash-in.</li>
+        </ul>
+    </div>
+
+    <div class="section">
+        <h2>Impact Analysis</h2>
+        <ul>
+            <li><strong>Admin:</strong> Improved UX for system configuration.</li>
+            <li><strong>Mobile:</strong> Better reliability for real-time updates.</li>
+            <li><strong>Backend:</strong> Consistent notification logic across transfer and cash-in operations.</li>
+        </ul>
+    </div>
+</body>
+</html>

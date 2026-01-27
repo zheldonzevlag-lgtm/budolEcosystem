@@ -1,0 +1,70 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Developer Manual - Budol Ecosystem v500</title>
+    <style>
+        body { font-family: 'Segoe UI', sans-serif; line-height: 1.6; color: #333; max-width: 1000px; margin: 0 auto; padding: 20px; }
+        .code-block { background: #1e1e1e; color: #d4d4d4; padding: 15px; border-radius: 5px; overflow-x: auto; font-family: 'Consolas', monospace; margin: 20px 0; }
+        .file-link { color: #3498db; text-decoration: none; font-weight: bold; }
+        .file-link:hover { text-decoration: underline; }
+        h1, h2, h3 { color: #2c3e50; }
+        .rationale { background: #e8f4fd; padding: 15px; border-left: 5px solid #3498db; margin: 20px 0; }
+    </style>
+</head>
+<body>
+    <h1>Developer Manual - Version v500</h1>
+    
+    <div class="rationale">
+        <h3>Purpose & Rationale</h3>
+        <p>The primary goal of this update was to resolve delays in order status updates from "In Transit" to "Delivered". The investigation revealed that the Lalamove webhook handler was using hardcoded status mapping that didn't align with the centralized <code>statusMapper.js</code> and was missing critical metadata updates required for order lifecycle completion.</p>
+    </div>
+
+    <h2>Technical Explanation</h2>
+    <p>The solution involved refactoring the webhook entry point to utilize the universal status normalization logic and explicitly handling the transition to <code>DELIVERED</code> status by setting <code>deliveredAt</code> and <code>autoCompleteAt</code> timestamps.</p>
+
+    <h3>Key Code Changes</h3>
+    
+    <h4>1. Lalamove Webhook Refactoring</h4>
+    <p>Modified <a href="file:///d:/IT Projects/budolEcosystem/budolshap-0.1.0/app/api/webhooks/lalamove/route.js" class="file-link">app/api/webhooks/lalamove/route.js</a> to standardize status mapping and metadata updates.</p>
+    <div class="code-block">
+<pre>
+// Before: Hardcoded switch-case
+// After: Unified normalization and metadata handling
+const newStatus = normalizeStatus(status, 'lalamove', false);
+
+if (newStatus === UNIVERSAL_STATUS.DELIVERED && !order.deliveredAt) {
+    updateData.deliveredAt = getNowUTC();
+    const autoCompleteDate = getNowUTC();
+    autoCompleteDate.setDate(autoCompleteDate.getDate() + 3);
+    updateData.autoCompleteAt = autoCompleteDate;
+}
+</pre>
+    </div>
+
+    <h4>2. Status Normalization Logic</h4>
+    <p>The system now relies on <a href="file:///d:/IT Projects/budolEcosystem/budolshap-0.1.0/lib/shipping/statusMapper.js" class="file-link">lib/shipping/statusMapper.js</a> for all courier-to-system status translations, ensuring consistency between polling and webhook events.</p>
+
+    <h2>Tests</h2>
+    <p>A specialized test script was developed to verify the webhook logic without requiring external Lalamove hits: <a href="file:///d:/IT Projects/budolEcosystem/scripts/test_scripts/budolShap/test_webhook_logic.js" class="file-link">scripts/test_scripts/budolShap/test_webhook_logic.js</a>.</p>
+
+    <h2>Phase 8: Dependencies and Software Choice</h2>
+    <div class="rationale">
+        <h3>Why these tools?</h3>
+        <ul>
+            <li><strong>Prisma ORM:</strong> Chosen for its type-safe database access and ease of managing complex relations like Order-Shipping-Return. It ensures that metadata updates are consistent across the database.</li>
+            <li><strong>Pusher/Realtime:</strong> Integrated to provide immediate feedback to users when a webhook event occurs. This eliminates the need for manual page refreshes to see status updates.</li>
+            <li><strong>statusMapper Utility:</strong> A centralized mapping pattern was chosen over inline switch statements to ensure that all courier status changes (polling or webhook) are handled identically, reducing bug surface area.</li>
+            <li><strong>Lalamove API:</strong> Selected as the primary logistics partner for its robust webhook support and real-time rider tracking capabilities in the Philippine market.</li>
+        </ul>
+    </div>
+
+    <h2>Compliance</h2>
+    <ul>
+        <li><strong>PCI DSS 10.2.2:</strong> Enhanced audit logging of order status transitions.</li>
+        <li><strong>BSP Circular 808:</strong> Improved real-time monitoring of financial transactions (orders).</li>
+    </ul>
+
+    <p><a href="index.html">Back to Index</a></p>
+</body>
+</html>

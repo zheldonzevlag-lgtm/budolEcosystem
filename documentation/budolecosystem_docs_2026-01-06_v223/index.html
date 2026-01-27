@@ -1,0 +1,185 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>budolEcosystem Documentation - v223</title>
+    <style>
+        :root {
+            --primary: #f43f5e;
+            --secondary: #0f172a;
+            --accent: #3b82f6;
+            --text: #f8fafc;
+            --bg: #020617;
+            --card-bg: #1e293b;
+        }
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            line-height: 1.6;
+            color: var(--text);
+            background-color: var(--bg);
+            margin: 0;
+            padding: 0;
+        }
+        .container {
+            max-width: 1000px;
+            margin: 0 auto;
+            padding: 40px 20px;
+        }
+        header {
+            text-align: center;
+            margin-bottom: 60px;
+            border-bottom: 2px solid var(--primary);
+            padding-bottom: 20px;
+        }
+        h1 { color: var(--primary); font-size: 2.5rem; margin-bottom: 10px; }
+        .version-tag {
+            background-color: var(--primary);
+            color: white;
+            padding: 5px 15px;
+            border-radius: 20px;
+            font-size: 0.9rem;
+            font-weight: bold;
+        }
+        section {
+            background: var(--card-bg);
+            padding: 30px;
+            border-radius: 15px;
+            margin-bottom: 30px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.5);
+        }
+        h2 { color: var(--primary); border-left: 5px solid var(--primary); padding-left: 15px; margin-top: 0; }
+        h3 { color: var(--accent); }
+        code {
+            background: #000;
+            padding: 2px 6px;
+            border-radius: 4px;
+            font-family: 'Consolas', monospace;
+            color: #10b981;
+        }
+        pre {
+            background: #000;
+            padding: 20px;
+            border-radius: 10px;
+            overflow-x: auto;
+            border: 1px solid #334155;
+        }
+        .status-badge {
+            display: inline-block;
+            padding: 4px 12px;
+            border-radius: 12px;
+            font-size: 0.8rem;
+            font-weight: bold;
+            text-transform: uppercase;
+        }
+        .status-fixed { background: #059669; color: white; }
+        .status-improved { background: #2563eb; color: white; }
+        .nav-links {
+            display: flex;
+            justify-content: space-between;
+            margin-top: 40px;
+        }
+        .nav-links a {
+            color: var(--primary);
+            text-decoration: none;
+            font-weight: bold;
+        }
+        .nav-links a:hover { text-decoration: underline; }
+        .otp-box {
+            background: #4c1d95;
+            color: #ddd6fe;
+            padding: 15px;
+            border-radius: 8px;
+            text-align: center;
+            font-weight: bold;
+            font-size: 1.2rem;
+            margin: 20px 0;
+            border: 1px dashed #a78bfa;
+        }
+    </style>
+</head>
+<body>
+    <div class="nav-links ecosystem-docs-top-nav">
+        <a href="../budolecosystem_docs_2026-01-08_v222/index.html">← Previous (v222)</a>
+        <a href="../index.html">Index</a>
+        <a href="../budolecosystem_docs_2026-01-08_v223/index.html">Next (v223) →</a>
+    </div>
+
+    <div class="container">
+        <div style="margin-bottom: 20px; display: flex; justify-content: space-between; align-items: center; background: #f8fafc; padding: 15px; border-radius: 8px; border: 1px solid #e2e8f0;">
+            <a href="../index.html" style="text-decoration: none; color: #3b82f6; font-weight: bold;">&larr; Main Index</a>
+            <div style="display: flex; gap: 20px;">
+                <a href="../budolecosystem_docs_2026-01-08_v222/index.html" style="text-decoration: none; color: #64748b; font-weight: bold;">&larr; Previous: v222</a>
+                <a href="../budolecosystem_docs_2026-01-08_v223/index.html" style="text-decoration: none; color: #3b82f6; font-weight: bold;">Next: v223 &rarr;</a>
+            </div>
+        </div>
+        <header>
+            <h1>budolEcosystem Documentation</h1>
+            <span class="version-tag">Version 223</span>
+            <p>OTP Verification UX Improvements & Mobile Auth Logic Fixes</p>
+        </header>
+
+        <section>
+            <h2>Purpose</h2>
+            <p>This release addresses critical UX issues in the mobile authentication flow, specifically focusing on the OTP (One-Time Password) and PIN verification steps. It also fixes a logical mismatch between the mobile app and the SSO backend that caused identification failures for new users.</p>
+        </section>
+
+        <section>
+            <h2>Technical Details & Fixes</h2>
+            
+            <h3>1. Mobile-Backend Logic Alignment</h3>
+            <p><span class="status-badge status-fixed">Fixed</span> The mobile app previously expected an <code>exists: false</code> field to identify new users. However, the backend returns a <code>404 Not Found</code> status for non-existent users. The logic in <code>login_screen.dart</code> has been updated to correctly interpret the backend's error response.</p>
+            <pre><code>// Updated identification logic
+if (result['error'] != null && result['error'].toString().contains('not found')) {
+    Navigator.pushNamed(context, '/registration', ...);
+}</code></pre>
+
+            <h3>2. Auto-Verification (UX Improvement)</h3>
+            <p><span class="status-badge status-improved">Improved</span> Users no longer need to click the "Verify" button manually. The app now automatically triggers verification as soon as the 6th digit of the OTP or PIN is entered.</p>
+            <pre><code>onChanged: (value) {
+    if (value.length == 6 && !_isLoading) {
+        _handleVerifyOtp();
+    }
+}</code></pre>
+
+            <h3>3. Loading States & Visual Feedback</h3>
+            <p><span class="status-badge status-improved">Improved</span> To prevent multiple submissions and provide better feedback, the "Verify" buttons now show a centered loading spinner and are disabled during processing.</p>
+            <ul>
+                <li><strong>Disabled State:</strong> Button is grayed out and non-clickable during API calls.</li>
+                <li><strong>Spinner:</strong> A white <code>CircularProgressIndicator</code> replaces the button text.</li>
+                <li><strong>Success Feedback:</strong> A green SnackBar confirms successful OTP verification.</li>
+            </ul>
+
+            <h3>4. Session Resilience</h3>
+            <p><span class="status-badge status-fixed">Fixed</span> Added checks for <code>_userId == null</code> in verification handlers. If a session expires or state is lost, the user is gracefully redirected to the initial login step with a clear error message.</p>
+        </section>
+
+        <section>
+            <h2>Test Results</h2>
+            <p>Verified the following flows in the mobile environment:</p>
+            <ul>
+                <li>✅ <strong>Identify:</strong> Correctly identifies existing vs. new users.</li>
+                <li>✅ <strong>Auto-OTP:</strong> Verification triggers instantly on the 6th digit.</li>
+                <li>✅ <strong>Auto-PIN:</strong> Login triggers instantly on the 6th digit.</li>
+                <li>✅ <strong>Loading UI:</strong> Spinner appears and button disables as expected.</li>
+                <li>✅ <strong>Error Handling:</strong> Invalid OTP/PIN displays appropriate error messages.</li>
+            </ul>
+        </section>
+
+        <section>
+            <h2>Recommendation for Future Enhancement</h2>
+            <ul>
+                <li><strong>Biometric Integration:</strong> Enable biometric login after the first successful OTP/PIN verification for even faster access.</li>
+                <li><strong>Resend OTP:</strong> Add a countdown timer and "Resend OTP" button for better user recovery.</li>
+                <li><strong>Input Masking:</strong> Improve the OTP input field with separate boxes for each digit for a more modern look.</li>
+            </ul>
+        </section>
+
+        <div class="nav-links">
+            <a href="../budolecosystem_docs_2026-01-06_v222/index.html">← Previous (v222)</a>
+            <a href="../../documentation/index.html">Main Index</a>
+            <span>Next (v224) →</span>
+        </div>
+    </div>
+</body>
+</html>

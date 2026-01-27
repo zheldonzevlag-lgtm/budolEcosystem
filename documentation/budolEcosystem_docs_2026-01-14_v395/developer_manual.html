@@ -1,0 +1,72 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Developer Manual - v395</title>
+    <style>
+        :root { --primary: #F43F5E; --bg: #0F172A; --card-bg: #1E293B; --text: #F8FAFC; }
+        body { font-family: 'Inter', sans-serif; background: var(--bg); color: var(--text); margin: 0; display: flex; }
+        .sidebar { width: 280px; background: var(--card-bg); height: 100vh; padding: 20px; border-right: 1px solid #334155; position: fixed; }
+        .main-content { margin-left: 320px; padding: 40px; max-width: 900px; }
+        .nav-link { display: block; padding: 12px; color: #94a3b8; text-decoration: none; border-radius: 8px; margin-bottom: 4px; }
+        .nav-link:hover { background: #334155; color: white; }
+        .nav-link.active { background: var(--primary); color: white; }
+        .card { background: var(--card-bg); padding: 30px; border-radius: 16px; border: 1px solid #334155; margin-bottom: 24px; }
+        code { background: #0F172A; padding: 2px 6px; border-radius: 4px; color: #F43F5E; }
+        pre { background: #0F172A; padding: 20px; border-radius: 12px; overflow-x: auto; border: 1px solid #334155; }
+        .code-link { color: #3B82F6; text-decoration: none; font-weight: bold; }
+        .code-link:hover { text-decoration: underline; }
+    </style>
+</head>
+<body>
+    <div class="sidebar">
+        <h2 style="color: white; margin-bottom: 30px;">budolPay Docs</h2>
+        <a href="index.html" class="nav-link">Overview</a>
+        <a href="developer_manual.html" class="nav-link active">Developer Manual</a>
+        <a href="user_manual.html" class="nav-link">User Manual</a>
+        <a href="risk_register.html" class="nav-link">Risk Register</a>
+        <a href="test_results.html" class="nav-link">Test Results</a>
+        <a href="future_recommendations.html" class="nav-link">Future Recommendations</a>
+    </div>
+    <div class="main-content">
+        <h1>Developer Manual - v395</h1>
+        
+        <div class="card">
+            <h2>Technical Rationale</h2>
+            <p>
+                In v394, we prioritized OS-level biometrics to avoid redundant photo capture. However, feedback indicated that the <strong>Face icon</strong> should remain the primary entry point for the custom <strong>Native Face Recognition</strong> (TFLite) feature, as it includes proprietary liveness checks.
+            </p>
+            <p>
+                v395 implements a "Smart Fallback" logic: The Face icon will attempt the custom TFLite flow first if a template is present and enabled. If not, it falls back to the system's biometric prompt (LocalAuth).
+            </p>
+        </div>
+
+        <div class="card">
+            <h2>Code Changes</h2>
+            <h3>1. Logic Update in Login Screen</h3>
+            <p>
+                The <code>_handleFaceRecognitionLogin</code> method in <a href="file:///d:/IT Projects/budolEcosystem/budolPayMobile/lib/screens/login_screen.dart" class="code-link">login_screen.dart</a> has been restructured.
+            </p>
+            <pre><code>// Prioritize Custom Face Recognition (Native to App)
+if (_hasFaceTemplate && _isBiometricEnabled) {
+  // Use Custom TFLite Flow (Manual Photo Capture)
+  // ...
+} else {
+  // Fallback to Biometric Login (OS Prompt)
+  final hasNativeFace = await biometricService.hasEnrolledFace();
+  if (hasNativeFace && _isBiometricEnabled) {
+    return _handleBiometricLogin();
+  }
+}</code></pre>
+        </div>
+
+        <div class="card">
+            <h2>Compliance</h2>
+            <ul>
+                <li><strong>NPC:</strong> Biometric data remains encrypted and stored locally.</li>
+                <li><strong>Cybersecurity Law:</strong> Liveness detection (blink/smile) remains the primary defense against spoofing in the custom flow.</li>
+            </ul>
+        </div>
+    </div>
+</body>
+</html>

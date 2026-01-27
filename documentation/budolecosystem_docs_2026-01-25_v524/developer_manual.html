@@ -1,0 +1,145 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Developer Manual - v524</title>
+    <style>
+        body { font-family: -apple-system, system-ui, sans-serif; line-height: 1.6; max-width: 1200px; margin: 0 auto; padding: 2rem; color: #333; }
+        header { background: #f8f9fa; padding: 2rem; border-radius: 8px; margin-bottom: 2rem; border-left: 5px solid #667eea; }
+        h1 { margin: 0; color: #2d3748; }
+        h2 { color: #4a5568; border-bottom: 2px solid #e2e8f0; padding-bottom: 0.5rem; margin-top: 2rem; }
+        h3 { color: #667eea; margin-top: 1.5rem; }
+        code { background: #edf2f7; padding: 0.2rem 0.4rem; border-radius: 4px; font-family: 'Fira Code', monospace; color: #c0392b; }
+        pre { background: #1a202c; color: #e2e8f0; padding: 1.5rem; border-radius: 8px; overflow-x: auto; }
+        .file-path { color: #718096; font-size: 0.9rem; font-style: italic; }
+        .note { background: #ebf8ff; border-left: 4px solid #4299e1; padding: 1rem; margin: 1rem 0; }
+        .nav-link { display: inline-block; margin-bottom: 1rem; color: #667eea; text-decoration: none; }
+        .nav-link:hover { text-decoration: underline; }
+    </style>
+</head>
+<body>
+    <a href="index.html" class="nav-link">← Back to Index</a>
+    
+    <header>
+        <h1>👨‍💻 Developer Manual - v524</h1>
+        <p>Technical implementation details for Abandoned Payment Exclusion and Customer Name Display Fixes</p>
+    </header>
+
+    <h2>1. Abandoned & Failed Payment Handling</h2>
+    <p>We implemented a robust system to manage order visibility based on payment status. Failed and expired payments are now explicitly handled to prevent user confusion.</p>
+
+    <h3>Logic Refinement</h3>
+    <p class="file-path">File: <a href="file:///d:/IT Projects/budolEcosystem/budolshap-0.1.0/lib/services/ordersService.js">budolshap-0.1.0/lib/services/ordersService.js</a></p>
+    <p>The <code>getOrders</code> function was updated with the following rules:</p>
+    <ul>
+        <li><strong>Active Lists (All/To Pay):</strong> Orders with <code>failed</code> or <code>expired</code> payment status are <strong>immediately excluded</strong>.</li>
+        <li><strong>Cancelled Tab:</strong> Orders with <code>failed</code> or <code>expired</code> payment status are now <strong>included</strong> alongside cancelled orders.</li>
+    </ul>
+
+    <pre><code>// Cancelled Tab Filter (Line 112)
+OR: [
+    { status: 'CANCELLED' },
+    { paymentStatus: { in: ['cancelled', 'failed', 'expired'] } }, // Added failed/expired
+    ...
+]</code></pre>
+
+    <h2>2. Payment Status Labeling</h2>
+    <p class="file-path">File: <a href="file:///d:/IT Projects/budolEcosystem/budolshap-0.1.0/components/OrderItem.jsx">budolshap-0.1.0/components/OrderItem.jsx</a></p>
+    <p>The UI now provides specific feedback for terminal payment failures instead of a generic "Unpaid" label.</p>
+    
+    <pre><code>// Enhanced Labeling Logic (Line 231)
+{order.isPaid
+    ? 'Paid'
+    : order.paymentStatus === 'cancelled'
+        ? 'Cancelled'
+        : order.paymentStatus === 'failed'
+            ? 'Payment Failed'  // New specific label
+            : order.paymentStatus === 'expired'
+                ? 'Payment Expired' // New specific label
+                : order.status === 'PENDING_VERIFICATION'
+                    ? 'Verifying'
+                    ...
+}</code></pre>
+
+    <h2>3. Customer Name Display Fix</h2>
+    <p>Users reported seeing incorrect names (e.g., "Jon Galvez") instead of the logged-in user's name. This was due to the UI prioritizing the shipping address name over the user profile name.</p>
+
+    <h3>Frontend Component</h3>
+    <p class="file-path">File: <a href="file:///d:/IT Projects/budolEcosystem/budolshap-0.1.0/components/OrderItem.jsx">budolshap-0.1.0/components/OrderItem.jsx</a></p>
+    <p>The logic was updated to prioritize <code>order.user?.name</code>. We also added a specific "Shipping To:" label for clarity.</p>
+
+    <pre><code>// Prioritize user's account name, fallback to address name
+const customerName = order.user?.name || order.address?.name || 'Customer';
+
+// Display in UI
+&lt;div className="font-medium text-gray-900"&gt;{customerName}&lt;/div&gt;
+&lt;div className="text-sm text-gray-500"&gt;
+    Shipping To: {order.address?.name}
+&lt;/div&gt;</code></pre>
+
+    <h2>3. Realtime Updates</h2>
+    <p class="file-path">File: <a href="file:///d:/IT Projects/budolEcosystem/budolshap-0.1.0/hooks/useRealtimeBuyerOrders.js">budolshap-0.1.0/hooks/useRealtimeBuyerOrders.js</a></p>
+    <p>The <code>useRealtimeBuyerOrders</code> hook was updated to listen for <code>order-updated</code> events via Pusher/Socket.io to ensure the order list reflects status changes (e.g., payment success or cancellation) immediately.</p>
+
+    <h2>4. Cross-Platform UI Consistency (budol₱ay Mobile)</h2>
+    <p>We aligned the <strong>budol₱ay Mobile App</strong> with the <strong>budolShap Web</strong> payment experience by replacing standard bottom sheets and alert dialogs with full-page feedback screens.</p>
+
+    <h3>New Component: PaymentStatusScreen</h3>
+    <p class="file-path">File: <a href="file:///d:/IT Projects/budolEcosystem/budolPayMobile/lib/screens/payment_status_screen.dart">budolPayMobile/lib/screens/payment_status_screen.dart</a></p>
+    <p>A unified screen that handles <code>Verifying</code>, <code>Success</code>, and <code>Failed</code> states with distinct animations and transaction breakdowns. Key features include:</p>
+    <ul>
+        <li><strong>Elastic Animations:</strong> Uses <code>CurvedAnimation(curve: Curves.elasticOut)</code> for status icons.</li>
+        <li><strong>Transaction Breakdown:</strong> Displays Order ID, Amount, Status, Merchant, and Date/Time in a clean card layout.</li>
+        <li><strong>Responsive Actions:</strong> Dynamic buttons ("VIEW MY ORDERS", "CONTINUE SHOPPING") based on transaction outcome.</li>
+    </ul>
+
+    <h3>Mobile Build: budolPay 1.3.33</h3>
+    <p>The mobile app was successfully built and archived in <code>/android-installer/budolPay 1.3.33.apk</code>. The version was incremented from 1.3.32 to 1.3.33 to reflect the major UI alignment with the web ecosystem.</p>
+
+    <pre><code>// PaymentStatusScreen Usage
+Navigator.pushReplacement(
+  context,
+  MaterialPageRoute(
+    builder: (context) => PaymentStatusScreen(
+      initialStatus: PaymentStatus.success,
+      transactionData: result['transaction'],
+    ),
+  ),
+);</code></pre>
+
+    <h3>Backend API Update: /process-qr</h3>
+    <p class="file-path">File: <a href="file:///d:/IT Projects/budolEcosystem/budolpay-0.1.0/services/wallet-service/index.js">budolpay-0.1.0/services/wallet-service/index.js</a></p>
+    <p>The <code>/process-qr</code> endpoint was updated to return full transaction details upon success, enabling the mobile app to display the breakdown card without additional API calls.</p>
+    
+    <pre><code>// Updated Response Object
+res.json({ 
+    success: true, 
+    newBalance: Number(newBalance),
+    transaction: {
+        id: transaction.id,
+        reference: transaction.referenceId,
+        amount: Number(transaction.amount),
+        storeName: storeName,
+        date: getLegacyManilaISO(),
+        status: 'COMPLETED'
+    }
+});</code></pre>
+
+    <h3>QR Scanner Integration</h3>
+    <p class="file-path">File: <a href="file:///d:/IT Projects/budolEcosystem/budolPayMobile/lib/screens/qr_scanner_screen.dart">budolPayMobile/lib/screens/qr_scanner_screen.dart</a></p>
+    <p>The <code>_handlePayment</code> method was refactored to transition immediately to the <code>Verifying</code> state on the <code>PaymentStatusScreen</code>, providing a seamless "Lazada-style" transition.</p>
+
+    <div class="note">
+        <strong>Technical Choice:</strong> We used <code>Navigator.pushReplacement</code> to ensure users cannot "go back" to the scanning screen once a transaction has reached a terminal state (Success/Failure).
+    </div>
+
+    <h2>5. Build & Deployment</h2>
+    <p>The mobile app version was incremented and verified with <code>flutter analyze</code>. All <code>withOpacity</code> calls were migrated to <code>withValues(alpha: ...)</code> to comply with the latest Flutter 3.x standards.</p>
+
+    <div class="note">
+        <strong>Important:</strong> The 30-minute grace period logic relies on server time. Ensure server clocks are synchronized.
+    </div>
+
+</body>
+</html>

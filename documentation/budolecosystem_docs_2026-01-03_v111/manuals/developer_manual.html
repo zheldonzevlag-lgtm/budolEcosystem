@@ -1,0 +1,60 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Developer Manual - v111</title>
+    <style>
+        body { font-family: 'Segoe UI', sans-serif; line-height: 1.6; color: #333; max-width: 900px; margin: 0 auto; padding: 20px; background: #f8fafc; }
+        .container { background: white; padding: 40px; border-radius: 12px; box-shadow: 0 4px 6px rgba(0,0,0,0.05); }
+        h1, h2 { color: #f43f5e; }
+        pre { background: #1e293b; color: #f8fafc; padding: 15px; border-radius: 8px; overflow-x: auto; }
+        code { font-family: 'Consolas', monospace; }
+        .back-link { display: block; margin-bottom: 20px; text-decoration: none; color: #f43f5e; font-weight: bold; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <a href="../index.html" class="back-link">← Back to v111 Index</a>
+        <h1>Developer Manual - v111</h1>
+
+        <section>
+            <h2>Build Configuration Fixes</h2>
+            <p>During the production build, we encountered several issues that required manual intervention in the Android project configuration.</p>
+            
+            <h3>1. Dependency Version Forcing</h3>
+            <p>Some transitive dependencies (like <code>androidx.browser</code> and <code>androidx.core</code>) were pulling in versions that required Android Gradle Plugin 8.9.1, while the project uses 8.7.3. We forced stable versions in <code>android/app/build.gradle.kts</code>:</p>
+            <pre><code>configurations.all {
+    resolutionStrategy {
+        force("androidx.browser:browser:1.8.0")
+        force("androidx.core:core:1.15.0")
+        force("androidx.core:core-ktx:1.15.0")
+    }
+}</code></pre>
+        </section>
+
+        <section>
+            <h2>App Branding Restoration</h2>
+            <p>The app name and icon were updated to meet the production requirements.</p>
+            <ul>
+                <li><strong>AndroidManifest.xml:</strong> Updated <code>android:label</code> to "budolPay 1.0".</li>
+                <li><strong>Launcher Icons:</strong> Re-generated using <code>flutter_launcher_icons</code> with <code>assets/app_icon.png</code> as the source.</li>
+            </ul>
+        </section>
+
+        <section>
+            <h2>Code Fixes</h2>
+            <p>Resolved compilation errors that were blocking the release build:</p>
+            <ul>
+                <li><strong>home_screen.dart:</strong> Added missing <code>material.dart</code> import and fixed a trailing brace syntax error.</li>
+                <li><strong>main.dart:</strong> Added missing <code>api_service.dart</code> import to provide the <code>ApiService</code> to the widget tree.</li>
+            </ul>
+        </section>
+
+        <section>
+            <h2>Build Command</h2>
+            <p>The release APK was built using the following command to ensure all icons were included despite resource optimization flags:</p>
+            <pre><code>flutter build apk --release --no-tree-shake-icons</code></pre>
+        </section>
+    </div>
+</body>
+</html>

@@ -1,0 +1,130 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Developer Manual - v492</title>
+    <style>
+        :root {
+            --primary: #2c3e50;
+            --secondary: #34495e;
+            --accent: #27ae60;
+            --code-bg: #1e1e1e;
+            --code-text: #d4d4d4;
+            --text: #333;
+            --bg: #f4f7f6;
+        }
+        body { font-family: 'Segoe UI', sans-serif; line-height: 1.6; color: var(--text); max-width: 1200px; margin: 0 auto; padding: 20px; background-color: var(--bg); }
+        header { background: var(--primary); color: white; padding: 20px; border-radius: 8px; margin-bottom: 20px; }
+        .nav-links { margin-bottom: 20px; }
+        .nav-links a { margin-right: 15px; text-decoration: none; color: var(--primary); font-weight: bold; }
+        .section { background: white; padding: 25px; border-radius: 8px; box-shadow: 0 2px 5px rgba(0,0,0,0.1); margin-bottom: 30px; }
+        h2 { border-bottom: 2px solid var(--accent); padding-bottom: 10px; color: var(--primary); }
+        pre { background: var(--code-bg); color: var(--code-text); padding: 15px; border-radius: 5px; overflow-x: auto; font-family: 'Consolas', 'Monaco', monospace; }
+        code { font-family: 'Consolas', monospace; color: #e74c3c; background: #f9f9f9; padding: 2px 4px; border-radius: 4px; }
+        .file-link { color: var(--accent); font-weight: bold; text-decoration: none; }
+        .file-link:hover { text-decoration: underline; }
+    </style>
+</head>
+<body>
+    <header>
+        <h1>Developer Manual - Version 492</h1>
+        <p>Realtime Infrastructure & Cost Optimization</p>
+    </header>
+
+    <div class="nav-links">
+        <a href="index.html">← Back to Index</a>
+        <a href="#cache-patching">SWR Cache Patching</a>
+        <a href="#chat-realtime">Chat Realtime</a>
+        <a href="#cost-optimization">Cost Optimization</a>
+    </div>
+
+    <section id="cache-patching" class="section">
+        <h2>1. SWR Cache Patching</h2>
+        <p>To eliminate UI flickering (caused by <code>router.refresh()</code>), we implemented targeted cache patching. Instead of re-fetching the entire page, we manually update the SWR cache when a realtime event is received.</p>
+        
+        <h3>Core Implementation</h3>
+        <p>File: <a class="file-link" href="file:///d:/IT Projects/budolEcosystem/budolshap-0.1.0/components/RealtimeProvider.jsx">RealtimeProvider.jsx</a></p>
+        <pre><code>const patchOrderCache = (data, forceRevalidate = false) => {
+    const orderId = data.orderId || data.id;
+    const newStatus = data.status;
+
+    if (!orderId || !newStatus) return;
+
+    mutate(
+        (key) => typeof key === 'string' && (key.startsWith('/api/orders') || key.startsWith('/api/dashboard/seller/orders')),
+        (currentData) => {
+            if (!currentData || !currentData.orders) return currentData;
+
+            const updatedOrders = currentData.orders.map(order => {
+                if (order.id === orderId) {
+                    return { ...order, status: newStatus };
+                }
+                return order;
+            });
+
+            return { ...currentData, orders: updatedOrders };
+        },
+        { revalidate: forceRevalidate }
+    );
+};</code></pre>
+    </section>
+
+    <section id="chat-realtime" class="section">
+        <h2>2. Event-Driven Chat Updates</h2>
+        <p>We replaced the 3-second message polling with a realtime event-driven architecture. The backend now triggers a <code>message-received</code> event upon message creation.</p>
+        
+        <h3>Backend Trigger</h3>
+        <p>File: <a class="file-link" href="file:///d:/IT Projects/budolEcosystem/budolshap-0.1.0/app/api/chats/[id]/messages/route.js">route.js</a></p>
+        <pre><code>await triggerRealtimeEvent(`chat-${id}`, 'message-received', {
+    messageId: message.id,
+    chatId: id,
+    senderId: user.id,
+    content: message.content,
+    sender: message.sender
+});</code></pre>
+
+        <h3>Frontend Listener</h3>
+        <p>The <a class="file-link" href="file:///d:/IT Projects/budolEcosystem/budolshap-0.1.0/components/RealtimeProvider.jsx">RealtimeProvider.jsx</a> listens for these events and mutates the specific chat cache:</p>
+        <pre><code>if (event === 'message-received') {
+    if (data.chatId) {
+        mutate(`/api/chats/${data.chatId}/messages`);
+    }
+}</code></pre>
+    </section>
+
+    <section id="cost-optimization" class="section">
+        <h2>3. Cloud Cost & Bandwidth Optimization</h2>
+        <p>For hosting on AWS/Vercel, reducing API calls is critical. We implemented several strategies:</p>
+        <ul>
+            <li><strong>Tab Visibility Guard:</strong> Polling intervals increase from 5s to 30s when the browser tab is hidden.</li>
+            <li><strong>SWR Deduplication:</strong> Dashboard stats have a 10s deduplication interval to prevent redundant fetches.</li>
+            <li><strong>Minimal Payloads:</strong> Realtime events carry only the necessary data (IDs and status) to keep bandwidth low.</li>
+            <li><strong>Revalidation Control:</strong> <code>mutate</code> is called with <code>revalidate: false</code> by default when the payload is sufficient.</li>
+        </ul>
+        <p>File: <a class="file-link" href="file:///d:/IT Projects/budolEcosystem/budolshap-0.1.0/components/RealtimeProvider.jsx">RealtimeProvider.jsx</a> (Visibility Logic)</p>
+        <pre><code>const handleVisibilityChange = () => {
+    const isHidden = document.visibilityState === 'hidden';
+    if (provider === 'POLLING') {
+        setSwrOptions(prev => ({ 
+            ...prev, 
+            refreshInterval: isHidden ? 30000 : 5000 
+        }));
+    }
+};</code></pre>
+    </section>
+
+    <section id="references" class="section">
+        <h2>4. Key File References</h2>
+        <ul>
+            <li><a class="file-link" href="file:///d:/IT Projects/budolEcosystem/budolshap-0.1.0/hooks/useStoreDashboard.js">useStoreDashboard.js</a> - SWR hook for seller dashboard.</li>
+            <li><a class="file-link" href="file:///d:/IT Projects/budolEcosystem/budolshap-0.1.0/hooks/useStoreWallet.js">useStoreWallet.js</a> - SWR hook for store wallet.</li>
+            <li><a class="file-link" href="file:///d:/IT Projects/budolEcosystem/budolshap-0.1.0/components/ChatWindow.jsx">ChatWindow.jsx</a> - Refactored to remove polling.</li>
+        </ul>
+    </section>
+
+    <footer style="text-align: center; margin-top: 50px; color: #7f8c8d;">
+        Budol Implementation & Documentation Standard (BIDS) - v492
+    </footer>
+</body>
+</html>

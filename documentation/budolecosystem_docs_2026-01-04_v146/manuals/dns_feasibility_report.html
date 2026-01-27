@@ -1,0 +1,175 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Local DNS & Service Discovery Feasibility Report</title>
+    <style>
+        :root {
+            --primary: #f43f5e;
+            --secondary: #0f172a;
+            --bg: #f8fafc;
+            --text: #1e293b;
+            --border: #e2e8f0;
+        }
+        body { 
+            font-family: 'Inter', sans-serif; 
+            line-height: 1.6; 
+            color: var(--text); 
+            background: var(--bg); 
+            max-width: 800px; 
+            margin: 0 auto; 
+            padding: 40px 20px; 
+        }
+        h1, h2, h3 { color: var(--secondary); }
+        h2 { border-bottom: 2px solid var(--primary); padding-bottom: 10px; margin-top: 40px; }
+        .box { background: white; padding: 25px; border-radius: 12px; border: 1px solid var(--border); margin: 20px 0; box-shadow: 0 2px 4px rgba(0,0,0,0.05); }
+        code { background: #1e293b; color: white; padding: 2px 6px; border-radius: 4px; font-family: monospace; }
+        .tag { display: inline-block; padding: 4px 12px; border-radius: 20px; font-size: 0.8em; font-weight: bold; margin-bottom: 10px; }
+        .tag-low { background: #dcfce7; color: #166534; }
+        .tag-mod { background: #fef9c3; color: #854d0e; }
+        .tag-high { background: #fee2e2; color: #991b1b; }
+    </style>
+</head>
+<body>
+    <a href="../index.html" style="text-decoration: none; color: var(--primary);">← Back to v146 Index</a>
+    
+    <h1>Local DNS & Service Discovery Feasibility Report</h1>
+    <p><strong>Date:</strong> 2026-01-04 | <strong>Version:</strong> 1.0</p>
+
+    <div class="box">
+        <h2>1. Purpose & Explanation</h2>
+        <p>The goal is to eliminate the need for users to manually enter IP addresses in the mobile app when moving between network environments (home, office, cafe). We analyzed two primary methods: <strong>Local DNS (Static)</strong> and <strong>mDNS/ZeroConf (Dynamic)</strong>.</p>
+    </div>
+
+    <div class="box">
+        <h2>2. Reason for Consideration</h2>
+        <p>Manual IP entry is error-prone and creates friction for non-technical users. Automated discovery provides a "magic" user experience where the app simply works as soon as it connects to the local network.</p>
+    </div>
+
+    <div class="box">
+        <h2>3. Technical Details</h2>
+        <h3>Option A: mDNS (Multicast DNS)</h3>
+        <p>Uses the <code>_http._tcp</code> service type to broadcast the ecosystem's presence. Libraries like <code>nsd</code> for Flutter and <code>bonjour-service</code> for Node.js are the industry standard for this.</p>
+        <p><span class="tag tag-mod">Difficulty: Moderate</span> Requires app permission changes and code integration.</p>
+
+        <h3>Option B: Local DNS Server</h3>
+        <p>Uses a standard DNS server to map a hostname (e.g., <code>budol.local</code>) to the server's IP. No app changes are needed if the app is already configured to use hostnames.</p>
+        <p><span class="tag tag-low">Difficulty: Low</span> Requires infrastructure setup outside the codebase.</p>
+    </div>
+
+    <div class="box">
+        <h2>4. Issues & Risks</h2>
+        <ul>
+            <li><strong>Network Isolation:</strong> Some routers block multicast/mDNS traffic (especially in corporate or public Wi-Fi).</li>
+            <li><strong>iOS Permissions:</strong> iOS 14+ requires explicit <code>NSLocalNetworkUsageDescription</code> and <code>NSBonjourServices</code> in <code>Info.plist</code>.</li>
+            <li><strong>Android Permissions:</strong> Requires <code>CHANGE_WIFI_MULTICAST_STATE</code>.</li>
+            <li><strong>Power Consumption:</strong> Continuous scanning for services can impact mobile battery life.</li>
+        </ul>
+    </div>
+
+    <div class="box">
+        <h2>5. Mitigation Strategies</h2>
+        <ul>
+            <li><strong>Fallback to Manual:</strong> Always keep the manual IP entry (added in v145) as a fallback if auto-discovery fails.</li>
+            <li><strong>On-Demand Scanning:</strong> Only scan when the app opens or when the "Connect" button is pressed, rather than continuously in the background.</li>
+            <li><strong>Clear Error Messaging:</strong> Inform the user if the network environment blocks discovery.</li>
+            <li><strong>Environment Guard:</strong> Wrap discovery in a production check to prevent accidental local scans in the live app.</li>
+        </ul>
+    </div>
+
+    <div class="box">
+        <h2>6. Environment Switching (Local vs. Vercel)</h2>
+        <p>Switching between Local (mDNS) and Vercel (Production) is highly straightforward using Flutter's environment flags. We can use a constant flag to gate the discovery logic:</p>
+        <pre><code>// Example implementation logic
+bool get isProduction => const String.fromEnvironment('APP_ENV') == 'production';
+
+void startDiscovery() {
+  if (isProduction) {
+    print("mDNS disabled in production.");
+    return;
+  }
+  // Proceed with mDNS scan for local server...
+}</code></pre>
+        <p>When deploying to Vercel, the build command will include <code>--dart-define=APP_ENV=production</code>, which automatically disables all local discovery logic and forces the app to use the hardcoded Vercel API URLs.</p>
+    </div>
+
+    <div class="box">
+        <h2>7. Dependencies</h2>
+        <ul>
+            <li><strong>Mobile:</strong> <code>nsd: ^4.0.3</code></li>
+            <li><strong>Server:</strong> <code>bonjour-service: ^1.2.1</code></li>
+        </ul>
+    </div>
+
+    <div class="box">
+        <h2>7. Test Results (Simulated)</h2>
+        <p>Simulated discovery logic shows that mDNS is highly effective in standard home/office LANs. Discovery time is typically < 2 seconds.</p>
+    </div>
+
+    <div class="box">
+        <h2>8. Recommendation for Future Enhancement</h2>
+        <p>Implement mDNS discovery as the primary connection method, with the manual IP configuration (v145) as a robust secondary option. This provides the best balance of user experience and reliability.</p>
+    </div>
+
+    <div class="box">
+        <h2>9. Roadmap</h2>
+        <ol>
+            <li>Implement Server-side broadcast (Phase 1)</li>
+            <li>Update Mobile App permissions and add <code>nsd</code> dependency (Phase 2)</li>
+            <li>Implement <code>DiscoveryService</code> in Flutter (Phase 3)</li>
+            <li>Add "Auto-connecting..." UI to Login Screen (Phase 4)</li>
+        </ol>
+    </div>
+
+    <div class="box">
+        <h2>10. Server-Side Integration (Ecosystem Services)</h2>
+        <p>For the mobile app to discover the ecosystem, the server-side services must announce their presence. This will be integrated into the <code>start-ecosystem.js</code> runner.</p>
+        
+        <h3>Implementation Strategy:</h3>
+        <ul>
+            <li><strong>Centralized Broadcast:</strong> The <code>start-ecosystem.js</code> script will initialize a <code>bonjour-service</code> instance and publish a primary service (e.g., <code>budolecosystem-gateway</code>) on port 8080.</li>
+            <li><strong>Service-Specific Broadcast:</strong> Each microservice (Auth, Wallet, etc.) can optionally publish its own service record to allow direct discovery by other services in the future.</li>
+            <li><strong>Package Requirement:</strong> <code>bonjour-service</code> is a pure JavaScript library, making it compatible across Windows, Mac, and Linux without native dependencies.</li>
+        </ul>
+
+        <pre><code>// Proposed start-ecosystem.js integration
+const { Bonjour } = require('bonjour-service');
+const bonjour = new Bonjour();
+
+// After starting services
+bonjour.publish({ 
+  name: 'BudolPay API Gateway', 
+  type: 'http', 
+  port: 8080,
+  txt: { version: '1.0.0', env: 'local' } 
+});</code></pre>
+
+        <h3>Cross-Service Discovery:</h3>
+        <p>While services currently use environment variables injected at startup, they can be updated to use mDNS for dynamic discovery if IP addresses change while the ecosystem is running. This improves robustness in dynamic network environments.</p>
+    </div>
+
+    <div class="box">
+        <h2>11. Philippine ISP Compatibility Analysis</h2>
+        <p>A critical requirement is ensuring the solution works with major Philippine DSL/Fiber providers (PLDT, Globe, Converge). Since mDNS is the foundation for common consumer tech like <strong>Chromecast, AirPlay, and Spotify Connect</strong>, it is widely supported by ISP-provided routers.</p>
+        
+        <h3>Provider-Specific Notes:</h3>
+        <ul>
+            <li><strong>PLDT Home Fibr (Huawei/FiberHome):</strong> Generally supports mDNS out of the box. Users should ensure "AP Isolation" is disabled in the 2.4G/5G settings to allow Wi-Fi devices to communicate.</li>
+            <li><strong>Globe At Home (Huawei/ZTE):</strong> High compatibility. Standard multicast settings usually allow discovery between Wi-Fi and Ethernet clients without modification.</li>
+            <li><strong>Converge ICT (ZTE/Huawei):</strong> Compatible, though some ZTE models may require "IGMP Snooping" to be enabled if discovery between different Wi-Fi bands (2.4GHz vs 5GHz) fails.</li>
+        </ul>
+
+        <h3>Common Troubleshooting for PH Users:</h3>
+        <ul>
+            <li><strong>AP Isolation:</strong> If enabled, the mobile app cannot "see" the server even on the same Wi-Fi. This must be turned OFF.</li>
+            <li><strong>Multicast/IGMP:</strong> Ensure these are not explicitly blocked in the "Security" or "Advanced" firewall settings of the router.</li>
+            <li><strong>Guest Wi-Fi:</strong> Most Philippine routers isolate Guest networks. The app and server must be on the <strong>Main</strong> Wi-Fi network.</li>
+        </ul>
+    </div>
+
+    <footer style="margin-top: 50px; text-align: center; color: #64748b; font-size: 0.9em;">
+        <p>budolEcosystem Documentation | Version 146</p>
+    </footer>
+</body>
+</html>

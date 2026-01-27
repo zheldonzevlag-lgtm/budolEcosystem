@@ -1,0 +1,50 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Developer Manual - v199</title>
+    <style>
+        body { font-family: sans-serif; line-height: 1.6; color: #333; max-width: 900px; margin: 0 auto; padding: 20px; }
+        code { background: #f4f4f4; padding: 2px 5px; border-radius: 3px; }
+        pre { background: #f4f4f4; padding: 15px; border-radius: 5px; overflow-x: auto; }
+        .logic-change { border-left: 4px solid #3498db; padding-left: 20px; margin: 20px 0; background: #ebf5fb; }
+    </style>
+</head>
+<body>
+    <h1>Developer Manual Updates - v199</h1>
+    
+    <h2>Purpose</h2>
+    <p>To enable a seamless recovery path for users who reach the authentication phase but have not yet configured a security PIN.</p>
+
+    <div class="logic-change">
+        <h3>Endpoint: <code>/login/mobile/setup-pin</code> (POST)</h3>
+        <p>A new endpoint dedicated to setting the <code>pinHash</code> for an existing user account.</p>
+        <pre><code>// Request Body
+{
+    "userId": "uuid",
+    "pin": "123456"
+}
+
+// Logic
+const pinHash = await bcrypt.hash(pin, 10);
+await prisma.user.update({
+    where: { id: userId },
+    data: { pinHash }
+});</code></pre>
+    </div>
+
+    <div class="logic-change">
+        <h3>Logic Change: <code>/verify-otp</code> Response</h3>
+        <p>The OTP verification response now includes a <code>needsPinSetup</code> boolean flag. This informs the mobile client if it should navigate to the home screen or a PIN setup screen.</p>
+        <pre><code>return res.json({ 
+    message: 'Device verified and login successful', 
+    token,
+    user: { id: updatedUser.id, phoneNumber: updatedUser.phoneNumber },
+    needsPinSetup: !updatedUser.pinHash
+});</code></pre>
+    </div>
+
+    <h2>Mobile Implementation (Inferred)</h2>
+    <p>Mobile developers should update the OTP verification handler to check for <code>needsPinSetup</code>. If true, the app should navigate to a <code>PinCreationScreen</code> instead of the <code>HomeScreen</code>.</p>
+</body>
+</html>

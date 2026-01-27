@@ -1,0 +1,50 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>System Admin Manual - v157 - Infrastructure & Config</title>
+    <style>
+        body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; max-width: 1200px; margin: 0 auto; padding: 20px; }
+        h1, h2, h3 { color: #2c3e50; }
+        .info { background: #e7f3fe; border-left: 6px solid #2196F3; margin-bottom: 15px; padding: 4px 12px; }
+        .nav { margin-bottom: 20px; }
+    </style>
+</head>
+<body>
+    <div class="nav">
+        <a href="../index.html">← Back to v157 Index</a> | 
+        <a href="../../../documentation/index.html">Main Index</a>
+    </div>
+
+    <h1>System Admin Manual - v157</h1>
+    
+    <h3>1. Environment Configuration</h3>
+    <p>No new environment variables were introduced in this version. However, ensure that <code>budolID</code> and <code>budolPay Auth</code> services are restarted to apply the endpoint changes.</p>
+
+    <h3>2. Database Schema</h3>
+    <p>No schema changes (DDL) were required as <code>phoneNumber</code> field already existed in both <code>budolID</code> and <code>budolPay</code> databases. Ensure Prisma client is regenerated if any discrepancies occur.</p>
+    <pre><code>npm run prisma:generate --prefix budolID-0.1.0
+npm run prisma:generate --prefix budolpay-0.1.0</code></pre>
+
+    <h3>3. Operational Procedures</h3>
+    <h4>A. User Synchronization</h4>
+    <p>The system now automatically syncs phone numbers from budolID SSO to budolPay when a user is looked up for the first time by phone number.</p>
+
+    <h4>B. Troubleshooting</h4>
+    <p>If a phone-based transfer fails with 404, verify that the phone number exists in the <code>budolID</code> database. You can use the provided script:</p>
+    <pre><code>node budolID-0.1.0/check-users-budolid.js</code></pre>
+
+    <h3>4. Risk & Mitigation</h3>
+    <ul>
+        <li><strong>Risk:</strong> Duplicate phone numbers in the system.<br>
+            <strong>Mitigation:</strong> <code>phoneNumber</code> is marked as <code>@unique</code> in the Prisma schema.</li>
+        <li><strong>Risk:</strong> Phone number format mismatch (e.g., +63 vs 09).<br>
+            <strong>Mitigation:</strong> Recommendation for future enhancement includes adding a phone normalization library.</li>
+    </ul>
+
+    <div class="nav">
+        <a href="user_manual.html">Next: User Manual →</a>
+    </div>
+</body>
+</html>

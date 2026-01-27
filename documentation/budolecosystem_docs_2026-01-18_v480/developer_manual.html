@@ -1,0 +1,100 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Developer Manual - Budol Ecosystem v480</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <style>
+        :root { --budol-primary: #2563eb; }
+        body { font-family: 'Segoe UI', sans-serif; background: #f8fafc; }
+        .sidebar { background: #1e293b; color: white; min-height: 100vh; padding: 2rem 1rem; position: sticky; top: 0; }
+        .sidebar a { color: #cbd5e1; text-decoration: none; display: block; padding: 0.75rem 1rem; border-radius: 0.5rem; }
+        .sidebar a:hover { background: #334155; color: white; }
+        .code-block { background: #1e1e1e; color: #d4d4d4; padding: 1.5rem; border-radius: 0.5rem; font-family: 'Consolas', monospace; margin: 1rem 0; overflow-x: auto; }
+        .main-content { padding: 3rem; }
+        .file-link { color: var(--budol-primary); font-weight: 600; text-decoration: none; }
+        .file-link:hover { text-decoration: underline; }
+    </style>
+</head>
+<body>
+    <div class="container-fluid">
+        <div class="row">
+            <div class="col-md-2 sidebar">
+                <h4>BudolDocs</h4>
+                <nav>
+                    <a href="index.html">🏠 Overview</a>
+                    <a href="developer_manual.html" class="bg-primary text-white">💻 Developer Manual</a>
+                    <a href="system_admin_manual.html">⚙️ System Admin</a>
+                    <a href="user_manual.html">👤 User Manual</a>
+                    <hr>
+                    <a href="#architecture">Architecture</a>
+                    <a href="#network-util">Network Utility</a>
+                    <a href="#test-scripts">Test Scripts</a>
+                </nav>
+            </div>
+            <div class="col-md-10 main-content">
+                <h1>Developer Manual</h1>
+                <p class="lead">Technical implementation details for Network Awareness in v480.</p>
+
+                <section id="architecture" class="mt-5">
+                    <h3>Architecture & Data Contracts</h3>
+                    <p>The core change involves using the <code>LOCAL_IP</code> environment variable as the source of truth for service discovery within a local network. If not provided, it fallbacks to <code>localhost</code>.</p>
+                    
+                    <h5>Key Code Reference:</h5>
+                    <p>Modified <a class="file-link" href="file:///d:/IT Projects/budolEcosystem/scripts/network-util.js">network-util.js</a> to detect and propagate the local IP across all services.</p>
+                    <div class="code-block">
+const localIP = networkInterfaces[netName].find(net => net.family === 'IPv4' && !net.internal)?.address;
+// ...
+if (localIP) {
+    process.env.LOCAL_IP = localIP;
+    updateEnvFiles(localIP);
+}
+                    </div>
+                </section>
+
+                <section id="network-util" class="mt-5">
+                    <h3>Network Utility Implementation</h3>
+                    <p>The <a class="file-link" href="file:///d:/IT Projects/budolEcosystem/scripts/network-util.js">network-util.js</a> script now handles:</p>
+                    <ul>
+                        <li>Automatic detection of the primary network interface.</li>
+                        <li>Updating <code>.env</code> files in all service subdirectories.</li>
+                        <li>Updating the Flutter <code>api_service.dart</code> default value.</li>
+                        <li>Updating <code>MOBILE_CONFIG.txt</code> for manual device linking.</li>
+                    </ul>
+                </section>
+
+                <section id="test-scripts" class="mt-5">
+                    <h3>Dynamic Test Scripts</h3>
+                    <p>Test scripts have been updated to use dynamic hostnames. Example from <a class="file-link" href="file:///d:/IT Projects/budolEcosystem/scripts/test_scripts/global/check-services.js">check-services.js</a>:</p>
+                    <div class="code-block">
+const LOCAL_IP = process.env.LOCAL_IP || 'localhost';
+const GATEWAY_URL = `http://${LOCAL_IP}:8080`;
+                    </div>
+                </section>
+
+                <section id="dependencies" class="mt-5">
+                    <h3>Dependencies & Rationale</h3>
+                    <div class="card p-3 mb-3">
+                        <h6>Node.js ecosystem</h6>
+                        <ul>
+                            <li><strong>dotenv:</strong> Essential for standardizing environment variable injection across microservices.</li>
+                            <li><strong>axios:</strong> Chosen for its robust timeout handling and interceptors, critical for cross-network reliability.</li>
+                            <li><strong>bonjour-service:</strong> Used in the central runner for zero-config service advertising via mDNS.</li>
+                        </ul>
+                    </div>
+                    <div class="card p-3 mb-3">
+                        <h6>Flutter ecosystem</h6>
+                        <ul>
+                            <li><strong>http:</strong> Standard Dart package for API communication.</li>
+                            <li><strong>flutter_secure_storage:</strong> Used to persist session tokens securely on physical devices.</li>
+                            <li><strong>shared_preferences:</strong> Used for non-sensitive configuration like custom host overrides.</li>
+                        </ul>
+                    </div>
+                    <p>Pushing for <code>LOCAL_IP</code> reduces friction during team onboarding and cross-device testing, ensuring that developers can focus on features rather than network troubleshooting.</p>
+                </section>
+            </div>
+        </div>
+    </div>
+</body>
+</html>

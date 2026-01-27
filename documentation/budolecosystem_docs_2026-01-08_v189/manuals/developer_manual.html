@@ -1,0 +1,140 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Developer Manual - v189 (2026-01-08)</title>
+    <style>
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; line-height: 1.6; color: #333; max-width: 900px; margin: 0 auto; padding: 20px; background-color: #f9f9f9; }
+        header { border-bottom: 2px solid #2c3e50; padding-bottom: 10px; margin-bottom: 30px; }
+        h1, h2, h3 { color: #2c3e50; }
+        .back-link { display: inline-block; margin-bottom: 20px; text-decoration: none; color: #3498db; font-weight: bold; }
+        .section { background: #fff; padding: 25px; border-radius: 8px; box-shadow: 0 1px 5px rgba(0,0,0,0.05); margin-bottom: 30px; }
+        code { background: #eee; padding: 2px 5px; border-radius: 3px; font-family: 'Courier New', Courier, monospace; }
+        pre { background: #2d3436; color: #dfe6e9; padding: 15px; border-radius: 5px; overflow-x: auto; }
+        .status-badge { display: inline-block; padding: 5px 12px; border-radius: 20px; font-size: 0.85em; font-weight: bold; text-transform: uppercase; }
+        .status-fixed { background: #d4edda; color: #155724; }
+        .status-risk { background: #fff3cd; color: #856404; }
+        table { width: 100%; border-collapse: collapse; margin: 20px 0; }
+        th, td { text-align: left; padding: 12px; border-bottom: 1px solid #ddd; }
+        th { background: #f2f2f2; }
+    </style>
+</head>
+<body>
+    <a href="../index.html" class="back-link">← Back to v189 Index</a>
+    <header>
+        <h1>Developer Manual: Infinite Loop Resolution</h1>
+        <p>Technical implementation details for resolving production routing failures.</p>
+    </header>
+
+    <div class="section">
+        <h2>1. Purpose & Overview</h2>
+        <p>The primary goal of this update was to resolve <code>508 INFINITE_LOOP</code> errors occurring on the Vercel-deployed instances of the BudolPay Admin and BudolShap platforms. These errors prevented users from accessing the applications and were traced back to misconfigured environment variables that dictated authentication and redirection logic.</p>
+    </div>
+
+    <div class="section">
+        <h2>2. Technical Analysis</h2>
+        <h3>Root Cause: Environment Mismatch</h3>
+        <p>In Next.js applications, especially those using <code>middleware.ts</code> for authentication, public URLs (like <code>NEXT_PUBLIC_APP_URL</code>) are often used to determine if a request is authenticated or needs redirection. If these URLs point to <code>localhost</code> or a local IP (e.g., <code>192.168.1.13</code>) while running in a production environment (Vercel), the middleware can enter a recursive loop:</p>
+        <ol>
+            <li>User visits production URL (Vercel).</li>
+            <li>Middleware checks authentication, sees mismatch between production URL and expected <code>NEXT_PUBLIC_APP_URL</code> (which was local).</li>
+            <li>Middleware redirects to SSO/Auth page.</li>
+            <li>SSO/Auth page redirects back to <code>NEXT_PUBLIC_APP_URL</code> (Local IP).</li>
+            <li>Local IP is inaccessible or routes back to production, causing the loop.</li>
+        </ol>
+
+        <h3>Specific Issues Identified</h3>
+        <table>
+            <thead>
+                <tr>
+                    <th>Component</th>
+                    <th>Issue</th>
+                    <th>Impact</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td>BudolPay Admin</td>
+                    <td>Local IPs (<code>192.168.1.13</code>) in <code>.env</code></td>
+                    <td>Infinite loop during auth redirection on Vercel.</td>
+                </tr>
+                <tr>
+                    <td>BudolShap</td>
+                    <td>Typo in <code>.env.vercel</code> (<code>budulshap</code> vs <code>budolshap</code>)</td>
+                    <td>Mismatched origins causing 508 errors.</td>
+                </tr>
+                <tr>
+                    <td>Verification Service</td>
+                    <td>Incorrect URL endpoint in Admin config</td>
+                    <td>KYC/Verification features failing.</td>
+                </tr>
+            </tbody>
+        </table>
+    </div>
+
+    <div class="section">
+        <h2>3. Code Details & Implementation</h2>
+        <h3>Admin Environment Alignment</h3>
+        <p>Updated <code>apps/admin/.env</code> to use correct production endpoints:</p>
+        <pre><code># Before
+NEXT_PUBLIC_SSO_URL="http://192.168.1.13:3003"
+NEXT_PUBLIC_APP_URL="http://192.168.1.13:3004"
+VERIFICATION_SERVICE_URL="https://budolpay-kyc.vercel.app"
+
+# After
+NEXT_PUBLIC_SSO_URL="https://budolid.vercel.app"
+NEXT_PUBLIC_APP_URL="https://budolpay-admin.vercel.app"
+VERIFICATION_SERVICE_URL="https://budolpay-verification-service.vercel.app"</code></pre>
+
+        <h3>BudolShap Typo Fix</h3>
+        <p>Corrected the <code>.env.vercel</code> file in the <code>budolshap-0.1.0</code> root:</p>
+        <pre><code># Fixed URLs
+NEXT_PUBLIC_APP_URL="https://budolshap-0.10.vercel.app"
+NEXT_PUBLIC_BASE_URL="https://budolshap-0.10.vercel.app"
+NEXT_PUBLIC_SITE_URL="https://budolshap-0.10.vercel.app"</code></pre>
+    </div>
+
+    <div class="section">
+        <h2>4. Risk & Mitigation</h2>
+        <table>
+            <thead>
+                <tr>
+                    <th>Risk</th>
+                    <th>Mitigation</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td>Environment Variable Desync</td>
+                    <td>Implemented automated sync script (<code>sync-vercel-envs.ps1</code>) to push local configs to Vercel.</td>
+                </tr>
+                <tr>
+                    <td>Middleware Versioning</td>
+                    <td>Verified <code>middleware.ts</code> logic in Admin to ensure it uses <code>NEXT_PUBLIC_APP_URL</code> correctly.</td>
+                </tr>
+                <tr>
+                    <td>Local Development Breakage</td>
+                    <td>Developers must use <code>.env.local</code> for local development to override production defaults.</td>
+                </tr>
+            </tbody>
+        </table>
+    </div>
+
+    <div class="section">
+        <h2>5. Test Results</h2>
+        <p><span class="status-badge status-fixed">Verified</span> <strong>Configuration Validation:</strong> All environment variables now point to their respective production Vercel URLs.</p>
+        <p><span class="status-badge status-fixed">Verified</span> <strong>Sync Script:</strong> <code>sync-vercel-envs.ps1</code> successfully includes <code>budolpay-admin</code> in the synchronization process.</p>
+        <p><span class="status-badge status-fixed">Verified</span> <strong>Ecosystem Alignment:</strong> Root <code>.env.vercel</code> now contains centralized SSO and App URL references.</p>
+    </div>
+
+    <div class="section">
+        <h2>6. Future Recommendations</h2>
+        <ul>
+            <li><strong>Centralized Config Service:</strong> Move from file-based <code>.env</code> to a centralized secret management service (e.g., Vercel Secrets or AWS Secrets Manager).</li>
+            <li><strong>Middleware Logging:</strong> Add server-side logging to <code>middleware.ts</code> to catch redirection loops early.</li>
+            <li><strong>Automated URL Validation:</strong> Add a build-time script to verify that <code>NEXT_PUBLIC_*_URL</code> variables match the deployment target environment.</li>
+        </ul>
+    </div>
+</body>
+</html>

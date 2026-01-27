@@ -1,0 +1,76 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Developer Manual - v436</title>
+    <style>
+        body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif; line-height: 1.6; color: #333; max-width: 1200px; margin: 0 auto; padding: 20px; background-color: #f4f5f7; }
+        .sidebar { position: fixed; left: 0; top: 0; bottom: 0; width: 250px; background-color: #0747a6; color: white; padding: 20px; overflow-y: auto; }
+        .sidebar h2 { color: #fff; font-size: 1.2rem; margin-bottom: 20px; border-bottom: 1px solid rgba(255,255,255,0.2); padding-bottom: 10px; }
+        .sidebar ul { list-style: none; padding: 0; }
+        .sidebar li { margin-bottom: 10px; }
+        .sidebar a { color: #deebff; text-decoration: none; display: block; padding: 8px; border-radius: 4px; transition: background 0.2s; }
+        .sidebar a:hover { background-color: rgba(255,255,255,0.1); color: white; }
+        .sidebar a.active { background-color: #2684ff; color: white; }
+        .main-content { margin-left: 270px; background: white; padding: 40px; border-radius: 8px; box-shadow: 0 1px 3px rgba(0,0,0,0.1); }
+        h1 { color: #172b4d; border-bottom: 2px solid #ebecf0; padding-bottom: 10px; }
+        h2 { color: #0747a6; margin-top: 30px; }
+        pre { background: #091e42; color: #fff; padding: 20px; border-radius: 8px; overflow-x: auto; font-family: "SFMono-Regular", Consolas, "Liberation Mono", Menlo, monospace; }
+        .code-ref { color: #2684ff; font-weight: bold; text-decoration: none; }
+        .code-ref:hover { text-decoration: underline; }
+        .footer { margin-top: 50px; text-align: center; font-size: 0.8rem; color: #5e6c84; border-top: 1px solid #ebecf0; padding-top: 20px; }
+    </style>
+</head>
+<body>
+    <div class="sidebar">
+        <h2>Budol Ecosystem</h2>
+        <ul>
+            <li><a href="index.html">Home</a></li>
+            <li><a href="developer_manual.html" class="active">Developer Manual</a></li>
+            <li><a href="system_admin_manual.html">System Admin Manual</a></li>
+            <li><a href="user_manual.html">User Manual</a></li>
+            <li><a href="risk_register.html">Risk Register</a></li>
+            <li><a href="Mitigation.html">Mitigations</a></li>
+            <li><a href="issues.html">Known Issues</a></li>
+            <li><a href="fixes.html">Fixes & Updates</a></li>
+            <li><a href="test_results.html">Test Results</a></li>
+            <li><a href="future_recommendations.html">Recommendations</a></li>
+        </ul>
+    </div>
+
+    <div class="main-content">
+        <h1>Developer Manual - v436</h1>
+        
+        <h2>Technical Summary</h2>
+        <p>This version fixes a <code>ReferenceError</code> in the <code>StoreOrders</code> component. The <code>searchTerm</code> variable was being used in the JSX to bind the value of the search input, but it was not initialized as a state variable in the component's scope.</p>
+
+        <h2>Code Changes</h2>
+        <h3>1. State Initialization</h3>
+        <p>The following state was added to the <code>StoreOrders</code> function in <a href="file:///d:/IT%20Projects/budolEcosystem/budolshap-0.1.0/app/store/orders/page.jsx" class="code-ref">app/store/orders/page.jsx</a>:</p>
+        <pre><code>const [searchTerm, setSearchTerm] = useState('')</code></pre>
+
+        <h3>2. Search Logic</h3>
+        <p>The <code>searchTerm</code> state is used within the <code>filteredOrders</code> filter logic to match order IDs, customer details, and product names:</p>
+        <pre><code>// Search term filter (customer name, email, order ID, product name)
+if (searchTerm) {
+    const searchLower = searchTerm.toLowerCase()
+    const matchesOrderId = order.id.toLowerCase().includes(searchLower)
+    const matchesCustomer = order.user?.name?.toLowerCase().includes(searchLower) ||
+        order.user?.email?.toLowerCase().includes(searchLower)
+    const matchesProduct = order.items?.some(item =>
+        item.product?.name?.toLowerCase().includes(searchLower)
+    )
+    if (!matchesOrderId && !matchesCustomer && !matchesProduct) return false
+}</code></pre>
+
+        <h2>Testing</h2>
+        <p>A structural test script was executed to ensure the fix is correctly implemented in the source code. See <a href="test_results.html">Test Results</a> for details.</p>
+
+        <div class="footer">
+            &copy; 2026 Budol Ecosystem. All rights reserved. | <a href="../knowledgebase.html">Knowledge Base</a>
+        </div>
+    </div>
+</body>
+</html>

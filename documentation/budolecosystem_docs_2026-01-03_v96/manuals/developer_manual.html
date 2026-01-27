@@ -1,0 +1,84 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Developer Manual - budolEcosystem v96</title>
+    <style>
+        body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; line-height: 1.6; color: #333; max-width: 900px; margin: 0 auto; padding: 20px; background-color: #fff; }
+        h1, h2, h3 { color: #2c3e50; }
+        code { background: #f0f2f5; padding: 2px 5px; border-radius: 4px; font-family: "SFMono-Regular", Consolas, "Liberation Mono", Menlo, monospace; }
+        pre { background: #282c34; color: #abb2bf; padding: 15px; border-radius: 8px; overflow-x: auto; }
+        .success { color: #27ae60; font-weight: bold; }
+        .back-link { display: inline-block; margin-bottom: 20px; color: #3498db; text-decoration: none; }
+        .back-link:hover { text-decoration: underline; }
+        .method { background: #e7f3ff; padding: 10px; border-left: 4px solid #3498db; margin: 15px 0; }
+    </style>
+</head>
+<body>
+    <a href="../index.html" class="back-link">← Back to Overview</a>
+    <h1>Developer Manual - v96</h1>
+
+    <section>
+        <h2>Ecosystem Expansion & Service Isolation</h2>
+        <p>In this update, the central runner <code>start-ecosystem.js</code> has been expanded to support the full <code>budolPay</code> service stack. Previously, only the Admin frontend was managed, leading to <code>ECONNREFUSED</code> errors when <code>budolShap</code> attempted to communicate with the payment gateway.</p>
+
+        <h3>Orchestration Updates</h3>
+        <p>The <code>apps</code> array in <code>start-ecosystem.js</code> now includes the following service boundaries:</p>
+        <pre><code>{
+    name: 'budolPay (Gateway)',
+    cwd: path.join(__dirname, 'budolpay-0.1.0', 'services', 'payment-gateway-service'),
+    command: 'node',
+    args: ['index.js'],
+    port: 8004,
+    color: '\x1b[36m' // Cyan
+},
+{
+    name: 'budolPay (Wallet)',
+    cwd: path.join(__dirname, 'budolpay-0.1.0', 'services', 'wallet-service'),
+    command: 'node',
+    args: ['index.js'],
+    port: 8002,
+    color: '\x1b[94m' // Light Blue
+}</code></pre>
+
+        <h3>Environment Variable Propagation</h3>
+        <div class="method">
+            <strong>Key Fix:</strong> We ensured that every child process receives its own <code>PORT</code> environment variable. This prevents the monorepo root from forcing a single port on all its workspaces.
+        </div>
+        <pre><code>const env = { ...process.env, PORT: app.port.toString() };
+
+const childProcess = spawn(app.command, app.args, { 
+    cwd: app.cwd, 
+    shell: true,
+    env: env
+});</code></pre>
+    </section>
+
+    <section>
+        <h2>Monorepo Startup Optimization</h2>
+        <p>The <code>budolPay (Admin)</code> startup was refined to use workspace-specific commands. This ensures that <code>npm run dev</code> only triggers the <code>admin</code> app development server, while other services are managed independently by the central runner.</p>
+        <pre><code>{
+    name: 'budolPay (Admin)',
+    cwd: path.join(__dirname, 'budolpay-0.1.0'),
+    command: 'npm',
+    args: ['run', 'dev', '-w', 'admin'],
+    port: 3000,
+    color: '\x1b[34m'
+}</code></pre>
+    </section>
+
+    <section>
+        <h2>Recommendations for Future Enhancement</h2>
+        <ul>
+            <li><strong>Health Check Dependencies:</strong> Implement a retry mechanism in <code>budolShap</code> when the gateway is not yet ready.</li>
+            <li><strong>Service Discovery:</strong> Transition from hardcoded localhost URLs to a shared environment registry for service ports.</li>
+            <li><strong>Dockerization:</strong> Consider moving the service-heavy <code>budolPay</code> monorepo into a Docker Compose setup for better resource isolation.</li>
+        </ul>
+    </section>
+
+    <div style="margin-top: 50px; border-top: 1px solid #eee; padding-top: 20px;">
+        <p><a href="../index.html">Main Index</a> | <a href="sysadmin_manual.html">Next: SysAdmin Manual →</a></p>
+    </div>
+</body>
+</html>

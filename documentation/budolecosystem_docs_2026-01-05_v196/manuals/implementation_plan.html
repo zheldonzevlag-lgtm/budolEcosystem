@@ -1,0 +1,106 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>v196 Implementation Plan - SMS OTP & Identity Verification</title>
+    <style>
+        body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; line-height: 1.6; color: #333; max-width: 900px; margin: 0 auto; padding: 2rem; background: #f8fafc; }
+        .card { background: white; padding: 2rem; border-radius: 0.75rem; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.1); margin-bottom: 2rem; }
+        h1, h2, h3 { color: #1e293b; border-bottom: 1px solid #e2e8f0; padding-bottom: 0.5rem; }
+        .phase { margin-bottom: 2rem; padding-left: 1rem; border-left: 4px solid #10b981; }
+        .step { margin-bottom: 1rem; }
+        .step-title { font-weight: bold; color: #059669; }
+        code { background: #f1f5f9; padding: 0.2rem 0.4rem; border-radius: 0.25rem; font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace; font-size: 0.9em; }
+        pre { background: #1e293b; color: #f8fafc; padding: 1rem; border-radius: 0.5rem; overflow-x: auto; }
+        .nav-links { display: flex; justify-content: space-between; margin-top: 2rem; font-size: 0.9rem; }
+        .nav-links a { color: #3b82f6; text-decoration: none; }
+        .comparison-table { width: 100%; border-collapse: collapse; margin: 1rem 0; }
+        .comparison-table th, .comparison-table td { padding: 0.75rem; border: 1px solid #e2e8f0; text-align: left; }
+        .comparison-table th { background: #f1f5f9; }
+    </style>
+</head>
+<body>
+    <div class="nav-links">
+        <a href="../index.html">v196 Index</a>
+        <a href="developer_manual.html">Developer Manual →</a>
+    </div>
+
+    <div class="card">
+        <h1>v196 Implementation Plan</h1>
+        <p><strong>Subject:</strong> SMS OTP Integration for Identity Verification</p>
+        <p><strong>Date:</strong> 2026-01-05 | <strong>Version:</strong> v196</p>
+
+        <h2>Purpose</h2>
+        <p>To enhance the security and legitimacy of the budolEcosystem by integrating a Philippines-based SMS gateway. This will enable 2-Factor Authentication (2FA), phone number ownership verification (OTP), and real-time transaction alerts, bringing budolPay closer to GCash-level security standards.</p>
+
+        <h2>API Selection Analysis</h2>
+        <table class="comparison-table">
+            <thead>
+                <tr>
+                    <th>Provider</th>
+                    <th>Best For</th>
+                    <th>Pros</th>
+                    <th>Cons</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td><strong>Semaphore</strong></td>
+                    <td>OTP & Verification</td>
+                    <td>Dead simple API; High reliability for PH carriers (Globe/Smart).</td>
+                    <td>Strict free tier limits.</td>
+                </tr>
+                <tr>
+                    <td><strong>ITexMo</strong></td>
+                    <td>General Dev</td>
+                    <td>Generous free tier; Established PH presence.</td>
+                    <td>Signature tags on free messages.</td>
+                </tr>
+                <tr>
+                    <td><strong>engageSPARK</strong></td>
+                    <td>2-Way Messaging</td>
+                    <td>Powerful automation; Branded SMS.</td>
+                    <td>Complex for simple OTP needs.</td>
+                </tr>
+            </tbody>
+        </table>
+
+        <h2>Phase 1: Ecosystem SMS Service</h2>
+        <div class="phase">
+            <div class="step">
+                <span class="step-title">1.1 Create Central SMS Microservice</span>
+                <p>Develop a new service <code>budolEcosystem-SMS</code> that abstracts the chosen gateway (e.g., Semaphore). This allows other services to send SMS via a simple internal API call.</p>
+            </div>
+            <div class="step">
+                <span class="step-title">1.2 OTP Generation & Storage</span>
+                <p>Implement logic to generate 6-digit codes, store them in Redis (with 5-minute TTL), and handle verification attempts.</p>
+            </div>
+        </div>
+
+        <h2>Phase 2: Mobile App Integration (Step 1)</h2>
+        <div class="phase">
+            <div class="step">
+                <span class="step-title">2.1 Registration Flow Update</span>
+                <p>Modify <code>lib/screens/registration_screen.dart</code>. After the user enters their phone number in Step 1, trigger an OTP request. Add a verification sub-step before allowing the user to proceed to Step 2.</p>
+            </div>
+        </div>
+
+        <h2>Phase 3: Transaction Alerts</h2>
+        <div class="phase">
+            <div class="step">
+                <span class="step-title">3.1 Transaction-Service Webhook</span>
+                <p>Update <code>transaction-service</code> to trigger an SMS notification to the recipient whenever a P2P transfer is successful.</p>
+            </div>
+        </div>
+
+        <h2>Risks & Mitigations</h2>
+        <ul>
+            <li><strong>Risk:</strong> SMS delivery failure due to network congestion.</li>
+            <li><strong>Mitigation:</strong> Implement a "Resend OTP" button with a 60-second cooldown and a fallback to email OTP if SMS fails repeatedly.</li>
+            <li><strong>Risk:</strong> API credit exhaustion.</li>
+            <li><strong>Mitigation:</strong> Implement rate limiting per IP and phone number to prevent abuse.</li>
+        </ul>
+    </div>
+</body>
+</html>

@@ -1,0 +1,79 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Developer Manual - v168</title>
+    <style>
+        body { font-family: sans-serif; line-height: 1.6; padding: 2rem; max-width: 800px; margin: 0 auto; background: #f4f4f9; color: #333; }
+        h1, h2 { color: #6366f1; }
+        pre { background: #1e1e1e; color: #d4d4d4; padding: 1rem; border-radius: 0.5rem; overflow-x: auto; }
+        code { font-family: monospace; background: #eee; padding: 0.2rem 0.4rem; border-radius: 3px; }
+        .back-link { display: inline-block; margin-bottom: 1rem; text-decoration: none; color: #6366f1; font-weight: bold; }
+        .update-table { width: 100%; border-collapse: collapse; margin: 1rem 0; }
+        .update-table th, .update-table td { border: 1px solid #ddd; padding: 0.8rem; text-align: left; }
+        .update-table th { background: #6366f1; color: white; }
+    </style>
+</head>
+<body>
+    <a href="../index.html" class="back-link">← Back to Index</a>
+    <h1>Developer Manual - v168</h1>
+    
+    <h2>Purpose</h2>
+    <p>Update specific user mobile numbers in the ecosystem to match requirements for test accounts.</p>
+
+    <h2>Technical Details</h2>
+    <p>The update was performed using Node.js scripts leveraging the Prisma Client for each respective service. Due to different module types (CommonJS vs ESM), scripts were adapted accordingly.</p>
+
+    <h3>Data Updates</h3>
+    <table class="update-table">
+        <tr>
+            <th>Email</th>
+            <th>Old Number (Estimated)</th>
+            <th>New Number</th>
+        </tr>
+        <tr>
+            <td>reynaldomgalvez@gmail.com</td>
+            <td>-</td>
+            <td>09484099388</td>
+        </tr>
+        <tr>
+            <td>tony.stark@budolshap.com</td>
+            <td>09179999999</td>
+            <td>09484099400</td>
+        </tr>
+        <tr>
+            <td>peter.parker@budolshap.com</td>
+            <td>-</td>
+            <td>09171854432</td>
+        </tr>
+    </table>
+
+    <h3>Implementation Scripts</h3>
+    <p>Scripts were created in the following locations:</p>
+    <ul>
+        <li><code>budolID-0.1.0/update-phones.js</code></li>
+        <li><code>budolpay-0.1.0/packages/database/update-phones.js</code></li>
+        <li><code>budolshap-0.1.0/update-phones.cjs</code> (Renamed to .cjs for ESM compatibility)</li>
+    </ul>
+
+    <h3>Code Example (Prisma Update)</h3>
+    <pre><code>
+await prisma.user.update({
+  where: { email: 'tony.stark@budolshap.com' },
+  data: { phoneNumber: '09484099400' }
+});
+    </code></pre>
+
+    <h2>Issues & Fixes</h2>
+    <ul>
+        <li><strong>Issue:</strong> Typos in user-provided email (<code>budholshap.com</code> instead of <code>budolshap.com</code>).<br>
+            <strong>Fix:</strong> Performed fuzzy search in BudolID database to identify the correct email format.</li>
+        <li><strong>Issue:</strong> ESM module error in BudolShap.<br>
+            <strong>Fix:</strong> Renamed script to <code>.cjs</code> to force CommonJS interpretation for easier execution via <code>node</code>.</li>
+    </ul>
+
+    <h2>Test Results</h2>
+    <p>Verified via post-update lookup scripts in all three databases. All records reflect the correct numbers.</p>
+</body>
+</html>

@@ -1,0 +1,63 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Developer Manual - v50 - SSO Name Persistence Fix</title>
+    <style>
+        body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, 'Open Sans', 'Helvetica Neue', sans-serif; line-height: 1.6; color: #333; max-width: 800px; margin: 0 auto; padding: 20px; }
+        h1 { color: #0f172a; border-bottom: 2px solid #e2e8f0; padding-bottom: 10px; }
+        h2 { color: #1e293b; margin-top: 30px; }
+        code { background: #f1f5f9; padding: 2px 4px; rounded: 4px; font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace; }
+        pre { background: #1e293b; color: #f8fafc; padding: 15px; border-radius: 8px; overflow-x: auto; }
+        .tag { display: inline-block; padding: 2px 8px; border-radius: 12px; font-size: 12px; font-weight: bold; margin-right: 10px; }
+        .tag-fix { background: #dcfce7; color: #166534; }
+        .tag-feature { background: #dbeafe; color: #1e40af; }
+    </style>
+</head>
+<body>
+    <h1>Developer Manual - v50</h1>
+    <p><strong>Release Date:</strong> 2026-01-02</p>
+    <p><strong>Version:</strong> v50</p>
+
+    <h2>Overview</h2>
+    <p>This update resolves the issue where user name changes in the budolShap/budolPay admin panels were being reverted to their original values upon subsequent SSO login. This was caused by a lack of bi-directional synchronization between the application services and the budolID SSO provider.</p>
+
+    <h2>Technical Changes</h2>
+
+    <h3>1. budolID SSO Provider Enhancements</h3>
+    <p>A new profile update endpoint was added to allow applications to push name changes back to the central identity provider.</p>
+    <ul>
+        <li><strong>Endpoint:</strong> <code>PATCH /users/:userId/profile</code></li>
+        <li><strong>File:</strong> <code>budolID-0.1.0/index.js</code></li>
+        <li><strong>Functionality:</strong> Updates <code>firstName</code>, <code>lastName</code>, and <code>avatarUrl</code> in the Prisma database.</li>
+    </ul>
+
+    <h3>2. budolShap Client & API Updates</h3>
+    <p>The budolShap application now proactively synchronizes name changes to the SSO provider.</p>
+    <ul>
+        <li><strong>Client Update:</strong> Added <code>updateUserProfile</code> to <code>budolshap-0.1.0/lib/api/budolIdClient.js</code>.</li>
+        <li><strong>Admin API Update:</strong> Modified <code>budolshap-0.1.0/app/api/admin/users/[userId]/route.js</code> to call <code>updateUserProfile</code> when a name is edited.</li>
+        <li><strong>SSO Callback Update:</strong> Updated <code>budolshap-0.1.0/app/api/auth/sso/callback/route.js</code> to store <code>ssoUserId</code> in the user's <code>metadata</code>, enabling the link between local and SSO identities.</li>
+    </ul>
+
+    <h3>3. budolPay Admin Sync Updates</h3>
+    <p>Similar to budolShap, budolPay now synchronizes profile updates to budolID.</p>
+    <ul>
+        <li><strong>Client Created:</strong> <code>budolpay-0.1.0/apps/admin/lib/budolIdClient.ts</code></li>
+        <li><strong>Admin API Update:</strong> Added <code>UPDATE_PROFILE</code> action to <code>budolpay-0.1.0/apps/admin/app/api/users/route.ts</code> with SSO sync logic.</li>
+        <li><strong>SSO Callback Update:</strong> Updated <code>budolpay-0.1.0/apps/admin/app/api/auth/callback/route.ts</code> to store <code>ssoUserId</code> in <code>kycData</code>.</li>
+    </ul>
+
+    <h3>4. Checkout & Payment Flow Fixes</h3>
+    <p>Resolved critical errors in the checkout process for BudolPay and PayMongo integrations.</p>
+    <ul>
+        <li><strong>Case Sensitivity:</strong> Fixed <code>OrderSummary.jsx</code> to handle payment methods in a case-insensitive manner (e.g., "BUDOL_PAY" vs "budolpay").</li>
+        <li><strong>Provider Routing:</strong> Ensured <code>budolpay</code> method correctly routes to the <code>budolpay</code> provider instead of defaulting to PayMongo.</li>
+        <li><strong>Port Configuration:</strong> Standardized BudolPay Gateway communication on port <code>8004</code> to avoid conflicts with budolID on port <code>8000</code>.</li>
+    </ul>
+
+    <h2>Impact Analysis</h2>
+    <p>Name changes made in the admin panel are now persistent across sessions. The <code>budolID</code> service acts as the source of truth, and applications now have the capability to update this source of truth when administrative changes are made.</p>
+</body>
+</html>

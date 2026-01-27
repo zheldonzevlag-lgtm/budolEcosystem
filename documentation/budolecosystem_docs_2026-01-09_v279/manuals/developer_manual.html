@@ -1,0 +1,62 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>v279: Developer Manual - LAN & mDNS Implementation</title>
+    <style>
+        body { font-family: sans-serif; line-height: 1.6; color: #333; max-width: 800px; margin: 0 auto; padding: 20px; }
+        pre { background: #f4f4f4; padding: 15px; border-radius: 5px; overflow-x: auto; }
+        code { font-family: monospace; color: #d63384; }
+        .back-link { display: block; margin-bottom: 20px; color: #10b981; text-decoration: none; }
+    </style>
+</head>
+<body>
+    <a href="../index.html" class="back-link">← Back to Index</a>
+    <h1>Developer Manual: LAN & mDNS</h1>
+    
+    <section>
+        <h2>Overview</h2>
+        <p>The ecosystem has been upgraded to support seamless LAN accessibility. This involves binding Express servers to <code>0.0.0.0</code> and advertising services via mDNS.</p>
+    </section>
+
+    <section>
+        <h2>Binding to 0.0.0.0</h2>
+        <p>All microservices must bind to <code>0.0.0.0</code> to be accessible from outside the local machine. Example:</p>
+        <pre><code>app.listen(PORT, '0.0.0.0', () => {
+    console.log(`Service running on http://0.0.0.0:${PORT}`);
+});</code></pre>
+    </section>
+
+    <section>
+        <h2>mDNS Service Discovery</h2>
+        <p>Service advertising is handled centrally in <code>start-ecosystem.js</code> using the <code>bonjour-service</code> library. This publishes the service name and IP to the local network.</p>
+        <pre><code>const service = bonjour.publish({
+    name: 'budolPay (Gateway API)',
+    type: 'budolpay',
+    protocol: 'tcp',
+    port: 8080
+});</code></pre>
+    </section>
+
+    <section>
+        <h2>Prisma Client Generation</h2>
+        <p>The ecosystem uses multiple Prisma instances. To ensure all clients are synchronized and initialized, the <code>start-ecosystem.js</code> runner automatically executes <code>npm run db:generate</code> at startup. This covers:</p>
+        <ul>
+            <li>budolPay microservices (@budolpay/database)</li>
+            <li>budolID</li>
+            <li>budolAccounting</li>
+            <li>budolShap</li>
+        </ul>
+    </section>
+
+    <section>
+        <h2>Environment Variable Sync</h2>
+        <p>The <code>sync-network.js</code> script automatically updates <code>.env</code> files with the current LAN IP. Developers should run <code>npm run sync-network</code> whenever their IP changes.</p>
+    </section>
+
+    <section>
+        <h2>Mobile App Integration</h2>
+        <p>The mobile app uses <code>multicast_dns</code> to find the <code>_budolpay._tcp.local</code> service. This returns the host IP which is then used for all API calls.</p>
+    </section>
+</body>
+</html>

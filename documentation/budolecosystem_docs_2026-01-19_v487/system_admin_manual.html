@@ -1,0 +1,90 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>v487 System Admin Manual - Budol Ecosystem</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --primary: #0052CC;
+            --primary-hover: #0065FF;
+            --bg-main: #FFFFFF;
+            --bg-sidebar: #F4F5F7;
+            --text-main: #091E42;
+            --text-subtle: #6B778C;
+            --border: #DFE1E6;
+            --code-bg: #F4F5F7;
+            --code-text: #172B4D;
+            --sidebar-width: 280px;
+        }
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: 'Inter', sans-serif; background: var(--bg-main); color: var(--text-main); line-height: 1.6; display: flex; }
+        .sidebar { width: var(--sidebar-width); background: var(--bg-sidebar); border-right: 1px solid var(--border); height: 100vh; position: sticky; top: 0; padding: 24px; }
+        .main-content { flex-grow: 1; padding: 40px 60px; max-width: 1000px; }
+        .nav-item { display: block; padding: 8px 12px; color: var(--text-main); text-decoration: none; border-radius: 4px; margin-bottom: 4px; font-size: 0.9rem; }
+        .nav-item:hover { background: #EBECF0; }
+        .nav-item.active { background: #DEEBFF; color: var(--primary); font-weight: 600; }
+        h1 { font-size: 2rem; margin-bottom: 24px; border-bottom: 2px solid var(--primary); padding-bottom: 12px; }
+        h2 { font-size: 1.5rem; margin: 32px 0 16px; border-bottom: 1px solid var(--border); padding-bottom: 8px; }
+        h3 { font-size: 1.2rem; margin: 24px 0 12px; }
+        section { margin-bottom: 40px; }
+        .panel { padding: 16px; border-radius: 4px; margin-bottom: 24px; border: 1px solid #DFE1E6; }
+        .panel-info { background: #DEEBFF; color: #0747A6; border-color: #B3D4FF; }
+    </style>
+</head>
+<body>
+    <aside class="sidebar">
+        <div style="font-weight: 700; margin-bottom: 24px; color: var(--primary);">v487 DOCUMENTATION</div>
+        <nav>
+            <a href="index.html" class="nav-item">Index</a>
+            <a href="developer_manual.html" class="nav-item">Developer Manual</a>
+            <a href="system_admin_manual.html" class="nav-item active">System Admin Manual</a>
+            <a href="user_manual.html" class="nav-item">User Manual</a>
+            <a href="risk_register.html" class="nav-item">Risk Register</a>
+            <a href="Mitigation.html" class="nav-item">Mitigation Plan</a>
+            <a href="issues.html" class="nav-item">Issues</a>
+            <a href="fixes.html" class="nav-item">Fixes</a>
+            <a href="test_results.html" class="nav-item">Test Results</a>
+            <a href="future_recommendations.html" class="nav-item">Future Recommendations</a>
+            <div style="margin-top: 24px; padding-top: 16px; border-top: 1px solid var(--border);">
+                <a href="../knowledgebase.html" class="nav-item">← Back to Knowledgebase</a>
+            </div>
+        </nav>
+    </aside>
+
+    <main class="main-content">
+        <h1>System Admin Manual - v487</h1>
+
+        <section id="configuration">
+            <h2>1. Configuration</h2>
+            <p>The in-page modal update relies on existing environment variables. No new variables are introduced in v487.</p>
+            <ul>
+                <li><code>NEXT_PUBLIC_PAYMENT_GATEWAY_URL</code>: Endpoint for payment status polling.</li>
+                <li><code>PAYMONGO_SECRET_KEY</code>: Used by the backend to verify transaction status.</li>
+            </ul>
+        </section>
+
+        <section id="monitoring">
+            <h2>2. Monitoring & Logging</h2>
+            <p>Admins should monitor the following endpoints for performance and error rates:</p>
+            <ul>
+                <li><code>/api/payment/checkout</code>: Monitor for 500 errors during modal initiation.</li>
+                <li><code>/api/paymongo/status</code>: Monitor for polling timeouts or API rate limiting.</li>
+            </ul>
+            <div class="panel panel-info">
+                <strong>Note:</strong> Forensic audit logs now capture <code>modal_triggered</code> events to differentiate between checkout initiation and actual payment confirmation.
+            </div>
+        </section>
+
+        <section id="troubleshooting">
+            <h2>3. Troubleshooting</h2>
+            <h3>Common Issues</h3>
+            <ul>
+                <li><strong>Modal doesn't appear:</strong> Check browser console for JS errors in <code>OrderSummary.jsx</code>. Usually caused by invalid QR data structure from the gateway.</li>
+                <li><strong>Timer stuck at 10:00:</strong> Ensure the client system clock is synchronized. The timer relies on local intervals but should ideally be synced with server time in future versions.</li>
+            </ul>
+        </section>
+    </main>
+</body>
+</html>

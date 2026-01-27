@@ -1,0 +1,128 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>BudolEcosystem Docs v190 - Mobile Implementation</title>
+    <style>
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; line-height: 1.6; color: #333; max-width: 1200px; margin: 0 auto; padding: 20px; background-color: #f4f7f6; }
+        header { background-color: #F43F5E; color: white; padding: 2rem; border-radius: 10px; margin-bottom: 2rem; box-shadow: 0 4px 6px rgba(0,0,0,0.1); }
+        .nav-links { display: flex; justify-content: space-between; margin-bottom: 2rem; background: white; padding: 1rem; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.05); }
+        .nav-links a { color: #F43F5E; text-decoration: none; fontWeight: bold; }
+        .section { background: white; padding: 2rem; border-radius: 10px; margin-bottom: 2rem; box-shadow: 0 2px 5px rgba(0,0,0,0.05); }
+        h2 { color: #F43F5E; border-bottom: 2px solid #fee2e2; padding-bottom: 0.5rem; }
+        code { background-color: #f1f5f9; padding: 0.2rem 0.4rem; border-radius: 4px; font-family: 'Courier New', Courier, monospace; }
+        pre { background-color: #1e293b; color: #f8fafc; padding: 1.5rem; border-radius: 8px; overflow-x: auto; }
+        .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 1.5rem; }
+        .card { border: 1px solid #e2e8f0; padding: 1.5rem; border-radius: 8px; }
+        .status-tag { display: inline-block; padding: 0.25rem 0.75rem; border-radius: 9999px; font-size: 0.875rem; font-weight: 600; background-color: #dcfce7; color: #166534; }
+    </style>
+</head>
+<body>
+    <div class="nav-links ecosystem-docs-top-nav">
+        <a href="../budolecosystem_docs_2026-01-05_v190/index.html">← Previous (v190)</a>
+        <a href="../index.html">Index</a>
+        <a href="../budolecosystem_docs_2026-01-05_v191/index.html">Next (v191) →</a>
+    </div>
+
+    <header>
+        <h1>BudolEcosystem Implementation Plan v190</h1>
+        <p>Mobile Dynamic Host Discovery & Route Centralization</p>
+    </header>
+
+    <div class="nav-links">
+        <a href="../budolecosystem_docs_2026-01-08_v189/index.html">← Previous Version (v189)</a>
+        <a href="../index.html">Main Documentation Index</a>
+        <span style="color: #888;">Next Version →</span>
+    </div>
+
+    <div class="section">
+        <h2>Purpose</h2>
+        <p>The goal of this implementation is to eliminate the fragility of hardcoded IP addresses and route strings in the BudolPay mobile app. By implementing mDNS (Multicast DNS) discovery, the mobile app can automatically find the API Gateway on the local network, significantly improving the developer and user experience in local environments.</p>
+    </div>
+
+    <div class="section">
+        <h2>Technical Details</h2>
+        <div class="grid">
+            <div class="card">
+                <h3>1. mDNS Advertisement</h3>
+                <p>The API Gateway now advertises itself on the local network using the <code>bonjour-service</code> package. It broadcasts as <code>_budolpay._tcp.local</code>.</p>
+                <ul>
+                    <li>Service Name: <code>budolpay-gateway</code></li>
+                    <li>Service Type: <code>budolpay</code></li>
+                    <li>Protocol: <code>tcp</code></li>
+                </ul>
+            </div>
+            <div class="card">
+                <h3>2. Mobile Discovery</h3>
+                <p>The Flutter app uses the <code>multicast_dns</code> package to scan the network for the gateway service during initialization or via manual trigger.</p>
+                <ul>
+                    <li>Package: <code>multicast_dns: ^0.3.2+2</code></li>
+                    <li>Service: <code>DiscoveryService</code></li>
+                </ul>
+            </div>
+            <div class="card">
+                <h3>3. Route Centralization</h3>
+                <p>All route strings are now centralized in a dedicated constants class to prevent typos and simplify navigation management.</p>
+                <ul>
+                    <li>File: <code>lib/constants/routes.dart</code></li>
+                    <li>Usage: <code>Navigator.pushNamed(context, Routes.home)</code></li>
+                </ul>
+            </div>
+        </div>
+    </div>
+
+    <div class="section">
+        <h2>Implementation Summary</h2>
+        <ul>
+            <li><strong>Gateway Update:</strong> Installed <code>bonjour-service</code> and added advertisement logic to <code>api-gateway/index.js</code>.</li>
+            <li><strong>Flutter Dependencies:</strong> Added <code>multicast_dns</code> to <code>pubspec.yaml</code>.</li>
+            <li><strong>Route Constants:</strong> Created <code>Routes</code> class and refactored <code>main.dart</code> and all screen files.</li>
+            <li><strong>Discovery Logic:</strong> Implemented <code>DiscoveryService</code> and integrated it into <code>ApiService</code>.</li>
+            <li><strong>Settings UI:</strong> Added "Gateway Host" configuration with manual override and network scanning capabilities.</li>
+        </ul>
+    </div>
+
+    <div class="section">
+        <h2>Risks & Mitigations</h2>
+        <table style="width: 100%; border-collapse: collapse;">
+            <thead>
+                <tr style="background-color: #f8fafc;">
+                    <th style="padding: 1rem; border: 1px solid #e2e8f0; text-align: left;">Risk</th>
+                    <th style="padding: 1rem; border: 1px solid #e2e8f0; text-align: left;">Mitigation</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td style="padding: 1rem; border: 1px solid #e2e8f0;">Firewall Blocking mDNS</td>
+                    <td style="padding: 1rem; border: 1px solid #e2e8f0;">Provided manual IP override in Settings screen as a fallback.</td>
+                </tr>
+                <tr>
+                    <td style="padding: 1rem; border: 1px solid #e2e8f0;">Multiple Gateways on Network</td>
+                    <td style="padding: 1rem; border: 1px solid #e2e8f0;">Service picks the first discovered; manual override allows selection if needed.</td>
+                </tr>
+                <tr>
+                    <td style="padding: 1rem; border: 1px solid #e2e8f0;">Network Latency during Scan</td>
+                    <td style="padding: 1rem; border: 1px solid #e2e8f0;">Implemented async scanning with UI loading indicators.</td>
+                </tr>
+            </tbody>
+        </tbody>
+        </table>
+    </div>
+
+    <div class="section">
+        <h2>Future Enhancements</h2>
+        <ul>
+            <li>Implement service health checks before switching to a discovered host.</li>
+            <li>Add support for QR code scanning of host configuration for even easier setup.</li>
+            <li>Implement encrypted mDNS for improved security in shared networks.</li>
+        </ul>
+    </div>
+
+    <div class="nav-links">
+        <a href="manuals/developer.html">Developer Manual</a>
+        <a href="manuals/sysadmin.html">SysAdmin Manual</a>
+        <a href="manuals/user.html">User Manual</a>
+    </div>
+</body>
+</html>

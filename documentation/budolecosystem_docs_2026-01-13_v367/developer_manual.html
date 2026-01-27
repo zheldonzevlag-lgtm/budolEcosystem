@@ -1,0 +1,44 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Developer Manual - v367</title>
+    <style>
+        :root { --primary: #F43F5E; --bg: #0F172A; --card-bg: #1E293B; --text: #F8FAFC; --code-bg: #2D3748; }
+        body { font-family: sans-serif; background: var(--bg); color: var(--text); padding: 40px; line-height: 1.6; }
+        .card { background: var(--card-bg); padding: 25px; border-radius: 12px; margin-bottom: 25px; }
+        h1, h2 { color: var(--primary); }
+        pre { background: var(--code-bg); padding: 15px; border-radius: 8px; overflow-x: auto; border: 1px solid #4A5568; }
+        code { color: #E2E8F0; }
+        .file-link { color: #3B82F6; text-decoration: none; font-family: monospace; }
+    </style>
+</head>
+<body>
+    <div class="card">
+        <h1>Developer Manual - v367</h1>
+        <h2>Face Embedding Reliability Fix</h2>
+        <p>This version addresses failures in the <code>FaceEmbeddingService</code> and enhances the registration flow in <a href="file:///d:/IT Projects/budolEcosystem/budolPayMobile/lib/screens/settings_screen.dart" class="file-link">settings_screen.dart</a>.</p>
+        
+        <h3>1. Asset Path Correction</h3>
+        <p>The <code>Interpreter.fromAsset</code> call was updated in <a href="file:///d:/IT Projects/budolEcosystem/budolPayMobile/lib/services/face_embedding_service.dart" class="file-link">face_embedding_service.dart</a> to use the full path <code>assets/models/facenet.tflite</code>, ensuring consistency with <code>pubspec.yaml</code>.</p>
+
+        <h3>2. ML Kit Integration</h3>
+        <p>We now use <code>Google ML Kit Face Detection</code> to verify the presence of a face before calling the embedding service. This prevents "blind" processing of invalid images.</p>
+
+        <pre><code>// Enhanced Registration Flow
+final faces = await _faceDetector.processImage(inputImage);
+if (faces.isEmpty) {
+  throw Exception('No face detected...');
+}
+
+// Generate embedding only after verification
+final template = await faceService.generateEmbedding(file);</code></pre>
+
+        <h3>3. Liveness Check</h3>
+        <p>A basic liveness check (Blink/Smile probability) has been added to the registration flow to ensure users are capturing a real face in good lighting.</p>
+    </div>
+    <div class="card">
+        <a href="index.html" style="color: #3B82F6; text-decoration: none;">← Back to Index</a>
+    </div>
+</body>
+</html>

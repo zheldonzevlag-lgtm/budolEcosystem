@@ -1,0 +1,82 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>budolPay v378 – Face Recognition Interpreter Reliability Release</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <style>
+    body { font-family: system-ui, sans-serif; margin: 2rem; background:#f7f7f7; color:#222; }
+    h1, h2 { color:#0b57d0; }
+    code { background:#eef; padding:2px 4px; border-radius:4px; }
+    .nav { margin-bottom:2rem; }
+    .nav a { margin-right:1rem; text-decoration:none; color:#0b57d0; }
+    .nav a:hover { text-decoration:underline; }
+  </style>
+</head>
+<body>
+  <div class="nav">
+    <a href="index.html">Release Notes</a>
+    <a href="developer_manual.html">Developer Manual</a>
+    <a href="system_admin_manual.html">Admin Manual</a>
+    <a href="user_manual.html">User Manual</a>
+    <a href="risk_register.html">Risk Register</a>
+    <a href="Mitigation.html">Mitigations</a>
+    <a href="test_results.html">Test Results</a>
+    <a href="future_recommendations.html">Future</a>
+  </div>
+
+  <h1>budolPay v378 – Face Recognition Interpreter Reliability Release</h1>
+  <p><strong>Date:</strong> 2026-01-13<br>
+     <strong>Version:</strong> 1.2.78+78<br>
+     <strong>Previous:</strong> <a href="../budolecosystem_docs_2026-01-13_v377/index.html">v377</a><br>
+     <strong>Next:</strong> <a href="../budolecosystem_docs_2026-01-14_v379/index.html">v379</a></p>
+
+  <h2>Purpose</h2>
+  <p>Eliminate the "TFLite Interpreter is unavailable (null)" runtime failure during face registration by adding robust retry logic, interpreter health validation, and defensive file handling.</p>
+
+  <h2>Technical Changes</h2>
+  <ul>
+    <li><strong>face_embedding_service.dart</strong>
+      <ul>
+        <li>Wrapped initialization in 2-attempt retry loop with 200 ms back-off.</li>
+        <li>Added <code>getInputTensors()</code> health check immediately after interpreter creation to detect native-side null edge-cases.</li>
+        <li>Unique temp file per attempt (<code>facenet_attempt_N.tflite</code>) to avoid stale file locks.</li>
+        <li>Removed unused <code>dart:typed_data</code> import to satisfy linter.</li>
+      </ul>
+    </li>
+    <li><strong>pubspec.yaml & api_service.dart</strong>
+      <ul>
+        <li>Version bumped to 1.2.78+78 for release tracking.</li>
+      </ul>
+    </li>
+  </ul>
+
+  <h2>Compliance Impact</h2>
+  <p>No new data flows; strengthens biometric reliability (BSP, NPC) and error resilience (Cybersecurity Law).</p>
+
+  <h2>Known Risks & Mitigations</h2>
+  <table border="1" cellpadding="6">
+    <tr><th>Risk</th><th>Mitigation Present</th></tr>
+    <tr><td>Interpreter still null after 2 attempts</td><td>Exception propagated to UI with clear message; user can retry.</td></tr>
+    <tr><td>Temp directory full / write failure</td><td>Checked file existence & size match; falls back to exception.</td></tr>
+  </table>
+
+  <h2>Test Summary</h2>
+  <ul>
+    <li><code>flutter analyze</code> – 0 issues in modified file.</li>
+    <li>Ecosystem health – all payment & wallet services UP.</li>
+  </ul>
+
+  <h2>Deliverables</h2>
+  <ul>
+    <li>Source: <code>face_embedding_service.dart</code> (retry & health check)</li>
+    <li>Installer: <code>android-installer/budolPay 1.2.78.apk</code></li>
+    <li>Docs: v378 HTML suite (this page + sub-pages)</li>
+  </ul>
+
+  <h2>Rollback Plan</h2>
+  <p>Revert commit <code>face_embedding_service.dart</code> to v377 state; no schema or API changes—safe hot-swap.</p>
+
+  <p><em>Next: <a href="developer_manual.html">Developer Manual</a></em></p>
+</body>
+</html>

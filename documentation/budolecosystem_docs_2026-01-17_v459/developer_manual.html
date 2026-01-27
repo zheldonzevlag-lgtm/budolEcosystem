@@ -1,0 +1,93 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Developer Manual - v459</title>
+    <style>
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; line-height: 1.6; color: #333; max-width: 1200px; margin: 0 auto; padding: 20px; background-color: #f4f7f6; }
+        header { background-color: #0F172A; color: white; padding: 20px; border-radius: 8px; margin-bottom: 20px; }
+        nav { background: #fff; padding: 15px; border-radius: 8px; box-shadow: 0 2px 5px rgba(0,0,0,0.1); margin-bottom: 20px; }
+        nav a { margin-right: 20px; text-decoration: none; color: #F43F5E; font-weight: bold; }
+        .card { background: #fff; padding: 20px; border-radius: 8px; box-shadow: 0 2px 5px rgba(0,0,0,0.1); margin-bottom: 20px; }
+        h1, h2, h3 { color: #0F172A; }
+        code { background-color: #1E293B; color: #E2E8F0; padding: 2px 5px; border-radius: 4px; font-family: 'Courier New', Courier, monospace; }
+        pre { background-color: #1E293B; color: #E2E8F0; padding: 15px; border-radius: 8px; overflow-x: auto; }
+        .code-link { color: #38BDF8; text-decoration: none; font-weight: bold; }
+        .code-link:hover { text-decoration: underline; }
+    </style>
+</head>
+<body>
+    <header>
+        <h1>Developer Manual</h1>
+        <p>Version: 2026-01-17 v459 | Engineering Documentation</p>
+    </header>
+
+    <nav>
+        <a href="index.html">Index</a>
+        <a href="developer_manual.html">Developer Manual</a>
+        <a href="system_admin_manual.html">System Admin Manual</a>
+        <a href="user_manual.html">User Manual</a>
+        <a href="risk_register.html">Risk Register</a>
+        <a href="Mitigation.html">Mitigation</a>
+        <a href="issues.html">Issues</a>
+        <a href="fixes.html">Fixes</a>
+        <a href="test_results.html">Test Results</a>
+        <a href="future_recommendations.html">Recommendations</a>
+    </nav>
+
+    <div class="card">
+        <h2>Technical Architecture & Changes</h2>
+        <p>This release focuses on UI stability and diagnostic capabilities within the Flutter Web environment. The core issue addressed was a race condition/rendering failure during the transition from the splash screen to the marketing ads screen.</p>
+
+        <h3>1. Rendering Guards in MarketingAdsScreen</h3>
+        <p>We implemented explicit sizing constraints and a <code>Material</code> wrapper to ensure that the Flutter web engine correctly calculates the layout even if the initial window dimensions are reported incorrectly by the browser.</p>
+        <p><strong>File:</strong> <a class="code-link" href="file:///d:/IT Projects/budolEcosystem/budolPayMobile/lib/screens/marketing_ads_screen.dart">marketing_ads_screen.dart</a></p>
+        <pre><code>// Robust size detection for Web
+final double width = constraints.maxWidth.isFinite && constraints.maxWidth > 0 
+    ? constraints.maxWidth 
+    : 393;
+final double height = constraints.maxHeight.isFinite && constraints.maxHeight > 0 
+    ? constraints.maxHeight 
+    : 780;</code></pre>
+        <p>Rationale: On some web browsers, <code>maxWidth</code> or <code>maxHeight</code> might be reported as infinite or zero during the very first frame after a route change. Defaulting to standard mobile dimensions prevents the "black screen" caused by zero-size widgets.</p>
+
+        <h3>2. Diagnostic Navigation Controls</h3>
+        <p>To assist in debugging navigation hangs in production-like web environments, we added "FORCE ADS" and "FORCE LOGIN" buttons to the splash screen when in debug mode.</p>
+        <p><strong>File:</strong> <a class="code-link" href="file:///d:/IT Projects/budolEcosystem/budolPayMobile/lib/screens/splash_screen.dart">splash_screen.dart</a></p>
+        <pre><code>if (kDebugMode) ...[
+    const SizedBox(height: 10),
+    Row(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+            TextButton(
+                onPressed: () {
+                    context.read<ApiService>().resetAdsStatus();
+                    Navigator.pushReplacementNamed(context, Routes.marketing);
+                },
+                child: const Text('FORCE ADS', style: TextStyle(color: Colors.white24, fontSize: 10)),
+            ),
+            // ...
+        ],
+    ),
+]</code></pre>
+    </div>
+
+    <div class="card">
+        <h2>Dependencies</h2>
+        <ul>
+            <li><code>smooth_page_indicator: ^1.1.0</code> - Used for modern pagination in MarketingAdsScreen.</li>
+            <li><code>provider</code> - State management for ApiService.</li>
+            <li><code>shared_preferences</code> - Local persistence for <code>hasSeenAds</code> flag.</li>
+        </ul>
+    </div>
+
+    <div class="card">
+        <h2>Future Enhancements</h2>
+        <ul>
+            <li>Transition to <code>go_router</code> for better web URL handling and deep linking.</li>
+            <li>Implement automated screenshot testing for web rendering verification.</li>
+        </ul>
+    </div>
+</body>
+</html>

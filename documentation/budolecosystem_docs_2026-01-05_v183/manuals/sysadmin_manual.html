@@ -1,0 +1,47 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>System Admin Manual - v183</title>
+    <style>
+        body { font-family: sans-serif; line-height: 1.6; max-width: 900px; margin: 0 auto; padding: 2rem; color: #1a202c; }
+        .section { margin-bottom: 2rem; border-left: 4px solid #38a169; padding-left: 1rem; }
+        h1, h2 { color: #276749; }
+        .alert { background: #fff5f5; color: #c53030; padding: 1rem; border-radius: 6px; border: 1px solid #feb2b2; }
+    </style>
+</head>
+<body>
+    <h1>System Admin Manual - v183 Updates</h1>
+
+    <div class="section">
+        <h2>Database Integrity</h2>
+        <p>Admin status updates directly modify the <code>User</code> table in the primary PostgreSQL database. Admins should be aware that:</p>
+        <ul>
+            <li><strong>Audit Trails:</strong> Current rejection actions are logged at the API level but do not have a dedicated audit table for "Rejection History".</li>
+            <li><strong>Data Retention:</strong> Document images are retained in the <code>Document</code> table (linked to the user) even after rejection.</li>
+        </ul>
+    </div>
+
+    <div class="section">
+        <h2>Infrastructure Considerations</h2>
+        <p>The KYC rejection flow does not trigger any high-resource tasks (like OCR or image processing) since it is a purely metadata update. However, re-submissions from users will re-trigger OCR processes, impacting engine costs.</p>
+    </div>
+
+    <div class="section">
+        <h2>Issues & Troubleshooting</h2>
+        <div class="alert">
+            <strong>Warning:</strong> If a user remains in "VERIFIED" status on their mobile app after an admin rejection, ensure the mobile app's session has been refreshed. The user may need to log out and log back in to force a profile sync if push notifications are not active.
+        </div>
+    </div>
+
+    <div class="section">
+        <h2>Recommendations for Monitoring</h2>
+        <ul>
+            <li>Monitor the frequency of "REJECTED" statuses to identify potential bot attacks or systemic issues with the OCR engine.</li>
+            <li>Verify that OCR data is being correctly associated with the <code>source</code> engine in the <code>Document</code> table.</li>
+        </ul>
+    </div>
+
+    <p><a href="../index.html">Back to Index</a></p>
+</body>
+</html>

@@ -1,0 +1,43 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Developer Manual - v420</title>
+    <style>
+        body { font-family: sans-serif; line-height: 1.6; padding: 40px; background: #f0f2f5; }
+        .code-block { background: #1e1e1e; color: #d4d4d4; padding: 20px; border-radius: 8px; overflow-x: auto; margin: 20px 0; }
+        .link { color: #0747A6; text-decoration: none; font-weight: bold; }
+        .link:hover { text-decoration: underline; }
+    </style>
+</head>
+<body>
+    <h1>Developer Manual - v420</h1>
+    <h2>SSO Button Redundancy Resolution</h2>
+    <p>This manual covers the resolution of the duplicate "Login with budolID" buttons on the BudolShap login page.</p>
+
+    <h3>Technical Explanation</h3>
+    <p>The redundancy was caused by a design overlap between the <code>AuthForm</code> component and the <code>LoginPage</code>. Both files contained logic and UI for the SSO button.</p>
+    
+    <h3>Changes</h3>
+    <ol>
+        <li><strong>AuthForm Update:</strong> The button in <a class="link" href="file:///d:/IT%20Projects/budolEcosystem/budolshap-0.1.0/components/auth/AuthForm.jsx">AuthForm.jsx</a> was converted from an <code>&lt;a&gt;</code> tag to a <code>&lt;button&gt;</code> to handle dynamic <code>redirect_uri</code> construction in an <code>onClick</code> handler.</li>
+        <li><strong>LoginPage Cleanup:</strong> The hardcoded SSO section was removed from <a class="link" href="file:///d:/IT%20Projects/budolEcosystem/budolshap-0.1.0/app/(public)/login/page.jsx">page.jsx</a>, relying solely on the <code>AuthForm</code> component.</li>
+    </ol>
+
+    <h3>Code Implementation</h3>
+    <div class="code-block">
+// AuthForm construction of redirect URI
+const ssoUrl = process.env.NEXT_PUBLIC_SSO_URL || (typeof window !== 'undefined' ? `http://${window.location.hostname}:8000` : 'http://localhost:8000');
+const appUrl = process.env.NEXT_PUBLIC_APP_URL || (typeof window !== 'undefined' ? window.location.origin : '');
+const redirectUri = `${appUrl}/auth/callback`;
+const apiKey = process.env.NEXT_PUBLIC_BUDOLID_API_KEY || 'bs_key_2025';
+window.location.href = `${ssoUrl}/login?apiKey=${apiKey}&redirect_uri=${encodeURIComponent(redirectUri)}`;
+    </div>
+
+    <h3>Code References</h3>
+    <ul>
+        <li><a class="link" href="file:///d:/IT%20Projects/budolEcosystem/budolshap-0.1.0/components/auth/AuthForm.jsx">AuthForm.jsx</a> - Contains the primary SSO button logic.</li>
+        <li><a class="link" href="file:///d:/IT%20Projects/budolEcosystem/budolshap-0.1.0/app/(public)/login/page.jsx">LoginPage (page.jsx)</a> - The main login entry point.</li>
+    </ul>
+</body>
+</html>

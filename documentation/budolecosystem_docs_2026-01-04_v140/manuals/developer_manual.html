@@ -1,0 +1,63 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Developer Manual - v140 Fixes</title>
+    <style>
+        body { font-family: system-ui, sans-serif; line-height: 1.6; max-width: 800px; margin: 0 auto; padding: 40px; color: #1e293b; }
+        code { background: #f1f5f9; padding: 2px 4px; border-radius: 4px; font-family: monospace; }
+        pre { background: #1e293b; color: #f8fafc; padding: 20px; border-radius: 8px; overflow-x: auto; }
+        .success { color: #059669; font-weight: bold; }
+        .warning { color: #d97706; font-weight: bold; }
+    </style>
+</head>
+<body>
+    <a href="../index.html">← Back to v140 Index</a>
+    <h1>Developer Manual: Environment Isolation & SSO Fix</h1>
+
+    <h2>1. Purpose</h2>
+    <p>The primary goal of this update was to fix the <code>PrismaClientInitializationError</code> encountered during budolPay mobile app login. This error was caused by improper environment variable handling in the ecosystem's central runner.</p>
+
+    <h2>2. Technical Details & Code Logic</h2>
+    <h3>The Problem: Environment Pollution</h3>
+    <p>In <code>start-ecosystem.js</code>, the pre-flight validation loop was doing the following:</p>
+    <pre><code>process.env.DATABASE_URL = dbMatch[1]; // Polluted parent process
+if (!validateEnvironment(app.name)) { ... }</code></pre>
+    <p>Because <code>process.env</code> is shared, the <code>DATABASE_URL</code> of the last app in the loop remained in the runner's environment. When <code>spawn()</code> was called, it passed <code>...process.env</code> to the child, overriding the child's own <code>.env</code> file settings.</p>
+
+    <h3>The Fix: Proper Restoration & Cleanup</h3>
+    <p>I implemented two layers of protection in <code>start-ecosystem.js</code>:</p>
+    <ol>
+        <li><strong>Atomic Restoration:</strong> The validation loop now captures a full snapshot of <code>process.env</code> and restores it by explicitly deleting keys that weren't originally present.</li>
+        <li><strong>Spawn Isolation:</strong> Before spawning a child process, we create a <code>cleanEnv</code> object that explicitly deletes <code>DATABASE_URL</code>, <code>NODE_ENV</code>, and <code>VERCEL</code>. This forces the child service to load these values from its own <code>.env</code> file via <code>dotenv</code>.</li>
+    </ol>
+
+    <h2>3. Code Example (Cleaned Spawn)</h2>
+    <pre><code>const cleanEnv = { ...process.env };
+delete cleanEnv.DATABASE_URL;
+delete cleanEnv.NODE_ENV;
+delete cleanEnv.VERCEL;
+
+const env = { 
+    ...cleanEnv, 
+    PORT: app.port.toString(),
+    LOCAL_IP: localIP,
+    // ... URLs
+};
+
+spawn(app.command, app.args, { cwd: app.cwd, shell: true, env });</code></pre>
+
+    <h2>4. Test Results</h2>
+    <ul>
+        <li><span class="success">Verified:</span> Parent <code>process.env</code> remains clean after validation loop.</li>
+        <li><span class="success">Verified:</span> <code>budolID</code> correctly loads its own <code>DATABASE_URL</code> from <code>.env</code>.</li>
+        <li><span class="success">Verified:</span> SSO login no longer throws <code>PrismaClientInitializationError</code>.</li>
+    </ul>
+
+    <h2>5. Recommendation for Future Enhancement</h2>
+    <ul>
+        <li><strong>Encapsulated Validator:</strong> Refactor <code>scripts/env-validator.js</code> to accept parameters instead of relying on <code>process.env</code>.</li>
+        <li><strong>Env Monitoring:</strong> Add a <code>/health/env</code> endpoint to services to debug environment states in production safely.</li>
+    </ul>
+</body>
+</html>

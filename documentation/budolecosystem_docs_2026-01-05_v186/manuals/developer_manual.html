@@ -1,0 +1,66 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Developer Manual - Image Rotation Persistence v186</title>
+    <style>
+        :root { --primary: #2563eb; --bg: #f8fafc; --text: #1e293b; --border: #e2e8f0; }
+        body { font-family: system-ui, sans-serif; line-height: 1.6; color: var(--text); background: var(--bg); margin: 0; padding: 40px; }
+        .container { max-width: 800px; margin: 0 auto; background: white; padding: 40px; border-radius: 12px; border: 1px solid var(--border); }
+        h1 { color: var(--primary); border-bottom: 2px solid var(--bg); padding-bottom: 10px; }
+        h2 { margin-top: 30px; color: #0f172a; }
+        code { background: #f1f5f9; padding: 2px 4px; border-radius: 4px; font-family: monospace; }
+        pre { background: #1e293b; color: #f8fafc; padding: 20px; border-radius: 8px; overflow-x: auto; }
+        .back-link { display: inline-block; margin-bottom: 20px; text-decoration: none; color: var(--primary); font-weight: 500; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <a href="../index.html" class="back-link">&larr; Back to v186 Index</a>
+        <h1>Developer Manual: Image Rotation Persistence (Enhanced)</h1>
+        
+        <h2>Purpose</h2>
+        <p>This implementation enhances the document rotation feature in the Admin Panel by adding debounced automatic saving and loading indicators. It ensures that orientation adjustments are persisted to the database efficiently without overwhelming the API.</p>
+
+        <h2>Technical Details</h2>
+        <h3>1. Debounced Saving Logic</h3>
+        <p>In <code>apps/admin/app/users/page.tsx</code>, the <code>handleRotate</code> function now uses a 1-second debounce timer. This allows users to click the rotate button multiple times quickly, but only the final orientation is sent to the server.</p>
+        <pre><code>const handleRotate = (docId: string) => {
+  const newRotation = ((rotations[docId] || 0) + 90) % 360;
+  setRotations(prev => ({ ...prev, [docId]: newRotation }));
+
+  if (rotationTimeouts[docId]) clearTimeout(rotationTimeouts[docId]);
+
+  const timeout = setTimeout(async () => {
+    setIsSavingRotation(prev => ({ ...prev, [docId]: true }));
+    try {
+      await fetch("/api/users", {
+        method: "POST",
+        body: JSON.stringify({ action: "UPDATE_DOCUMENT_ROTATION", documentId: docId, rotation: newRotation }),
+        headers: { "Content-Type": "application/json" }
+      });
+    } finally {
+      setIsSavingRotation(prev => ({ ...prev, [docId]: false }));
+    }
+  }, 1000);
+
+  setRotationTimeouts(prev => ({ ...prev, [docId]: timeout }));
+};</code></pre>
+
+        <h3>2. Loading Indicators</h3>
+        <p>A <code>Loader2</code> spinner from <code>lucide-react</code> is shown inside the rotation button while the persistence request is in flight, providing visual feedback to the administrator.</p>
+
+        <h3>3. Database Schema</h3>
+        <p>The <code>VerificationDocument</code> model in <code>packages/database/prisma/schema.prisma</code> includes the <code>rotation</code> field (Int, default 0), which is now fully synced and used by the UI.</p>
+
+        <h2>Verification Results</h2>
+        <ul>
+            <li><strong>Optimistic UI:</strong> Rotation is instantaneous in the browser.</li>
+            <li><strong>Debouncing:</strong> Multiple clicks only trigger one API call after 1 second.</li>
+            <li><strong>Persistence:</strong> Refreshing the page or reopening the modal preserves the rotation.</li>
+            <li><strong>Feedback:</strong> Spinner correctly appears during the save operation.</li>
+        </ul>
+    </div>
+</body>
+</html>

@@ -1,0 +1,52 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SysAdmin Manual - Image Rotation Persistence</title>
+    <style>
+        :root { --primary: #2563eb; --bg: #f8fafc; --text: #1e293b; --border: #e2e8f0; }
+        body { font-family: system-ui, sans-serif; line-height: 1.6; color: var(--text); background: var(--bg); margin: 0; padding: 40px; }
+        .container { max-width: 800px; margin: 0 auto; background: white; padding: 40px; border-radius: 12px; border: 1px solid var(--border); }
+        h1 { color: var(--primary); border-bottom: 2px solid var(--bg); padding-bottom: 10px; }
+        h2 { margin-top: 30px; color: #0f172a; }
+        .alert { background: #fff7ed; border: 1px solid #fed7aa; padding: 15px; border-radius: 8px; color: #9a3412; margin: 20px 0; }
+        .back-link { display: inline-block; margin-bottom: 20px; text-decoration: none; color: var(--primary); font-weight: 500; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <a href="../index.html" class="back-link">&larr; Back to v184 Index</a>
+        <h1>SysAdmin Manual: Image Rotation Persistence</h1>
+        
+        <h2>Deployment Procedures</h2>
+        <h3>1. Database Migration</h3>
+        <p>The <code>VerificationDocument</code> table requires a new <code>rotation</code> column. Run the following command in the <code>budolpay-0.1.0</code> directory:</p>
+        <pre><code>npx prisma db push --schema=packages/database/prisma/schema.prisma</code></pre>
+        <p>Or if using migrations:</p>
+        <pre><code>npx prisma migrate dev --name add_document_rotation</code></pre>
+
+        <h3>2. Prisma Client Regeneration</h3>
+        <p>After updating the schema, regenerate the Prisma client to include the new field in TypeScript types:</p>
+        <pre><code>npx prisma generate --schema=packages/database/prisma/schema.prisma</code></pre>
+        <div class="alert">
+            <strong>Note:</strong> Ensure no Node.js processes (like the dev server) are running during regeneration to avoid <code>EPERM</code> errors on Windows.
+        </div>
+
+        <h2>Risk & Mitigation</h2>
+        <ul>
+            <li><strong>Risk:</strong> Database migration failure due to existing data.</li>
+            <li><strong>Mitigation:</strong> The <code>rotation</code> field has a default value of <code>0</code>, ensuring compatibility with existing records.</li>
+            <li><strong>Risk:</strong> High frequency of API calls if users click rotate rapidly.</li>
+            <li><strong>Mitigation:</strong> Current implementation uses optimistic UI. Future enhancement could include debouncing the API call.</li>
+        </ul>
+
+        <h2>Test Results</h2>
+        <ul>
+            <li><strong>Database Sync:</strong> Verified. Column <code>rotation</code> (Int, default 0) successfully added to <code>VerificationDocument</code>.</li>
+            <li><strong>API Action:</strong> Verified. <code>UPDATE_DOCUMENT_ROTATION</code> successfully updates the database.</li>
+            <li><strong>UI State:</strong> Verified. Image rotation persists after closing and reopening the modal.</li>
+        </ul>
+    </div>
+</body>
+</html>

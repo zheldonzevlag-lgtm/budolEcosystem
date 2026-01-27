@@ -1,0 +1,53 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Developer Manual - v509</title>
+    <style>
+        body { font-family: sans-serif; line-height: 1.6; max-width: 1000px; margin: 0 auto; padding: 20px; }
+        pre { background: #1e1e1e; color: #d4d4d4; padding: 15px; border-radius: 5px; overflow-x: auto; }
+        .code-link { color: #0052cc; text-decoration: none; font-weight: bold; }
+        .code-link:hover { text-decoration: underline; }
+        .diff-remove { color: #f85149; background: rgba(248, 81, 73, 0.1); }
+        .diff-add { color: #3fb950; background: rgba(63, 185, 80, 0.1); }
+    </style>
+</head>
+<body>
+    <h1>Developer Manual - Version v509</h1>
+    
+    <h2>Problem Statement</h2>
+    <p>The <code>createOrder</code> function in <code>ordersService.js</code> was failing with a <code>PrismaClientValidationError</code> because it attempted to pass a <code>subtotal</code> field to the Prisma <code>order.create</code> method. The <code>Order</code> model in <code>schema.prisma</code> does not define a <code>subtotal</code> field, only <code>total</code> and <code>shippingCost</code>.</p>
+
+    <h2>Technical Solution</h2>
+    <p>The <code>subtotal</code> field was removed from the data object passed to Prisma. The value is still calculated locally to derive the <code>total</code>, but it is no longer persisted as a separate database column.</p>
+
+    <h3>Code Changes</h3>
+    <p>File: <a class="code-link" href="file:///d:/IT%20Projects/budolEcosystem/budolshap-0.1.0/lib/services/ordersService.js">ordersService.js</a></p>
+    <pre><code>
+// BEFORE (Lines 294-298)
+status: 'ORDER_PLACED',
+paymentMethod,
+<span class="diff-remove">- subtotal: storeData.subtotal,</span>
+shippingCost,
+total,
+
+// AFTER
+status: 'ORDER_PLACED',
+paymentMethod,
+shippingCost,
+total,
+    </code></pre>
+
+    <h2>Rationale</h2>
+    <p>The schema design intended for <code>total</code> to represent the final amount. <code>subtotal</code> can be derived if needed by subtracting <code>shippingCost</code> from <code>total</code>, or by summing <code>orderItems</code>. Removing the redundant field prevents runtime validation errors.</p>
+
+    <h2>Dependencies</h2>
+    <ul>
+        <li>Prisma Client v6.19.1</li>
+        <li>Next.js 15+</li>
+    </ul>
+
+    <h2>Tests</h2>
+    <p>Verification involved checking the Prisma schema against the service layer logic. No database migration was required as the fix aligned the code with the existing schema.</p>
+</body>
+</html>

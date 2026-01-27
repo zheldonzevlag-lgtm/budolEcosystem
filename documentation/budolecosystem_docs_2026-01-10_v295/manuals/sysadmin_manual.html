@@ -1,0 +1,35 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>SysAdmin Manual - v295</title>
+    <style>
+        body { font-family: sans-serif; line-height: 1.6; max-width: 800px; margin: 0 auto; padding: 20px; color: #333; }
+        .back { margin-bottom: 20px; display: block; }
+    </style>
+</head>
+<body>
+    <a href="../index.html" class="back">← Back to v295 Index</a>
+    <h1>SysAdmin Manual - v295</h1>
+    
+    <h2>Environment Management</h2>
+    <p>This version introduces better management of environment override files during deployment and local development setup.</p>
+    
+    <h3>Automated Synchronization</h3>
+    <p>Run the following command to synchronize the current host's LAN IP across all services:</p>
+    <pre><code>npm run network:sync</code></pre>
+    <p>This command now performs the following actions:</p>
+    <ul>
+        <li><strong>IP Detection:</strong> Automatically identifies the primary LAN IPv4 address.</li>
+        <li><strong>Multi-file Update:</strong> Updates <code>.env</code>, <code>.env.local</code>, and <code>.env.development</code> across all sub-folders.</li>
+        <li><strong>Service URL Sync:</strong> Propagates the IP to SSO, App, and Gateway URL variables.</li>
+        <li><strong>Mobile Build Skip:</strong> Skips the resource-intensive mobile build process by default.</li>
+    </ul>
+
+    <h2>JWT Configuration</h2>
+    <p>Ensure that <code>JWT_SECRET</code> is defined in the root <code>.env</code> file. The synchronization script will propagate this value if configured, though it primarily focuses on IP-related variables. For security, ensure the same secret is used across all production nodes.</p>
+
+    <h2>Database Requirements</h2>
+    <p>After running <code>npm run network:sync</code>, it is recommended to run <code>node scripts/update-db-ips.js</code> (which is usually triggered automatically) to ensure the database's <code>redirect_uri</code> entries are up to date.</p>
+</body>
+</html>

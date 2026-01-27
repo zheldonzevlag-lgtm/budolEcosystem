@@ -1,0 +1,121 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Future Enhancements - budolEcosystem</title>
+    <style>
+        :root { --primary: #e67e22; --secondary: #2c3e50; --bg: #fdfefe; --text: #2c3e50; }
+        body { font-family: 'Segoe UI', sans-serif; line-height: 1.6; max-width: 1000px; margin: 0 auto; padding: 40px 20px; color: var(--text); background: var(--bg); }
+        h1, h2, h3 { color: var(--secondary); border-bottom: 2px solid #eee; padding-bottom: 10px; }
+        .card { background: #fff; padding: 25px; border-radius: 12px; box-shadow: 0 4px 12px rgba(0,0,0,0.08); margin-bottom: 25px; border-left: 5px solid var(--primary); }
+        .section-title { font-weight: bold; color: var(--primary); margin-top: 15px; display: block; }
+    </style>
+</head>
+<body>
+    <h1>Future Enhancements: Network & Authentication</h1>
+
+    <div class="card">
+        <h2>1. HTTPS Support for Local Development</h2>
+        <span class="section-title">Purpose:</span>
+        <p>Enable secure communication (TLS/SSL) for local development to better mimic production environments.</p>
+        
+        <span class="section-title">Explanation:</span>
+        <p>Currently, all services run over HTTP. This prevents testing features like Secure/SameSite=None cookies and some modern browser APIs that require a secure context.</p>
+        
+        <span class="section-title">Reason:</span>
+        <p>Increasingly, browsers and external APIs (like OAuth providers) require HTTPS even for local testing.</p>
+        
+        <span class="section-title">Issues:</span>
+        <p>Local SSL certificates are difficult to manage across multiple microservices and devices.</p>
+        
+        <span class="section-title">Fixes:</span>
+        <p>Implement <code>mkcert</code> or a similar utility to generate locally-trusted certificates and update <code>network-util.js</code> to handle <code>https://</code> protocols.</p>
+        
+        <span class="section-title">Risk:</span>
+        <p>Increased complexity in local setup for new developers.</p>
+        
+        <span class="section-title">Mitigation:</span>
+        <p>Provide a one-click setup script that installs certificates and configures the ecosystem.</p>
+    </div>
+
+    <div class="card">
+        <h2>2. Dynamic Service Discovery (mDNS/Bonjour)</h2>
+        <span class="section-title">Purpose:</span>
+        <p>Allow services to find each other without manual IP configuration using human-readable names like <code>budolid.local</code>.</p>
+        
+        <span class="section-title">Explanation:</span>
+        <p>Instead of hardcoding IPs in <code>.env</code> files, services would broadcast their presence and ports via mDNS.</p>
+        
+        <span class="section-title">Reason:</span>
+        <p>Eliminates the need to run <code>network-util.js</code> every time the IP changes.</p>
+        
+        <span class="section-title">Issues:</span>
+        <p>mDNS reliability can vary across different routers and OS configurations.</p>
+        
+        <span class="section-title">Fixes:</span>
+        <p>Integrate <code>bonjour-service</code> library into the startup runner to resolve <code>.local</code> names to IPs dynamically.</p>
+        
+        <span class="section-title">Risk:</span>
+        <p>Dependency on network hardware support for multicast.</p>
+        
+        <span class="section-title">Mitigation:</span>
+        <p>Keep the current IP-based discovery as a fallback mechanism.</p>
+    </div>
+
+    <div class="card">
+        <h2>3. Centralized Configuration Management</h2>
+        <span class="section-title">Purpose:</span>
+        <p>Move configuration away from 20+ individual <code>.env</code> files to a single source of truth.</p>
+        
+        <span class="section-title">Explanation:</span>
+        <p>A "Config Service" or a shared configuration file that all services read at startup.</p>
+        
+        <span class="section-title">Reason:</span>
+        <p>Reduces the risk of configuration drift and mismatches (like the JWT_SECRET issue resolved in v292).</p>
+        
+        <span class="section-title">Issues:</span>
+        <p>Adds a startup dependency (Config Service must be up first).</p>
+        
+        <span class="section-title">Fixes:</span>
+        <p>Implement a lightweight JSON-based configuration server or use a tool like <code>etcd</code> or <code>Consul</code>.</p>
+        
+        <span class="section-title">Risk:</span>
+        <p>Single point of failure for the entire ecosystem.</p>
+        
+        <span class="section-title">Mitigation:</span>
+        <p>Use local caching of the last known good configuration.</p>
+    </div>
+
+    <div class="card">
+        <h2>4. RBAC & Granular Permission Management UI</h2>
+        <span class="section-title">Purpose:</span>
+        <p>Provide a user-friendly interface for administrators to manage roles and granular permissions without direct database access.</p>
+        
+        <span class="section-title">Explanation:</span>
+        <p>Currently, RBAC assignments are handled via scripts (e.g., <code>assign_rbac.mjs</code>). A dedicated UI within the Admin Dashboard would allow for real-time adjustments.</p>
+        
+        <span class="section-title">Reason:</span>
+        <p>As the number of staff and managers grows, manual script execution becomes inefficient and error-prone.</p>
+        
+        <span class="section-title">Issues:</span>
+        <p>Need to ensure that the UI itself is heavily secured and only accessible by Super-Admins.</p>
+        
+        <span class="section-title">Fixes:</span>
+        <p>Develop a <code>PermissionsMatrix</code> component in the Admin Dashboard linked to the <code>/api/admin/users/roles</code> endpoint.</p>
+        
+        <span class="section-title">Risk:</span>
+        <p>Potential for accidental privilege escalation if the UI logic has bugs.</p>
+        
+        <span class="section-title">Mitigation:</span>
+        <p>Implement "Dual-Approval" for critical permission changes and maintain a strict audit log of all role modifications.</p>
+        
+        <span class="section-title">Dependencies:</span>
+        <p>Requires the <code>AUDIT_LOGS_VIEW</code> permission and backend logging infrastructure.</p>
+    </div>
+
+    <footer>
+        <p>&copy; 2026 budolEcosystem Technical Documentation</p>
+    </footer>
+</body>
+</html>

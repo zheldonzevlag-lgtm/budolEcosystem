@@ -1,0 +1,73 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>System Admin Manual - v524</title>
+    <style>
+        body { font-family: -apple-system, system-ui, sans-serif; line-height: 1.6; max-width: 1200px; margin: 0 auto; padding: 2rem; color: #333; }
+        header { background: #f8f9fa; padding: 2rem; border-radius: 8px; margin-bottom: 2rem; border-left: 5px solid #2ecc71; }
+        h1 { margin: 0; color: #2d3748; }
+        h2 { color: #27ae60; border-bottom: 2px solid #e2e8f0; padding-bottom: 0.5rem; margin-top: 2rem; }
+        table { width: 100%; border-collapse: collapse; margin-top: 1rem; }
+        th, td { border: 1px solid #e2e8f0; padding: 0.75rem; text-align: left; }
+        th { background: #f7fafc; color: #4a5568; }
+        .nav-link { display: inline-block; margin-bottom: 1rem; color: #27ae60; text-decoration: none; }
+        .nav-link:hover { text-decoration: underline; }
+    </style>
+</head>
+<body>
+    <a href="index.html" class="nav-link">← Back to Index</a>
+
+    <header>
+        <h1>🔧 System Admin Manual - v524</h1>
+        <p>Operational guide for managing the new Payment Safety features</p>
+    </header>
+
+    <h2>1. Monitoring Abandoned Payments</h2>
+    <p>With the new exclusion logic, "abandoned" payments (cancelled/failed) are hidden from the user's main view but remain in the database for audit purposes.</p>
+    
+    <h3>Database Queries</h3>
+    <p>To view excluded orders directly in the database (Prisma Studio or SQL), query for:</p>
+    <ul>
+        <li><code>paymentStatus</code>: 'cancelled', 'failed', 'expired'</li>
+        <li><code>paymentStatus</code>: 'awaiting_payment' AND <code>createdAt</code> < (Now - 30 mins) AND <code>paymentMethod</code> != 'COD'</li>
+    </ul>
+
+    <h2>2. Cron Jobs & Automation</h2>
+    <p>A new automated process is recommended (implementation pending in Phase 5) to clean up old unpaid orders.</p>
+    <table>
+        <thead>
+            <tr>
+                <th>Job Name</th>
+                <th>Schedule</th>
+                <th>Action</th>
+                <th>Purpose</th>
+            </tr>
+        </thead>
+        <tbody>
+            <tr>
+                <td>Unpaid Order Cleanup</td>
+                <td>Every 1 hour</td>
+                <td>Cancel orders > 24 hours old</td>
+                <td>Release inventory held by stale orders.</td>
+            </tr>
+        </tbody>
+    </table>
+
+    <h2>3. Troubleshooting User Reports</h2>
+    <p>If a user claims their order "disappeared":</p>
+    <ol>
+        <li><strong>Check Payment Status:</strong> Was the payment failed or cancelled? If so, it is correctly hidden.</li>
+        <li><strong>Check Time Elapsed:</strong> If they selected a non-COD payment method but didn't pay within 30 minutes, it will be hidden.</li>
+        <li><strong>Verify "Shipping To" Name:</strong> Confirm if the user is confused by the "Shipping To" name vs. their account name. The new UI clarifies this.</li>
+    </ol>
+
+    <h2>4. Configuration</h2>
+    <p>The 30-minute grace period is currently hardcoded in <code>ordersService.js</code>. To change this value, a code deployment is required.</p>
+    <ul>
+        <li><strong>File:</strong> <code>lib/services/ordersService.js</code></li>
+        <li><strong>Variable:</strong> <code>30 * 60 * 1000</code> (30 minutes in milliseconds)</li>
+    </ul>
+</body>
+</html>

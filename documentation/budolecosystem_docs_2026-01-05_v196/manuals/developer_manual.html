@@ -1,0 +1,71 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>v196 Developer Manual - SMS Integration</title>
+    <style>
+        body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; line-height: 1.6; color: #333; max-width: 900px; margin: 0 auto; padding: 2rem; background: #f8fafc; }
+        .card { background: white; padding: 2rem; border-radius: 0.75rem; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.1); margin-bottom: 2rem; }
+        h1, h2, h3 { color: #1e293b; border-bottom: 1px solid #e2e8f0; padding-bottom: 0.5rem; }
+        pre { background: #1e293b; color: #f8fafc; padding: 1rem; border-radius: 0.5rem; overflow-x: auto; }
+        code { background: #f1f5f9; padding: 0.2rem 0.4rem; border-radius: 0.25rem; font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace; font-size: 0.9em; }
+        .nav-links { display: flex; justify-content: space-between; margin-top: 2rem; font-size: 0.9rem; }
+        .nav-links a { color: #3b82f6; text-decoration: none; }
+    </style>
+</head>
+<body>
+    <div class="nav-links">
+        <a href="implementation_plan.html">← Implementation Plan</a>
+        <a href="../index.html">v196 Index</a>
+        <a href="sysadmin_manual.html">SysAdmin Manual →</a>
+    </div>
+
+    <div class="card">
+        <h1>v196 Developer Manual</h1>
+        <p><strong>Subject:</strong> Technical Implementation of SMS Microservice</p>
+
+        <h2>Architecture Overview</h2>
+        <p>The <code>sms-service</code> acts as a wrapper around the Semaphore API. It provides an internal REST endpoint for other services to send messages.</p>
+
+        <h3>1. Sending an OTP</h3>
+        <p>Services can request an OTP by calling the <code>/otp/send</code> endpoint. The service handles code generation and expiration.</p>
+        <pre>
+// POST /otp/send
+{
+    "phoneNumber": "09123456789",
+    "purpose": "registration"
+}
+        </pre>
+
+        <h3>2. Verifying an OTP</h3>
+        <p>The mobile app sends the user-provided code back for validation.</p>
+        <pre>
+// POST /otp/verify
+{
+    "phoneNumber": "09123456789",
+    "code": "123456"
+}
+        </pre>
+
+        <h2>Integration with Semaphore (PH)</h2>
+        <p>The implementation uses the following Semaphore structure for message delivery:</p>
+        <pre>
+const axios = require('axios');
+
+async function sendSMS(to, message) {
+    const res = await axios.post('https://api.semaphore.co/api/v4/messages', {
+        apikey: process.env.SEMAPHORE_API_KEY,
+        number: to,
+        message: message,
+        sendername: 'BUDOLPAY'
+    });
+    return res.data;
+}
+        </pre>
+
+        <h2>Flutter Changes</h2>
+        <p>In <code>lib/services/api_service.dart</code>, add <code>requestOTP()</code> and <code>verifyOTP()</code> methods. Update the <code>RegistrationScreen</code> to include an OTP input field between Step 1 and Step 2.</p>
+    </div>
+</body>
+</html>

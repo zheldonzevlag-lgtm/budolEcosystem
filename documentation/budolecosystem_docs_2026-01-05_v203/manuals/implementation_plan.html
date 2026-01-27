@@ -1,0 +1,89 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Implementation Plan - v203 - Dual-Channel Notification & OTP Flow</title>
+    <style>
+        body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; line-height: 1.6; color: #333; max-width: 800px; margin: 0 auto; padding: 20px; }
+        h1, h2, h3 { color: #0070f3; }
+        code { background: #f4f4f4; padding: 2px 4px; border-radius: 4px; font-family: monospace; }
+        pre { background: #f4f4f4; padding: 10px; border-radius: 4px; overflow-x: auto; }
+        .nav { margin-bottom: 20px; display: flex; justify-content: space-between; }
+        .status { display: inline-block; padding: 2px 8px; border-radius: 12px; font-size: 0.85em; font-weight: bold; }
+        .status-completed { background: #e6fffa; color: #2c7a7b; }
+        .status-in-progress { background: #feebc8; color: #9c4221; }
+    </style>
+</head>
+<body>
+    <div class="nav">
+        <a href="../index.html">← Back to v203 Index</a>
+        <div>
+            <a href="../../budolecosystem_docs_2026-01-05_v202/manuals/implementation_plan.html">Previous Version (v202)</a> | 
+            <span>Next Version (None)</span>
+        </div>
+    </div>
+
+    <h1>Implementation Plan - v203</h1>
+    <p><strong>Subject:</strong> Dual-Channel Notification System & OTP Flow Integration</p>
+    <p><strong>Version:</strong> v203 (2026-01-05)</p>
+    <p><strong>Status:</strong> <span class="status status-completed">COMPLETED</span></p>
+
+    <h2>1. Purpose</h2>
+    <p>To enhance the budolPay ecosystem with a robust notification system that supports both Email and SMS channels for critical events like account creation, KYC approval, and OTP verification, ensuring users are informed and verified through their preferred active providers.</p>
+
+    <h2>2. Explanation & Reason</h2>
+    <p>Previously, notifications were either missing or limited to a single channel. This implementation centralizes notification logic in a shared package (<code>@budolpay/notifications</code>) and integrates it across microservices (Auth and Admin) to provide a seamless user experience and improve security via OTP verification.</p>
+
+    <h2>3. Technical Details</h2>
+    <ul>
+        <li><strong>New Shared Package:</strong> <code>@budolpay/notifications</code> handles delivery logic for various providers (Brevo, Gmail, Zerix, iTextMo, etc.).</li>
+        <li><strong>Database Schema Update:</strong> Added <code>otpCode</code>, <code>otpExpiresAt</code>, <code>emailVerified</code>, and <code>phoneVerified</code> to the <code>User</code> model.</li>
+        <li><strong>Auth Service Integration:</strong> Added OTP generation on registration and a new <code>/verify-otp</code> endpoint.</li>
+        <li><strong>Admin Service Integration:</strong> Integrated notification triggers in the KYC approval flow.</li>
+    </ul>
+
+    <h2>4. Code Details</h2>
+    <h3>OTP Generation (Auth Service)</h3>
+    <pre><code>const otpCode = Math.floor(100000 + Math.random() * 900000).toString();
+const otpExpiresAt = new Date(Date.now() + 10 * 60 * 1000); // 10 mins</code></pre>
+
+    <h3>Notification Trigger (KYC Approval)</h3>
+    <pre><code>if (status === "VERIFIED") {
+  await sendKycSuccess(updatedUser.email, updatedUser.firstName || 'User', 'BOTH');
+  await sendOTP(updatedUser.email, otpCode, 'EMAIL');
+  if (updatedUser.phoneNumber) {
+    await sendOTP(updatedUser.phoneNumber, otpCode, 'SMS');
+  }
+}</code></pre>
+
+    <h2>5. Test Results</h2>
+    <ul>
+        <li><strong>Registration Flow:</strong> Successfully generates OTP and triggers Email/SMS notifications. <span class="status status-completed">PASSED</span></li>
+        <li><strong>KYC Approval:</strong> Successfully triggers KYC success notification and OTP delivery on status change. <span class="status status-completed">PASSED</span></li>
+        <li><strong>OTP Verification:</strong> Successfully validates code and updates user verification status. <span class="status status-completed">PASSED</span></li>
+    </ul>
+
+    <h2>6. Issues & Fixes</h2>
+    <ul>
+        <li><strong>Issue:</strong> Prisma generate EPERM error on Windows due to locked DLLs.
+            <br><strong>Fix:</strong> Used <code>npm install --ignore-scripts</code> and <code>npx prisma db push</code> to bypass lock issues.</li>
+    </ul>
+
+    <h2>7. Risk & Mitigation</h2>
+    <ul>
+        <li><strong>Risk:</strong> Notification delivery failure (e.g., API downtime).
+            <br><strong>Mitigation:</strong> Implemented try-catch blocks and fallback to console logging for visibility.</li>
+    </ul>
+
+    <h2>8. Dependencies</h2>
+    <ul>
+        <li><code>@budolpay/database</code> (Prisma)</li>
+        <li><code>nodemailer</code> (Email)</li>
+        <li><code>axios</code> (SMS API calls)</li>
+    </ul>
+
+    <h2>9. Recommendation for Future Enhancement</h2>
+    <p>Consolidated in <a href="../../consolidated_recommendations.html">consolidated_recommendations.html</a>.</p>
+</body>
+</html>

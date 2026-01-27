@@ -1,0 +1,87 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Developer Manual - v258</title>
+    <style>
+        body { font-family: 'Segoe UI', sans-serif; line-height: 1.6; color: #333; max-width: 1000px; margin: 0 auto; padding: 40px 20px; background: #f4f7f6; }
+        .card { background: white; padding: 40px; border-radius: 12px; box-shadow: 0 4px 15px rgba(0,0,0,0.1); }
+        h1, h2 { color: #2c3e50; border-bottom: 2px solid #3498db; padding-bottom: 10px; }
+        code { background: #f1f5f9; padding: 2px 6px; border-radius: 4px; font-family: monospace; }
+        pre { background: #1e293b; color: #f8fafc; padding: 20px; border-radius: 8px; overflow-x: auto; }
+        .back-link { display: inline-block; margin-bottom: 20px; color: #3498db; text-decoration: none; font-weight: bold; }
+        .tech-detail { background: #f8fafc; border-left: 4px solid #3498db; padding: 20px; margin: 20px 0; }
+    </style>
+</head>
+<body>
+    <a href="index.html" class="back-link">← Back to v258 Index</a>
+    <div class="card">
+        <h1>Developer Manual: v258 Implementation</h1>
+        
+        <h2>1. Purpose & Reason</h2>
+        <p>The primary purpose of this update was to resolve a regression in the API Gateway where the <code>/system/settings</code> route was missing. This route is critical for the mobile application to determine whether to use Pusher, Socket.io, or SWR for real-time updates. Without it, the mobile app defaulted to SWR (polling), which resulted in delayed or non-functional real-time transaction updates.</p>
+
+        <h2>2. Technical Details & Code Changes</h2>
+        <div class="tech-detail">
+            <h3>API Gateway Route Implementation</h3>
+            <p>File: <code>services/api-gateway/index.js</code></p>
+            <p>Added the following route to the Express router to fetch and format system settings:</p>
+            <pre><code>router.get('/system/settings', async (req, res) => {
+    try {
+        const settings = await prisma.systemSetting.findMany();
+        const settingsMap = settings.reduce((acc, curr) => {
+            acc[curr.key] = curr.value;
+            return acc;
+        }, {});
+
+        // Format for mobile app
+        const response = {
+            realtime: {
+                method: settingsMap['REALTIME_METHOD'] || 'SWR',
+                pusher: {
+                    key: settingsMap['PUSHER_KEY'],
+                    cluster: settingsMap['PUSHER_CLUSTER']
+                },
+                socketio: {
+                    url: settingsMap['SOCKETIO_URL']
+                },
+                swr: {
+                    refreshInterval: parseInt(settingsMap['SWR_REFRESH_INTERVAL'] || '5000')
+                }
+            },
+            maps: {
+                enabledProviders: JSON.parse(settingsMap['ENABLED_MAP_PROVIDERS'] || '[]'),
+                googleMapsKey: settingsMap['GOOGLE_MAPS_API_KEY'],
+                geoapifyKey: settingsMap['GEOAPIFY_API_KEY'],
+                radarKey: settingsMap['RADAR_API_KEY']
+            }
+        };
+
+        res.json(response);
+    } catch (err) {
+        console.error('[Gateway] Failed to fetch system settings:', err.message);
+        res.status(500).json({ error: 'Failed to fetch system settings' });
+    }
+});</code></pre>
+        </div>
+
+        <h2>3. Impact Analysis</h2>
+        <ul>
+            <li><strong>Mobile Integration:</strong> <code>RealtimeService</code> now correctly receives <code>method: "PUSHER"</code> and initializes the Pusher client.</li>
+            <li><strong>Latency:</strong> Reduced UI update latency from 1-5 seconds (SWR) to near-instantaneous (Pusher).</li>
+            <li><strong>Server Load:</strong> Decreased polling frequency from mobile clients, reducing unnecessary HTTP traffic.</li>
+        </ul>
+
+        <h2>4. Test Results</h2>
+        <div class="tech-detail" style="border-left-color: #27ae60;">
+            <p><strong>✓ API Verification:</strong> <code>curl http://localhost:8080/system/settings</code> returns valid JSON with 200 OK.</p>
+            <p><strong>✓ Event Forwarding:</strong> Simulated <code>transaction_update</code> notification triggered correct logs: <code>[Notification] Emitted transaction_update to user:test-user-id</code>.</p>
+            <p><strong>✓ Pusher Initialization:</strong> Gateway logs confirm <code>[Pusher] Initialized successfully</code>.</p>
+        </div>
+
+        <h2>5. Recommendation for Future Enhancement</h2>
+        <p>Consolidated with Recommendation #16: Implement an automated endpoint discovery and registry system to ensure all critical routes are present during gateway startup.</p>
+    </div>
+</body>
+</html>

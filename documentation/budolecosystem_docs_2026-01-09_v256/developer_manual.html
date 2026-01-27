@@ -1,0 +1,57 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Developer Manual - v256</title>
+    <style>
+        body { font-family: sans-serif; line-height: 1.6; max-width: 900px; margin: 0 auto; padding: 20px; color: #333; }
+        h1 { color: #2c3e50; border-bottom: 2px solid #3498db; }
+        h2 { color: #2980b9; border-left: 5px solid #3498db; padding-left: 10px; margin-top: 30px; }
+        pre { background: #f4f4f4; padding: 15px; border-radius: 5px; overflow-x: auto; border: 1px solid #ddd; }
+        code { font-family: 'Consolas', monospace; color: #d63384; }
+        .nav { margin-bottom: 20px; }
+    </style>
+</head>
+<body>
+    <div class="nav"><a href="index.html">← Back to v256 Index</a></div>
+    <h1>Developer Manual - Version v256</h1>
+
+    <h2>Issue</h2>
+    <p>Users reported that the <code>TransactionHistoryScreen</code> did not update automatically when a new transaction was received. It required a manual refresh or a screen reload.</p>
+
+    <h2>Solution</h2>
+    <p>We implemented a real-time listener using <code>RealtimeService</code>'s <code>transactionStream</code>. This stream aggregates events from either Socket.io or Pusher depending on the current system configuration.</p>
+
+    <h2>Technical Implementation</h2>
+    <h3>1. Real-time Listener in TransactionHistoryScreen</h3>
+    <p>Added a <code>StreamSubscription</code> to listen for <code>transaction_update</code> events. When an event is received, the new transaction is inserted at the beginning of the <code>_transactions</code> list.</p>
+    <pre><code>// lib/screens/transaction_history_screen.dart
+void _setupRealtimeListener() {
+  Future.microtask(() {
+    if (!mounted) return;
+    final realtimeService = Provider.of&lt;RealtimeService&gt;(context, listen: false);
+    _transactionSubscription = realtimeService.transactionStream.listen((newTx) {
+      if (mounted) {
+        setState(() {
+          final alreadyExists = _transactions.any((tx) => tx['id'] == newTx['id']);
+          if (!alreadyExists) {
+            _transactions.insert(0, newTx);
+          }
+        });
+      }
+    });
+  });
+}</code></pre>
+
+    <h3>2. State Synchronization</h3>
+    <p>The implementation checks for duplicate IDs before insertion to handle cases where an event might be delivered multiple times or if a manual refresh happens simultaneously with a real-time update.</p>
+
+    <h2>Test Results</h2>
+    <ul>
+        <li><strong>Socket.io:</strong> ✅ New transactions appear instantly in history list.</li>
+        <li><strong>Pusher:</strong> ✅ New transactions appear instantly in history list.</li>
+        <li><strong>Memory Leak Test:</strong> ✅ Subscription is correctly cancelled in <code>dispose()</code>.</li>
+    </ul>
+</body>
+</html>

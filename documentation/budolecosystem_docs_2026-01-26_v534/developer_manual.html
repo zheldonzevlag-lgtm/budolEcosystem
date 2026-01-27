@@ -1,0 +1,71 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Developer Manual - v1.3.39+136</title>
+    <style>
+        body { font-family: sans-serif; line-height: 1.6; color: #333; max-width: 1000px; margin: 0 auto; padding: 40px; }
+        h1, h2, h3 { color: #0052CC; }
+        code { background: #f4f4f4; padding: 2px 4px; border-radius: 4px; font-family: monospace; }
+        pre { background: #1E1E1E; color: #D4D4D4; padding: 20px; border-radius: 8px; overflow-x: auto; }
+        .file-link { color: #0052CC; text-decoration: none; font-weight: bold; }
+        .file-link:hover { text-decoration: underline; }
+    </style>
+</head>
+<body>
+    <h1>Developer Manual - v1.3.39+136</h1>
+    
+    <h2>Technical Overview</h2>
+    <p>The primary technical change in this version is the transition from a "push-and-replace" navigation model for payment processing to a "state-callback" model. This ensures the <code>PaymentStatusScreen</code> maintains a stable lifecycle during the asynchronous verification process.</p>
+
+    <h2>Code References</h2>
+
+    <h3>1. PaymentStatusScreen Architecture Update</h3>
+    <p>Modified <a class="file-link" href="file:///d:/IT Projects/budolEcosystem/budolPayMobile/lib/screens/payment_status_screen.dart">payment_status_screen.dart</a> to support an <code>onVerify</code> callback. This allows the screen to initiate the payment process itself while displaying the "Verifying" UI.</p>
+    <pre><code>
+// Added onVerify callback to the constructor
+final Future&lt;Map&lt;String, dynamic&gt;&gt; Function()? onVerify;
+
+// In initState
+if (widget.onVerify != null) {
+  _performVerification();
+}
+
+// Logic to handle verification with a minimum UX delay
+Future&lt;void&gt; _performVerification() async {
+  try {
+    await Future.delayed(const Duration(milliseconds: 1500)); // UX feedback delay
+    final result = await widget.onVerify!();
+    if (mounted) {
+      updateStatus(PaymentStatus.success, updatedData: result['transaction']);
+    }
+  } catch (e) {
+    if (mounted) {
+      updateStatus(PaymentStatus.failed, errorMessage: e.toString());
+    }
+  }
+}
+    </code></pre>
+
+    <h3>2. QR Scanner Navigation Simplification</h3>
+    <p>Modified <a class="file-link" href="file:///d:/IT Projects/budolEcosystem/budolPayMobile/lib/screens/qr_scanner_screen.dart">qr_scanner_screen.dart</a> to eliminate redundant navigation calls. It now only performs a single <code>Navigator.push</code> to the status screen.</p>
+    <pre><code>
+void _handlePayment(BuildContext context) async {
+  Navigator.push(
+    context,
+    MaterialPageRoute(
+      builder: (context) => PaymentStatusScreen(
+        initialStatus: PaymentStatus.verifying,
+        transactionData: paymentData,
+        onVerify: () => apiService.processPayment(qrData: paymentData),
+      ),
+    ),
+  );
+}
+    </code></pre>
+
+    <h2>Rationale for Delay</h2>
+    <p>A 1500ms delay was introduced in <code>_performVerification</code>. This is not for technical reasons (the API is faster), but for User Experience (UX). It ensures that the user has enough time to recognize the "Verifying" state, which builds trust that the system is actually performing work before showing the final success/failure result.</p>
+</body>
+</html>

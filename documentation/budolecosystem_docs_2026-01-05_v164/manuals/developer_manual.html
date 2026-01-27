@@ -1,0 +1,83 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Developer Manual - v164</title>
+    <style>
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; line-height: 1.6; color: #333; max-width: 1000px; margin: 0 auto; padding: 20px; background-color: #f4f7f6; }
+        header { background-color: #F43F5E; color: white; padding: 20px; border-radius: 8px 8px 0 0; }
+        main { background: white; padding: 30px; border-radius: 0 0 8px 8px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); }
+        code { background: #f0f0f0; padding: 2px 5px; border-radius: 4px; font-family: 'Courier New', Courier, monospace; }
+        pre { background: #1e1e1e; color: #d4d4d4; padding: 15px; border-radius: 8px; overflow-x: auto; }
+        h2 { color: #F43F5E; border-bottom: 2px solid #eee; padding-bottom: 10px; }
+        .back-link { display: inline-block; margin-bottom: 20px; color: #F43F5E; text-decoration: none; font-weight: bold; }
+        .status-badge { display: inline-block; padding: 5px 10px; border-radius: 20px; font-size: 0.8rem; font-weight: bold; margin-bottom: 10px; }
+        .status-fixed { background-color: #dcfce7; color: #166534; }
+    </style>
+</head>
+<body>
+    <header>
+        <div style="padding: 20px;">
+            <h1>Developer Manual v164</h1>
+            <p>Mobile Resilience & Error Handling Architecture</p>
+        </div>
+    </header>
+    <main>
+        <a href="../index.html" class="back-link">← Back to v164 Index</a>
+
+        <h2>Purpose & Explanation</h2>
+        <p>The primary goal of v164 was to eliminate the "white screen" crash occurring during mobile app initialization. This crash was typically caused by unhandled exceptions in the <code>build</code> method or during <code>main()</code> initialization before the widget tree was established.</p>
+
+        <h2>Technical Details: Global Error Boundary</h2>
+        <p>We implemented a custom <code>ErrorWidget.builder</code> in <code>main.dart</code>. This catches any exception thrown during a widget's <code>build</code> phase and replaces the crash with a user-friendly error UI.</p>
+        <pre><code>// lib/main.dart
+ErrorWidget.builder = (FlutterErrorDetails details) {
+  return Scaffold(
+    body: Center(
+      child: Column(
+        children: [
+          Icon(Icons.error_outline),
+          Text('Oops! Something went wrong.'),
+          Text(details.exceptionAsString()),
+          ElevatedButton(
+            onPressed: () => apiService.logout(),
+            child: Text('Reset App'),
+          ),
+        ],
+      ),
+    ),
+  );
+};</code></pre>
+
+        <h2>Defensive Data Parsing</h2>
+        <p>In <code>HomeScreen</code>, we added multiple layers of safety when parsing transaction data from the backend. This prevents <code>TypeError</code> crashes if the backend returns unexpected data types (e.g., Decimal as String vs Number).</p>
+        <pre><code>// lib/screens/home_screen.dart
+double amount = 0.0;
+if (tx['amount'] != null) {
+  if (tx['amount'] is num) {
+    amount = (tx['amount'] as num).toDouble();
+  } else {
+    amount = double.tryParse(tx['amount'].toString()) ?? 0.0;
+  }
+}</code></pre>
+
+        <h2>Issues & Fixes</h2>
+        <ul>
+            <li><strong>Issue:</strong> White screen on app start. <br><strong>Fix:</strong> Added 5-second timeout to <code>apiService.init()</code> in <code>main.dart</code> and wrapped in try-catch.</li>
+            <li><strong>Issue:</strong> <code>TypeError</code> in transaction list. <br><strong>Fix:</strong> Added <code>try-catch</code> around the <code>map</code> function in <code>HomeScreen</code> build.</li>
+            <li><strong>Issue:</strong> Socket data mismatch. <br><strong>Fix:</strong> Added type checks (<code>is Map</code>) before calling <code>Map.from()</code> in <code>SocketService</code>.</li>
+        </ul>
+
+        <h2>Test Results</h2>
+        <p>Verified via <code>test-transaction-history-v163.js</code>. The backend correctly returns transaction data, and the mobile app (simulated logic) successfully parses various formats of the <code>amount</code> field without crashing.</p>
+
+        <h2>Dependencies</h2>
+        <ul>
+            <li><code>provider: ^6.0.5</code> - Used for state management.</li>
+            <li><code>intl: ^0.18.1</code> - Used for currency formatting.</li>
+            <li><code>socket_io_client: ^3.0.0</code> - Real-time updates.</li>
+        </ul>
+    </main>
+</body>
+</html>

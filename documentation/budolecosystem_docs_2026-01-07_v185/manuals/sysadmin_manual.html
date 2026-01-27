@@ -1,0 +1,56 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>System Admin Manual - v185</title>
+    <style>
+        body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; line-height: 1.6; color: #333; max-width: 800px; margin: 0 auto; padding: 2rem; }
+        h1 { color: #0070f3; }
+        h2 { color: #10b981; margin-top: 2rem; }
+        pre { background: #f4f4f4; padding: 1rem; border-radius: 4px; overflow-x: auto; }
+        .nav-links { margin-top: 2rem; padding-top: 1rem; border-top: 1px solid #eaeaea; }
+    </style>
+</head>
+<body>
+    <h1>System Admin Manual <span class="version-tag">v185</span></h1>
+    
+    <h2>Operational Guide: Phase 3 Financial Services</h2>
+
+    <h3>1. Deploying the Microservices</h3>
+    <p>Each service in <code>budolpay-0.1.0/services</code> has a <code>vercel.json</code> and should be deployed as a separate Vercel project.</p>
+    <pre>
+# Example for Wallet Service
+cd budolpay-0.1.0/services/wallet-service
+vercel link --project budolpay-wallet
+vercel env pull .env.vercel
+vercel deploy --prod
+    </pre>
+
+    <h3>2. Deploying the Admin Dashboard</h3>
+    <p>The Admin app is a Next.js application located in <code>apps/admin</code>.</p>
+    <pre>
+cd budolpay-0.1.0/apps/admin
+vercel link --project budolpay-admin
+vercel deploy --prod
+    </pre>
+
+    <h3>3. Database Synchronization</h3>
+    <p>Run the Prisma migration against the Vercel Postgres instance before first use:</p>
+    <pre>
+cd budolpay-0.1.0
+node scripts/env-manager.js vercel
+npm run db:vercel
+    </pre>
+
+    <h2>Risk & Mitigation</h2>
+    <ul>
+        <li><strong>Risk:</strong> Cold starts in serverless functions impacting financial transaction latency.</li>
+        <li><strong>Mitigation:</strong> Implement lightweight <code>/health</code> endpoints and use Vercel's "Warm Starts" (if available) or keep-alive pings.</li>
+    </ul>
+
+    <div class="nav-links">
+        <a href="../index.html">← Back to v185 Index</a>
+    </div>
+</body>
+</html>

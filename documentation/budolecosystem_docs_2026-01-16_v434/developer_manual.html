@@ -1,0 +1,96 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Developer Manual - v434</title>
+    <style>
+        body { font-family: -apple-system, sans-serif; line-height: 1.6; color: #333; margin: 0; display: flex; }
+        .sidebar { width: 250px; background: #f4f5f7; border-right: 1px solid #dfe1e6; height: 100vh; position: fixed; padding: 20px; }
+        .content { margin-left: 290px; padding: 40px; max-width: 900px; }
+        pre { background: #1e1e1e; color: #d4d4d4; padding: 15px; border-radius: 5px; overflow-x: auto; }
+        code { font-family: 'Consolas', monospace; }
+        .code-link { color: #0052cc; text-decoration: none; font-weight: bold; }
+        .code-link:hover { text-decoration: underline; }
+    </style>
+</head>
+<body>
+    <div class="sidebar">
+        <h2>v434 Documentation</h2>
+        <ul>
+            <li><a href="index.html">Home / Task List</a></li>
+            <li><a href="developer_manual.html">Developer Manual</a></li>
+            <li><a href="system_admin_manual.html">System Admin Manual</a></li>
+            <li><a href="user_manual.html">User Manual</a></li>
+            <li><a href="risk_register.html">Risk Register</a></li>
+            <li><a href="Mitigation.html">Mitigation</a></li>
+            <li><a href="issues.html">Issues</a></li>
+            <li><a href="fixes.html">Fixes</a></li>
+            <li><a href="test_results.html">Test Results</a></li>
+            <li><a href="future_recommendations.html">Future Recommendations</a></li>
+        </ul>
+    </div>
+    <div class="content">
+        <h1>Developer Manual - v434</h1>
+        
+        <h2>Technical Overview</h2>
+        <p>This release involves changes in both the budolShap payment adapter and the budolPay mobile app (Flutter Web).</p>
+
+        <h3>1. Payment Adapter Update</h3>
+        <p>The merchant owner name for BudolPay payments was hardcoded in the adapter. This has been updated to reflect the correct merchant owner.</p>
+        <p><strong>File:</strong> <a class="code-link" href="file:///d:/IT Projects/budolEcosystem/budolshap-0.1.0/lib/payment/adapters/budolpay-adapter.js">budolpay-adapter.js</a></p>
+        <pre><code>
+// lib/payment/adapters/budolpay-adapter.js:129
+qrCode: {
+    imageUrl: `https://api.qrserver.com/v1/create-qr-code/?size=300x300&data=${encodeURIComponent(JSON.stringify({
+        type: 'budolpay_payment',
+        orderId: options.orderId,
+        amount: amount / 100,
+        merchant: 'budolShap Merchant',
+        paymentIntentId: paymentIntentId
+    }))}`,
+    amount: amount,
+    label: 'Jon Galvez' // Updated from 'budolPay'
+},
+        </code></pre>
+
+        <h3>2. Flutter Web Layout Fix</h3>
+        <p>The Flutter Web app experienced a black screen issue due to nested layout constraints in the <code>MaterialApp.builder</code> and <code>MarketingAdsScreen</code>.</p>
+        
+        <p><strong>File:</strong> <a class="code-link" href="file:///d:/IT Projects/budolEcosystem/budolpaymobile/lib/main.dart">main.dart</a></p>
+        <p>Simplified the web builder to avoid redundant <code>Stack</code> and <code>Positioned.fill</code> which could interfere with <code>Navigator</code> rendering.</p>
+        <pre><code>
+// lib/main.dart:193
+child: Material(
+    color: const Color(0xFF0F172A),
+    child: DefaultTextStyle(
+      style: const TextStyle(
+        fontFamily: 'Inter',
+        color: Colors.white,
+        decoration: TextDecoration.none,
+      ),
+      child: child ?? const SplashScreen(), // Simplified from Stack/Positioned.fill
+    ),
+  ),
+        </code></pre>
+
+        <p><strong>File:</strong> <a class="code-link" href="file:///d:/IT Projects/budolEcosystem/budolpaymobile/lib/screens/marketing_ads_screen.dart">marketing_ads_screen.dart</a></p>
+        <p>Removed <code>SafeArea</code> and added explicit dimensions to <code>PageView</code> items to ensure they render correctly in the constrained web container.</p>
+        <pre><code>
+// lib/screens/marketing_ads_screen.dart:127
+return Scaffold(
+  backgroundColor: const Color(0xFF0F172A),
+  body: Stack(
+    children: [
+      Positioned.fill(
+        child: PageView.builder(
+          // ...
+        ),
+      ),
+      // ...
+    ],
+  ),
+);
+        </code></pre>
+    </div>
+</body>
+</html>

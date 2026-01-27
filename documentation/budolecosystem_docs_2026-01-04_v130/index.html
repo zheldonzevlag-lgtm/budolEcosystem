@@ -1,0 +1,79 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>budolEcosystem Documentation v130</title>
+    <style>
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; line-height: 1.6; color: #333; max-width: 800px; margin: 0 auto; padding: 20px; }
+        header { background: #f43f5e; color: white; padding: 20px; border-radius: 8px; margin-bottom: 20px; }
+        .version-tag { background: #fff; color: #f43f5e; padding: 2px 8px; border-radius: 4px; font-weight: bold; }
+        section { background: white; padding: 20px; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); margin-bottom: 20px; }
+        h2 { color: #f43f5e; border-bottom: 2px solid #f43f5e; padding-bottom: 10px; }
+        code { background: #f4f4f4; padding: 2px 4px; border-radius: 4px; font-family: monospace; }
+        .nav-links { display: flex; justify-content: space-between; margin-top: 40px; }
+        .nav-links a { color: #f43f5e; text-decoration: none; font-weight: bold; }
+        .issue { color: #dc2626; font-weight: bold; }
+        .fix { color: #16a34a; font-weight: bold; }
+        ul { padding-left: 20px; }
+        li { margin-bottom: 10px; }
+    </style>
+</head>
+<body>
+    <div class="nav-links ecosystem-docs-top-nav">
+        <a href="../budolecosystem_docs_2026-01-04_v129/index.html">← Previous (v129)</a>
+        <a href="../index.html">Index</a>
+        <a href="../budolecosystem_docs_2026-01-04_v131/index.html">Next (v131) →</a>
+    </div>
+
+    <header>
+        <h1>budolEcosystem Documentation <span class="version-tag">v130</span></h1>
+        <p><strong>Date:</strong> 2026-01-04</p>
+        <p><strong>Focus:</strong> Database Constraint Resolution & UI Alignment</p>
+    </header>
+
+    <section>
+        <h2>Purpose</h2>
+        <p>To resolve Foreign Key constraint violations in the Wallet Service and fix horizontal alignment issues in the mobile app's service grid.</p>
+    </section>
+
+    <section>
+        <h2>Issues Addressed</h2>
+        <ul>
+            <li><span class="issue">Prisma P2003 Error:</span> The <code>wallet.create()</code> call was failing with a <code>Foreign key constraint violated: Wallet_userId_fkey</code> because the <code>userId</code> did not exist in the <code>User</code> table of the Wallet Service's database.</li>
+            <li><span class="issue">Zero Balance:</span> The 1,000 PHP testing balance was not appearing because the wallet creation was failing silently due to the constraint error.</li>
+            <li><span class="issue">UI Misalignment:</span> The <code>budolLoan</code> item (using a Text widget for ₱) was not horizontally aligned with the other icon-based service items.</li>
+        </ul>
+    </section>
+
+    <section>
+        <h2>Technical Implementation</h2>
+        <ul>
+            <li><span class="fix">Wallet Service (Failsafe Sync):</span> Modified <code>wallet-service/index.js</code> to check if a <code>User</code> record exists before creating a <code>Wallet</code>. If missing, it creates a placeholder <code>User</code> record to satisfy the database relationship.</li>
+            <li><span class="fix">Mobile UI (Alignment Fix):</span>
+                <ul>
+                    <li>Wrapped the service item content in a fixed-size <code>SizedBox(32x32)</code> in <code>home_screen.dart</code>.</li>
+                    <li>Added <code>Center</code> alignment to the custom Philippine Peso (₱) text widget.</li>
+                    <li>Ensured all service items share the same vertical baseline via <code>mainAxisAlignment: MainAxisAlignment.center</code> in the item column.</li>
+                </ul>
+            </li>
+            <li><span class="fix">Build:</span> Bumped version to <code>1.1.2+1</code> and generated a new release APK.</li>
+        </ul>
+    </section>
+
+    <section>
+        <h2>Test Results</h2>
+        <ul>
+            <li><strong>Constraint Fix:</strong> Confirmed that wallets are now successfully created for new users by satisfying the <code>userId</code> foreign key requirement.</li>
+            <li><strong>Balance Display:</strong> Verified that the 1,000 PHP initial balance is correctly fetched and displayed on the Home Screen.</li>
+            <li><strong>UI Layout:</strong> Confirmed <code>budolLoan</code> is now perfectly aligned with Load, Bills, and other services.</li>
+        </ul>
+    </section>
+
+    <div class="nav-links">
+        <a href="../budolecosystem_docs_2026-01-04_v129/index.html">← Previous (v129)</a>
+        <a href="../index.html">Index</a>
+        <span>Next (v131) →</span>
+    </div>
+</body>
+</html>

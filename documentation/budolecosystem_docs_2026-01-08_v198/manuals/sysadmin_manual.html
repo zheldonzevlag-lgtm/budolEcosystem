@@ -1,0 +1,32 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>System Admin Manual - v198</title>
+    <style>
+        body { font-family: sans-serif; line-height: 1.6; color: #333; max-width: 900px; margin: 0 auto; padding: 20px; }
+        .audit-cmd { background: #2c3e50; color: #ecf0f1; padding: 15px; border-radius: 5px; font-family: monospace; }
+    </style>
+</head>
+<body>
+    <h1>System Admin Manual Updates - v198</h1>
+
+    <h2>User Authentication Audit</h2>
+    <p>Admins can now more easily identify users who are stuck in the PIN flow due to missing PINs. Use the following SQL query to audit your user base:</p>
+    <div class="audit-cmd">
+        SELECT id, "phoneNumber", "pinHash", "trustedDevices" <br>
+        FROM "User" <br>
+        WHERE "pinHash" IS NULL;
+    </div>
+
+    <h2>Service Restart Requirements</h2>
+    <p>The changes in v198 involve critical logic in the Auth Service. After applying these changes, ensure the service is restarted to clear any cached process states:</p>
+    <ul>
+        <li><strong>Local:</strong> Restart the <code>npm run dev</code> process for <code>auth-service</code>.</li>
+        <li><strong>Production:</strong> Trigger a rolling redeploy of the <code>auth-service</code> container/pod.</li>
+    </ul>
+
+    <h2>Troubleshooting</h2>
+    <p>If a user reports an "Invalid authentication request" error despite the v198 fixes, verify that their <code>userId</code> exists in the database. If it doesn't, they may need to re-register or clear their app cache to re-trigger the identification phase.</p>
+</body>
+</html>

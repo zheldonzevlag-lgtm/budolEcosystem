@@ -1,0 +1,92 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Developer Manual - v261</title>
+    <style>
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; line-height: 1.6; color: #333; max-width: 1000px; margin: 0 auto; padding: 20px; background-color: #f4f7f6; }
+        header { background: #0f172a; color: white; padding: 20px; text-align: center; border-radius: 8px 8px 0 0; }
+        .container { background: white; padding: 30px; border-radius: 0 0 8px 8px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); }
+        h1, h2, h3 { color: #0f172a; }
+        pre { background: #f1f5f9; padding: 15px; border-radius: 5px; overflow-x: auto; border-left: 5px solid #f43f5e; }
+        code { font-family: 'Courier New', Courier, monospace; }
+        .back-link { display: inline-block; margin-bottom: 20px; text-decoration: none; color: #f43f5e; font-weight: bold; }
+    </style>
+</head>
+<body>
+    <header>
+        <h1>Developer Manual - v261</h1>
+        <p>Technical Implementation Details</p>
+    </header>
+    <div class="container">
+        <a href="../index.html" class="back-link">← Back to v261 Index</a>
+        
+        <section>
+            <h2>Purpose</h2>
+            <p>To fix the "NotFound" error when users try to add recipients to favorites and ensure the favorites list correctly facilitates subsequent "Send Money" transactions.</p>
+        </section>
+
+        <section>
+            <h2>Issues Identified</h2>
+            <ul>
+                <li><strong>Incorrect API Prefix:</strong> The <code>ApiService</code> in the mobile app was calling <code>/api/auth/favorites</code>, but the API Gateway only proxies <code>/auth</code> to the Auth Service. This resulted in a 404 Not Found error.</li>
+                <li><strong>Workflow Verification:</strong> Need to ensure that tapping a favorite recipient correctly populates the recipient field in the Send Money screen.</li>
+            </ul>
+        </section>
+
+        <section>
+            <h2>Technical Details & Code Changes</h2>
+            <h3>1. API URL Correction</h3>
+            <p>Modified <code>lib/services/api_service.dart</code> to remove the redundant <code>/api</code> prefix for favorites endpoints.</p>
+            <pre><code>
+// Before:
+final url = '$baseUrl/api/auth/favorites';
+
+// After:
+final url = '$baseUrl/auth/favorites';
+            </code></pre>
+            <p>Impacted methods: <code>getFavorites()</code>, <code>addFavorite()</code>, and <code>removeFavorite()</code>.</p>
+
+            <h3>2. Navigation Logic Verification</h3>
+            <p>Verified <code>lib/screens/favorites_screen.dart</code> correctly passes the recipient's email or phone number to the <code>SendMoneyScreen</code>.</p>
+            <pre><code>
+onTap: () {
+  Navigator.push(
+    context,
+    MaterialPageRoute(
+      builder: (context) => SendMoneyScreen(
+        initialRecipient: email.isNotEmpty ? email : phone,
+      ),
+    ),
+  );
+},
+            </code></pre>
+
+            <h3>3. Version Increment</h3>
+            <ul>
+                <li>Updated <code>pubspec.yaml</code> to <code>1.2.25+25</code>.</li>
+                <li>Updated <code>lib/services/api_service.dart</code> fallback version to <code>1.2.25</code>.</li>
+            </ul>
+        </section>
+
+        <section>
+            <h2>Test Results</h2>
+            <ul>
+                <li><strong>API Connectivity:</strong> Verified that removing <code>/api</code> prefix allows successful connection to Auth Service favorites endpoints through Gateway.</li>
+                <li><strong>Navigation:</strong> Confirmed that selecting a favorite recipient correctly initializes the <code>SendMoneyScreen</code> with the recipient's details.</li>
+                <li><strong>Build:</strong> APK build initiated for version 1.2.25.</li>
+            </ul>
+        </section>
+
+        <section>
+            <h2>Future Enhancements</h2>
+            <ul>
+                <li>Implement local caching for favorites to improve offline experience.</li>
+                <li>Add ability to categorize favorites (e.g., Family, Friends, Business).</li>
+                <li>Enhance error handling with more descriptive user messages for API failures.</li>
+            </ul>
+        </section>
+    </div>
+</body>
+</html>

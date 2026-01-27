@@ -1,0 +1,87 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Developer Manual - v493</title>
+    <style>
+        :root {
+            --primary: #0747a6;
+            --secondary: #172b4d;
+            --accent: #0065ff;
+            --bg: #f4f5f7;
+            --code-bg: #1e1e1e;
+            --code-text: #d4d4d4;
+        }
+        body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, "Fira Sans", "Droid Sans", sans-serif; line-height: 1.6; color: var(--secondary); margin: 0; display: flex; }
+        .sidebar { width: 250px; background: var(--secondary); color: white; height: 100vh; position: fixed; padding: 20px; }
+        .main-content { margin-left: 270px; padding: 40px; max-width: 900px; flex-grow: 1; }
+        .section { background: white; padding: 30px; border-radius: 3px; box-shadow: 0 1px 3px rgba(0,0,0,0.1); margin-bottom: 30px; }
+        h1, h2, h3 { color: var(--primary); }
+        pre { background: var(--code-bg); color: var(--code-text); padding: 15px; border-radius: 5px; overflow-x: auto; }
+        code { font-family: 'Consolas', 'Monaco', monospace; }
+        .code-link { color: var(--accent); text-decoration: none; font-weight: bold; }
+        .code-link:hover { text-decoration: underline; }
+    </style>
+</head>
+<body>
+    <div class="sidebar">
+        <h3>Budol Docs v493</h3>
+        <ul>
+            <li><a href="index.html" style="color: white;">Home</a></li>
+            <li><a href="#admin-enforcement" style="color: white;">Admin Settings Enforcement</a></li>
+            <li><a href="#realtime-architecture" style="color: white;">Realtime Architecture</a></li>
+            <li><a href="#cost-optimization" style="color: white;">Cost Optimization</a></li>
+        </ul>
+    </div>
+
+    <div class="main-content">
+        <h1>Developer Manual - Version 493</h1>
+        
+        <section id="admin-enforcement" class="section">
+            <h2>1. Admin Settings Enforcement</h2>
+            <p>Version 493 ensures that the realtime infrastructure strictly adheres to the configuration set in the Admin UI. This is achieved through a dual-enforcement strategy on both the frontend and backend.</p>
+            
+            <h3>Frontend Enforcement (RealtimeProvider)</h3>
+            <p>The <a class="code-link" href="file:///d:/IT Projects/budolEcosystem/budolshap-0.1.0/components/RealtimeProvider.jsx">RealtimeProvider.jsx</a> fetches settings via SWR and dynamically switches between PUSHER, SOCKET_IO, and POLLING modes.</p>
+            <pre><code>const { data: configData } = useSWR('/api/system/settings', fetcher);
+useEffect(() => {
+    const provider = configData?.realtimeProvider || 'POLLING';
+    if (provider === 'POLLING') {
+        setSwrOptions({ refreshInterval: 5000 });
+    } else {
+        setSwrOptions({ refreshInterval: 0 });
+        // Initialize Pusher or Socket.io...
+    }
+}, [configData]);</code></pre>
+
+            <h3>Backend Enforcement (lib/realtime.js)</h3>
+            <p>The <a class="code-link" href="file:///d:/IT Projects/budolEcosystem/budolshap-0.1.0/lib/realtime.js">lib/realtime.js</a> module caches settings for 1 minute and routes all events through the active provider.</p>
+            <pre><code>export async function triggerRealtimeEvent(channel, event, data) {
+    const settings = await getSettings();
+    if (settings.realtimeProvider === 'PUSHER') {
+        // Trigger Pusher...
+    } else if (settings.realtimeProvider === 'SOCKET_IO') {
+        // Trigger Socket.io...
+    }
+}</code></pre>
+        </section>
+
+        <section id="realtime-architecture" class="section">
+            <h2>2. Centralized Realtime Architecture</h2>
+            <p>All realtime logic is centralized in the global <code>RealtimeProvider</code>. Individual hooks like <code>useRealtimeOrders</code> no longer manage their own connections, reducing redundant listeners and memory usage.</p>
+            <p>Reference: <a class="code-link" href="file:///d:/IT Projects/budolEcosystem/budolshap-0.1.0/hooks/useRealtimeOrders.js">useRealtimeOrders.js</a></p>
+        </section>
+
+        <section id="cost-optimization" class="section">
+            <h2>3. Cost & Bandwidth Optimization</h2>
+            <p>To minimize AWS/Vercel hosting costs, the following features are implemented:</p>
+            <ul>
+                <li><strong>Visibility-Aware Polling:</strong> Throttles polling from 5s to 30s when the browser tab is hidden.</li>
+                <li><strong>SWR Cache Patching:</strong> Updates local UI state without full API re-fetches.</li>
+                <li><strong>Minimal Payloads:</strong> Realtime events only carry essential fields (e.g., ID, Status).</li>
+            </ul>
+        </section>
+    </div>
+</body>
+</html>

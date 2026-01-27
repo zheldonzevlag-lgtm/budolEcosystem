@@ -1,0 +1,53 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Developer Manual - v280</title>
+    <style>
+        body { font-family: sans-serif; line-height: 1.6; padding: 40px; color: #333; }
+        code { background: #f4f4f4; padding: 2px 5px; border-radius: 3px; }
+        pre { background: #f4f4f4; padding: 15px; border-radius: 5px; overflow-x: auto; }
+        h1 { color: #1e293b; }
+        h2 { color: #10b981; border-bottom: 1px solid #ddd; padding-bottom: 10px; }
+        .back-link { display: inline-block; margin-bottom: 20px; color: #10b981; text-decoration: none; font-weight: bold; }
+    </style>
+</head>
+<body>
+    <a href="../index.html" class="back-link">← Back to Index</a>
+    <h1>Developer Manual Updates - v280</h1>
+
+    <section>
+        <h2>Shared Database Package Fixes</h2>
+        <p>A critical issue was identified where <code>api-gateway</code> was using a local <code>prisma</code> client instead of the shared <code>@budolpay/database</code> package. This caused synchronization issues when the database schema was updated in the shared package but not in the gateway.</p>
+        <p><strong>Fix:</strong> Updated <code>api-gateway/package.json</code> to depend on <code>@budolpay/database</code> and updated its <code>index.js</code> to import the shared prisma instance:</p>
+        <pre><code>// api-gateway/index.js
+const { prisma } = require('@budolpay/database');</code></pre>
+    </section>
+
+    <section>
+        <h2>Prisma Versioning & Binaries</h2>
+        <p>An error <code>(0 , pq.ensureNeededBinariesExist) is not a function</code> occurred during Prisma generation due to a version mismatch between Prisma CLI and the client. This was resolved by pinning the shared database package to Prisma <code>6.2.1</code>.</p>
+        <pre><code>npm install prisma@6.2.1 @prisma/client@6.2.1 --save-dev</code></pre>
+    </section>
+
+    <section>
+        <h2>mDNS Advertising Logic</h2>
+        <p>The <code>start-ecosystem.js</code> script now categorizes services for mDNS advertising to help clients (like the mobile app) identify specific endpoints:</p>
+        <pre><code>if (app.port === 8080) {
+    mdnsType = 'budolpay'; // Main Gateway
+} else if (app.name.toLowerCase().includes('id')) {
+    mdnsType = 'budolid'; // Identity Provider
+}</code></pre>
+    </section>
+
+    <section>
+        <h2>Verification Tools</h2>
+        <p>Two new verification tools were added to the root directory for developers to test network health:</p>
+        <ul>
+            <li><code>verify-lan.js</code>: Checks if all core service ports are open and responding on the LAN IP.</li>
+            <li><code>verify-mdns.js</code>: Browses the network for mDNS advertisements to ensure services are discoverable.</li>
+        </ul>
+    </section>
+</body>
+</html>

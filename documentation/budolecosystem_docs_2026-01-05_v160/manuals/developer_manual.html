@@ -1,0 +1,100 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Developer Manual - v160</title>
+    <style>
+        body { font-family: sans-serif; line-height: 1.6; max-width: 800px; margin: 0 auto; padding: 20px; }
+        code { background: #f4f4f4; padding: 2px 5px; border-radius: 3px; }
+        pre { background: #f4f4f4; padding: 15px; overflow-x: auto; border-radius: 5px; }
+        .nav { margin-bottom: 20px; }
+    </style>
+</head>
+<body>
+    <div class="nav">
+        <a href="../index.html">Back to v160 Index</a>
+    </div>
+    <h1>Developer Manual - Real-time Recipient Validation</h1>
+    
+    <section>
+        <h2>Purpose</h2>
+        <p>To improve user experience and data integrity by providing real-time validation for recipient identifiers (Email and Phone Number) in the Send Money screen.</p>
+    </section>
+
+    <section>
+        <h2>Technical Implementation</h2>
+        <p>The validation is implemented in the <code>SendMoneyScreen</code> using Flutter's <code>TextField</code> <code>onChanged</code> callback and state management.</p>
+        
+        <h3>1. State Management</h3>
+        <p>A new state variable <code>_recipientError</code> was added to track validation status:</p>
+        <pre><code>String? _recipientError;</code></pre>
+
+        <h3>2. Validation Logic</h3>
+        <p>The <code>_validateRecipient</code> method handles dual-format validation:</p>
+        <ul>
+            <li><strong>Email:</strong> Uses a standard email regex. Triggered if the input contains '@'.</li>
+            <li><strong>Phone Number:</strong> Specifically targets Philippine mobile formats:
+                <ul>
+                    <li><code>09XXXXXXXXX</code> (11 digits)</li>
+                    <li><code>+639XXXXXXXXX</code> (13 characters)</li>
+                </ul>
+            </li>
+        </ul>
+    </section>
+
+    <section>
+        <h2>Code Details</h2>
+        <p>File: <code>lib/screens/send_money_screen.dart</code></p>
+        <pre><code>
+void _validateRecipient(String value) {
+  if (value.isEmpty) {
+    setState(() => _recipientError = null);
+    return;
+  }
+
+  if (value.contains('@')) {
+    final emailRegex = RegExp(r'^[\w-\.]+@([\w-]+\.)+[\w-]{2,4}$');
+    setState(() => _recipientError = emailRegex.hasMatch(value) ? null : 'Invalid email format');
+    return;
+  }
+
+  if (RegExp(r'^[\d+]').hasMatch(value)) {
+    if (value.startsWith('+')) {
+      if (!value.startsWith('+639')) {
+        setState(() => _recipientError = 'Use +639XXXXXXXXX format');
+      } else if (value.length != 13) {
+        setState(() => _recipientError = 'Must be 13 characters');
+      } else {
+        setState(() => _recipientError = RegExp(r'^\+639\d{9}$').hasMatch(value) ? null : 'Invalid phone number');
+      }
+    } else if (value.startsWith('09')) {
+      if (value.length != 11) {
+        setState(() => _recipientError = 'Must be 11 digits (09XXXXXXXXX)');
+      } else {
+        setState(() => _recipientError = RegExp(r'^09\d{9}$').hasMatch(value) ? null : 'Invalid phone number');
+      }
+    } else {
+      setState(() => _recipientError = 'Phone must start with 09 or +639');
+    }
+    return;
+  }
+
+  setState(() => _recipientError = 'Invalid email or phone number');
+}
+        </code></pre>
+    </section>
+
+    <section>
+        <h2>Dependencies</h2>
+        <ul>
+            <li>Flutter Material Design package</li>
+            <li>RegExp (Dart core)</li>
+        </ul>
+    </section>
+
+    <div class="nav">
+        <a href="sysadmin_manual.html">Next: System Admin Manual</a>
+    </div>
+</body>
+</html>

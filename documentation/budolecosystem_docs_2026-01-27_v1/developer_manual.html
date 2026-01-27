@@ -1,0 +1,68 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Developer Manual - Budol Ecosystem</title>
+    <style>
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; line-height: 1.6; color: #333; max-width: 1200px; margin: 0 auto; padding: 20px; background-color: #f4f7f6; }
+        header { background: #3b82f6; color: white; padding: 20px; text-align: center; border-radius: 8px 8px 0 0; margin-bottom: 20px; }
+        .container { background: white; padding: 30px; border-radius: 0 0 8px 8px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); }
+        h1, h2, h3 { color: #1e40af; }
+        .code-block { background: #1e293b; color: #f8fafc; padding: 15px; border-radius: 5px; overflow-x: auto; font-family: 'Courier New', Courier, monospace; position: relative; }
+        .code-block a { color: #60a5fa; text-decoration: none; }
+        .code-block a:hover { text-decoration: underline; }
+        .nav-links { margin-top: 20px; border-top: 1px solid #ddd; padding-top: 20px; }
+        .nav-links a { color: #3b82f6; text-decoration: none; margin-right: 20px; font-weight: bold; }
+    </style>
+</head>
+<body>
+    <header>
+        <h1>Developer Manual - Budol Ecosystem</h1>
+        <p>Technical Reference for Order & Transaction Persistence</p>
+    </header>
+    <div class="container">
+        <h2>Architecture & Data Contracts</h2>
+        <p>The Budol Ecosystem uses a distributed architecture where BudolShap handles order management and BudolPay handles financial transactions. Persistence is achieved via PostgreSQL databases managed by Prisma ORM.</p>
+
+        <h3>Order Persistence Flow</h3>
+        <ol>
+            <li><strong>Order Creation:</strong> Initialized in <code>budolshap-0.1.0</code> via <a href="file:///d:/IT Projects/budolEcosystem/budolshap-0.1.0/lib/services/ordersService.js">ordersService.js</a>.</li>
+            <li><strong>Payment Processing:</strong> Handled by <code>budolpay-0.1.0</code>.</li>
+            <li><strong>Status Update:</strong> Webhooks from BudolPay trigger status updates in BudolShap via <a href="file:///d:/IT Projects/budolEcosystem/budolshap-0.1.0/app/api/webhooks/budolpay/route.js">budolpay/route.js</a>.</li>
+        </ol>
+
+        <h3>Database Verification Script</h3>
+        <p>A verification script is available for developers to audit database persistence:</p>
+        <div class="code-block">
+            <pre>
+// Location: <a href="file:///d:/IT Projects/budolEcosystem/scripts/test_scripts/budolShap/v2/verify-orders-db.mjs">scripts/test_scripts/budolShap/v2/verify-orders-db.mjs</a>
+
+import { PrismaClient } from '@prisma/client';
+// ... initialization logic ...
+
+const recentOrders = await prisma.order.findMany({
+    take: 10,
+    orderBy: { createdAt: 'desc' },
+    include: {
+        user: { select: { email: true, name: true } },
+        store: { select: { name: true } },
+        orderItems: true
+    }
+});
+            </pre>
+        </div>
+
+        <h3>Key Files Reference</h3>
+        <ul>
+            <li><a href="file:///d:/IT Projects/budolEcosystem/budolshap-0.1.0/prisma/schema.prisma">budolshap-0.1.0/prisma/schema.prisma</a> - Order model definition.</li>
+            <li><a href="file:///d:/IT Projects/budolEcosystem/budolpay-0.1.0/services/wallet-service/index.js">wallet-service/index.js</a> - Transaction persistence logic.</li>
+        </ul>
+
+        <div class="nav-links">
+            <a href="index.html">← Index</a>
+            <a href="system_admin_manual.html">System Admin Manual →</a>
+        </div>
+    </div>
+</body>
+</html>

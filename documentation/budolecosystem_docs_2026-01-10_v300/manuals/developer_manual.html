@@ -1,0 +1,94 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Developer Manual - v300</title>
+    <style>
+        body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; line-height: 1.6; color: #333; max-width: 1000px; margin: 0 auto; padding: 20px; background-color: #f4f7f6; }
+        .container { background: white; padding: 40px; border-radius: 8px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); }
+        h1 { color: #2c3e50; border-bottom: 2px solid #3498db; padding-bottom: 10px; }
+        h2 { color: #2c3e50; margin-top: 30px; }
+        h3 { color: #3498db; }
+        code { background: #f8f9fa; border: 1px solid #e1e8ed; padding: 2px 5px; border-radius: 4px; font-family: "SFMono-Regular", Consolas, "Liberation Mono", Menlo, monospace; }
+        pre { background: #f8f9fa; border: 1px solid #e1e8ed; padding: 15px; border-radius: 8px; overflow-x: auto; font-family: "SFMono-Regular", Consolas, "Liberation Mono", Menlo, monospace; }
+        .nav-links { margin-bottom: 20px; }
+        .nav-links a { text-decoration: none; color: #3498db; }
+        .issue-box { background: #fff5f5; border-left: 5px solid #c53030; padding: 15px; margin: 20px 0; }
+        .fix-box { background: #f0fff4; border-left: 5px solid #2f855a; padding: 15px; margin: 20px 0; }
+    </style>
+</head>
+<body>
+    <div class="nav-links">
+        <a href="../index.html">← Back to Version Index</a>
+    </div>
+    <div class="container">
+        <h1>Developer Manual - Version v300</h1>
+
+        <section>
+            <h2>Technical Overview</h2>
+            <p>This version implements a standardized RBAC (Role-Based Access Control) architecture and secures the administrative surface area of BudolShap. The implementation centralizes authentication logic and ensures that the database <code>isAdmin</code> flag is the primary source of truth for administrative elevation.</p>
+        </section>
+
+        <section>
+            <h2>Architectural Decisions</h2>
+            <h3>1. Centralized Admin Middleware</h3>
+            <p>Instead of disparate checks across routes, we now use a unified <code>requireAdmin</code> helper located in <code>lib/adminAuth.js</code>. This ensures consistent responses (403 Forbidden) and standardized error messages.</p>
+            <pre>
+// Example Usage in API Routes
+const { authorized, errorResponse } = await requireAdmin(request, PERMISSIONS.SETTINGS_EDIT);
+if (!authorized) return errorResponse;
+            </pre>
+
+            <h3>2. Three-Tier Role Resolution</h3>
+            <p>Role resolution now follows a prioritized hierarchy:</p>
+            <ol>
+                <li><strong>Database Flag:</strong> <code>user.isAdmin</code> (Boolean)</li>
+                <li><strong>Account Type:</strong> <code>user.accountType === 'ADMIN'</code> (Enum)</li>
+                <li><strong>Permissions JSON:</strong> Granular checks in <code>user.permissions</code></li>
+            </ol>
+        </section>
+
+        <section>
+            <h2>Code Logic Explanations</h2>
+            <h3>Admin Access Resolution (<code>lib/adminAccess.js</code>)</h3>
+            <p>The <code>isUserAdmin</code> function was updated to prioritize the database boolean flag over email configuration lists, allowing for dynamic admin management without code changes.</p>
+            
+            <div class="fix-box">
+                <strong>Fix:</strong> Updated <code>isUserAdmin</code> to check <code>user.isAdmin</code> first. This prevents access denial for users who are elevated in the database but not present in the hardcoded <code>ADMIN_EMAILS</code> list.
+            </div>
+
+            <h3>RBAC Permission Mapping (<code>lib/rbac.js</code>)</h3>
+            <p>Standardized mappings for <code>ADMIN</code>, <code>MANAGER</code>, <code>SELLER</code>, and <code>BUYER</code> roles were enforced. Permissions are now stored as a JSON array in the <code>User</code> model.</p>
+        </section>
+
+        <section>
+            <h2>Impact Analysis</h2>
+            <ul>
+                <li><strong>Security:</strong> Significant reduction in attack surface by securing 18+ previously unprotected admin endpoints.</li>
+                <li><strong>Performance:</strong> Minimal overhead due to indexed Prisma queries for user roles.</li>
+                <li><strong>Scalability:</strong> The system now supports granular permissions (e.g., <code>products:approve</code> vs <code>products:view</code>), enabling future implementation of sub-admin roles.</li>
+            </ul>
+        </section>
+
+        <section>
+            <h2>Test Results</h2>
+            <p>End-to-end testing was performed using <code>test_rbac_logic.mjs</code>:</p>
+            <ul>
+                <li><strong>Admin Verification:</strong> <code>reynaldomgalvez@gmail.com</code> successfully accessed <code>settings:edit</code>. <span style="color: green;">PASSED</span></li>
+                <li><strong>Buyer Restriction:</strong> <code>caspermilan80@gmail.com</code> was correctly denied access to <code>settings:edit</code>. <span style="color: green;">PASSED</span></li>
+                <li><strong>Granular Permission:</strong> Buyer account correctly authorized for <code>products:view</code> via explicit permission JSON. <span style="color: green;">PASSED</span></li>
+            </ul>
+        </section>
+
+        <section>
+            <h2>Recommendations for Future Enhancement</h2>
+            <ul>
+                <li><strong>Permission Groups:</strong> Implement logical grouping of permissions to simplify bulk assignments.</li>
+                <li><strong>Audit Logging:</strong> Integrate <code>AUDIT_LOGS_VIEW</code> with a backend service to track administrative actions.</li>
+                <li><strong>UI Role Management:</strong> Develop a dedicated <code>/admin/users</code> UI for managing roles and permissions directly from the dashboard.</li>
+            </ul>
+        </section>
+    </div>
+</body>
+</html>

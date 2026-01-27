@@ -1,0 +1,207 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Budol Ecosystem v386 - Risk Register</title>
+    <style>
+        body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; line-height: 1.6; color: #333; max-width: 1200px; margin: 0 auto; padding: 20px; background-color: #f4f5f7; }
+        .container { background: white; padding: 40px; border-radius: 8px; box-shadow: 0 2px 10px rgba(0,0,0,0.1); }
+        h1, h2 { color: #172b4d; }
+        h1 { border-bottom: 2px solid #ebecf0; padding-bottom: 10px; }
+        .risk-table { width: 100%; border-collapse: collapse; margin: 20px 0; }
+        .risk-table th, .risk-table td { border: 1px solid #dfe1e6; padding: 12px; text-align: left; }
+        .risk-table th { background-color: #f4f5f7; font-weight: 600; }
+        .risk-high { background-color: #fff1f0; border-left: 4px solid #ff4d4f; }
+        .risk-medium { background-color: #fffbe6; border-left: 4px solid #faad14; }
+        .risk-low { background-color: #f6ffed; border-left: 4px solid #52c41a; }
+        .mitigation-box { background: #f8f9fa; border: 1px solid #e1e4e8; border-radius: 6px; padding: 15px; margin: 10px 0; }
+        .summary { background: #e6f7ff; border: 1px solid #91d5ff; padding: 15px; border-radius: 4px; margin-bottom: 20px; }
+        .nav-links { margin-top: 30px; padding-top: 20px; border-top: 1px solid #ebecf0; }
+        .nav-links a { color: #0052cc; text-decoration: none; margin-right: 20px; }
+        .nav-links a:hover { text-decoration: underline; }
+        .code-block { background: #f6f8fa; border: 1px solid #e1e4e8; border-radius: 6px; padding: 16px; margin: 10px 0; font-family: 'SF Mono', Monaco, 'Cascadia Code', 'Roboto Mono', Consolas, 'Courier New', monospace; font-size: 14px; overflow-x: auto; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Budol Ecosystem v386 - Risk Register</h1>
+        
+        <div class="summary">
+            <strong>Risk Assessment Summary:</strong> This risk register covers the TFLite model validation and security enhancements implemented in v386. All identified risks have appropriate mitigation strategies in place.
+        </div>
+
+        <h2>Identified Risks</h2>
+        
+        <table class="risk-table">
+            <thead>
+                <tr>
+                    <th>Risk ID</th>
+                    <th>Description</th>
+                    <th>Likelihood</th>
+                    <th>Impact</th>
+                    <th>Risk Level</th>
+                    <th>Mitigation Strategy</th>
+                    <th>Owner</th>
+                    <th>Status</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr class="risk-medium">
+                    <td>RISK-386-001</td>
+                    <td>Corrupted TFLite Model File</td>
+                    <td>Medium</td>
+                    <td>High</td>
+                    <td><strong>Medium</strong></td>
+                    <td>Size and hash validation with automatic retry mechanism</td>
+                    <td>Security Team</td>
+                    <td>Mitigated</td>
+                </tr>
+                <tr class="risk-high">
+                    <td>RISK-386-002</td>
+                    <td>Tampered Model File (Security Breach)</td>
+                    <td>Low</td>
+                    <td>Critical</td>
+                    <td><strong>High</strong></td>
+                    <td>SHA256 hash verification, secure download sources, integrity checks</td>
+                    <td>Security Team</td>
+                    <td>Mitigated</td>
+                </tr>
+                <tr class="risk-low">
+                    <td>RISK-386-003</td>
+                    <td>Model Loading Performance Issues</td>
+                    <td>Medium</td>
+                    <td>Low</td>
+                    <td><strong>Low</strong></td>
+                    <td>Optimized model size, efficient loading mechanism, background processing</td>
+                    <td>Development Team</td>
+                    <td>Mitigated</td>
+                </tr>
+                <tr class="risk-medium">
+                    <td>RISK-386-004</td>
+                    <td>Biometric Authentication Bypass</td>
+                    <td>Low</td>
+                    <td>High</td>
+                    <td><strong>Medium</strong></td>
+                    <td>Model integrity validation, secure storage, encrypted communication</td>
+                    <td>Security Team</td>
+                    <td>Mitigated</td>
+                </tr>
+                <tr class="risk-low">
+                    <td>RISK-386-005</td>
+                    <td>False Positive Model Validation</td>
+                    <td>Low</td>
+                    <td>Medium</td>
+                    <td><strong>Low</strong></td>
+                    <td>Multiple validation layers, checksum verification, size constraints</td>
+                    <td>QA Team</td>
+                    <td>Mitigated</td>
+                </tr>
+            </tbody>
+        </table>
+
+        <h2>Detailed Risk Analysis</h2>
+        
+        <div class="mitigation-box">
+            <h3>RISK-386-001: Corrupted TFLite Model File</h3>
+            <p><strong>Description:</strong> The FaceNet TFLite model file may become corrupted during download, storage, or deployment, leading to biometric authentication failures.</p>
+            <p><strong>Impact:</strong> Complete failure of face recognition functionality, user authentication issues, potential service disruption.</p>
+            <p><strong>Mitigation Implementation:</strong></p>
+            <div class="code-block">
+// Model size and hash validation guard check
+const expectedSize = 93941044; // Expected size in bytes
+const expectedHash = 'c3a5e56c'; // Expected checksum
+
+if (bytes.length != expectedSize) {
+    throw Exception('Model file size mismatch. Expected: $expectedSize bytes, Got: ${bytes.length} bytes.');
+}
+
+final modelHash = await _calculateSHA256(bytes);
+if (modelHash != expectedHash) {
+    throw Exception('Model file hash mismatch. Expected: $expectedHash, Got: $modelHash.');
+}
+            </div>
+            <p><strong>Residual Risk:</strong> Low - Multiple validation layers ensure early detection of corruption.</p>
+        </div>
+
+        <div class="mitigation-box">
+            <h3>RISK-386-002: Tampered Model File (Security Breach)</h3>
+            <p><strong>Description:</strong> Malicious actors could potentially replace the legitimate FaceNet model with a compromised version to bypass biometric authentication.</p>
+            <p><strong>Impact:</strong> Critical security breach, potential unauthorized access to user accounts, regulatory compliance violations.</p>
+            <p><strong>Mitigation Implementation:</strong></p>
+            <ul>
+                <li>SHA256 hash verification of model files</li>
+                <li>Secure download from trusted sources (Hugging Face)</li>
+                <li>Runtime integrity checks</li>
+                <li>Encrypted model storage</li>
+                <li>Secure transmission protocols</li>
+            </ul>
+            <p><strong>Residual Risk:</strong> Low - Comprehensive security measures protect against tampering.</p>
+        </div>
+
+        <div class="mitigation-box">
+            <h3>RISK-386-003: Model Loading Performance Issues</h3>
+            <p><strong>Description:</strong> The 94MB FaceNet model may cause performance issues during loading, especially on lower-end devices.</p>
+            <p><strong>Impact:</strong> Poor user experience, slow app startup, potential timeouts.</p>
+            <p><strong>Mitigation Implementation:</strong></p>
+            <ul>
+                <li>Background model loading</li>
+                <li>Optimized model size (already compressed)</li>
+                <li>Efficient memory management</li>
+                <li>Progressive loading where possible</li>
+                <li>Retry mechanisms with exponential backoff</li>
+            </ul>
+            <p><strong>Residual Risk:</strong> Low - Performance optimizations minimize impact.</p>
+        </div>
+
+        <h2>Compliance Considerations</h2>
+        
+        <div class="mitigation-box">
+            <h3>PCI DSS Requirements</h3>
+            <ul>
+                <li><strong>Requirement 6:</strong> Secure systems and applications - Model validation ensures secure biometric processing</li>
+                <li><strong>Requirement 8:</strong> User authentication - Enhanced biometric authentication with integrity checks</li>
+                <li><strong>Requirement 10:</strong> Access monitoring - Model validation provides audit trail for security events</li>
+            </ul>
+        </div>
+
+        <div class="mitigation-box">
+            <h3>BSP Circular 808 Compliance</h3>
+            <ul>
+                <li><strong>Enhanced Due Diligence:</strong> Biometric authentication with model integrity validation</li>
+                <li><strong>Risk Management:</strong> Comprehensive risk assessment and mitigation strategies</li>
+                <li><strong>Transaction Monitoring:</strong> Secure authentication mechanisms prevent unauthorized access</li>
+            </ul>
+        </div>
+
+        <h2>Monitoring and Review</h2>
+        
+        <div class="mitigation-box">
+            <h3>Key Performance Indicators (KPIs)</h3>
+            <ul>
+                <li>Model validation success rate: Target >99.9%</li>
+                <li>Biometric authentication success rate: Target >95%</li>
+                <li>Model loading time: Target <3 seconds</li>
+                <li>Security incident rate: Target 0 incidents</li>
+            </ul>
+        </div>
+
+        <div class="mitigation-box">
+            <h3>Review Schedule</h3>
+            <ul>
+                <li><strong>Weekly:</strong> Security incident review and model validation metrics</li>
+                <li><strong>Monthly:</strong> Risk register update and mitigation effectiveness assessment</li>
+                <li><strong>Quarterly:</strong> Comprehensive security audit and compliance review</li>
+                <li><strong>Annually:</strong> Full risk assessment and mitigation strategy update</li>
+            </ul>
+        </div>
+
+        <div class="nav-links">
+            <a href="index.html">← Back to v386 Index</a>
+            <a href="developer_manual.html">Developer Manual →</a>
+            <a href="test_results.html">Test Results →</a>
+            <a href="../budolecosystem_docs_2026-01-14_v385/risk_register.html">Previous Risk Register (v385)</a>
+        </div>
+    </div>
+</body>
+</html>

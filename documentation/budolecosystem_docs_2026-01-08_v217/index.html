@@ -1,0 +1,117 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>BudolEcosystem Documentation - v217</title>
+    <style>
+        body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; line-height: 1.6; color: #333; max-width: 800px; margin: 0 auto; padding: 20px; }
+        h1, h2, h3 { color: #007bff; }
+        .version { color: #6c757d; font-size: 0.9em; }
+        .nav { margin: 20px 0; padding: 10px; background: #f8f9fa; border-radius: 4px; }
+        .nav a { margin-right: 15px; text-decoration: none; color: #007bff; }
+        .content { margin-top: 30px; }
+        .status-success { color: #28a745; font-weight: bold; }
+        .code-block { background: #f1f3f5; padding: 15px; border-radius: 4px; overflow-x: auto; font-family: "SFMono-Regular", Consolas, "Liberation Mono", Menlo, monospace; font-size: 0.9em; }
+        table { width: 100%; border-collapse: collapse; margin: 20px 0; }
+        th, td { text-align: left; padding: 12px; border-bottom: 1px solid #dee2e6; }
+        th { background-color: #f8f9fa; }
+    </style>
+</head>
+<body>
+    <div class="nav-links ecosystem-docs-top-nav">
+        <a href="../budolecosystem_docs_2026-01-06_v217/index.html">← Previous (v217)</a>
+        <a href="../index.html">Index</a>
+        <a href="../budolecosystem_docs_2026-01-06_v218/index.html">Next (v218) →</a>
+    </div>
+
+    <h1>BudolEcosystem Implementation Plan & Documentation</h1>
+    <div class="version">Version: 2026-01-08_v217</div>
+
+    <div class="nav">
+        <a href="../budolecosystem_docs_2026-01-08_v216/index.html">← Previous Version (v216)</a>
+        <a href="../../index.html">Main Index</a>
+        <span>Next Version (TBD) →</span>
+    </div>
+
+    <div class="content">
+        <h2>1. Purpose</h2>
+        <p>The purpose of this update is to resolve a critical registration failure in the BudolEcosystem where users were unable to register due to unhandled duplicate phone number formats and generic error propagation from the BudolID centralized identity service.</p>
+
+        <h2>2. Explanation & Reason</h2>
+        <p>The system previously allowed duplicate registrations if the phone numbers were formatted differently (e.g., "9484099300" vs "+639484099300"). Additionally, when a registration failed in the BudolID microservice, the BudolShap frontend would often display a generic "Centralized Identity service is currently unavailable" message, even for specific validation errors like duplicate phone numbers.</p>
+
+        <h2>3. Issues Identified</h2>
+        <ul>
+            <li><strong>Phone Number Formatting:</strong> Lack of normalization allowed bypass of unique constraints.</li>
+            <li><strong>Error Propagation:</strong> BudolShap API routes were swallowing specific error messages from BudolID.</li>
+            <li><strong>Service Stability:</strong> BudolID service was crashing due to path resolution issues for new utilities.</li>
+        </ul>
+
+        <h2>4. Fixes Implemented</h2>
+        <ul>
+            <li><strong>Phone Normalization:</strong> Created a utility in <code>budolID-0.1.0/api/lib/utils.js</code> to enforce E.164 format for Philippines phone numbers (+63...).</li>
+            <li><strong>BudolID Validation:</strong> Updated <code>budolID-0.1.0/api/index.js</code> to perform explicit checks using normalized phone numbers before user creation.</li>
+            <li><strong>Error Propagation:</strong> Modified <code>budolshap-0.1.0/app/api/auth/register/route.js</code> to propagate specific error messages (e.g., "This phone number is already registered") back to the client.</li>
+            <li><strong>Path Fix:</strong> Moved the utility library into the <code>api/</code> folder of BudolID to ensure correct relative path resolution during execution.</li>
+        </ul>
+
+        <h2>5. Technical Details</h2>
+        <h3>Code Changes</h3>
+        <p><strong>budolID-0.1.0/api/lib/utils.js:</strong></p>
+        <div class="code-block">
+<pre>function normalizePhone(phone) {
+    if (!phone) return null;
+    let cleaned = phone.replace(/\D/g, '');
+    if (cleaned.startsWith('63')) return '+' + cleaned;
+    if (cleaned.startsWith('0')) return '+63' + cleaned.substring(1);
+    if (cleaned.length === 10) return '+63' + cleaned;
+    if (phone.startsWith('+')) return phone;
+    return '+' + cleaned;
+}</pre>
+        </div>
+
+        <h2>6. Test Results</h2>
+        <table>
+            <tr>
+                <th>Test Case</th>
+                <th>Expected Result</th>
+                <th>Actual Result</th>
+                <th>Status</th>
+            </tr>
+            <tr>
+                <td>Duplicate Phone Registration (9484099300)</td>
+                <td>Error: "This phone number is already registered"</td>
+                <td>Error: "This phone number is already registered"</td>
+                <td class="status-success">PASSED</td>
+            </tr>
+            <tr>
+                <td>BudolID Service Stability</td>
+                <td>Service remains running after registration attempts</td>
+                <td>Service stable and responsive</td>
+                <td class="status-success">PASSED</td>
+            </tr>
+        </table>
+
+        <h2>7. Risks & Mitigation</h2>
+        <ul>
+            <li><strong>Risk:</strong> Normalization might incorrectly format international numbers.</li>
+            <li><strong>Mitigation:</strong> Currently focused on Philippines (+63). Future updates should use a robust library like <code>libphonenumber-js</code> for international support.</li>
+        </ul>
+
+        <h2>8. Dependencies</h2>
+        <ul>
+            <li>BudolID Service (Port 8000)</li>
+            <li>BudolShap Service (Port 3000)</li>
+            <li>Prisma Database Client</li>
+        </ul>
+
+        <h2>9. Recommendations for Future Enhancement</h2>
+        <ul>
+            <li>Implement international phone number validation using <code>libphonenumber-js</code>.</li>
+            <li>Add more granular error logging for microservice communication failures.</li>
+            <li>Automate end-to-end registration tests in the CI/CD pipeline.</li>
+        </ul>
+    </div>
+</body>
+</html>

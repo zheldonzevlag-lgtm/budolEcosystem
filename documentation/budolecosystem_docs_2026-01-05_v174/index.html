@@ -1,0 +1,123 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>BudolEcosystem Documentation v174</title>
+    <style>
+        :root {
+            --primary: #f97316;
+            --primary-dark: #ea580c;
+            --secondary: #0f172a;
+            --bg: #f8fafc;
+            --text: #334155;
+            --white: #ffffff;
+            --warning: #f59e0b;
+        }
+        body { font-family: 'Inter', system-ui, sans-serif; line-height: 1.6; color: var(--text); background: var(--bg); margin: 0; padding: 20px; }
+        .container { max-width: 900px; margin: 0 auto; background: var(--white); padding: 40px; border-radius: 16px; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.1); }
+        header { border-bottom: 2px solid var(--bg); padding-bottom: 20px; margin-bottom: 30px; display: flex; justify-content: space-between; align-items: center; }
+        h1 { color: var(--secondary); margin: 0; font-size: 24px; }
+        .version { background: var(--primary); color: white; padding: 4px 12px; border-radius: 20px; font-size: 14px; font-weight: bold; }
+        h2 { color: var(--primary-dark); border-left: 4px solid var(--primary); padding-left: 15px; margin-top: 40px; font-size: 20px; }
+        .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin-top: 20px; }
+        .card { background: var(--bg); padding: 20px; border-radius: 12px; }
+        .card h3 { margin-top: 0; color: var(--secondary); font-size: 16px; }
+        .alert { background: #fef3c7; border-left: 4px solid var(--warning); padding: 15px; border-radius: 4px; margin: 20px 0; }
+        code { background: #e2e8f0; padding: 2px 6px; border-radius: 4px; font-family: monospace; font-size: 14px; }
+        pre { background: #1e293b; color: #f8fafc; padding: 15px; border-radius: 8px; overflow-x: auto; font-size: 13px; }
+        .nav-links { margin-top: 50px; padding-top: 20px; border-top: 2px solid var(--bg); display: flex; justify-content: space-between; }
+        .nav-links a { text-decoration: none; color: var(--primary); font-weight: bold; }
+        .nav-links a:hover { text-decoration: underline; }
+        .status-badge { display: inline-block; padding: 2px 8px; border-radius: 4px; font-size: 12px; font-weight: bold; }
+        .status-passed { background: #22c55e; color: white; }
+        .status-blocked { background: #ef4444; color: white; }
+    </style>
+</head>
+<body>
+    <div class="nav-links ecosystem-docs-top-nav">
+        <a href="../budolecosystem_docs_2026-01-07_v173/index.html">← Previous (v173)</a>
+        <a href="../index.html">Index</a>
+        <a href="../budolecosystem_docs_2026-01-07_v174/index.html">Next (v174) →</a>
+    </div>
+
+    <div class="container">
+        <header>
+            <h1>KYC Enhancements & Release 1.2.0</h1>
+            <span class="version">v174</span>
+        </header>
+
+        <section>
+            <h2>Purpose & Rationale</h2>
+            <p>This phase focused on enhancing the KYC verification process in BudolPay by adding robust DOB selection, address pinning with map integration, and GCash-compliant phone number change procedures. It also included the preparation for the 1.2.0 release to ensure the codebase meets quality standards.</p>
+        </section>
+
+        <div class="alert">
+            <strong>Build Notice:</strong> The automated APK generation encountered a JVM memory allocation failure (OOM) due to environment resource constraints. However, all code changes have been successfully implemented, verified with <code>flutter analyze</code>, and are ready for compilation in a standard build environment.
+        </div>
+
+        <section>
+            <h2>Key Implementation Details</h2>
+            <div class="grid">
+                <div class="card">
+                    <h3>KYC & Mobile</h3>
+                    <ul>
+                        <li><strong>DOB Format:</strong> Switched to <code>MM-dd-yyyy</code> with hyphen separators and integrated <code>showDatePicker</code>.</li>
+                        <li><strong>Address Pinning:</strong> Integrated <code>MapPicker</code> (from v173) into the KYC flow for precise coordinate selection.</li>
+                        <li><strong>Phone Migration:</strong> Implemented GCash-compliant "Change Phone Number" screen with migration guidance.</li>
+                        <li><strong>Versioning:</strong> Bumped BudolPay to <code>1.2.0+1</code>.</li>
+                    </ul>
+                </div>
+                <div class="card">
+                    <h3>Admin Console</h3>
+                    <ul>
+                        <li><strong>KYC Review:</strong> Enhanced admin interface to display submitted user documents (ID photos, selfies) for verification.</li>
+                        <li><strong>Map Alignment:</strong> Ensured admin map settings are consumed by the mobile app's <code>MapPicker</code>.</li>
+                        <li><strong>API Consistency:</strong> Updated Prisma schemas and routes to support extended KYC data.</li>
+                    </ul>
+                </div>
+            </div>
+        </section>
+
+        <section>
+            <h2>GCash Phone Change Analysis</h2>
+            <div class="card">
+                <p><strong>Process:</strong> GCash requires a migration-based approach where the user "migrates" their account to a new number via the app settings, which involves OTP verification on both old and new numbers (if accessible) or identity re-verification.</p>
+                <p><strong>BudolPay Strategy:</strong> We've implemented a similar secure migration screen that guides the user through the identity verification required before allowing a phone number update, ensuring parity with industry security standards.</p>
+            </div>
+        </section>
+
+        <section>
+            <h2>Testing & Validation</h2>
+            <p><span class="status-badge status-passed">PASSED</span> <strong>Static Analysis:</strong> <code>flutter analyze</code> returned zero errors for BudolPay 1.2.0.</p>
+            <p><span class="status-badge status-passed">PASSED</span> <strong>Date Selection:</strong> Verified <code>intl</code> date formatting and calendar picker interaction.</p>
+            <p><span class="status-badge status-passed">PASSED</span> <strong>Map Integration:</strong> Verified that mobile <code>MapPicker</code> successfully retrieves admin settings.</p>
+            <p><span class="status-badge status-blocked">BLOCKED</span> <strong>Release Build:</strong> JVM Crash (OOM) during <code>assembleRelease</code>. Code is clean but build failed due to local RAM limits.</p>
+        </section>
+
+        <section>
+            <h2>Risks & Mitigation</h2>
+            <div class="card">
+                <p><strong>Risk:</strong> Users without technical knowledge might find the coordinate-based address pinning confusing.</p>
+                <p><strong>Mitigation:</strong> Added clear SnackBar feedback and maintained the text-based address field as a fallback/display.</p>
+            </div>
+        </section>
+
+        <section>
+            <h2>Future Recommendations</h2>
+            <ul>
+                <li><strong>Biometric Auth:</strong> Implement FIDO2/WebAuthn for passwordless login as per industry trends.</li>
+                <li><strong>OCR Integration:</strong> Automate data extraction from ID cards using ML Kit to reduce manual entry.</li>
+                <li><strong>CI/CD:</strong> Move builds to a cloud environment (e.g., GitHub Actions) to avoid local memory constraints.</li>
+            </ul>
+        </section>
+
+        <div class="nav-links">
+            <a href="../budolecosystem_docs_2026-01-05_v173/index.html">← Previous: v173 Map Integration</a>
+            <a href="../index.html">Main Index</a>
+                <a href="../budolecosystem_docs_2026-01-07_v174/index.html">Next (v174) →</a>
+            <span>Next: v175 (Planned) →</span>
+        </div>
+    </div>
+</body>
+</html>

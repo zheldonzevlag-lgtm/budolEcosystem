@@ -1,0 +1,60 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Developer Manual - v180</title>
+    <style>
+        body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; line-height: 1.6; color: #333; max-width: 800px; margin: 0 auto; padding: 2rem; }
+        h1 { color: #0070f3; }
+        h2 { color: #10b981; margin-top: 2rem; }
+        code { background: #f4f4f4; padding: 0.2rem 0.4rem; border-radius: 4px; font-family: "SFMono-Regular", Consolas, "Liberation Mono", Menlo, monospace; }
+        pre { background: #f4f4f4; padding: 1rem; border-radius: 8px; overflow-x: auto; }
+        .success { color: #10b981; font-weight: bold; }
+        .nav-links { margin-top: 2rem; padding-top: 1rem; border-top: 1px solid #eaeaea; }
+    </style>
+</head>
+<body>
+    <h1>Developer Manual <span class="version-tag">v180</span></h1>
+    
+    <h2>Purpose</h2>
+    <p>To implement and verify the production database connection for the <code>budolpay</code> service using Vercel Postgres and Prisma Accelerate.</p>
+
+    <h2>Technical Details</h2>
+    <h3>Database Connection Strings</h3>
+    <p>The following connection strings were integrated into <code>budolpay-0.1.0/.env.vercel</code> and <code>budolpay-0.1.0/.env.connection.prod</code>:</p>
+    <pre>
+DATABASE_URL="postgres://ceae182307777fb97dd2da976823d805e7d3cce5b51255990340cd552b7abb2b:sk_9RrogGNq6XZgFN5kp7zMM@db.prisma.io:5432/postgres?sslmode=require"
+DIRECT_URL="postgres://ceae182307777fb97dd2da976823d805e7d3cce5b51255990340cd552b7abb2b:sk_9RrogGNq6XZgFN5kp7zMM@db.prisma.io:5432/postgres?sslmode=require"
+PRISMA_DATABASE_URL="prisma+postgres://accelerate.prisma-data.net/?api_key=..."
+    </pre>
+
+    <h3>Implementation Steps</h3>
+    <ol>
+        <li>Updated <code>.env.vercel</code> with production credentials.</li>
+        <li>Synchronized <code>.env.connection.prod</code> for consistent production environment management.</li>
+        <li>Executed <code>npx prisma db push</code> to synchronize the schema with the remote database.</li>
+    </ol>
+
+    <h2>Test Results</h2>
+    <p class="success">✓ Database Connectivity: Verified via <code>prisma db pull</code>.</p>
+    <p class="success">✓ Schema Synchronization: Successfully pushed schema to the remote database.</p>
+    <p>Note: An <code>EPERM</code> error occurred during <code>prisma generate</code> due to file locking on Windows, but the database synchronization was successful.</p>
+
+    <h2>Issues & Fixes</h2>
+    <ul>
+        <li><strong>Issue:</strong> Empty database on initial connection.</li>
+        <li><strong>Fix:</strong> Performed <code>npx prisma db push</code> to initialize the schema.</li>
+    </ul>
+
+    <h2>Recommendations</h2>
+    <ul>
+        <li>Consolidate all service connection strings in a centralized secret manager.</li>
+        <li>Implement automated schema drift detection.</li>
+    </ul>
+
+    <div class="nav-links">
+        <a href="../index.html">← Back to v180 Index</a>
+    </div>
+</body>
+</html>

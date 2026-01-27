@@ -1,0 +1,65 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Developer Manual - v430</title>
+    <style>
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; line-height: 1.6; color: #333; max-width: 1200px; margin: 0 auto; padding: 20px; background-color: #f4f7f6; }
+        header { background-color: #2c3e50; color: #fff; padding: 20px; text-align: center; border-radius: 8px 8px 0 0; }
+        .container { background-color: #fff; padding: 30px; border-radius: 8px; box-shadow: 0 2px 5px rgba(0,0,0,0.1); margin-top: 20px; }
+        h1, h2, h3 { color: #2c3e50; }
+        pre { background-color: #2d3436; color: #dfe6e9; padding: 15px; border-radius: 5px; overflow-x: auto; }
+        code { font-family: 'Courier New', Courier, monospace; }
+        .code-ref { font-weight: bold; color: #e67e22; }
+        .file-link { color: #3498db; text-decoration: none; }
+        .file-link:hover { text-decoration: underline; }
+    </style>
+</head>
+<body>
+    <header>
+        <h1>Developer Manual - Version v430</h1>
+    </header>
+    <div class="container">
+        <h2>Technical Overview</h2>
+        <p>The core issue was a mismatch between client-side and server-side authentication state. While the client had a valid token in <code>localStorage</code>, the browser was failing to send the corresponding cookie to the <code>/api/auth/admin/check</code> endpoint, resulting in a 401 Unauthorized response.</p>
+
+        <h3>Backend Fix: API Route Enhancement</h3>
+        <p>The <code>/api/auth/admin/check</code> route was modified to use the <code>requireAdmin</code> middleware, which is capable of extracting the token from both cookies and the <code>Authorization: Bearer</code> header. This makes the endpoint much more robust.</p>
+        
+        <p class="code-ref">File: <a class="file-link" href="file:///d:/IT Projects/budolEcosystem/budolshap-0.1.0/app/api/auth/admin/check/route.js">app/api/auth/admin/check/route.js</a></p>
+        <pre><code>// Enhanced logic to support both cookies and headers
+const { authorized, user: authUser, errorResponse } = await requireAdmin(request)
+
+if (authorized && authUser) {
+    // Return detailed admin info...
+} else {
+    return errorResponse || NextResponse.json({ isAdmin: false, error: 'Not authenticated' }, { status: 401 });
+}</code></pre>
+
+        <h3>Frontend Fix: Token Header Injection</h3>
+        <p>The <code>AdminLayout.jsx</code> component was updated to explicitly retrieve the token from <code>auth-client.js</code> and include it in the <code>Authorization</code> header when performing the admin check. This ensures that even if cookies are missing or blocked, the server can still authenticate the request.</p>
+
+        <p class="code-ref">File: <a class="file-link" href="file:///d:/IT Projects/budolEcosystem/budolshap-0.1.0/components/admin/AdminLayout.jsx">components/admin/AdminLayout.jsx</a></p>
+        <pre><code>// Get token for Authorization header
+const { getToken } = await import("@/lib/auth-client")
+const token = getToken()
+
+const response = await fetch('/api/auth/admin/check', {
+    headers: token ? {
+        'Authorization': `Bearer ${token}`
+    } : {}
+})</code></pre>
+
+        <h3>Rationale</h3>
+        <ul>
+            <li><strong>Reliability:</strong> <code>localStorage</code> is often more reliable than cookies in multi-origin or complex LAN environments.</li>
+            <li><strong>Consistency:</strong> Using the <code>Authorization</code> header is the standard practice for modern API-driven applications.</li>
+            <li><strong>Security:</strong> The token is still verified on the server using the same <code>JWT_SECRET</code>, maintaining high security standards.</li>
+        </ul>
+
+        <h3>Compliance</h3>
+        <p>This fix adheres to <strong>Cybersecurity Law</strong> and <strong>NPC</strong> requirements by ensuring that only authorized administrators can access sensitive management functions, while providing a seamless user experience for legitimate users.</p>
+    </div>
+</body>
+</html>

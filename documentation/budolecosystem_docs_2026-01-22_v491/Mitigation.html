@@ -1,0 +1,56 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Risk Mitigation - v491</title>
+    <style>
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; line-height: 1.6; color: #333; max-width: 1200px; margin: 0 auto; padding: 20px; background-color: #f4f7f6; }
+        header { background-color: #27ae60; color: #fff; padding: 20px; text-align: center; border-radius: 8px 8px 0 0; }
+        main { background-color: #fff; padding: 30px; margin-top: 20px; border-radius: 8px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); }
+        .mitigation-card { border-left: 5px solid #2ecc71; background-color: #f9f9f9; padding: 15px; margin-bottom: 20px; }
+        footer { text-align: center; margin-top: 40px; padding: 20px; color: #7f8c8d; }
+    </style>
+</head>
+<body>
+    <header>
+        <h1>Risk Mitigation Strategies - v491</h1>
+        <p>Proactive Measures for System Stability</p>
+    </header>
+    <main>
+        <div class="mitigation-card">
+            <h3>M-491-01: Realtime Provider Redundancy</h3>
+            <p><strong>Risk:</strong> Infrastructure failure or quota limits.</p>
+            <p><strong>Strategy:</strong> The system implements a fallback to <strong>POLLING</strong> mode if Pusher or Socket.io is unavailable. Frontend hooks (<code>useRealtimeBuyerOrders</code>) detect the configuration and adjust automatically.</p>
+        </div>
+
+        <div class="mitigation-card">
+            <h3>M-491-02: Webhook Integrity Verification</h3>
+            <p><strong>Risk:</strong> Malicious payload injection.</p>
+            <p><strong>Strategy:</strong> All payment webhooks (PayMongo, BudolPay) and shipping webhooks (Lalamove) implement provider-specific signature verification using HMAC-SHA256 with secret keys stored in secure environment variables.</p>
+        </div>
+
+        <div class="mitigation-card">
+            <h3>M-491-03: Race Condition Prevention</h3>
+            <p><strong>Risk:</strong> UI desync during simultaneous updates.</p>
+            <p><strong>Strategy:</strong> SWR <code>mutate()</code> is used globally. Realtime events trigger an immediate cache invalidation and re-fetch, ensuring that the latest database state is always shown regardless of the event source.</p>
+        </div>
+
+        <div class="mitigation-card">
+            <h3>M-491-04: Channel Authorization</h3>
+            <p><strong>Risk:</strong> Unauthorized data eavesdropping.</p>
+            <p><strong>Strategy:</strong> Channels are prefixed with <code>user-</code> or <code>store-</code> and include unique IDs. Future enhancements will implement Pusher Private Channels with JWT-based authentication for tighter security.</p>
+        </div>
+
+        <div class="mitigation-card">
+            <h3>M-491-05: Redundant Notification Suppression</h3>
+            <p><strong>Risk:</strong> Notification fatigue and UI noise.</p>
+            <p><strong>Strategy:</strong> Implemented a two-tier suppression system: 1) Backend status verification in service layers to skip redundant database writes and event triggers, and 2) Frontend event fingerprinting with a 3-second TTL to deduplicate concurrent broadcasts from multiple realtime providers.</p>
+        </div>
+    </main>
+    <footer>
+        <p>&copy; 2026 Budol Ecosystem. All rights reserved.</p>
+        <p><a href="index.html">Back to Index</a></p>
+    </footer>
+</body>
+</html>

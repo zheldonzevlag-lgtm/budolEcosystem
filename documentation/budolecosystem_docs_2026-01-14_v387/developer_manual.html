@@ -1,0 +1,126 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Developer Manual - Budol Ecosystem v387</title>
+    <style>
+        body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; line-height: 1.6; color: #333; max-width: 1200px; margin: 0 auto; padding: 20px; background-color: #f4f5f7; }
+        .container { background: white; padding: 40px; border-radius: 8px; box-shadow: 0 2px 10px rgba(0,0,0,0.1); }
+        h1 { color: #172b4d; border-bottom: 2px solid #ebecf0; padding-bottom: 10px; }
+        h2 { color: #0052cc; margin-top: 30px; }
+        h3 { color: #172b4d; margin-top: 25px; }
+        .code-block { background: #1e1e1e; color: #d4d4d4; border-radius: 6px; padding: 16px; margin: 15px 0; font-family: "SFMono-Regular", Consolas, "Liberation Mono", Menlo, monospace; font-size: 14px; overflow-x: auto; }
+        .highlight { background: #fff3cd; border: 1px solid #ffeaa7; padding: 10px; border-radius: 4px; margin: 10px 0; }
+        .nav-links { margin-bottom: 20px; }
+        .nav-links a { color: #0052cc; text-decoration: none; margin-right: 15px; }
+        .nav-links a:hover { text-decoration: underline; }
+        table { border-collapse: collapse; width: 100%; margin: 15px 0; }
+        th, td { border: 1px solid #e1e4e8; padding: 8px; text-align: left; }
+        th { background-color: #f6f8fa; font-weight: 600; }
+        .code-link { color: #0052cc; font-weight: bold; text-decoration: none; cursor: pointer; }
+        .code-link:hover { text-decoration: underline; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="nav-links">
+            <a href="index.html">← Back to Index</a>
+            <a href="test_results.html">Test Results</a>
+            <a href="risk_register.html">Risk Register</a>
+        </div>
+
+        <h1>Developer Manual - Budol Ecosystem v387</h1>
+        
+        <h2>Purpose</h2>
+        <p>This manual documents the implementation of robust biometric security using SHA256 model validation and enhanced device-level authentication (local_auth) for the BudolPay mobile application.</p>
+
+        <h2>Rationale</h2>
+        <p>The previous version (v386) used a simple checksum for TFLite model validation. To comply with <strong>BSP Circular 808</strong> and <strong>NPC Data Privacy Act</strong>, a cryptographically secure SHA256 hash is required to prevent model tampering. Additionally, user feedback indicated the need for better biometric dialogs, addressed via local_auth 2.3.0 enhancements.</p>
+
+        <h2>Technical Explanation</h2>
+        <p>The system now utilizes the <code>crypto</code> package to calculate the SHA256 hash of the 93MB FaceNet TFLite model during initialization. The hash is calculated on a background thread using <code>compute()</code> to prevent UI freezing.</p>
+
+        <h2>Changes</h2>
+        <ul>
+            <li><strong>Package Update:</strong> <code>local_auth</code> updated to ^2.3.0 for better OS compatibility.</li>
+            <li><strong>New Dependency:</strong> Added <code>crypto: ^3.0.3</code> for SHA256 support.</li>
+            <li><strong>FaceEmbeddingService:</strong> Switched from checksum to SHA256 validation.</li>
+            <li><strong>BiometricService:</strong> Added <code>hasEnrolledFace()</code> to detect OS-level Face ID and <code>AndroidAuthMessages</code> for custom UI strings.</li>
+            <li><strong>LoginScreen:</strong> Fixed "Face icon" discrepancy by redirecting to native Face ID if enrolled in the OS.</li>
+            <li><strong>Version Sync:</strong> Incremented to 1.2.83 across all services.</li>
+        </ul>
+
+        <h2>Code References</h2>
+        
+        <h3>1. SHA256 Model Validation</h3>
+        <p>File: <a class="code-link" href="file:///d:/IT Projects/budolEcosystem/budolPayMobile/lib/services/face_embedding_service.dart">face_embedding_service.dart</a></p>
+        <div class="code-block">
+// SHA256 for valid FaceNet model
+const expectedHash = '54660297ebad23b7106a8ccd05f2f2f616b3d39bf7d7e82e148cf8ed7e27ae1a';
+
+Future&lt;String&gt; _calculateSHA256(Uint8List data) async {
+  return await compute((bytes) {
+    final hash = sha256.convert(bytes);
+    return hash.toString();
+  }, data);
+}
+        </div>
+
+        <h3>2. Enhanced Biometric Dialogs</h3>
+        <p>File: <a class="code-link" href="file:///d:/IT Projects/budolEcosystem/budolPayMobile/lib/services/biometric_service.dart">biometric_service.dart</a></p>
+        <div class="code-block">
+authMessages: const [
+  AndroidAuthMessages(
+    signInTitle: 'Biometric login for budolPay',
+    biometricHint: 'Verify your identity',
+    cancelButton: 'No thanks',
+  ),
+  IOSAuthMessages(
+    cancelButton: 'No thanks',
+  ),
+],
+        </div>
+
+        <h2>Issues & Fixes</h2>
+        <table>
+            <tr>
+                <th>Issue</th>
+                <th>Fix</th>
+            </tr>
+            <tr>
+                <td>Weak checksum validation</td>
+                <td>Implemented full SHA256 using <code>crypto</code> package.</td>
+            </tr>
+            <tr>
+                <td>Generic biometric prompts</td>
+                <td>Added <code>AndroidAuthMessages</code> for custom branding.</td>
+            </tr>
+            <tr>
+                <td>Face icon error (No face profile found)</td>
+                <td>Redirected face icon to native Face ID in <code>LoginScreen</code> if enrolled in OS.</td>
+            </tr>
+            <tr>
+                <td>Version mismatch</td>
+                <td>Synced pubspec.yaml and ApiService to 1.2.83.</td>
+            </tr>
+        </table>
+
+        <h2>Compliance</h2>
+        <ul>
+            <li><strong>BSP Circular 808:</strong> Cryptographic integrity for biometric templates.</li>
+            <li><strong>NPC Data Privacy Act:</strong> Secure handling of face embeddings.</li>
+            <li><strong>Cybersecurity Law:</strong> Multi-layered authentication (Biometric + PIN fallback).</li>
+        </ul>
+
+        <h2>Future Enhancements</h2>
+        <ul>
+            <li>Implement Git LFS properly for TFLite models in CI/CD.</li>
+            <li>Add face liveness detection (blink/smile) to registration flow.</li>
+        </ul>
+
+        <h2>Recommendation</h2>
+        <p>Ensure that all developer machines have the <code>facenet.tflite</code> file with the matching SHA256 hash to avoid initialization failures.</p>
+    </div>
+</body>
+</html>

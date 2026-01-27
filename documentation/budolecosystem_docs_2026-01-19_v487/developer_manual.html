@@ -1,0 +1,171 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>v487 Developer Manual - Budol Ecosystem</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --primary: #0052CC;
+            --primary-hover: #0065FF;
+            --bg-main: #FFFFFF;
+            --bg-sidebar: #F4F5F7;
+            --text-main: #091E42;
+            --text-subtle: #6B778C;
+            --border: #DFE1E6;
+            --code-bg: #F4F5F7;
+            --code-text: #172B4D;
+            --sidebar-width: 280px;
+        }
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: 'Inter', sans-serif; background: var(--bg-main); color: var(--text-main); line-height: 1.6; display: flex; }
+        .sidebar { width: var(--sidebar-width); background: var(--bg-sidebar); border-right: 1px solid var(--border); height: 100vh; position: sticky; top: 0; padding: 24px; }
+        .main-content { flex-grow: 1; padding: 40px 60px; max-width: 1000px; }
+        .nav-item { display: block; padding: 8px 12px; color: var(--text-main); text-decoration: none; border-radius: 4px; margin-bottom: 4px; font-size: 0.9rem; }
+        .nav-item:hover { background: #EBECF0; }
+        .nav-item.active { background: #DEEBFF; color: var(--primary); font-weight: 600; }
+        h1 { font-size: 2rem; margin-bottom: 24px; border-bottom: 2px solid var(--primary); padding-bottom: 12px; }
+        h2 { font-size: 1.5rem; margin: 32px 0 16px; border-bottom: 1px solid var(--border); padding-bottom: 8px; }
+        h3 { font-size: 1.2rem; margin: 24px 0 12px; }
+        section { margin-bottom: 40px; }
+        .code-block { background: #091E42; color: #fff; padding: 16px; border-radius: 4px; overflow-x: auto; margin: 16px 0; font-family: monospace; }
+        .code-link { color: var(--primary); text-decoration: none; font-weight: 500; }
+        .code-link:hover { text-decoration: underline; }
+        .tag { display: inline-block; padding: 2px 8px; border-radius: 3px; font-size: 0.8rem; font-weight: 600; margin-right: 8px; }
+        .tag-version { background: #E3FCEF; color: #006644; }
+        .tag-status { background: #DEEBFF; color: #0747A6; }
+    </style>
+</head>
+<body>
+    <aside class="sidebar">
+        <div style="font-weight: 700; margin-bottom: 24px; color: var(--primary);">v487 DOCUMENTATION</div>
+        <nav>
+            <a href="index.html" class="nav-item">Index</a>
+            <a href="developer_manual.html" class="nav-item active">Developer Manual</a>
+            <a href="system_admin_manual.html" class="nav-item">System Admin Manual</a>
+            <a href="user_manual.html" class="nav-item">User Manual</a>
+            <a href="risk_register.html" class="nav-item">Risk Register</a>
+            <a href="Mitigation.html" class="nav-item">Mitigation Plan</a>
+            <a href="issues.html" class="nav-item">Issues</a>
+            <a href="fixes.html" class="nav-item">Fixes</a>
+            <a href="test_results.html" class="nav-item">Test Results</a>
+            <a href="future_recommendations.html" class="nav-item">Future Recommendations</a>
+            <div style="margin-top: 24px; padding-top: 16px; border-top: 1px solid var(--border);">
+                <a href="../knowledgebase.html" class="nav-item">← Back to Knowledgebase</a>
+            </div>
+        </nav>
+    </aside>
+
+    <main class="main-content">
+        <div class="tag tag-version">v487</div>
+        <div class="tag tag-status">COMPLIANT</div>
+        <h1>Developer Manual - In-Page QR Modal Trigger</h1>
+
+        <section id="purpose">
+            <h2>1. Purpose</h2>
+            <p>To standardize the payment initiation flow by replacing external page redirections with an in-page modal trigger. This ensures a seamless user experience across checkout and order management views.</p>
+        </section>
+
+        <section id="rationale">
+            <h2>2. Rationale</h2>
+            <p>Redirection to a separate payment page (Image 1 style) often leads to higher bounce rates and friction. Standardizing on a modal (Image 2 style) keeps the user in context, improves perceived performance, and aligns with modern fintech UX patterns used by GCash and Maya.</p>
+        </section>
+
+        <section id="technical-explanation">
+            <h2>3. Technical Explanation</h2>
+            <p>The implementation utilizes a centralized <code>QRCodeModal</code> component that handles QR rendering, status polling, and countdown timers. State management in <code>OrderSummary.jsx</code> and <code>orders/page.jsx</code> was updated to intercept successful checkout responses and display the modal instead of triggering a router push.</p>
+            <h3>Key Logic:</h3>
+            <ul>
+                <li><strong>Timer:</strong> 600-second (10-minute) countdown using <code>useEffect</code> and <code>setInterval</code>.</li>
+                <li><strong>Polling:</strong> Background status checks every 5 seconds to detect payment completion.</li>
+                <li><strong>Data Normalization:</strong> Ensures QR data from different providers (PayMongo, budolPay) is mapped to a consistent schema.</li>
+            </ul>
+        </section>
+
+        <section id="dependencies">
+            <h2>4. Dependencies and Software Rationale</h2>
+            <p>The following software and libraries were selected to ensure scalability, security, and developer productivity:</p>
+            <ul>
+                <li><strong>Next.js (React Framework):</strong> Chosen for its hybrid rendering capabilities (SSR/CSR) and built-in routing, which allows for fast page loads and seamless modal transitions.</li>
+                <li><strong>Prisma ORM:</strong> Provides type-safe database access, ensuring that payment logs and order statuses are updated with zero schema mismatches.</li>
+                <li><strong>Axios:</strong> Used for standardized HTTP requests with interceptors, crucial for handling authentication and error logging across payment gateways.</li>
+                <li><strong>PayMongo API:</strong> Selected for its robust Philippine market support (GCash, Maya, QRPH) and clean JSON API structure.</li>
+                <li><strong>Lucide React:</strong> Provides a consistent, lightweight icon set that aligns with the "Atlassian-inspired" professional UI/UX.</li>
+            </ul>
+            <h3>Rationale for Modal Approach:</h3>
+            <p>The decision to move from a page-based to a modal-based payment trigger was driven by <strong>Conversion Rate Optimization (CRO)</strong>. By keeping the user on the same page, we eliminate the risk of session loss during redirection and provide a faster feedback loop for payment status updates.</p>
+        </section>
+
+        <section id="changes">
+            <h2>5. Changes</h2>
+            <h3>5.1 Backend Services</h3>
+            <ul>
+                <li>Modified <a class="code-link" href="file:///d:/IT Projects/budolEcosystem/budolpay-0.1.0/services/payment-gateway-service/index.js">payment-gateway-service/index.js</a>: Updated the <code>create-intent</code> endpoint to return QR data for internal <code>budolPay</code> payments instead of a checkout URL. This enables the in-page modal flow for <code>budolPay</code>.</li>
+            </ul>
+            <h3>5.2 Frontend Components</h3>
+            <ul>
+                <li>Modified <a class="code-link" href="file:///d:/IT Projects/budolEcosystem/budolshap-0.1.0/components/payment/QRCodeModal.jsx">QRCodeModal.jsx</a>: Standardized UI, added instructions and timer.</li>
+                <li>Modified <a class="code-link" href="file:///d:/IT Projects/budolEcosystem/budolshap-0.1.0/components/OrderSummary.jsx">OrderSummary.jsx</a>: Integrated modal trigger for "Place Order".</li>
+                <li>Modified <a class="code-link" href="file:///d:/IT Projects/budolEcosystem/budolshap-0.1.0/app/(public)/orders/page.jsx">orders/page.jsx</a>: Integrated modal trigger for "Pay Now".</li>
+            </ul>
+        </section>
+
+        <section id="code-references">
+            <h2>6. Code References</h2>
+            <h3>6.1 Modal Trigger Implementation (Frontend)</h3>
+            <div class="code-block">
+// OrderSummary.jsx snippet
+if (data.qrCode) {
+    const qrData = {
+        qrCode: data.qrCode,
+        paymentIntentId: data.paymentIntentId,
+        paymentMethod: paymentMethod,
+        orderId: orderId
+    };
+    setQrData(qrData); // Triggers modal display
+    return;
+}
+            </div>
+            <p>File: <a class="code-link" href="file:///d:/IT Projects/budolEcosystem/budolshap-0.1.0/components/OrderSummary.jsx">OrderSummary.jsx</a></p>
+
+            <h3>6.2 Internal budolPay QR Generation (Backend)</h3>
+            <div class="code-block">
+// payment-gateway-service/index.js snippet
+const qrData = {
+    type: 'budolpay_payment',
+    orderId: metadata.orderId || 'unknown',
+    amount: parseFloat(amount),
+    merchant: 'budolShap',
+    paymentIntentId: transaction.id,
+    referenceId: transaction.referenceId
+};
+providerResponse = {
+    qrCode: JSON.stringify(qrData),
+    id: `bp_intent_${transaction.id}`
+};
+            </div>
+            <p>File: <a class="code-link" href="file:///d:/IT Projects/budolEcosystem/budolpay-0.1.0/services/payment-gateway-service/index.js">payment-gateway-service/index.js</a></p>
+        </section>
+
+        <section id="compliance">
+            <h2>7. Compliance</h2>
+            <ul>
+                <li><strong>BSP Circular 808:</strong> Maintains forensic audit trails for all payment initiation events.</li>
+                <li><strong>NPC:</strong> No PII is stored in LocalStorage; only transaction-specific identifiers are used for session recovery.</li>
+                <li><strong>Cybersecurity Law:</strong> Implements secure status polling with timeout protection.</li>
+            </ul>
+        </section>
+
+        <section id="tests">
+            <h2>8. Tests</h2>
+            <p>Verified using <a class="code-link" href="file:///d:/IT Projects/budolEcosystem/scripts/test_scripts/test_payment_modal_flow.js">test_payment_modal_flow.js</a>. All scenarios (Success, Timeout, Manual Close) were validated.</p>
+        </section>
+
+        <section id="future-recommendations">
+            <h2>9. Future Recommendations</h2>
+            <p>See <a href="future_recommendations.html">Future Recommendations</a> for details on push notifications and LocalStorage persistence.</p>
+        </section>
+    </main>
+</body>
+</html>

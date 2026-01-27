@@ -1,0 +1,112 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Comparative Analysis: 1-Device Policy vs budolPay Implementation</title>
+    <style>
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; line-height: 1.6; color: #333; max-width: 1000px; margin: 0 auto; padding: 20px; background-color: #f4f7f6; }
+        .container { background-color: #fff; padding: 40px; border-radius: 8px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); }
+        h1 { color: #2c3e50; border-bottom: 2px solid #3498db; padding-bottom: 10px; }
+        h2 { color: #2980b9; margin-top: 30px; }
+        table { width: 100%; border-collapse: collapse; margin: 20px 0; }
+        th, td { padding: 12px; text-align: left; border-bottom: 1px solid #ddd; }
+        th { background-color: #f2f2f2; font-weight: bold; }
+        .comparison-table tr:hover { background-color: #f9f9f9; }
+        .pros { color: #27ae60; font-weight: bold; }
+        .cons { color: #c0392b; font-weight: bold; }
+        .recommendation { background-color: #e8f4fd; border-left: 5px solid #3498db; padding: 15px; margin-top: 20px; }
+        .footer { margin-top: 40px; font-size: 0.9em; color: #7f8c8d; text-align: center; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Comparative Analysis: "1 Device → 1 Account" Policy</h1>
+        
+        <section>
+            <h2>Overview</h2>
+            <p>This document compares the strict <strong>1 Device → 1 Account</strong> security policy (as enforced by GCash) against the current <strong>budolPay</strong> implementation. The goal is to align budolPay with global security standards while maintaining user experience.</p>
+        </section>
+
+        <section>
+            <h2>Comparison Matrix</h2>
+            <table class="comparison-table">
+                <thead>
+                    <tr>
+                        <th>Feature</th>
+                        <th>GCash (Standard)</th>
+                        <th>budolPay (Current v398)</th>
+                        <th>budolPay (Proposed v399)</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td><strong>Device Limit</strong></td>
+                        <td>Strict 1 Device</td>
+                        <td>Multi-device support (Trust List)</td>
+                        <td><strong>Strict 1 Device</strong></td>
+                    </tr>
+                    <tr>
+                        <td><strong>Linking Logic</strong></td>
+                        <td>Hard-bind to Device ID</td>
+                        <td>JSON-based Trusted Devices array</td>
+                        <td>Single <code>activeDeviceId</code> field</td>
+                    </tr>
+                    <tr>
+                        <td><strong>Unlinking Process</strong></td>
+                        <td>Manual via Settings or CS</td>
+                        <td>Delete from array</td>
+                        <td><strong>Self-Service Unlink via Biometrics</strong></td>
+                    </tr>
+                    <tr>
+                        <td><strong>New Device Setup</strong></td>
+                        <td>Selfie Scan / DoubleSafe</td>
+                        <td>OTP / MPIN only</td>
+                        <td><strong>512-dim Face Recognition</strong></td>
+                    </tr>
+                    <tr>
+                        <td><strong>Security Posture</strong></td>
+                        <td>Very High (BSP Compliant)</td>
+                        <td>Medium (Convenience focused)</td>
+                        <td><strong>Elite (PCI DSS/BSP Compliant)</strong></td>
+                    </tr>
+                </tbody>
+            </table>
+        </section>
+
+        <section>
+            <h2>Technical Deep Dive</h2>
+            
+            <h3>GCash Implementation Analysis</h3>
+            <p>GCash uses a centralized device registry. When a user logs in, the backend checks if the <code>deviceId</code> matches the one stored in the account metadata. If it doesn't, the login is blocked until the previous device is unlinked. This prevents session hijacking even if the MPIN is compromised.</p>
+
+            <h3>budolPay Current Implementation</h3>
+            <p>Currently, budolPay stores a list of <code>trustedDevices</code> in the database. While secure, it allows a user to be logged in on multiple devices (e.g., a phone and a tablet). This increases the attack surface.</p>
+            <pre style="background: #f4f4f4; padding: 10px; border-radius: 5px;">
+// Current logic in auth-service/index.js
+const devices = JSON.parse(user.trustedDevices);
+const device = devices.find(d => d.deviceId === deviceId && d.isVerified);
+if (device) isDeviceTrusted = true;
+            </pre>
+
+            <h3>Proposed v399 Logic</h3>
+            <p>We will transition to a 1:1 binding. The <code>trustedDevices</code> field will be deprecated in favor of a single <code>linkedDeviceId</code>. Registering a new device will automatically prompt for the unlinking of the existing one using the <strong>512-dim Face Recognition</strong> verification.</p>
+        </section>
+
+        <section class="recommendation">
+            <h2>Recommendations & Next Steps</h2>
+            <ul>
+                <li><strong>Phase 1:</strong> Database migration to add <code>linked_device_id</code> and <code>device_binding_timestamp</code>.</li>
+                <li><strong>Phase 2:</strong> Implement <code>/api/v1/auth/unlink-device</code> endpoint in Auth Service.</li>
+                <li><strong>Phase 3:</strong> Update budolPay Mobile to enforce the "1 Device" check during the splash screen/login flow.</li>
+                <li><strong>Phase 4:</strong> Integrate Face Recognition (FaceNet 512-dim) as the primary factor for unlinking.</li>
+            </ul>
+        </section>
+
+        <div class="footer">
+            <p>&copy; 2026 budolEcosystem - v399 Security Enhancement Plan</p>
+            <p><a href="index.html">Back to Version Index</a> | <a href="manuals/developer_manual.html">Developer Manual</a></p>
+        </div>
+    </div>
+</body>
+</html>

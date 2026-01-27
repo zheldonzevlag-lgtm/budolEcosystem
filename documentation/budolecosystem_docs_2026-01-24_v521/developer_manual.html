@@ -1,0 +1,68 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Developer Manual - v521</title>
+    <style>
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; line-height: 1.6; color: #333; max-width: 900px; margin: 0 auto; padding: 20px; background-color: #f4f7f6; }
+        .container { background-color: white; padding: 40px; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
+        h1, h2, h3 { color: #0052cc; }
+        code { background-color: #f0f0f0; padding: 2px 5px; border-radius: 4px; font-family: 'Courier New', Courier, monospace; }
+        pre { background-color: #272822; color: #f8f8f2; padding: 15px; border-radius: 8px; overflow-x: auto; line-height: 1.4; }
+        .file-link { color: #0052cc; text-decoration: none; font-weight: bold; }
+        .file-link:hover { text-decoration: underline; }
+        .metadata { color: #666; font-size: 0.9em; margin-bottom: 20px; border-bottom: 1px solid #eee; padding-bottom: 10px; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Developer Manual - v521</h1>
+        <div class="metadata">
+            Version: v521 | Date: 2026-01-24 | Author: Budol Ecosystem Master Orchestrator AI
+        </div>
+
+        <h2>Purpose</h2>
+        <p>This manual documents the implementation of the Order Rollback mechanism, QR Code Modal refinements, Admin Search fixes, and Customer Name verification. These changes ensure a more robust checkout experience, accurate data display, and a bug-free administrative interface.</p>
+
+        <h2>Technical Explanation</h2>
+        
+        <h3>1. Order Rollback Mechanism</h3>
+        <p>The system now follows a "Pending Order" pattern. When a user clicks "Place Order", an order is created with a <code>pending</code> status. If the payment process (QR Code) is interrupted, the frontend triggers a cancellation request to the backend.</p>
+        <p>The centralized cancellation logic is implemented in <a href="file:///d:/IT Projects/budolEcosystem/budolshap-0.1.0/lib/services/ordersService.js" class="file-link">ordersService.js</a>. It uses a Prisma transaction to ensure atomicity:</p>
+        <pre><code>export async function cancelOrder(orderId, restoreCart = true) {
+  return await prisma.$transaction(async (tx) => {
+    const order = await tx.order.findUnique({
+      where: { id: orderId },
+      include: { orderItems: true }
+    });
+    // ... validation ...
+    const updatedOrder = await tx.order.update({
+      where: { id: orderId },
+      data: { status: 'CANCELLED', paymentStatus: 'cancelled' }
+    });
+    // ... restore cart items ...
+    return updatedOrder;
+  });
+}</code></pre>
+
+        <h3>2. QR Code Modal Refinements</h3>
+        <p>In <a href="file:///d:/IT Projects/budolEcosystem/budolshap-0.1.0/components/payment/QRCodeModal.jsx" class="file-link">QRCodeModal.jsx</a>, we refined the display to show the store owner and store name separately. The "Store Owner" is now hardcoded to "Jon Galvez" for the demo store, and the Payment ID is displayed in full using <code>break-all</code> for responsiveness.</p>
+
+        <h3>3. Admin Search Context Fixes</h3>
+        <p>Administrative pages (Users, Products, Orders, Returns) were updated to correctly use the <code>searchQuery</code> and <code>updateSearchQuery</code> from the <a href="file:///d:/IT Projects/budolEcosystem/budolshap-0.1.0/context/SearchContext.jsx" class="file-link">SearchContext.jsx</a>. This resolved "search is not defined" runtime errors caused by accessing undefined variables.</p>
+
+        <h3>4. Customer Name Standardization</h3>
+        <p>To ensure consistent testing, "Natasha Romanoff" has been set as the default buyer name in <a href="file:///d:/IT Projects/budolEcosystem/budolshap-0.1.0/scripts/test_scripts_2/seed-test-data.js" class="file-link">seed-test-data.js</a> and as a placeholder in <a href="file:///d:/IT Projects/budolEcosystem/budolshap-0.1.0/components/address/AddressFormManager.jsx" class="file-link">AddressFormManager.jsx</a> and <a href="file:///d:/IT Projects/budolEcosystem/budolshap-0.1.0/components/auth/AuthForm.jsx" class="file-link">AuthForm.jsx</a>.</p>
+
+        <h2>Data Contracts</h2>
+        <p><strong>Endpoint:</strong> <code>POST /api/orders/[orderId]/cancel</code></p>
+        <p><strong>Response:</strong> Returns the updated order object with <code>status: 'CANCELLED'</code>.</p>
+
+        <h2>Compliance</h2>
+        <p>This implementation aligns with <strong>DTI</strong> and <strong>NPC</strong> guidelines regarding fair trade and data accuracy, ensuring users are not billed for incomplete transactions and inventory is correctly managed.</p>
+
+        <p><a href="index.html">Back to Index</a></p>
+    </div>
+</body>
+</html>

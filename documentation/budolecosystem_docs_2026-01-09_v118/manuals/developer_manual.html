@@ -1,0 +1,62 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Developer Manual - budolPay-to-budolPay Transaction Implementation</title>
+    <style>
+        body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; max-width: 800px; margin: 0 auto; padding: 20px; }
+        h1, h2, h3 { color: #2c3e50; }
+        code { background: #f4f4f4; padding: 2px 5px; border-radius: 3px; font-family: monospace; }
+        pre { background: #f4f4f4; padding: 10px; border-radius: 5px; overflow-x: auto; }
+        .back-link { display: inline-block; margin-bottom: 20px; text-decoration: none; color: #3498db; }
+        .nav-links { margin-top: 30px; border-top: 1px solid #eee; padding-top: 20px; }
+        .nav-links a { margin-right: 20px; text-decoration: none; color: #3498db; }
+    </style>
+</head>
+<body>
+    <a href="../index.html" class="back-link">← Back to Index</a>
+    <h1>Developer Manual Updates</h1>
+    <h2>P2P Transaction Implementation Details</h2>
+    
+    <h3>Purpose</h3>
+    <p>Enable secure and efficient budolPay-to-budolPay (P2P) fund transfers between users within the ecosystem.</p>
+
+    <h3>Code Logic Explanation</h3>
+    <p>The transaction flow involves several steps across the mobile app and backend services:</p>
+    <ol>
+        <li><strong>Mobile Initiation:</strong> <code>ApiService.transfer</code> in the Flutter app sends a POST request to <code>/transactions/transfer</code> via the API Gateway.</li>
+        <li><strong>Gateway Proxy:</strong> The API Gateway routes the request to the <code>transaction-service</code>.</li>
+        <li><strong>Transaction Processing:</strong>
+            <ul>
+                <li>Resolves recipient (email or phone) to a User ID.</li>
+                <li>Checks KYC limits (BASIC users cannot send P2P).</li>
+                <li>Creates a <code>PENDING</code> transaction record in the database.</li>
+                <li>Calls <code>wallet-service</code> to subtract funds from the sender.</li>
+                <li>Calls <code>wallet-service</code> to add funds to the receiver.</li>
+                <li>Creates accounting ledger entries (Debit Liability 1010 for sender, Credit Liability 1010 for receiver).</li>
+                <li>Updates transaction status to <code>COMPLETED</code>.</li>
+                <li>Notifies Admin via Socket.io.</li>
+            </ul>
+        </li>
+    </ol>
+
+    <h3>Architectural Decisions</h3>
+    <ul>
+        <li><strong>Microservice Separation:</strong> Transactions are handled by a dedicated <code>transaction-service</code>, while balance updates are managed by the <code>wallet-service</code>.</li>
+        <li><strong>RBAC Enforcement:</strong> Permissions like <code>TRANSACTION_CREATE_P2P</code> and <code>WALLET_DEBIT</code> are enforced at the service level using middleware.</li>
+        <li><strong>Atomicity:</strong> Rollback logic is implemented if adding funds to the receiver fails after deducting from the sender.</li>
+    </ul>
+
+    <h3>Impact Analysis</h3>
+    <ul>
+        <li><strong>Database:</strong> New records in <code>Transaction</code> and <code>LedgerEntry</code> tables.</li>
+        <li><strong>Performance:</strong> Synchronous calls between services require low latency; timeouts are set to 10 seconds.</li>
+    </ul>
+
+    <div class="nav-links">
+        <a href="sysadmin_manual.html">System Admin Manual</a>
+        <a href="user_manual.html">User Manual</a>
+    </div>
+</body>
+</html>

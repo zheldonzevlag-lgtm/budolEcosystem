@@ -1,0 +1,85 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Developer Manual - Budol Ecosystem v4</title>
+    <style>
+        :root { --primary: #0052CC; --bg: #F4F5F7; --text: #172B4D; --sidebar: #EBECF0; --code-bg: #272822; --code-text: #f8f8f2; }
+        body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Oxygen, Ubuntu, "Helvetica Neue", sans-serif; background: var(--bg); color: var(--text); margin: 0; display: flex; }
+        .sidebar { width: 260px; background: var(--sidebar); height: 100vh; position: fixed; padding: 20px; box-sizing: border-box; border-right: 1px solid #DFE1E6; }
+        .main-content { margin-left: 260px; padding: 40px; width: 100%; max-width: 1000px; }
+        .nav-item { display: block; padding: 10px; color: var(--text); text-decoration: none; border-radius: 4px; margin-bottom: 5px; }
+        .nav-item:hover { background: #DFE1E6; }
+        .nav-item.active { background: var(--primary); color: white; }
+        h1, h2, h3 { color: var(--primary); }
+        .code-block { background: var(--code-bg); color: var(--code-text); padding: 15px; border-radius: 5px; overflow-x: auto; font-family: 'Courier New', Courier, monospace; margin: 10px 0; }
+        .file-link { color: var(--primary); text-decoration: underline; cursor: pointer; }
+    </style>
+</head>
+<body>
+    <div class="sidebar">
+        <h2>Budol v4</h2>
+        <a href="index.html" class="nav-item">Overview</a>
+        <a href="developer_manual.html" class="nav-item active">Developer Manual</a>
+        <a href="system_admin_manual.html" class="nav-item">System Admin Manual</a>
+        <a href="user_manual.html" class="nav-item">User Manual</a>
+        <a href="risk_register.html" class="nav-item">Risk Register</a>
+        <hr>
+        <a href="../knowledgebase.html" class="nav-item">← Back to Knowledgebase</a>
+    </div>
+    <div class="main-content">
+        <h1>Developer Manual</h1>
+
+        <h2>Technical Architecture</h2>
+        <p>The system uses a React-based frontend (Next.js) and a Flutter-based mobile application. The core payment flow involves generating a QR code on the web which is then scanned or viewed by the user.</p>
+
+        <h3>Frontend: QR Modal ID Reordering</h3>
+        <p>The requirement was to display the <strong>Order ID</strong> before the <strong>Reference ID</strong> in the QR payment modal. This ensures that users can immediately identify their purchase context.</p>
+
+        <h4>1. QRCodeModal Component Update</h4>
+        <p>File: <a class="file-link" href="file:///d:/IT Projects/budolEcosystem/budolshap-0.1.0/components/payment/QRCodeModal.jsx">QRCodeModal.jsx</a></p>
+        <p>Changes: Added <code>orderId</code> prop and reordered the JSX elements.</p>
+        <div class="code-block">
+&lt;div className="flex justify-between text-sm"&gt;
+    &lt;span className="text-gray-600"&gt;Order ID:&lt;/span&gt;
+    &lt;span className="font-semibold text-gray-800 truncate ml-2"&gt;
+        &lt;BudolPayText text={orderId || "N/A"} /&gt;
+    &lt;/span&gt;
+&lt;/div&gt;
+&lt;div className="flex justify-between text-sm pt-1"&gt;
+    &lt;span className="text-gray-600 mb-0.5"&gt;Reference ID:&lt;/span&gt;
+    &lt;span className="text-[12px] text-gray-500 break-all leading-tight bg-gray-100 p-1"&gt;
+        {paymentIntentId}
+    &lt;/span&gt;
+&lt;/div&gt;
+        </div>
+
+        <h4>2. Prop Drilling Updates</h4>
+        <p>The <code>orderId</code> was passed down from the following parent components:</p>
+        <ul>
+            <li><a class="file-link" href="file:///d:/IT Projects/budolEcosystem/budolshap-0.1.0/components/OrderSummary.jsx">OrderSummary.jsx</a></li>
+            <li><a class="file-link" href="file:///d:/IT Projects/budolEcosystem/budolshap-0.1.0/app/payment/qr/page.jsx">app/payment/qr/page.jsx</a></li>
+            <li><a class="file-link" href="file:///d:/IT Projects/budolEcosystem/budolshap-0.1.0/app/(public)/orders/page.jsx">app/(public)/orders/page.jsx</a></li>
+        </ul>
+
+        <h3>Mobile: Android App Build</h3>
+        <p>The Android application was built using Flutter. The version was incremented to <code>1.3.34+131</code> in <code>pubspec.yaml</code>.</p>
+        <p>File: <a class="file-link" href="file:///d:/IT Projects/budolEcosystem/budolPayMobile/pubspec.yaml">pubspec.yaml</a></p>
+        <div class="code-block">
+version: 1.3.34+131
+        </div>
+        <p>Build Command:</p>
+        <div class="code-block">
+flutter build apk --release
+        </div>
+        <p>The output APK is located in: <code>D:\IT Projects\budolEcosystem\android-installer\budolPay 1.3.34.apk</code></p>
+
+        <h2>Compliance Verification</h2>
+        <ul>
+            <li><strong>PCI DSS:</strong> Payment IDs are truncated or handled securely.</li>
+            <li><strong>NPC:</strong> No PII is exposed in the QR modal or logs.</li>
+        </ul>
+    </div>
+</body>
+</html>
