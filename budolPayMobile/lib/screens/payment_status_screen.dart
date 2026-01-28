@@ -180,13 +180,13 @@ class _PaymentStatusScreenState extends State<PaymentStatusScreen> with SingleTi
         width: 100,
         height: 100,
         decoration: BoxDecoration(
-          color: isSuccess ? const Color(0xFF10B981).withValues(alpha: 0.1) : const Color(0xFFF43F5E).withValues(alpha: 0.1),
+          color: isSuccess ? const Color(0xFFF43F5E).withValues(alpha: 0.1) : const Color(0xFFF43F5E).withValues(alpha: 0.1),
           shape: BoxShape.circle,
         ),
         child: Icon(
           isSuccess ? Icons.check_circle_rounded : Icons.error_rounded,
           size: 80,
-          color: isSuccess ? const Color(0xFF10B981) : const Color(0xFFF43F5E),
+          color: isSuccess ? const Color(0xFFF43F5E) : const Color(0xFFF43F5E),
         ),
       ),
     );
@@ -205,7 +205,7 @@ class _PaymentStatusScreenState extends State<PaymentStatusScreen> with SingleTi
       case PaymentStatus.success:
         title = 'Payment Successful!';
         subtitle = 'Your transaction has been completed.';
-        titleColor = const Color(0xFF10B981);
+        titleColor = const Color(0xFFF43F5E);
         break;
       case PaymentStatus.failed:
         title = 'Payment Failed';
@@ -257,8 +257,17 @@ class _PaymentStatusScreenState extends State<PaymentStatusScreen> with SingleTi
     }
 
     final merchant = data['storeName'] ?? data['merchant'] ?? 'Merchant';
-    final reference = data['reference'] ?? data['referenceId'] ?? data['id']?.toString().toUpperCase() ?? 'N/A';
-    final orderId = data['orderId'] ?? 'N/A';
+    
+    // Logic to ensure Order # and Reference ID are distinct and correctly labeled
+    String orderId = data['orderId']?.toString() ?? 'N/A';
+    String reference = data['reference']?.toString() ?? data['referenceId']?.toString() ?? data['id']?.toString().toUpperCase() ?? 'N/A';
+    
+    // If we have a JON (Job Order Number) in reference but orderId is empty, swap them
+    if (orderId == 'N/A' && reference.startsWith('JON')) {
+      orderId = reference;
+      reference = data['id']?.toString().toUpperCase() ?? 'N/A';
+    }
+    
     final date = DateFormat('MMM dd, yyyy • hh:mm a').format(DateTime.now());
     final isSuccess = _currentStatus == PaymentStatus.success;
 
@@ -279,14 +288,12 @@ class _PaymentStatusScreenState extends State<PaymentStatusScreen> with SingleTi
       ),
       child: Column(
         children: [
-          if (data['orderId'] != null) ...[
-            _buildDetailRow('Order #', orderId, isMonospace: true),
-            const Padding(
-              padding: EdgeInsets.symmetric(vertical: 12),
-              child: Divider(height: 1, thickness: 1, color: Color(0xFFF1F5F9)),
-            ),
-          ],
-          _buildDetailRow('Reference ID', reference, isMonospace: true),
+          _buildDetailRow('Reference ID', orderId, isMonospace: true),
+          const Padding(
+            padding: EdgeInsets.symmetric(vertical: 12),
+            child: Divider(height: 1, thickness: 1, color: Color(0xFFF1F5F9)),
+          ),
+          _buildDetailRow('Order #', orderId, isMonospace: true),
           const Padding(
             padding: EdgeInsets.symmetric(vertical: 12),
             child: Divider(height: 1, thickness: 1, color: Color(0xFFF1F5F9)),
@@ -324,7 +331,7 @@ class _PaymentStatusScreenState extends State<PaymentStatusScreen> with SingleTi
             fontSize: 8,
             fontFamily: isMonospace ? 'monospace' : null,
             color: isStatus 
-              ? (isSuccess ? const Color(0xFF10B981) : const Color(0xFFEF4444))
+              ? (isSuccess ? const Color(0xFFF43F5E) : const Color(0xFFEF4444))
               : (isHighlighted ? const Color(0xFFF43F5E) : const Color(0xFF1E293B)),
           ),
         ),
@@ -353,7 +360,7 @@ class _PaymentStatusScreenState extends State<PaymentStatusScreen> with SingleTi
                 );
               },
               style: ElevatedButton.styleFrom(
-                backgroundColor: const Color(0xFF10B981),
+                backgroundColor: const Color(0xFFF43F5E),
                 foregroundColor: Colors.white,
                 padding: const EdgeInsets.symmetric(vertical: 16),
                 elevation: 0,

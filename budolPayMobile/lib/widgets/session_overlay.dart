@@ -57,7 +57,7 @@ class SessionOverlay extends StatelessWidget {
                             'Session Locked',
                             style: TextStyle(
                               color: Colors.white,
-                              fontSize: 24,
+                              fontSize: 14,
                               fontWeight: FontWeight.bold,
                               decoration: TextDecoration.none,
                             ),
@@ -91,7 +91,7 @@ class SessionOverlay extends StatelessWidget {
                               ),
                               child: const Text(
                                 'Unlock with Biometrics',
-                                style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                                style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold),
                               ),
                             ),
                           ),
@@ -102,7 +102,7 @@ class SessionOverlay extends StatelessWidget {
                               'Log Out',
                               style: TextStyle(
                                 color: Colors.white54,
-                                fontSize: 16,
+                                fontSize: 11,
                                 decoration: TextDecoration.underline,
                               ),
                             ),
