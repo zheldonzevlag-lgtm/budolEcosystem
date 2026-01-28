@@ -63,7 +63,7 @@ app.post('/auth/sso/login-form', async (req, res) => {
         if (!ecosystemApp) return res.status(403).send('Unauthorized Application');
 
         const user = await prisma.user.findUnique({ where: { email } });
-        if (!user || !(await bcrypt.compare(password, user.passwordHash))) {
+        if (!user || !(await bcrypt.compare(password, user.password))) {
             return res.status(401).send('Invalid credentials');
         }
 
@@ -119,7 +119,7 @@ app.post('/auth/register', async (req, res) => {
     try {
         const hashedPassword = await bcrypt.hash(password, 10);
         const user = await prisma.user.create({
-            data: { email, passwordHash: hashedPassword, firstName, lastName }
+            data: { email, password: hashedPassword, firstName, lastName }
         });
         res.status(201).json({ message: 'User created in budolID', userId: user.id });
     } catch (error) {
@@ -141,7 +141,7 @@ app.post('/auth/sso/login', async (req, res) => {
 
         // Verify user credentials
         const user = await prisma.user.findUnique({ where: { email } });
-        if (!user || !(await bcrypt.compare(password, user.passwordHash))) {
+        if (!user || !(await bcrypt.compare(password, user.password))) {
             console.log('[SSO Login API] Invalid credentials for:', email);
             return res.status(401).json({ error: 'Invalid credentials' });
         }
