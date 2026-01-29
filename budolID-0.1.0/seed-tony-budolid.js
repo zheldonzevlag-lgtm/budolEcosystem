@@ -11,8 +11,8 @@ const prisma = new PrismaClient({
 
 async function main() {
     try {
-        const email = 'tony.stark@budolshap.com';
-        const password = 'budolshap';
+        const email = 'tony@budol.id';
+        const password = 'password123';
         const hashedPassword = await bcrypt.hash(password, 10);
 
         console.log(`Creating user ${email} in budolID...`);
@@ -24,7 +24,7 @@ async function main() {
                 email,
                 password: hashedPassword,
                 firstName: 'Tony',
-                lastName: 'Stark',
+                lastName: 'Budol',
                 role: 'USER',
                 isVerified: true
             }
