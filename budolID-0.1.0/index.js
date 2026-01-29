@@ -1,9 +1,9 @@
+require('dotenv').config();
 const express = require('express');
 const { PrismaClient } = require('./generated/client');
 const jwt = require('jsonwebtoken');
 const bcrypt = require('bcryptjs');
 const cors = require('cors');
-require('dotenv').config();
 
 const prisma = new PrismaClient({
   datasources: {
@@ -12,6 +12,20 @@ const prisma = new PrismaClient({
     }
   }
 });
+
+// Debug connection on startup
+prisma.$connect()
+    .then(() => {
+        console.log('✅ Connected to Database');
+        return prisma.$queryRaw`SELECT current_schema()`;
+    })
+    .then(schema => {
+        console.log('📊 Database Schema:', schema);
+    })
+    .catch(err => {
+        console.error('❌ Database Connection Error:', err.message);
+        console.error('🔗 URL used:', process.env.DATABASE_URL ? process.env.DATABASE_URL.replace(/:[^:@]+@/, ':****@') : 'undefined');
+    });
 const app = express();
 const PORT = process.env.PORT || 8000;
 const JWT_SECRET = process.env.JWT_SECRET || 'budolid-super-secret-key';

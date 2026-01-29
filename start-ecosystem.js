@@ -233,10 +233,10 @@ async function start() {
         // We start with a copy of process.env but REMOVE variables that
         // should be loaded from the app's own .env file.
         const cleanEnv = { ...process.env };
-        delete cleanEnv.DATABASE_URL;
-        delete cleanEnv.NODE_ENV;
-        delete cleanEnv.VERCEL;
-        delete cleanEnv.PORT; // Let the app load its own or use the one we provide below
+        
+        // Remove variables that might be leaked from previous app starts or the runner itself
+        const varsToRemove = ['DATABASE_URL', 'NODE_ENV', 'VERCEL', 'PORT', 'JWT_SECRET', 'LOCAL_IP'];
+        varsToRemove.forEach(v => delete cleanEnv[v]);
 
         const env = { 
             ...cleanEnv, 
