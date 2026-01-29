@@ -1,9 +1,10 @@
+require('dotenv').config();
 const { PrismaClient } = require('./generated/client');
 const bcrypt = require('bcryptjs');
 const prisma = new PrismaClient({
     datasources: {
         db: {
-            url: "postgresql://postgres:r00t@localhost:5432/budolid?schema=public"
+            url: process.env.DATABASE_URL
         }
     }
 });
