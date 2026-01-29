@@ -1,6 +1,12 @@
-const { PrismaClient } = require('@prisma/client');
+const { PrismaClient } = require('./generated/client');
 const bcrypt = require('bcryptjs');
-const prisma = new PrismaClient();
+const prisma = new PrismaClient({
+    datasources: {
+        db: {
+            url: "postgresql://postgres:r00t@localhost:5432/budolid?schema=public"
+        }
+    }
+});
 
 async function main() {
     try {
@@ -9,13 +15,13 @@ async function main() {
         const hashedPassword = await bcrypt.hash(password, 10);
 
         console.log(`Creating user ${email} in budolID...`);
-        
+
         const user = await prisma.user.upsert({
             where: { email },
-            update: { passwordHash: hashedPassword },
+            update: { password: hashedPassword },
             create: {
                 email,
-                passwordHash: hashedPassword,
+                password: hashedPassword,
                 firstName: 'Tony',
                 lastName: 'Stark',
                 role: 'USER',

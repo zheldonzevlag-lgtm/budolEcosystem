@@ -1,11 +1,17 @@
 const express = require('express');
-const { PrismaClient } = require('@prisma/client');
+const { PrismaClient } = require('./generated/client');
 const jwt = require('jsonwebtoken');
 const bcrypt = require('bcryptjs');
 const cors = require('cors');
 require('dotenv').config();
 
-const prisma = new PrismaClient();
+const prisma = new PrismaClient({
+  datasources: {
+    db: {
+      url: process.env.DATABASE_URL
+    }
+  }
+});
 const app = express();
 const PORT = process.env.PORT || 8000;
 const JWT_SECRET = process.env.JWT_SECRET || 'budolid-super-secret-key';
@@ -14,8 +20,9 @@ app.use(cors());
 app.use(express.json());
 
 app.listen(PORT, '0.0.0.0', () => {
+    const localIP = process.env.LOCAL_IP || '192.168.1.2';
     console.log(`budolID SSO Service running on http://0.0.0.0:${PORT}`);
-    console.log(`Local LAN access at http://192.168.1.24:${PORT}`);
+    console.log(`Local LAN access at http://${localIP}:${PORT}`);
 });
 
 // Request logger
@@ -68,18 +75,18 @@ app.post('/auth/sso/login-form', async (req, res) => {
         }
 
         const token = jwt.sign(
-            { 
-                sub: user.id, 
-                email: user.email, 
+            {
+                sub: user.id,
+                email: user.email,
                 firstName: user.firstName,
                 lastName: user.lastName,
-                role: user.role, 
-                iss: 'budolID' 
-            }, 
-            JWT_SECRET, 
+                role: user.role,
+                iss: 'budolID'
+            },
+            JWT_SECRET,
             { expiresIn: '7d' }
         );
-        
+
         await prisma.session.create({
             data: {
                 userId: user.id,
@@ -148,16 +155,16 @@ app.post('/auth/sso/login', async (req, res) => {
 
         // Generate Ecosystem-wide JWT
         const token = jwt.sign(
-            { 
-                sub: user.id, 
-                email: user.email, 
+            {
+                sub: user.id,
+                email: user.email,
                 firstName: user.firstName,
                 lastName: user.lastName,
                 role: user.role,
                 iss: 'budolID',
                 jti: require('crypto').randomUUID()
-            }, 
-            JWT_SECRET, 
+            },
+            JWT_SECRET,
             { expiresIn: '7d' }
         );
 
@@ -183,9 +190,9 @@ app.post('/auth/sso/login', async (req, res) => {
 app.get('/auth/verify', async (req, res) => {
     const authHeader = req.headers.authorization;
     const token = authHeader?.split(' ')[1];
-    
+
     console.log('[Verify] Header:', authHeader);
-    
+
     if (!token) {
         console.log('[Verify] No token found');
         return res.status(401).json({ error: 'No token' });
@@ -193,7 +200,7 @@ app.get('/auth/verify', async (req, res) => {
 
     try {
         const decoded = jwt.verify(token, JWT_SECRET);
-        
+
         // Fetch full user details from database to ensure names are present
         const user = await prisma.user.findUnique({
             where: { id: decoded.sub },

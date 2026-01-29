@@ -1,5 +1,11 @@
-const { PrismaClient } = require('@prisma/client');
-const prisma = new PrismaClient();
+const { PrismaClient } = require('./generated/client');
+const prisma = new PrismaClient({
+    datasources: {
+        db: {
+            url: "postgresql://postgres:r00t@localhost:5432/budolid?schema=public"
+        }
+    }
+});
 async function main() {
     const apps = await prisma.ecosystemApp.findMany();
     apps.forEach(app => {

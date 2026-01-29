@@ -25,12 +25,16 @@ async function start() {
     console.log('3. \x1b[33mSKIP\x1b[0m (Keep current .env files)');
     
     // Strictly mandatory selection loop
-    let choice = '';
-    while (!['1', '2', '3'].includes(choice)) {
-        choice = (await askQuestion('\nEnter choice (1, 2, or 3): ')).trim();
-        if (!['1', '2', '3'].includes(choice)) {
-            console.log('\x1b[31mInvalid choice. Please enter 1, 2, or 3.\x1b[0m');
+    let choice = process.env.RUN_ENV || '';
+    if (!choice) {
+        while (!['1', '2', '3'].includes(choice)) {
+            choice = (await askQuestion('\nEnter choice (1, 2, or 3): ')).trim();
+            if (!['1', '2', '3'].includes(choice)) {
+                console.log('\x1b[31mInvalid choice. Please enter 1, 2, or 3.\x1b[0m');
+            }
         }
+    } else {
+        console.log(`\nUsing environment choice: ${choice}`);
     }
     
     let envType = '';
@@ -313,12 +317,4 @@ async function start() {
     });
 
     console.log('--------------------------------------------------');
-    console.log('\x1b[1m\x1b[32m%s\x1b[0m', '✅ All services started and advertising via mDNS!');
-}
-
-start();
-
-process.on('SIGINT', () => {
-    console.log('\n\x1b[31mStopping ecosystem...\x1b[0m');
-    process.exit();
-});
+    console.log('\x1b[1m\x1b[32m%s\x1b[0m', '✅ All services started and advertis
