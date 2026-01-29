@@ -317,4 +317,12 @@ async function start() {
     });
 
     console.log('--------------------------------------------------');
-    console.log('\x1b[1m\x1b[32m%s\x1b[0m', '✅ All services started and advertis
+    console.log('\x1b[1m\x1b[32m%s\x1b[0m', '✅ All services started and advertising via mDNS!');
+}
+
+start();
+
+process.on('SIGINT', () => {
+    console.log('\n\x1b[31mStopping ecosystem...\x1b[0m');
+    process.exit();
+});

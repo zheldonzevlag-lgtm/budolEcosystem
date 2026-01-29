@@ -1,0 +1,109 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Developer Manual - v1.0.1</title>
+    <style>
+        :root { --primary-color: #0052CC; --secondary-color: #172B4D; --bg-color: #F4F5F7; --sidebar-width: 280px; --text-color: #172B4D; }
+        body { font-family: -apple-system, sans-serif; margin: 0; display: flex; background: var(--bg-color); color: var(--text-color); }
+        .sidebar { width: var(--sidebar-width); height: 100vh; background: var(--secondary-color); color: white; position: fixed; padding: 20px; }
+        .sidebar h2 { font-size: 1.2rem; margin-bottom: 30px; }
+        .sidebar nav ul { list-style: none; padding: 0; }
+        .sidebar nav ul li { margin: 15px 0; }
+        .sidebar nav ul li a { color: #DEEBFF; text-decoration: none; }
+        .main-content { margin-left: calc(var(--sidebar-width) + 40px); padding: 40px; flex: 1; max-width: 1000px; }
+        .card { background: white; padding: 30px; border-radius: 8px; margin-bottom: 30px; }
+        .code-block { background: #282c34; color: #abb2bf; padding: 15px; border-radius: 4px; overflow-x: auto; font-family: monospace; position: relative; }
+        .code-block a { color: #61afef; text-decoration: none; font-size: 0.8rem; display: block; margin-bottom: 10px; }
+        h1, h2 { color: var(--primary-color); }
+        .file-link { color: var(--primary-color); text-decoration: none; font-weight: bold; }
+    </style>
+</head>
+<body>
+    <div class="sidebar">
+        <h2>Developer Manual</h2>
+        <nav>
+            <ul>
+                <li><a href="index.html">← Back to Index</a></li>
+                <li><a href="#sso-config">SSO Configuration</a></li>
+                <li><a href="#orchestration">Orchestration</a></li>
+                <li><a href="#network-util">Network Utilities</a></li>
+            </ul>
+        </nav>
+    </div>
+    <div class="main-content">
+        <h1>Technical Implementation - v1.0.1</h1>
+
+        <section id="sso-config">
+            <h2>1. SSO LAN Configuration</h2>
+            <div class="card">
+                <p>The BudolID SSO service was updated to dynamically detect and log the LAN IP for cross-device access. It now listens on <code>0.0.0.0</code> to allow external connections while providing a clear LAN URL in the logs.</p>
+                <div class="code-block">
+                    <a href="file:///D:/IT Projects/budolEcosystem/budolID-0.1.0/index.js">View: budolID-0.1.0/index.js</a>
+                    <pre><code>app.listen(PORT, '0.0.0.0', () => {
+    const localIP = process.env.LOCAL_IP || '192.168.1.2';
+    console.log(`budolID SSO Service running on http://0.0.0.0:${PORT}`);
+    console.log(`Local LAN access at http://${localIP}:${PORT}`);
+});</code></pre>
+                </div>
+                <p><strong>Rationale:</strong> Hardcoded IPs in redirect URIs cause authentication failures when the server host IP changes. Using environment-aware seeding fixes this.</p>
+                <div class="code-block">
+                    <a href="file:///D:/IT Projects/budol/Ecosystem/budolID-0.1.0/prisma/seed.js">View: budolID-0.1.0/prisma/seed.js</a>
+                    <pre><code>const localIP = process.env.LOCAL_IP || '192.168.1.2';
+const apps = [
+  { name: 'budolPay', apiKey: 'bp_key_2025', redirectUri: `http://${localIP}:3000/api/auth/callback` },
+  ...
+];</code></pre>
+                </div>
+            </div>
+        </section>
+
+        <section id="orchestration">
+            <h2>2. Ecosystem Orchestration</h2>
+            <div class="card">
+                <p>The central runner was enhanced with <code>RUN_ENV</code> support to allow automated startups without manual CLI input, facilitating faster deployment and testing.</p>
+                <div class="code-block">
+                    <a href="file:///D:/IT Projects/budolEcosystem/start-ecosystem.js">View: start-ecosystem.js</a>
+                    <pre><code>let choice = process.env.RUN_ENV || '';
+if (!choice) {
+    while (!['1', '2', '3'].includes(choice)) {
+        choice = (await askQuestion('\nEnter choice (1, 2, or 3): ')).trim();
+        ...
+    }
+}</code></pre>
+                </div>
+            </div>
+        </section>
+
+        <section id="network-util">
+            <h2>3. Automated Network Sync</h2>
+            <div class="card">
+                <p>The <code>network-util.js</code> utility was implemented to recursively scan all <code>.env</code> files in the ecosystem and update <code>LOCAL_IP</code> and related URL patterns automatically on startup.</p>
+                <div class="code-block">
+                    <a href="file:///D:/IT Projects/budolEcosystem/scripts/test_scripts/global/network-util.js">View: network-util.js</a>
+                    <p>Detects physical interfaces (Ethernet/Wi-Fi) and ignores virtual adapters (WSL/Docker).</p>
+                </div>
+            </div>
+        </section>
+
+        <section id="dependencies">
+            <h2>4. Dependencies & Rationale</h2>
+            <div class="card">
+                <h3>Core Stack</h3>
+                <ul>
+                    <li><strong>Node.js & Express:</strong> Chosen for its asynchronous nature and vast ecosystem, ideal for microservices.</li>
+                    <li><strong>Prisma ORM:</strong> Provides type-safe database access and automated migrations, critical for multi-service consistency.</li>
+                    <li><strong>PostgreSQL:</strong> Robust relational database with strong support for schemas, allowing us to isolate services (e.g., <code>budolid</code> schema) within a shared cluster.</li>
+                    <li><strong>JWT (JSON Web Tokens):</strong> Stateless authentication mechanism perfect for SSO across different domains/IPs.</li>
+                </ul>
+                <h3>Utilities</h3>
+                <ul>
+                    <li><strong>Bonjour Service:</strong> Planned for zero-config networking to resolve <code>.local</code> hostnames.</li>
+                    <li><strong>Dotenv:</strong> Standard for environment management, enabling easy switching between local and production.</li>
+                </ul>
+            </div>
+        </section>
+    </div>
+</body>
+</html>
