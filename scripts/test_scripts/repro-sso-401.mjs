@@ -16,8 +16,8 @@ const BUDOLID_URL = 'http://localhost:8000';
 const BUDOLSHAP_URL = 'http://localhost:3001';
 
 // Test credentials
-const email = 'tony@budol.id';
-const password = 'password123';
+const email = 'reynaldomgalvez@gmail.com';
+const password = 'tr@1t0r';
 
 async function testSSOFlow() {
     console.log('--- Starting SSO Flow Repro ---');
@@ -29,8 +29,15 @@ async function testSSOFlow() {
             email,
             password,
             apiKey: 'bs_key_2025'
+        }).catch(err => {
+            console.error('Login Request failed:', err.response?.data || err.message);
+            throw err;
         });
         
+        if (!loginRes.data || !loginRes.data.token) {
+            throw new Error('No token returned from budolID');
+        }
+
         const { redirectUri, token } = loginRes.data;
         console.log('✅ Login successful. Token received.');
         console.log('Redirect URI:', redirectUri);
@@ -88,10 +95,7 @@ async function testSSOFlow() {
         }
         
     } catch (e) {
-        console.error('Error during test:', e.message);
-        if (e.response) {
-            console.error('Response data:', e.response.data);
-        }
+        console.error('Error during test:', e.response?.data || e.message);
     }
 }
 
