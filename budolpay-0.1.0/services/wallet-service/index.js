@@ -209,12 +209,14 @@ router.post('/process-qr', authorize(PERMISSIONS.WALLET_DEBIT), async (req, res)
         // 2. Create Audit Log for starting payment processing
         const metadata = JSON.parse(transaction.metadata || '{}');
         const storeName = qrData.storeName || qrData.merchant || metadata.storeName || metadata.merchantName || 'Unknown Merchant';
+        const orderId = qrData.orderId || metadata.orderId || 'N/A';
         
         await createAuditLog(req, userId, 'QR_PAYMENT_INITIATED', {
             transactionId: transaction.id,
             referenceId: transaction.referenceId,
             amount: transaction.amount,
-            merchant: storeName
+            merchant: storeName,
+            orderId: orderId
         }, 'Financial', transaction.id);
 
         // 3. Check user's wallet
@@ -288,6 +290,7 @@ router.post('/process-qr', authorize(PERMISSIONS.WALLET_DEBIT), async (req, res)
         await notifyTransactionUpdate(userId, `Payment of ₱${transaction.amount} to ${qrData.storeName || metadata.storeName || 'Merchant'} successful.`, {
             id: transaction.id,
             referenceId: transaction.referenceId,
+            orderId: orderId,
             status: 'COMPLETED',
             amount: transaction.amount,
             type: 'MERCHANT_PAYMENT',
@@ -335,6 +338,7 @@ router.post('/process-qr', authorize(PERMISSIONS.WALLET_DEBIT), async (req, res)
             transaction: {
                 id: transaction.id,
                 reference: transaction.referenceId,
+                orderId: orderId,
                 amount: Number(transaction.amount),
                 storeName: storeName,
                 date: getLegacyManilaISO(),

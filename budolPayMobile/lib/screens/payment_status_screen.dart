@@ -273,7 +273,7 @@ class _PaymentStatusScreenState extends State<PaymentStatusScreen> with SingleTi
 
     return Container(
       margin: const EdgeInsets.only(top: 24),
-      padding: const EdgeInsets.all(18),
+      padding: const EdgeInsets.all(14),
       decoration: BoxDecoration(
         color: const Color(0xFFF8FAFC), // slate-50 equivalent
         borderRadius: BorderRadius.circular(16),
@@ -288,7 +288,7 @@ class _PaymentStatusScreenState extends State<PaymentStatusScreen> with SingleTi
       ),
       child: Column(
         children: [
-          _buildDetailRow('Reference ID', orderId, isMonospace: true),
+          _buildDetailRow('Reference ID', reference, isMonospace: true),
           const Padding(
             padding: EdgeInsets.symmetric(vertical: 12),
             child: Divider(height: 1, thickness: 1, color: Color(0xFFF1F5F9)),

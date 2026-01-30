@@ -2,58 +2,69 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <title>Developer Manual - Budol Ecosystem v1.0.5</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Developer Manual - v1.0.5</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
     <style>
-        :root { --primary-color: #0052cc; --sidebar-bg: #f4f5f7; --text-color: #172b4d; --code-bg: #282c34; --code-text: #abb2bf; }
-        body { font-family: sans-serif; margin: 0; display: flex; }
-        .sidebar { width: 280px; background: var(--sidebar-bg); height: 100vh; position: fixed; padding: 20px; box-sizing: border-box; }
-        .main-content { margin-left: 280px; padding: 40px; }
-        .code-block { background: var(--code-bg); color: var(--code-text); padding: 20px; border-radius: 8px; font-family: monospace; margin: 20px 0; position: relative; }
-        .code-block a { position: absolute; top: 10px; right: 10px; color: #61afef; text-decoration: none; border: 1px solid #61afef; padding: 2px 5px; border-radius: 4px; }
+        :root { --primary: #0052CC; --bg-main: #FFFFFF; --bg-sidebar: #F4F5F7; --text-main: #091E42; --border: #DFE1E6; --code-bg: #1e1e1e; --code-text: #d4d4d4; }
+        body { font-family: 'Inter', sans-serif; background: var(--bg-main); color: var(--text-main); line-height: 1.6; margin: 0; display: flex; }
+        .sidebar { width: 280px; background: var(--bg-sidebar); border-right: 1px solid var(--border); height: 100vh; position: sticky; top: 0; padding: 24px; }
+        .main-content { flex: 1; padding: 40px 60px; max-width: 900px; }
+        .nav-item { display: block; padding: 10px 15px; text-decoration: none; color: var(--text-main); border-radius: 4px; margin-bottom: 5px; }
+        .nav-item:hover { background: #EBECF0; }
+        .nav-item.active { background: #DEEBFF; color: var(--primary); }
+        pre { background: var(--code-bg); color: var(--code-text); padding: 16px; border-radius: 8px; overflow-x: auto; }
+        code { font-family: 'Courier New', Courier, monospace; }
+        .file-link { color: var(--primary); text-decoration: none; font-weight: 600; }
     </style>
 </head>
 <body>
-    <div class="sidebar">
-        <h2>Budol Ecosystem</h2>
-        <ul>
-            <li><a href="index.html">Release Overview</a></li>
-            <li><a href="developer_manual.html" style="font-weight:bold">Developer Manual</a></li>
-        </ul>
-    </div>
-    <div class="main-content">
-        <h1>Developer Manual v1.0.5</h1>
+    <nav class="sidebar">
+        <div style="font-weight: 700; font-size: 1.2rem; margin-bottom: 30px;">v1.0.5 Docs</div>
+        <a href="index.html" class="nav-item">Release Overview</a>
+        <a href="developer_manual.html" class="nav-item active">Developer Manual</a>
+        <a href="system_admin_manual.html" class="nav-item">System Admin Manual</a>
+        <hr>
+        <a href="../knowledgebase.html" class="nav-item">← Knowledgebase</a>
+    </nav>
+    <main class="main-content">
+        <h1>Developer Manual - v1.0.5</h1>
+        
         <section>
-            <h2>Admin Provisioning Script</h2>
-            <p>The provisioning script ensures ID synchronization across schemas by capturing the UUID from <code>budolid.User</code> and injecting it into <code>public.User</code>.</p>
-            <div class="code-block">
-                <a href="file:///d:/IT Projects/budolEcosystem/scripts/test_scripts/provision-admin.js">Open File</a>
-                <pre>
-// scripts/test_scripts/provision-admin.js
-const budolIDUser = await budolIDPrisma.user.upsert({
-    where: { email },
-    create: { email, role: 'ADMIN', ... }
-});
+            <h2>1. Admin ID Synchronization</h2>
+            <p>To resolve the ID mismatch between budolID and budolShap, a script was implemented to unify the ID for the admin user.</p>
+            <p><strong>File:</strong> <a class="file-link" href="file:///d:/IT Projects/budolEcosystem/scripts/test_scripts/fix-admin-id.js">fix-admin-id.js</a></p>
+            <pre><code>// Snippet of the fix logic
+const shapUser = await shapPrisma.user.findUnique({ where: { email: ADMIN_EMAIL } });
+const idUser = await idPrisma.user.findUnique({ where: { email: ADMIN_EMAIL } });
 
-const budolShapUser = await budolShapPrisma.user.upsert({
-    where: { email },
-    create: { 
-        id: budolIDUser.id, // Syncing ID
-        email, 
-        isAdmin: true, 
-        accountType: 'ADMIN' 
-    }
-});</pre>
-            </div>
+if (shapUser && idUser && shapUser.id !== idUser.id) {
+    // Sync logic implemented here
+}</code></pre>
         </section>
+
         <section>
-            <h2>Role Mapping</h2>
-            <table>
-                <tr><th>Field</th><th>budolID</th><th>budolShap</th></tr>
-                <tr><td>Role</td><td>ADMIN</td><td>ADMIN</td></tr>
-                <tr><td>isAdmin</td><td>N/A</td><td>true</td></tr>
-                <tr><td>accountType</td><td>N/A</td><td>ADMIN</td></tr>
-            </table>
+            <h2>2. Order ID Propagation</h2>
+            <p>The Wallet Service was updated to include the <code>orderId</code> from metadata in its response to the mobile app.</p>
+            <p><strong>File:</strong> <a class="file-link" href="file:///d:/IT Projects/budolEcosystem/budolpay-0.1.0/services/wallet-service/index.js">wallet-service/index.js</a></p>
+            <pre><code>res.json({ 
+    success: true, 
+    transaction: {
+        id: transaction.id,
+        reference: transaction.referenceId,
+        orderId: orderId, // Added this field
+        // ...
+    }
+});</code></pre>
         </section>
-    </div>
+
+        <section>
+            <h2>3. Mobile App UI Logic</h2>
+            <p>The <code>PaymentStatusScreen</code> now correctly prioritizes <code>orderId</code> from the transaction data.</p>
+            <p><strong>File:</strong> <a class="file-link" href="file:///d:/IT Projects/budolEcosystem/budolpaymobile/lib/screens/payment_status_screen.dart">payment_status_screen.dart</a></p>
+            <pre><code>String orderId = data['orderId']?.toString() ?? 'N/A';
+String reference = data['reference']?.toString() ?? data['referenceId']?.toString() ?? 'N/A';</code></pre>
+        </section>
+    </main>
 </body>
 </html>
