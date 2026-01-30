@@ -11,8 +11,8 @@ class SessionService extends ChangeNotifier with WidgetsBindingObserver {
   final LocalAuthentication _auth = LocalAuthentication();
   
   Timer? _inactivityTimer;
-  static const int _timeoutMinutes = 5;
-  static const int _gracePeriodSeconds = 1; // Locked immediately after backgrounding (v471)
+  static const int _timeoutMinutes = 3;
+  static const int _gracePeriodSeconds = 180; // 3 minutes grace period for backgrounding (v472)
   
   DateTime? _lastBackgroundTime;
   bool _isLocked = false;
@@ -87,7 +87,7 @@ class SessionService extends ChangeNotifier with WidgetsBindingObserver {
     _isLocked = true;
     notifyListeners();
     // For banking apps, hard timeout usually logs out completely
-    apiService.logout();
+    // apiService.logout(); // Keep session but lock UI (v472)
   }
 
   // --- Lifecycle Handling ---

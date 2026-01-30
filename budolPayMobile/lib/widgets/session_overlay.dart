@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/foundation.dart';
 import 'package:provider/provider.dart';
 import '../services/session_service.dart';
+import '../utils/ui_utils.dart';
 
 class SessionOverlay extends StatelessWidget {
   final Widget child;
@@ -111,6 +112,19 @@ class SessionOverlay extends StatelessWidget {
                                       color: Colors.white54,
                                       fontSize: 14,
                                       decoration: TextDecoration.underline,
+                                    ),
+                                  ),
+                                ),
+                                const Spacer(),
+                                Padding(
+                                  padding: const EdgeInsets.only(bottom: 24),
+                                  child: UIUtils.formatBudolPayText(
+                                    'budol₱ay',
+                                    baseStyle: const TextStyle(
+                                      color: Colors.white30,
+                                      fontSize: 14,
+                                      fontWeight: FontWeight.w900,
+                                      letterSpacing: 1.5,
                                     ),
                                   ),
                                 ),
