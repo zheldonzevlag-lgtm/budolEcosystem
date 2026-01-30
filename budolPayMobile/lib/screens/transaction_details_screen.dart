@@ -149,7 +149,7 @@ class _TransactionDetailsScreenState extends State<TransactionDetailsScreen> {
                       : (widget.transaction['receiver'] != null
                           ? '${widget.transaction['receiver']['firstName'] ?? ''} ${widget.transaction['receiver']['lastName'] ?? ''}'.trim()
                           : (widget.transaction['storeName'] ?? widget.transaction['description'] ?? 'Money Sent')),
-                    baseStyle: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Color(0xFF1E293B)),
+                    baseStyle: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: Color(0xFF1E293B)),
                   ),
                   const SizedBox(height: 8),
                   Text(
