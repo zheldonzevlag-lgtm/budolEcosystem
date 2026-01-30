@@ -12,7 +12,7 @@ class SessionService extends ChangeNotifier with WidgetsBindingObserver {
   
   Timer? _inactivityTimer;
   static const int _timeoutMinutes = 5;
-  static const int _gracePeriodSeconds = 30;
+  static const int _gracePeriodSeconds = 1; // Locked immediately after backgrounding (v471)
   
   DateTime? _lastBackgroundTime;
   bool _isLocked = false;
