@@ -154,9 +154,29 @@ app.get('/auth/check-email', async (req, res) => {
     }
 });
 
+// Check if phone number exists
+app.get('/auth/check-phone', async (req, res) => {
+    const { phone } = req.query;
+    if (!phone) return res.status(400).json({ error: 'Phone number is required' });
+    
+    try {
+        const user = await prisma.user.findFirst({
+            where: { phoneNumber: phone },
+            select: { id: true, phoneNumber: true }
+        });
+        
+        res.json({ 
+            exists: !!user,
+            message: user ? 'Phone number already registered in the ecosystem' : 'Phone number is available'
+        });
+    } catch (error) {
+        res.status(500).json({ error: error.message });
+    }
+});
+
 // 2. User Registration (Centralized)
 app.post('/auth/register', async (req, res) => {
-    const { email, password, firstName, lastName } = req.body;
+    const { email, password, firstName, lastName, phoneNumber } = req.body;
     try {
         // Check if user already exists
         const existingUser = await prisma.user.findUnique({ where: { email } });
@@ -170,7 +190,13 @@ app.post('/auth/register', async (req, res) => {
 
         const hashedPassword = await bcrypt.hash(password, 10);
         const user = await prisma.user.create({
-            data: { email, password: hashedPassword, firstName, lastName }
+            data: { 
+                email, 
+                password: hashedPassword, 
+                firstName, 
+                lastName,
+                phoneNumber: phoneNumber || null
+            }
         });
         res.status(201).json({ message: 'User created in budolID', userId: user.id });
     } catch (error) {

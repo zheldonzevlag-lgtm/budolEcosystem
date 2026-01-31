@@ -336,7 +336,7 @@ class _TransactionDetailsScreenState extends State<TransactionDetailsScreen> {
   Widget _buildDetailRow(String label, String value) {
     const slate600 = Color(0xFF475569);
     const slate400 = Color(0xFF94A3B8);
-    const fontSize = 10.0;
+    const fontSize = 9.0;
     
     return Container(
       padding: const EdgeInsets.symmetric(vertical: 12),
