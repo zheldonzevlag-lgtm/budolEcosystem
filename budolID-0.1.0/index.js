@@ -134,6 +134,26 @@ app.post('/apps/register', async (req, res) => {
     }
 });
 
+// Check if email exists
+app.get('/auth/check-email', async (req, res) => {
+    const { email } = req.query;
+    if (!email) return res.status(400).json({ error: 'Email is required' });
+    
+    try {
+        const user = await prisma.user.findUnique({
+            where: { email },
+            select: { id: true, email: true }
+        });
+        
+        res.json({ 
+            exists: !!user,
+            message: user ? 'Email already registered in the ecosystem' : 'Email is available'
+        });
+    } catch (error) {
+        res.status(500).json({ error: error.message });
+    }
+});
+
 // 2. User Registration (Centralized)
 app.post('/auth/register', async (req, res) => {
     const { email, password, firstName, lastName } = req.body;
