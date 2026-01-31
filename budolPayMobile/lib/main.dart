@@ -191,23 +191,36 @@ class _BudolPayAppState extends State<BudolPayApp> {
     if (!widget.apiService.isAuthenticated) {
       // Use the navigator key directly to find current route name
       String? currentRouteName;
-      widget.navigatorKey.currentState?.popUntil((route) {
-        currentRouteName = route.settings.name;
-        return true;
-      });
+      try {
+        widget.navigatorKey.currentState?.popUntil((route) {
+          currentRouteName = route.settings.name;
+          return true; // Don't actually pop
+        });
+      } catch (e) {
+        debugPrint('BudolPay: Error getting current route: $e');
+      }
 
-      debugPrint('BudolPay: Auth change detected. Current route: $currentRouteName');
+      debugPrint('BudolPay: Auth change detected. Authenticated: false. Current route: $currentRouteName');
 
-      // Ignore redirect if we are on public onboarding/splash routes
-      if (currentRouteName == Routes.splash || 
-          currentRouteName == Routes.marketing || 
-          currentRouteName == Routes.login || 
-          currentRouteName == Routes.registration) {
-        debugPrint('BudolPay: Ignoring auth redirect on public route.');
+      // List of routes that DON'T require authentication
+      final publicRoutes = [
+        Routes.splash,
+        Routes.marketing,
+        Routes.login,
+        Routes.registration,
+      ];
+
+      // Ignore redirect if we are already on a public route
+      if (currentRouteName != null && publicRoutes.contains(currentRouteName)) {
+        debugPrint('BudolPay: Already on a public route ($currentRouteName), ignoring redirect.');
         return;
       }
 
-      debugPrint('BudolPay: Session cleared. Redirecting to login.');
+      debugPrint('BudolPay: Session cleared or expired. Hard redirecting to login UI.');
+      
+      // Ensure we clear the lock screen state in session service as well
+      widget.sessionService.resetInactivityTimer();
+      
       widget.navigatorKey.currentState?.pushNamedAndRemoveUntil(
         Routes.login,
         (route) => false,

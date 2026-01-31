@@ -84,10 +84,10 @@ class SessionService extends ChangeNotifier with WidgetsBindingObserver {
   }
 
   void _handleTimeout() {
-    _isLocked = true;
+    if (kDebugMode) print('SessionService: Hard timeout reached. Logging out user.');
+    _isLocked = false; // Hide lock screen if it was showing
+    apiService.logout(); // This will trigger the auth listener in BudolPayApp to redirect to login
     notifyListeners();
-    // For banking apps, hard timeout usually logs out completely
-    // apiService.logout(); // Keep session but lock UI (v472)
   }
 
   // --- Lifecycle Handling ---
@@ -111,8 +111,9 @@ class SessionService extends ChangeNotifier with WidgetsBindingObserver {
     final difference = now.difference(_lastBackgroundTime!).inSeconds;
 
     if (difference > _gracePeriodSeconds) {
-      if (kDebugMode) print('SessionService: Grace period exceeded ($difference s). Locking session.');
-      _isLocked = true;
+      if (kDebugMode) print('SessionService: Grace period exceeded ($difference s). Logging out user.');
+      _isLocked = false;
+      apiService.logout();
       notifyListeners();
     } else {
       if (kDebugMode) print('SessionService: Resumed within grace period ($difference s).');

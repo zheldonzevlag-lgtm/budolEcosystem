@@ -1,0 +1,75 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Developer Manual - v1.3.54</title>
+    <style>
+        body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; line-height: 1.6; color: #172b4d; margin: 0; display: flex; }
+        .sidebar { width: 260px; height: 100vh; background: #f4f5f7; border-right: 1px solid #dfe1e6; position: fixed; padding: 20px; box-sizing: border-box; }
+        .main-content { margin-left: 260px; padding: 40px; max-width: 900px; }
+        pre { background: #091e42; color: #fff; padding: 15px; border-radius: 5px; overflow-x: auto; }
+        code { font-family: 'Courier New', Courier, monospace; }
+        .code-link { color: #0052cc; text-decoration: none; font-weight: bold; }
+        .code-link:hover { text-decoration: underline; }
+        .file-path { background: #ebecf0; padding: 2px 5px; border-radius: 3px; font-size: 0.9em; }
+    </style>
+</head>
+<body>
+    <div class="sidebar">
+        <h2>v1.3.54 Manual</h2>
+        <nav>
+            <a href="index.html" style="display: block; padding: 10px; color: #42526e; text-decoration: none;">Dashboard</a>
+            <a href="developer_manual.html" style="display: block; padding: 10px; color: #0052cc; text-decoration: none; font-weight: bold; background: #deebff; border-radius: 3px;">Developer Manual</a>
+            <a href="system_admin_manual.html" style="display: block; padding: 10px; color: #42526e; text-decoration: none;">System Admin Manual</a>
+            <a href="user_manual.html" style="display: block; padding: 10px; color: #42526e; text-decoration: none;">User Manual</a>
+            <hr>
+            <a href="../knowledgebase.html" style="display: block; padding: 10px; color: #42526e; text-decoration: none;">Knowledgebase</a>
+        </nav>
+    </div>
+    <div class="main-content">
+        <h1>Developer Manual - Security & Session Management</h1>
+        
+        <section>
+            <h2>1. Web Auth Form Fix</h2>
+            <p>Resolved the <code>ReferenceError: Cannot access 'formData' before initialization</code> in the React registration form. This was caused by hook ordering where <code>useEffect</code> hooks were referencing <code>formData</code> before its state declaration.</p>
+            <p><strong>File:</strong> <span class="file-path">budolshap-0.1.0/components/auth/AuthForm.jsx</span></p>
+            <a href="file:///d:/IT Projects/budolEcosystem/budolshap-0.1.0/components/auth/AuthForm.jsx" class="code-link">View AuthForm.jsx</a>
+            <pre><code>// Corrected Order:
+const [formData, setFormData] = useState({ ... });
+
+useEffect(() => {
+    // Debounced email check now safely accesses formData
+    if (!formData.email) return;
+    // ... logic
+}, [formData.email]);</code></pre>
+        </section>
+
+        <section>
+            <h2>2. Session Timeout Implementation (Mobile)</h2>
+            <p>The <code>SessionService</code> manages inactivity timers. Upon timeout, it triggers a lock screen. This release ensures that manual "Log Out" from this state correctly purges all authentication tokens.</p>
+            <p><strong>File:</strong> <span class="file-path">budolPayMobile/lib/services/session_service.dart</span></p>
+            <a href="file:///d:/IT Projects/budolEcosystem/budolPayMobile/lib/services/session_service.dart" class="code-link">View SessionService.dart</a>
+            <pre><code>void forceLogout() {
+  _isLocked = false;
+  apiService.logout(); // Triggers global state clearing
+  notifyListeners();
+}</code></pre>
+        </section>
+
+        <section>
+            <h2>3. Global Auth Navigation</h2>
+            <p>The <code>main.dart</code> file acts as the orchestrator for authentication state changes. When <code>apiService.logout()</code> is called, the <code>token</code> becomes null, triggering an automatic redirect to the login screen.</p>
+            <p><strong>File:</strong> <span class="file-path">budolPayMobile/lib/main.dart</span></p>
+            <a href="file:///d:/IT Projects/budolEcosystem/budolPayMobile/lib/main.dart" class="code-link">View main.dart</a>
+            <pre><code>void _handleAuthChange() {
+  if (apiService.token == null) {
+    navigatorKey.currentState?.pushNamedAndRemoveUntil(
+      Routes.login,
+      (route) => false,
+    );
+  }
+}</code></pre>
+        </section>
+    </div>
+</body>
+</html>
