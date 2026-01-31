@@ -4,6 +4,7 @@ import 'package:provider/provider.dart';
 import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:image_picker/image_picker.dart';
 import 'dart:io';
+import 'dart:async';
 import 'package:local_auth/local_auth.dart';
 import '../services/face_embedding_service.dart';
 import '../utils/js_helper.dart';
@@ -36,6 +37,9 @@ class _LoginScreenState extends State<LoginScreen> with WidgetsBindingObserver {
   bool _isPhoneValid = false;
   String? _phoneError;
   bool _hasAutoPrompted = false;
+  bool _identifierExists = true; // Default to true for login
+  bool _checkingIdentifier = false;
+  Timer? _debounceTimer;
 
   // Face Recognition state
   final ImagePicker _picker = ImagePicker();
@@ -46,6 +50,8 @@ class _LoginScreenState extends State<LoginScreen> with WidgetsBindingObserver {
     WidgetsBinding.instance.addObserver(this);
     _checkBiometrics();
     
+    _phoneController.addListener(_onIdentifierChanged);
+
     // On Web, ensure splash is removed if we navigated directly here
     if (kIsWeb) {
       WidgetsBinding.instance.addPostFrameCallback((_) {
@@ -61,6 +67,7 @@ class _LoginScreenState extends State<LoginScreen> with WidgetsBindingObserver {
   @override
   void dispose() {
     WidgetsBinding.instance.removeObserver(this);
+    _phoneController.removeListener(_onIdentifierChanged);
     _phoneController.dispose();
     _otpController.dispose();
     _pinController.dispose();
@@ -251,7 +258,7 @@ class _LoginScreenState extends State<LoginScreen> with WidgetsBindingObserver {
     if (otp.isEmpty) return;
     
     if (_userId == null) {
-      _showError('Session expired. Please enter your phone number again.');
+      _showError('Session expired. Please enter your mobile or email again.');
       setState(() => _currentStep = LoginStep.phone);
       return;
     }
@@ -295,7 +302,7 @@ class _LoginScreenState extends State<LoginScreen> with WidgetsBindingObserver {
     if (pin.isEmpty) return;
     
     if (_userId == null) {
-      _showError('Session expired. Please enter your phone number again.');
+      _showError('Session expired. Please enter your mobile or email again.');
       setState(() => _currentStep = LoginStep.phone);
       return;
     }
@@ -363,24 +370,83 @@ class _LoginScreenState extends State<LoginScreen> with WidgetsBindingObserver {
     }
   }
 
-  void _validatePhone(String value) {
-    final digits = value.replaceAll('-', '');
-    setState(() {
-      if (digits.isEmpty) {
-        _isPhoneValid = false;
+  void _onIdentifierChanged() {
+    if (_debounceTimer?.isActive ?? false) _debounceTimer!.cancel();
+    _debounceTimer = Timer(const Duration(milliseconds: 800), () {
+      _checkIdentifier(_phoneController.text);
+    });
+  }
+
+  Future<void> _checkIdentifier(String identifier) async {
+    final trimmed = identifier.trim();
+    if (trimmed.isEmpty) {
+      setState(() {
+        _identifierExists = true;
+        _checkingIdentifier = false;
         _phoneError = null;
-      } else if (!digits.startsWith('09')) {
-        _isPhoneValid = false;
-        _phoneError = 'Must start with 09';
-      } else if (digits.length < 11) {
-        _isPhoneValid = false;
-        _phoneError = 'Enter 11 digits';
-      } else if (digits.length > 11) {
-        _isPhoneValid = false;
-        _phoneError = 'Too many digits';
+      });
+      return;
+    }
+
+    setState(() => _checkingIdentifier = true);
+    try {
+      final apiService = context.read<ApiService>();
+      bool exists = false;
+      
+      if (trimmed.contains('@')) {
+        final result = await apiService.checkEmail(trimmed);
+        exists = result['exists'] ?? false;
       } else {
-        _isPhoneValid = true;
+        final result = await apiService.checkPhone(trimmed);
+        exists = result['exists'] ?? false;
+      }
+
+      if (mounted) {
+        setState(() {
+          _identifierExists = exists;
+          _checkingIdentifier = false;
+          if (!exists) {
+            _phoneError = 'Account not found in ecosystem';
+            _isPhoneValid = false;
+          } else {
+            _phoneError = null;
+            // Re-validate format to set _isPhoneValid
+            _validateIdentifier(trimmed);
+          }
+        });
+      }
+    } catch (e) {
+      if (mounted) setState(() => _checkingIdentifier = false);
+    }
+  }
+
+  void _validateIdentifier(String value) {
+    final trimmed = value.trim();
+    setState(() {
+      if (trimmed.isEmpty) {
+        _isPhoneValid = false;
         _phoneError = null;
+      } else if (trimmed.contains('@')) {
+        // Simple email validation
+        final emailRegex = RegExp(r'^[\w-\.]+@([\w-]+\.)+[\w-]{2,4}$');
+        _isPhoneValid = emailRegex.hasMatch(trimmed);
+        _phoneError = _isPhoneValid ? null : 'Invalid email format';
+      } else {
+        // Phone validation
+        final digits = trimmed.replaceAll(RegExp(r'\D'), '');
+        if (!digits.startsWith('09') && !digits.startsWith('639') && !digits.startsWith('9')) {
+          _isPhoneValid = false;
+          _phoneError = 'Invalid phone format';
+        } else if (digits.length < 10) {
+          _isPhoneValid = false;
+          _phoneError = 'Too short';
+        } else if (digits.length > 12) {
+          _isPhoneValid = false;
+          _phoneError = 'Too long';
+        } else {
+          _isPhoneValid = true;
+          _phoneError = null;
+        }
       }
     });
   }
@@ -534,7 +600,7 @@ class _LoginScreenState extends State<LoginScreen> with WidgetsBindingObserver {
               if (_currentStep != LoginStep.phone)
                 TextButton(
                   onPressed: () => setState(() => _currentStep = LoginStep.phone),
-                  child: const Text('Back to Phone Number', 
+                  child: const Text('Back to Login', 
                     style: TextStyle(color: Colors.white70)),
                 ),
               const SizedBox(height: 12),
@@ -574,19 +640,23 @@ class _LoginScreenState extends State<LoginScreen> with WidgetsBindingObserver {
   Widget _buildPhoneStep() {
     return Column(
       children: [
-        const Text('Enter your mobile number to continue', 
+        const Text('Enter your mobile number or email to continue', 
           style: TextStyle(color: Colors.white70)),
         const SizedBox(height: 24),
         TextField(
           controller: _phoneController,
-          keyboardType: TextInputType.phone,
+          keyboardType: TextInputType.emailAddress,
           style: const TextStyle(color: Colors.white),
-          inputFormatters: [PhoneInputFormatter()],
-          onChanged: _validatePhone,
+          onChanged: _validateIdentifier,
           decoration: _inputDecoration(
-            'Mobile Number', 
-            Icons.phone_android, 
-            iconColor: Colors.green,
+            'Mobile Number or Email', 
+            Icons.person_outline, 
+            iconColor: Colors.indigoAccent,
+            suffixIcon: _checkingIdentifier 
+              ? const SizedBox(width: 20, height: 20, child: Padding(padding: EdgeInsets.all(12), child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white70)))
+              : !_identifierExists 
+                ? const Icon(Icons.error_outline, color: Colors.redAccent)
+                : _isPhoneValid ? const Icon(Icons.check_circle_outline, color: Colors.greenAccent) : null,
             errorText: _phoneError,
           ),
         ),

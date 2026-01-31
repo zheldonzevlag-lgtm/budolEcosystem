@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import 'dart:async';
 import '../services/api_service.dart';
 import '../constants/routes.dart';
 
@@ -14,6 +15,13 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
   final PageController _pageController = PageController();
   int _currentStep = 0;
   bool _isLoading = false;
+
+  // Real-time validation states
+  bool _phoneExists = false;
+  bool _emailExists = false;
+  bool _checkingPhone = false;
+  bool _checkingEmail = false;
+  Timer? _debounceTimer;
 
   // Step 1: Phone
   final TextEditingController _phoneController = TextEditingController();
@@ -34,12 +42,79 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
       final args = ModalRoute.of(context)?.settings.arguments as Map?;
       if (args != null && args['phoneNumber'] != null) {
         _phoneController.text = args['phoneNumber'].toString();
+        _checkPhone(_phoneController.text);
       }
     });
+
+    _phoneController.addListener(_onPhoneChanged);
+    _emailController.addListener(_onEmailChanged);
+  }
+
+  void _onPhoneChanged() {
+    if (_debounceTimer?.isActive ?? false) _debounceTimer!.cancel();
+    _debounceTimer = Timer(const Duration(milliseconds: 800), () {
+      _checkPhone(_phoneController.text);
+    });
+  }
+
+  void _onEmailChanged() {
+    if (_debounceTimer?.isActive ?? false) _debounceTimer!.cancel();
+    _debounceTimer = Timer(const Duration(milliseconds: 800), () {
+      _checkEmail(_emailController.text);
+    });
+  }
+
+  Future<void> _checkPhone(String phone) async {
+    if (phone.length < 10) {
+      setState(() {
+        _phoneExists = false;
+        _checkingPhone = false;
+      });
+      return;
+    }
+
+    setState(() => _checkingPhone = true);
+    try {
+      final result = await context.read<ApiService>().checkPhone(phone);
+      if (mounted) {
+        setState(() {
+          _phoneExists = result['exists'] ?? false;
+          _checkingPhone = false;
+        });
+      }
+    } catch (e) {
+      if (mounted) setState(() => _checkingPhone = false);
+    }
+  }
+
+  Future<void> _checkEmail(String email) async {
+    if (email.length < 5 || !email.contains('@')) {
+      setState(() {
+        _emailExists = false;
+        _checkingEmail = false;
+      });
+      return;
+    }
+
+    setState(() => _checkingEmail = true);
+    try {
+      final result = await context.read<ApiService>().checkEmail(email);
+      if (mounted) {
+        setState(() {
+          _emailExists = result['exists'] ?? false;
+          _checkingEmail = false;
+        });
+      }
+    } catch (e) {
+      if (mounted) setState(() => _checkingEmail = false);
+    }
   }
 
   @override
   void dispose() {
+    _phoneController.removeListener(_onPhoneChanged);
+    _emailController.removeListener(_onEmailChanged);
+    _debounceTimer?.cancel();
     _pageController.dispose();
     _phoneController.dispose();
     _firstNameController.dispose();
@@ -161,9 +236,22 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
         controller: _phoneController,
         keyboardType: TextInputType.phone,
         style: const TextStyle(color: Colors.white),
-        decoration: _inputDecoration('Phone Number', Icons.phone),
+        decoration: _inputDecoration(
+          'Phone Number', 
+          Icons.phone,
+          suffixIcon: _checkingPhone 
+            ? const SizedBox(width: 20, height: 20, child: Padding(padding: EdgeInsets.all(12), child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white70)))
+            : _phoneExists 
+              ? const Icon(Icons.error_outline, color: Colors.redAccent)
+              : _phoneController.text.length >= 10 ? const Icon(Icons.check_circle_outline, color: Colors.greenAccent) : null,
+          errorText: _phoneExists ? 'This number is already registered in the ecosystem' : null,
+        ),
       ),
       onNext: () {
+        if (_phoneExists) {
+          _showError('This phone number is already taken in the ecosystem');
+          return;
+        }
         if (_phoneController.text.length >= 10) {
           _pageController.nextPage(duration: const Duration(milliseconds: 300), curve: Curves.easeInOut);
         } else {
@@ -195,11 +283,24 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
             controller: _emailController,
             keyboardType: TextInputType.emailAddress,
             style: const TextStyle(color: Colors.white),
-            decoration: _inputDecoration('Email (Optional)', Icons.email),
+            decoration: _inputDecoration(
+              'Email (Optional)', 
+              Icons.email,
+              suffixIcon: _checkingEmail 
+                ? const SizedBox(width: 20, height: 20, child: Padding(padding: EdgeInsets.all(12), child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white70)))
+                : _emailExists 
+                  ? const Icon(Icons.error_outline, color: Colors.redAccent)
+                  : _emailController.text.contains('@') && _emailController.text.length > 5 ? const Icon(Icons.check_circle_outline, color: Colors.greenAccent) : null,
+              errorText: _emailExists ? 'This email is already registered in the ecosystem' : null,
+            ),
           ),
         ],
       ),
       onNext: () {
+        if (_emailExists) {
+          _showError('This email is already registered in the ecosystem');
+          return;
+        }
         if (_firstNameController.text.isNotEmpty && _lastNameController.text.isNotEmpty) {
           _pageController.nextPage(duration: const Duration(milliseconds: 300), curve: Curves.easeInOut);
         } else {
@@ -222,7 +323,7 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
             maxLength: 6,
             style: const TextStyle(color: Colors.white, letterSpacing: 8, fontSize: 24),
             textAlign: TextAlign.center,
-            decoration: _inputDecoration('Create PIN', Icons.lock),
+            decoration: _inputDecoration('PIN', Icons.lock),
           ),
           const SizedBox(height: 16),
           TextField(
@@ -279,10 +380,13 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
     );
   }
 
-  InputDecoration _inputDecoration(String label, IconData icon) {
+  InputDecoration _inputDecoration(String label, IconData icon, {Widget? suffixIcon, String? errorText}) {
     return InputDecoration(
       labelText: label,
       prefixIcon: Icon(icon, color: Colors.white70),
+      suffixIcon: suffixIcon,
+      errorText: errorText,
+      errorStyle: const TextStyle(color: Colors.redAccent),
       labelStyle: const TextStyle(color: Colors.white70),
       filled: true,
       fillColor: Colors.white.withValues(alpha: 0.1),
@@ -290,6 +394,10 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
       focusedBorder: OutlineInputBorder(
         borderRadius: BorderRadius.circular(12),
         borderSide: const BorderSide(color: Color(0xFFF43F5E)),
+      ),
+      enabledBorder: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(12),
+        borderSide: BorderSide(color: errorText != null ? Colors.redAccent : Colors.white24),
       ),
       counterStyle: const TextStyle(color: Colors.white70),
     );

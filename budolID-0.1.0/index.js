@@ -4,6 +4,7 @@ const { PrismaClient } = require('./generated/client');
 const jwt = require('jsonwebtoken');
 const bcrypt = require('bcryptjs');
 const cors = require('cors');
+const { normalizePhilippinePhone, isValidE164Phone } = require('./utils/phoneNormalization');
 
 const prisma = new PrismaClient({
   datasources: {
@@ -160,13 +161,20 @@ app.get('/auth/check-phone', async (req, res) => {
     if (!phone) return res.status(400).json({ error: 'Phone number is required' });
     
     try {
+        // Normalize phone number before checking
+        const normalizedPhone = normalizePhilippinePhone(phone);
+        if (!normalizedPhone) {
+            return res.status(400).json({ error: 'Invalid phone number format' });
+        }
+        
         const user = await prisma.user.findFirst({
-            where: { phoneNumber: phone },
+            where: { phoneNumber: normalizedPhone },
             select: { id: true, phoneNumber: true }
         });
         
         res.json({ 
             exists: !!user,
+            normalizedPhone: normalizedPhone,
             message: user ? 'Phone number already registered in the ecosystem' : 'Phone number is available'
         });
     } catch (error) {
@@ -178,14 +186,35 @@ app.get('/auth/check-phone', async (req, res) => {
 app.post('/auth/register', async (req, res) => {
     const { email, password, firstName, lastName, phoneNumber } = req.body;
     try {
-        // Check if user already exists
-        const existingUser = await prisma.user.findUnique({ where: { email } });
-        if (existingUser) {
+        // Normalize phone number if provided
+        let normalizedPhone = null;
+        if (phoneNumber) {
+            normalizedPhone = normalizePhilippinePhone(phoneNumber);
+            if (!normalizedPhone) {
+                return res.status(400).json({ error: 'Invalid phone number format' });
+            }
+        }
+
+        // Check if user already exists by email
+        const existingUserByEmail = await prisma.user.findUnique({ where: { email } });
+        if (existingUserByEmail) {
             return res.status(409).json({ 
                 error: 'Email already registered',
-                code: 'P2002', // Standardize on Prisma code for unique constraint
-                userId: existingUser.id 
+                code: 'P2002',
+                userId: existingUserByEmail.id 
             });
+        }
+
+        // Check if phone number already exists
+        if (normalizedPhone) {
+            const existingUserByPhone = await prisma.user.findFirst({ where: { phoneNumber: normalizedPhone } });
+            if (existingUserByPhone) {
+                return res.status(409).json({ 
+                    error: 'Phone number already registered',
+                    code: 'P2002',
+                    userId: existingUserByPhone.id 
+                });
+            }
         }
 
         const hashedPassword = await bcrypt.hash(password, 10);
@@ -195,13 +224,13 @@ app.post('/auth/register', async (req, res) => {
                 password: hashedPassword, 
                 firstName, 
                 lastName,
-                phoneNumber: phoneNumber || null
+                phoneNumber: normalizedPhone
             }
         });
         res.status(201).json({ message: 'User created in budolID', userId: user.id });
     } catch (error) {
         if (error.code === 'P2002') {
-            return res.status(409).json({ error: 'Email already registered', code: 'P2002' });
+            return res.status(409).json({ error: 'Email or phone number already registered', code: 'P2002' });
         }
         res.status(400).json({ error: error.message });
     }
@@ -211,6 +240,7 @@ app.post('/auth/register', async (req, res) => {
 app.post('/auth/sso/login', async (req, res) => {
     const { email, password, apiKey } = req.body;
     console.log('[SSO Login API] Attempt for:', email, 'with apiKey:', apiKey);
+    
     try {
         // Verify the requesting app
         const ecosystemApp = await prisma.ecosystemApp.findUnique({ where: { apiKey } });
@@ -219,10 +249,37 @@ app.post('/auth/sso/login', async (req, res) => {
             return res.status(403).json({ error: 'Unauthorized Application' });
         }
 
+        // Determine if the identifier is an email or phone number
+        let user;
+        let identifierType;
+        
+        // Check if it looks like a phone number (starts with +, 0, or 9 and has digits)
+        const phoneRegex = /^[\+\d]\d{9,}$/;
+        const isPhoneNumber = phoneRegex.test(email) && email.includes('9');
+        
+        if (isPhoneNumber) {
+            // Normalize phone number
+            const normalizedPhone = normalizePhilippinePhone(email);
+            if (!normalizedPhone) {
+                return res.status(400).json({ error: 'Invalid phone number format' });
+            }
+            
+            // Find user by phone number
+            user = await prisma.user.findFirst({ 
+                where: { phoneNumber: normalizedPhone } 
+            });
+            identifierType = 'phone';
+        } else {
+            // Assume it's an email
+            user = await prisma.user.findUnique({ 
+                where: { email: email } 
+            });
+            identifierType = 'email';
+        }
+
         // Verify user credentials
-        const user = await prisma.user.findUnique({ where: { email } });
         if (!user || !(await bcrypt.compare(password, user.password))) {
-            console.log('[SSO Login API] Invalid credentials for:', email);
+            console.log(`[SSO Login API] Invalid credentials for ${identifierType}:`, email);
             return res.status(401).json({ error: 'Invalid credentials' });
         }
 
@@ -234,8 +291,10 @@ app.post('/auth/sso/login', async (req, res) => {
                 firstName: user.firstName,
                 lastName: user.lastName,
                 role: user.role,
+                phoneNumber: user.phoneNumber,
                 iss: 'budolID',
-                jti: require('crypto').randomUUID()
+                jti: require('crypto').randomUUID(),
+                loginMethod: identifierType
             },
             JWT_SECRET,
             { expiresIn: '7d' }
@@ -251,8 +310,19 @@ app.post('/auth/sso/login', async (req, res) => {
             }
         });
 
-        console.log('[SSO Login API] Success for:', email);
-        res.json({ token, redirectUri: ecosystemApp.redirectUri });
+        console.log(`[SSO Login API] Success for ${identifierType}:`, email);
+        res.json({ 
+            token, 
+            redirectUri: ecosystemApp.redirectUri,
+            user: {
+                id: user.id,
+                email: user.email,
+                firstName: user.firstName,
+                lastName: user.lastName,
+                role: user.role,
+                phoneNumber: user.phoneNumber
+            }
+        });
     } catch (error) {
         console.error('[SSO Login API] Error:', error);
         res.status(500).json({ error: error.message });

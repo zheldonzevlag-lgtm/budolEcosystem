@@ -22,7 +22,7 @@ class ApiService extends ChangeNotifier {
   Map<String, dynamic>? _systemSettings;
   String? _deviceId;
   bool _hasSeenAds = false;
-  String _appVersion = '1.3.57'; // v1.3.57 - Release Build
+  String _appVersion = '1.3.58'; // v1.3.58 - Release Build
 
   String get appVersion => _appVersion;
   Future<void>? _initFuture;
@@ -581,6 +581,38 @@ class ApiService extends ChangeNotifier {
       return data;
     } else {
       throw Exception(data['error'] ?? 'Failed to update MPIN');
+    }
+  }
+
+  Future<Map<String, dynamic>> checkEmail(String email) async {
+    await _ensureInitialized();
+    final url = '$authUrl/check-email?email=${Uri.encodeComponent(email)}';
+    try {
+      final response = await http.get(
+        Uri.parse(url),
+        headers: {'Content-Type': 'application/json'},
+      ).timeout(const Duration(seconds: 5));
+      final decoded = json.decode(response.body);
+      return decoded is Map ? Map<String, dynamic>.from(decoded) : {};
+    } catch (e) {
+      if (kDebugMode) print('ApiService: Error checking email: $e');
+      return {'exists': false};
+    }
+  }
+
+  Future<Map<String, dynamic>> checkPhone(String phone) async {
+    await _ensureInitialized();
+    final url = '$authUrl/check-phone?phone=${Uri.encodeComponent(phone)}';
+    try {
+      final response = await http.get(
+        Uri.parse(url),
+        headers: {'Content-Type': 'application/json'},
+      ).timeout(const Duration(seconds: 5));
+      final decoded = json.decode(response.body);
+      return decoded is Map ? Map<String, dynamic>.from(decoded) : {};
+    } catch (e) {
+      if (kDebugMode) print('ApiService: Error checking phone: $e');
+      return {'exists': false};
     }
   }
 

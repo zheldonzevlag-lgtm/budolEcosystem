@@ -1,0 +1,90 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Developer Manual: v1.3.58 Dual-Identifier Implementation</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --primary: #0052CC;
+            --bg-main: #FFFFFF;
+            --text-main: #091E42;
+            --border: #DFE1E6;
+            --code-bg: #F4F5F7;
+        }
+        body { font-family: 'Inter', sans-serif; line-height: 1.6; color: var(--text-main); max-width: 1000px; margin: 0 auto; padding: 40px; }
+        h1 { font-size: 2.2rem; border-bottom: 2px solid var(--primary); padding-bottom: 10px; }
+        h2 { font-size: 1.5rem; margin-top: 30px; border-bottom: 1px solid var(--border); padding-bottom: 5px; }
+        .nav-links { margin-bottom: 20px; font-size: 0.9rem; }
+        .nav-links a { color: var(--primary); text-decoration: none; margin-right: 15px; }
+        .code-block { background: var(--code-bg); padding: 20px; border-radius: 6px; border: 1px solid var(--border); overflow-x: auto; font-family: 'Courier New', monospace; font-size: 0.9rem; margin: 20px 0; }
+        .file-link { color: var(--primary); font-weight: 600; text-decoration: none; }
+        .file-link:hover { text-decoration: underline; }
+    </style>
+</head>
+<body>
+    <div class="nav-links">
+        <a href="../knowledgebase.html">← Back to Knowledgebase</a>
+        <a href="index.html">Index</a>
+        <a href="developer_manual.html">Developer Manual</a>
+    </div>
+
+    <h1>Developer Manual: v1.3.58</h1>
+    
+    <h2>1. Backend Implementation (Auth Service)</h2>
+    <p>The backend was updated to support cross-identifier searching in the <code>/login/mobile/identify</code> endpoint and new endpoints for real-time uniqueness checks.</p>
+    
+    <p><strong>Key Changes in:</strong> <a class="file-link" href="file:///d:/IT Projects/budolEcosystem/budolpay-0.1.0/services/auth-service/index.js">auth-service/index.js</a></p>
+    
+    <h3>1.1. Identification Logic</h3>
+    <div class="code-block">
+        // Detect if input is an email<br>
+        const isEmail = phoneNumber.includes('@');<br>
+        <br>
+        if (isEmail) {<br>
+        &nbsp;&nbsp;user = await prisma.user.findFirst({<br>
+        &nbsp;&nbsp;&nbsp;&nbsp;where: { email: phoneNumber.toLowerCase().trim() }<br>
+        &nbsp;&nbsp;});<br>
+        } else {<br>
+        &nbsp;&nbsp;user = await prisma.user.findFirst({<br>
+        &nbsp;&nbsp;&nbsp;&nbsp;where: {<br>
+        &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;OR: [<br>
+        &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;{ phoneNumber: phoneNumber },<br>
+        &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;{ phoneNumber: normalizedPhone },<br>
+        &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;{ phoneNumber: '+63' + normalizedPhone.substring(1) }<br>
+        &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;]<br>
+        &nbsp;&nbsp;&nbsp;&nbsp;}<br>
+        &nbsp;&nbsp;});<br>
+        }
+    </div>
+
+    <h3>1.2. Uniqueness Endpoints</h3>
+    <p>Added <code>/check-email</code> and <code>/check-phone</code> to provide real-time validation for frontends.</p>
+
+    <h2>2. Mobile Implementation (Flutter)</h2>
+    <p>Updated the Login and Registration screens with 800ms debounced validation.</p>
+    
+    <p><strong>Key Changes in:</strong> <a class="file-link" href="file:///d:/IT Projects/budolEcosystem/budolPayMobile/lib/screens/login_screen.dart">login_screen.dart</a></p>
+    <div class="code-block">
+        void _onIdentifierChanged() {<br>
+        &nbsp;&nbsp;if (_debounceTimer?.isActive ?? false) _debounceTimer!.cancel();<br>
+        &nbsp;&nbsp;_debounceTimer = Timer(const Duration(milliseconds: 800), () {<br>
+        &nbsp;&nbsp;&nbsp;&nbsp;_checkIdentifier(_phoneController.text);<br>
+        &nbsp;&nbsp;});<br>
+        }
+    </div>
+
+    <h2>3. Web Implementation (React)</h2>
+    <p>Modified <code>AuthForm.jsx</code> to handle the <code>identifier</code> field dynamically.</p>
+    <p><strong>Key Changes in:</strong> <a class="file-link" href="file:///d:/IT Projects/budolEcosystem/budolshap-0.1.0/components/auth/AuthForm.jsx">AuthForm.jsx</a></p>
+
+    <h2>4. Compliance & Security</h2>
+    <ul>
+        <li><strong>PCI DSS 10.2.2:</strong> All identification attempts are logged via <code>createAuditLog</code>.</li>
+        <li><strong>BSP Circular 808:</strong> Phone normalization ensures consistent user mapping across the ecosystem.</li>
+        <li><strong>NPC (Data Privacy):</strong> Email addresses are trimmed and lowercased before comparison to prevent duplication.</li>
+    </ul>
+
+</body>
+</html>

@@ -280,37 +280,92 @@ app.post('/register', async (req, res) => {
     }
 });
 
-// Mobile Login - Phase 1: Identify & Challenge (GoTyme Style)
-app.post('/login/mobile/identify', async (req, res) => {
-    let { phoneNumber, deviceId } = req.body;
-    
-    if (!phoneNumber) return res.status(400).json({ error: 'Mobile number is required' });
+// Check if email is already taken (Ecosystem-wide)
+app.get('/check-email', async (req, res) => {
+    const { email } = req.query;
+    if (!email) return res.status(400).json({ error: 'Email is required' });
 
-    // Normalize Phone Number (BSP Circular 808/1108 Aligned)
-    // Strip everything except digits
-    let normalizedPhone = phoneNumber.replace(/\D/g, '');
-    
-    // Convert 639... to 09... for local DB consistency if needed
+    try {
+        const user = await prisma.user.findUnique({
+            where: { email: email.toLowerCase().trim() }
+        });
+        res.json({ exists: !!user });
+    } catch (error) {
+        res.status(500).json({ error: error.message });
+    }
+});
+
+// Check if phone number is already taken (Ecosystem-wide)
+app.get('/check-phone', async (req, res) => {
+    const { phone } = req.query;
+    if (!phone) return res.status(400).json({ error: 'Phone is required' });
+
+    // Normalize phone for comparison
+    let normalizedPhone = phone.replace(/\D/g, '');
     if (normalizedPhone.startsWith('63')) {
         normalizedPhone = '0' + normalizedPhone.substring(2);
     }
 
     try {
-        // Search with exact match first, then with normalized
-        let user = await prisma.user.findFirst({
+        const user = await prisma.user.findFirst({
             where: {
                 OR: [
-                    { phoneNumber: phoneNumber },
+                    { phoneNumber: phone },
                     { phoneNumber: normalizedPhone },
                     { phoneNumber: '+63' + normalizedPhone.substring(1) }
                 ]
             }
         });
+        res.json({ exists: !!user });
+    } catch (error) {
+        res.status(500).json({ error: error.message });
+    }
+});
+
+// Mobile Login - Phase 1: Identify & Challenge (GoTyme Style)
+app.post('/login/mobile/identify', async (req, res) => {
+    let { phoneNumber, deviceId } = req.body;
+    
+    if (!phoneNumber) return res.status(400).json({ error: 'Mobile number or email is required' });
+
+    // Detect if input is an email
+    const isEmail = phoneNumber.includes('@');
+    let normalizedPhone = '';
+    
+    if (!isEmail) {
+        // Normalize Phone Number (BSP Circular 808/1108 Aligned)
+        // Strip everything except digits
+        normalizedPhone = phoneNumber.replace(/\D/g, '');
+        
+        // Convert 639... to 09... for local DB consistency if needed
+        if (normalizedPhone.startsWith('63')) {
+            normalizedPhone = '0' + normalizedPhone.substring(2);
+        }
+    }
+
+    try {
+        // Search with exact match first, then with normalized phone or email
+        let user;
+        if (isEmail) {
+            user = await prisma.user.findFirst({
+                where: { email: phoneNumber.toLowerCase().trim() }
+            });
+        } else {
+            user = await prisma.user.findFirst({
+                where: {
+                    OR: [
+                        { phoneNumber: phoneNumber },
+                        { phoneNumber: normalizedPhone },
+                        { phoneNumber: '+63' + normalizedPhone.substring(1) }
+                    ]
+                }
+            });
+        }
         
         if (!user) {
             // Audit: Mobile Identification Failure
             await createAuditLog(req, null, 'SECURITY_MOBILE_IDENTIFY_FAILED', {
-                phoneNumber,
+                identifier: phoneNumber,
                 deviceId,
                 reason: 'USER_NOT_FOUND'
             }, 'Security');
