@@ -46,85 +46,95 @@ class SessionOverlay extends StatelessWidget {
                         child: SafeArea(
                           child: Material( // Wrap with Material to ensure text styles and buttons work correctly
                             color: Colors.transparent,
-                            child: Column(
-                              mainAxisAlignment: MainAxisAlignment.center,
+                            child: Stack(
                               children: [
-                                Container(
-                                  padding: const EdgeInsets.all(20),
-                                  decoration: BoxDecoration(
-                                    color: Colors.white.withValues(alpha: 0.1),
-                                    shape: BoxShape.circle,
-                                    border: Border.all(color: Colors.white24, width: 2),
-                                  ),
-                                  child: const Icon(
-                                    Icons.lock_outline_rounded,
-                                    color: Color(0xFFF43F5E),
-                                    size: 64,
-                                  ),
-                                ),
-                                const SizedBox(height: 32),
-                                const Text(
-                                  'Session Locked',
-                                  style: TextStyle(
-                                    color: Colors.white,
-                                    fontSize: 18,
-                                    fontWeight: FontWeight.bold,
-                                  ),
-                                ),
-                                const SizedBox(height: 12),
-                                const Padding(
-                                  padding: EdgeInsets.symmetric(horizontal: 40),
-                                  child: Text(
-                                    'For your security, your session has been locked due to inactivity or app switching.',
-                                    textAlign: TextAlign.center,
-                                    style: TextStyle(
-                                      color: Colors.white70,
-                                      fontSize: 14,
-                                    ),
-                                  ),
-                                ),
-                                const SizedBox(height: 48),
-                                Padding(
-                                  padding: const EdgeInsets.symmetric(horizontal: 40),
-                                  child: ElevatedButton(
-                                    onPressed: () => sessionService.unlockWithBiometrics(),
-                                    style: ElevatedButton.styleFrom(
-                                      backgroundColor: const Color(0xFFF43F5E),
-                                      foregroundColor: Colors.white,
-                                      padding: const EdgeInsets.symmetric(horizontal: 40, vertical: 16),
-                                      shape: RoundedRectangleBorder(
-                                        borderRadius: BorderRadius.circular(12),
+                                Center(
+                                  child: Column(
+                                    mainAxisAlignment: MainAxisAlignment.center,
+                                    crossAxisAlignment: CrossAxisAlignment.center,
+                                    children: [
+                                      Container(
+                                        padding: const EdgeInsets.all(20),
+                                        decoration: BoxDecoration(
+                                          color: Colors.white.withValues(alpha: 0.1),
+                                          shape: BoxShape.circle,
+                                          border: Border.all(color: Colors.white24, width: 2),
+                                        ),
+                                        child: const Icon(
+                                          Icons.lock_outline_rounded,
+                                          color: Color(0xFFF43F5E),
+                                          size: 64,
+                                        ),
                                       ),
-                                      minimumSize: const Size(double.infinity, 56),
-                                    ),
-                                    child: const Text(
-                                      'Unlock with Biometrics',
-                                      style: TextStyle(fontSize: 14, fontWeight: FontWeight.bold),
-                                    ),
+                                      const SizedBox(height: 32),
+                                      const Text(
+                                        'Session Locked',
+                                        style: TextStyle(
+                                          color: Colors.white,
+                                          fontSize: 18,
+                                          fontWeight: FontWeight.bold,
+                                        ),
+                                      ),
+                                      const SizedBox(height: 12),
+                                      const Padding(
+                                        padding: EdgeInsets.symmetric(horizontal: 40),
+                                        child: Text(
+                                          'For your security, your session has been locked due to inactivity or app switching.',
+                                          textAlign: TextAlign.center,
+                                          style: TextStyle(
+                                            color: Colors.white70,
+                                            fontSize: 14,
+                                          ),
+                                        ),
+                                      ),
+                                      const SizedBox(height: 48),
+                                      Padding(
+                                        padding: const EdgeInsets.symmetric(horizontal: 40),
+                                        child: ElevatedButton(
+                                          onPressed: () => sessionService.unlockWithBiometrics(),
+                                          style: ElevatedButton.styleFrom(
+                                            backgroundColor: const Color(0xFFF43F5E),
+                                            foregroundColor: Colors.white,
+                                            padding: const EdgeInsets.symmetric(horizontal: 40, vertical: 16),
+                                            shape: RoundedRectangleBorder(
+                                              borderRadius: BorderRadius.circular(12),
+                                            ),
+                                            minimumSize: const Size(double.infinity, 56),
+                                          ),
+                                          child: const Text(
+                                            'Unlock with Biometrics',
+                                            style: TextStyle(fontSize: 14, fontWeight: FontWeight.bold),
+                                          ),
+                                        ),
+                                      ),
+                                      const SizedBox(height: 16),
+                                      TextButton(
+                                        onPressed: () => sessionService.forceLogout(),
+                                        child: const Text(
+                                          'Log Out',
+                                          style: TextStyle(
+                                            color: Colors.white54,
+                                            fontSize: 14,
+                                            decoration: TextDecoration.underline,
+                                          ),
+                                        ),
+                                      ),
+                                    ],
                                   ),
                                 ),
-                                const SizedBox(height: 16),
-                                TextButton(
-                                  onPressed: () => sessionService.forceLogout(),
-                                  child: const Text(
-                                    'Log Out',
-                                    style: TextStyle(
-                                      color: Colors.white54,
-                                      fontSize: 14,
-                                      decoration: TextDecoration.underline,
-                                    ),
-                                  ),
-                                ),
-                                const Spacer(),
-                                Padding(
-                                  padding: const EdgeInsets.only(bottom: 24),
-                                  child: UIUtils.formatBudolPayText(
-                                    'budol₱ay',
-                                    baseStyle: const TextStyle(
-                                      color: Colors.white30,
-                                      fontSize: 14,
-                                      fontWeight: FontWeight.w900,
-                                      letterSpacing: 1.5,
+                                Positioned(
+                                  bottom: 24,
+                                  left: 0,
+                                  right: 0,
+                                  child: Center(
+                                    child: UIUtils.formatBudolPayText(
+                                      'budol₱ay',
+                                      baseStyle: const TextStyle(
+                                        color: Colors.white30,
+                                        fontSize: 14,
+                                        fontWeight: FontWeight.w900,
+                                        letterSpacing: 1.5,
+                                      ),
                                     ),
                                   ),
                                 ),
