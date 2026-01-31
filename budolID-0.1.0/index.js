@@ -138,12 +138,25 @@ app.post('/apps/register', async (req, res) => {
 app.post('/auth/register', async (req, res) => {
     const { email, password, firstName, lastName } = req.body;
     try {
+        // Check if user already exists
+        const existingUser = await prisma.user.findUnique({ where: { email } });
+        if (existingUser) {
+            return res.status(409).json({ 
+                error: 'Email already registered',
+                code: 'P2002', // Standardize on Prisma code for unique constraint
+                userId: existingUser.id 
+            });
+        }
+
         const hashedPassword = await bcrypt.hash(password, 10);
         const user = await prisma.user.create({
             data: { email, password: hashedPassword, firstName, lastName }
         });
         res.status(201).json({ message: 'User created in budolID', userId: user.id });
     } catch (error) {
+        if (error.code === 'P2002') {
+            return res.status(409).json({ error: 'Email already registered', code: 'P2002' });
+        }
         res.status(400).json({ error: error.message });
     }
 });

@@ -22,7 +22,7 @@ class ApiService extends ChangeNotifier {
   Map<String, dynamic>? _systemSettings;
   String? _deviceId;
   bool _hasSeenAds = false;
-  String _appVersion = '1.3.53'; // v1.3.53 - UI: Center Session Lock Screen Release
+  String _appVersion = '1.3.54'; // v1.3.54 - Release Build
 
   String get appVersion => _appVersion;
   Future<void>? _initFuture;
