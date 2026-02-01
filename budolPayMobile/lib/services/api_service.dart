@@ -513,6 +513,31 @@ class ApiService extends ChangeNotifier {
     }
   }
 
+  Future<Map<String, dynamic>> quickRegister({
+    required String phoneNumber,
+    String? firstName,
+  }) async {
+    final url = '$authUrl/register/quick';
+    
+    final response = await http.post(
+      Uri.parse(url),
+      headers: {'Content-Type': 'application/json'},
+      body: json.encode({
+        'phoneNumber': phoneNumber,
+        'firstName': firstName,
+        'deviceId': deviceId,
+      }),
+    ).timeout(const Duration(seconds: 10));
+
+    final decoded = json.decode(response.body);
+    final Map<String, dynamic> data = decoded is Map ? Map<String, dynamic>.from(decoded) : {};
+    if (response.statusCode == 201) {
+      return data;
+    } else {
+      throw Exception(data['error'] ?? 'Quick registration failed');
+    }
+  }
+
   Future<Map<String, dynamic>> updateProfile({
     String? firstName,
     String? lastName,

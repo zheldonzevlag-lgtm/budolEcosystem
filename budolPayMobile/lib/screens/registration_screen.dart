@@ -15,6 +15,7 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
   final PageController _pageController = PageController();
   int _currentStep = 0;
   bool _isLoading = false;
+  bool _isQuickReg = true; // Default to Quick as per Shopee best practice
 
   // Real-time validation states
   bool _phoneExists = false;
@@ -230,35 +231,128 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
 
   Widget _buildPhoneStep() {
     return _stepContainer(
-      title: 'What\'s your number?',
-      subtitle: 'We\'ll use this to secure your account.',
-      content: TextField(
-        controller: _phoneController,
-        keyboardType: TextInputType.phone,
-        style: const TextStyle(color: Colors.white),
-        decoration: _inputDecoration(
-          'Phone Number', 
-          Icons.phone,
-          suffixIcon: _checkingPhone 
-            ? const SizedBox(width: 20, height: 20, child: Padding(padding: EdgeInsets.all(12), child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white70)))
-            : _phoneExists 
-              ? const Icon(Icons.error_outline, color: Colors.redAccent)
-              : _phoneController.text.length >= 10 ? const Icon(Icons.check_circle_outline, color: Colors.greenAccent) : null,
-          errorText: _phoneExists ? 'This number is already registered in the ecosystem' : null,
-        ),
+      title: _isQuickReg ? 'Join us today' : 'What\'s your number?',
+      subtitle: _isQuickReg 
+        ? 'Quick registration will generate a temporary profile. You can complete your KYC later.'
+        : 'We\'ll use this to secure your account.',
+      content: Column(
+        children: [
+          // Registration Type Toggle (Shopee Style)
+          Container(
+            padding: const EdgeInsets.all(4),
+            decoration: BoxDecoration(
+              color: const Color(0xFF1E293B),
+              borderRadius: BorderRadius.circular(12),
+            ),
+            child: Row(
+              children: [
+                Expanded(
+                  child: GestureDetector(
+                    onTap: () => setState(() => _isQuickReg = false),
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(vertical: 12),
+                      decoration: BoxDecoration(
+                        color: !_isQuickReg ? Colors.white.withValues(alpha: 0.1) : Colors.transparent,
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                      alignment: Alignment.center,
+                      child: Text(
+                        'Standard',
+                        style: TextStyle(
+                          color: !_isQuickReg ? Colors.white : Colors.white60,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                    ),
+                  ),
+                ),
+                Expanded(
+                  child: GestureDetector(
+                    onTap: () => setState(() => _isQuickReg = true),
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(vertical: 12),
+                      decoration: BoxDecoration(
+                        color: _isQuickReg ? const Color(0xFF10B981) : Colors.transparent,
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                      alignment: Alignment.center,
+                      child: Text(
+                        'Quick (Phone Only)',
+                        style: TextStyle(
+                          color: _isQuickReg ? Colors.white : Colors.white60,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(height: 32),
+          TextField(
+            controller: _phoneController,
+            keyboardType: TextInputType.phone,
+            style: const TextStyle(color: Colors.white),
+            decoration: _inputDecoration(
+              'Phone Number', 
+              Icons.phone,
+              suffixIcon: _checkingPhone 
+                ? const SizedBox(width: 20, height: 20, child: Padding(padding: EdgeInsets.all(12), child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white70)))
+                : _phoneExists 
+                  ? const Icon(Icons.error_outline, color: Colors.redAccent)
+                  : _phoneController.text.length >= 10 ? const Icon(Icons.check_circle_outline, color: Colors.greenAccent) : null,
+              errorText: _phoneExists ? 'This number is already registered' : null,
+            ),
+          ),
+        ],
       ),
-      onNext: () {
+      buttonText: _isQuickReg ? 'Create Account' : 'Continue',
+      onNext: () async {
         if (_phoneExists) {
-          _showError('This phone number is already taken in the ecosystem');
+          _showError('This phone number is already taken');
           return;
         }
-        if (_phoneController.text.length >= 10) {
-          _pageController.nextPage(duration: const Duration(milliseconds: 300), curve: Curves.easeInOut);
-        } else {
+        if (_phoneController.text.length < 10) {
           _showError('Enter a valid phone number');
+          return;
+        }
+
+        if (_isQuickReg) {
+          await _handleQuickRegister();
+        } else {
+          _pageController.nextPage(duration: const Duration(milliseconds: 300), curve: Curves.easeInOut);
         }
       },
     );
+  }
+
+  Future<void> _handleQuickRegister() async {
+    setState(() => _isLoading = true);
+    try {
+      final result = await context.read<ApiService>().quickRegister(
+        phoneNumber: _phoneController.text.trim(),
+      );
+      
+      if (mounted) {
+        // We reuse LoginScreen's OTP step for quick registration verification.
+        // We push login with the userId and initialStep set to OTP.
+        Navigator.pushNamed(
+          context, 
+          Routes.login, 
+          arguments: {
+            'userId': result['userId'],
+            'phoneNumber': _phoneController.text.trim(),
+            'initialStep': 'OTP',
+            'type': 'REGISTRATION' // Backend will handle the registration verification type
+          }
+        );
+      }
+    } catch (e) {
+      _showError(e.toString());
+    } finally {
+      setState(() => _isLoading = false);
+    }
   }
 
   Widget _buildProfileStep() {

@@ -280,6 +280,91 @@ app.post('/register', async (req, res) => {
     }
 });
 
+/**
+ * Quick Registration (Shopee Aligned)
+ * Phase 1: Phone + OTP Only
+ * Creates a temporary profile with UNVERIFIED status
+ */
+app.post('/register/quick', async (req, res) => {
+    const { phoneNumber, deviceId, firstName } = req.body;
+    
+    if (!phoneNumber) return res.status(400).json({ error: 'Phone number is required' });
+
+    // Normalize phone
+    let normalizedPhone = phoneNumber.replace(/\D/g, '');
+    if (normalizedPhone.startsWith('63')) {
+        normalizedPhone = '0' + normalizedPhone.substring(2);
+    }
+
+    try {
+        // Check existence
+        const existing = await prisma.user.findFirst({
+            where: {
+                OR: [
+                    { phoneNumber: phoneNumber },
+                    { phoneNumber: normalizedPhone },
+                    { phoneNumber: '+63' + normalizedPhone.substring(1) }
+                ]
+            }
+        });
+
+        if (existing) {
+            return res.status(400).json({ 
+                error: 'This number is already registered. Please sign in instead.',
+                exists: true 
+            });
+        }
+
+        // OTP Generation
+        const isLocal = process.env.LOCAL_IP || !process.env.VERCEL;
+        const otpCode = isLocal ? '123456' : Math.floor(100000 + Math.random() * 900000).toString();
+        const otpExpiresAt = new Date(getNowUTC().getTime() + 10 * 60 * 1000);
+
+        // Trusted Devices init
+        const trustedDevices = deviceId ? JSON.stringify([{
+            deviceId,
+            addedAt: getLegacyManilaDate(),
+            lastUsed: getLegacyManilaDate(),
+            isVerified: false
+        }]) : null;
+
+        const user = await prisma.user.create({
+            data: {
+                phoneNumber: normalizedPhone,
+                firstName: firstName || 'Budol User',
+                lastName: 'Quick-Reg',
+                email: `${normalizedPhone}@budol.temp`, // Temporary internal email
+                passwordHash: 'QUICK_REG_PENDING',
+                otpCode,
+                otpExpiresAt,
+                trustedDevices,
+                kycTier: 'BASIC',
+                kycStatus: 'PENDING'
+            }
+        });
+
+        // Audit Log
+        await createAuditLog(req, user.id, 'SECURITY_QUICK_REG_INIT', {
+            deviceId,
+            mode: 'QUICK_PHONE_ONLY'
+        }, 'Security', user.id);
+
+        // Send OTP
+        await sendOTP(user.phoneNumber, otpCode, 'SMS');
+        if (isLocal) console.log(`[LOCAL] Quick-Reg OTP for ${user.phoneNumber}: ${otpCode}`);
+
+        res.status(201).json({
+            message: 'Quick registration initiated. Please verify OTP.',
+            userId: user.id,
+            requireOtp: true
+        });
+
+    } catch (error) {
+        console.error('[Quick Reg Error]', error);
+        res.status(500).json({ error: error.message });
+    }
+});
+
 // Check if email is already taken (Ecosystem-wide)
 app.get('/check-email', async (req, res) => {
     const { email } = req.query;
@@ -1110,10 +1195,12 @@ app.delete('/favorites/:recipientId', authenticate, async (req, res) => {
     }
 });
 
-app.listen(PORT, () => {
-    console.log(`[budolPay-Auth] Service running on http://localhost:${PORT}`);
-    // Keep alive for local development terminals
-    setInterval(() => {}, 1000000);
-});
+if (require.main === module) {
+    app.listen(PORT, () => {
+        console.log(`[budolPay-Auth] Service running on http://localhost:${PORT}`);
+        // Keep alive for local development terminals
+        setInterval(() => {}, 1000000);
+    });
+}
 
 module.exports = app;

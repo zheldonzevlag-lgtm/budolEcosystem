@@ -52,6 +52,23 @@ class _LoginScreenState extends State<LoginScreen> with WidgetsBindingObserver {
     
     _phoneController.addListener(_onIdentifierChanged);
 
+    // Handle initial state from arguments (e.g., coming from Registration)
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      final args = ModalRoute.of(context)?.settings.arguments as Map?;
+      if (args != null) {
+        if (args['phoneNumber'] != null) {
+          _phoneController.text = args['phoneNumber'];
+          _validateIdentifier(args['phoneNumber']);
+        }
+        if (args['userId'] != null) {
+          _userId = args['userId'].toString();
+        }
+        if (args['initialStep'] == 'OTP') {
+          setState(() => _currentStep = LoginStep.otp);
+        }
+      }
+    });
+
     // On Web, ensure splash is removed if we navigated directly here
     if (kIsWeb) {
       WidgetsBinding.instance.addPostFrameCallback((_) {
@@ -265,10 +282,14 @@ class _LoginScreenState extends State<LoginScreen> with WidgetsBindingObserver {
 
     setState(() => _isLoading = true);
     try {
+      // Get the type from arguments if coming from registration
+      final args = ModalRoute.of(context)?.settings.arguments as Map?;
+      final String otpType = args?['type'] ?? 'TRUST_DEVICE';
+
       final result = await context.read<ApiService>().verifyOtp(
         userId: _userId!,
         otp: otp,
-        type: 'TRUST_DEVICE',
+        type: otpType,
       );
       if (mounted) {
         if (result['status'] == 'PIN_SETUP_REQUIRED' || result['needsPinSetup'] == true) {
