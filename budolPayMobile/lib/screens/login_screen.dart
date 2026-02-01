@@ -712,87 +712,8 @@ class _LoginScreenState extends State<LoginScreen> with WidgetsBindingObserver {
             child: const Text('Login with OTP', style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600)),
           ),
         ),
-        const SizedBox(height: 16),
-        Row(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            _buildSsoButton(
-              'Google',
-              Icons.g_mobiledata,
-              Colors.redAccent,
-              () => _handleSsoLogin('Google'),
-            ),
-            const SizedBox(width: 16),
-            _buildSsoButton(
-              'Facebook',
-              Icons.facebook,
-              Colors.blueAccent,
-              () => _handleSsoLogin('Facebook'),
-            ),
-          ],
-        ),
       ],
     );
-  }
-
-  Widget _buildSsoButton(String label, IconData icon, Color color, VoidCallback onPressed) {
-    return InkWell(
-      onTap: _isLoading ? null : onPressed,
-      borderRadius: BorderRadius.circular(12),
-      child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-        decoration: BoxDecoration(
-          border: Border.all(color: Colors.white24),
-          borderRadius: BorderRadius.circular(12),
-          color: Colors.white.withValues(alpha: 0.05),
-        ),
-        child: Row(
-          children: [
-            Icon(icon, color: color, size: 28),
-            const SizedBox(width: 8),
-            Text(label, style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w600)),
-          ],
-        ),
-      ),
-    );
-  }
-
-  Future<void> _handleSsoLogin(String provider) async {
-    // In a real implementation, we would call GoogleSignIn or FacebookLogin SDKs
-    // For this prototype, we simulate a successful SSO auth and call linkSso
-    
-    setState(() => _isLoading = true);
-    try {
-      final apiService = context.read<ApiService>();
-      
-      // Simulate SSO data (this would come from the SDK)
-      final String simulatedEmail = "sso_${provider.toLowerCase()}@example.com";
-      final String simulatedProviderId = "sso_${provider.toLowerCase()}_12345";
-      const String firstName = "SSO";
-      final String lastName = provider;
-
-      final result = await apiService.linkSso(
-        email: simulatedEmail,
-        phoneNumber: null,
-        provider: provider,
-        providerId: simulatedProviderId,
-        firstName: firstName,
-        lastName: lastName,
-      );
-
-      if (!mounted) return;
-
-      if (result['status'] == 'LINKED' || result['status'] == 'CREATED') {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(result['message'] ?? 'Login successful via $provider'), backgroundColor: Colors.green),
-        );
-        Navigator.pushReplacementNamed(context, Routes.home);
-      }
-    } catch (e) {
-      _showError(e.toString());
-    } finally {
-      if (mounted) setState(() => _isLoading = false);
-    }
   }
 
   Widget _buildOtpStep() {

@@ -642,47 +642,6 @@ class ApiService extends ChangeNotifier {
     }
   }
 
-  // SSO Linking & Registration
-  Future<Map<String, dynamic>> linkSso({
-    String? email,
-    String? phoneNumber,
-    required String provider,
-    required String providerId,
-    String? firstName,
-    String? lastName,
-  }) async {
-    await _ensureInitialized();
-    final url = '$authUrl/sso/link';
-    
-    final response = await http.post(
-      Uri.parse(url),
-      headers: {'Content-Type': 'application/json'},
-      body: json.encode({
-        'email': email,
-        'phoneNumber': phoneNumber,
-        'provider': provider,
-        'providerId': providerId,
-        'firstName': firstName,
-        'lastName': lastName,
-      }),
-    ).timeout(const Duration(seconds: 10));
-
-    final decoded = json.decode(response.body);
-    final Map<String, dynamic> data = decoded is Map ? Map<String, dynamic>.from(decoded) : {};
-    
-    if (response.statusCode == 200 || response.statusCode == 201) {
-      if (data['token'] != null) {
-        token = data['token'];
-        user = data['user'];
-        await _saveSession();
-        notifyListeners();
-      }
-      return data;
-    } else {
-      throw Exception(data['error'] ?? 'SSO linking failed');
-    }
-  }
-
   // --- Favorites Management ---
 
   Future<List<dynamic>> getFavorites() async {
