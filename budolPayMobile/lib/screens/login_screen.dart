@@ -688,11 +688,11 @@ class _LoginScreenState extends State<LoginScreen> with WidgetsBindingObserver {
         const SizedBox(height: 24),
         _buildButton('Continue', _handleIdentify, isEnabled: _isPhoneValid),
         const SizedBox(height: 16),
-        Row(
+        const Row(
           children: [
             Expanded(child: Divider(color: Colors.white24)),
             Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 16),
+              padding: EdgeInsets.symmetric(horizontal: 16),
               child: Text('OR', style: TextStyle(color: Colors.white38, fontSize: 12)),
             ),
             Expanded(child: Divider(color: Colors.white24)),
@@ -768,7 +768,7 @@ class _LoginScreenState extends State<LoginScreen> with WidgetsBindingObserver {
       // Simulate SSO data (this would come from the SDK)
       final String simulatedEmail = "sso_${provider.toLowerCase()}@example.com";
       final String simulatedProviderId = "sso_${provider.toLowerCase()}_12345";
-      final String firstName = "SSO";
+      const String firstName = "SSO";
       final String lastName = provider;
 
       final result = await apiService.linkSso(
