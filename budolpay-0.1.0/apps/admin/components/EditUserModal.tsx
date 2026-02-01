@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import { X, Save, Trash2, Key, ShieldAlert } from 'lucide-react';
+import { X, Save, Trash2, Key, ShieldAlert, ShieldCheck } from 'lucide-react';
 
 interface EditUserModalProps {
     isOpen: boolean;
@@ -23,6 +23,7 @@ export default function EditUserModal({ isOpen, onClose, onSuccess, user }: Edit
     const [isResetting, setIsResetting] = useState(false);
     const [isDeleting, setIsDeleting] = useState(false);
     const [tempPassword, setTempPassword] = useState<string | null>(null);
+    const [deliveryInfo, setDeliveryInfo] = useState<{ target: string, method: string } | null>(null);
 
     useEffect(() => {
         if (user) {
@@ -35,6 +36,7 @@ export default function EditUserModal({ isOpen, onClose, onSuccess, user }: Edit
                 department: user.department || '',
             });
             setTempPassword(null);
+            setDeliveryInfo(null);
         }
     }, [user]);
 
@@ -88,6 +90,7 @@ export default function EditUserModal({ isOpen, onClose, onSuccess, user }: Edit
             if (res.ok) {
                 const data = await res.json();
                 setTempPassword(data.tempPassword);
+                setDeliveryInfo({ target: data.deliveredTo, method: data.method });
             }
         } catch (error) {
             console.error("Reset failed:", error);
@@ -208,12 +211,33 @@ export default function EditUserModal({ isOpen, onClose, onSuccess, user }: Edit
                     </div>
 
                     {tempPassword && (
-                        <div className="bg-amber-50 border border-amber-200 p-4 rounded-xl flex items-start gap-3">
-                            <Key className="w-5 h-5 text-amber-600 shrink-0" />
-                            <div>
-                                <p className="text-xs font-bold text-amber-800">Temporary Password Generated</p>
-                                <p className="text-lg font-mono font-bold text-amber-900 select-all">{tempPassword}</p>
-                                <p className="text-[9px] text-amber-600 mt-1 uppercase font-bold">Provide this to the user immediately.</p>
+                        <div className="bg-emerald-50 border border-emerald-200 p-4 rounded-xl space-y-3">
+                            <div className="flex items-start gap-3">
+                                <ShieldCheck className="w-5 h-5 text-emerald-600 shrink-0" />
+                                <div>
+                                    <p className="text-xs font-bold text-emerald-800 uppercase tracking-tight">Banking-Grade Reset Successful</p>
+                                    <p className="text-[10px] text-emerald-600">The system has securely generated and delivered a temporary credential to the user.</p>
+                                </div>
+                            </div>
+                            
+                            <div className="bg-white/50 p-3 rounded-lg border border-emerald-100 flex justify-between items-center">
+                                <div>
+                                    <p className="text-[9px] font-bold text-slate-400 uppercase">Delivery Target ({deliveryInfo?.method})</p>
+                                    <p className="text-xs font-mono font-bold text-slate-700">{deliveryInfo?.target}</p>
+                                </div>
+                                <div className="text-right">
+                                    <p className="text-[9px] font-bold text-slate-400 uppercase">Status</p>
+                                    <p className="text-[10px] font-bold text-emerald-600 flex items-center gap-1 justify-end">
+                                        <span className="w-1.5 h-1.5 bg-emerald-500 rounded-full animate-pulse"></span>
+                                        SENT
+                                    </p>
+                                </div>
+                            </div>
+
+                            <div className="pt-2 border-t border-emerald-100">
+                                <p className="text-[9px] font-bold text-emerald-700 uppercase mb-1">Developer Debug (Sandbox Only):</p>
+                                <p className="text-lg font-mono font-bold text-slate-900 select-all tracking-wider">{tempPassword}</p>
+                                <p className="text-[8px] text-slate-400 italic">In production, this clear-text password is never exposed to the Administrative Interface.</p>
                             </div>
                         </div>
                     )}
