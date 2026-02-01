@@ -49,6 +49,85 @@ export async function POST(request: Request) {
       return NextResponse.json({ success: true, user: updatedUser });
     }
 
+    if (action === "UPDATE_PROFILE") {
+      const { firstName, lastName, email, phoneNumber, role, department } = await request.json();
+      
+      const oldUser = await prisma.user.findUnique({ where: { id: userId } });
+      
+      const updatedUser = await prisma.user.update({
+        where: { id: userId },
+        data: { 
+          firstName, 
+          lastName, 
+          email, 
+          phoneNumber, 
+          role: role as any,
+          department 
+        }
+      });
+
+      // Forensic Audit Log
+      await prisma.auditLog.create({
+        data: {
+          action: "USER_PROFILE_UPDATED",
+          entity: "User",
+          entityId: userId,
+          userId: adminId,
+          oldValue: oldUser as any,
+          newValue: { firstName, lastName, email, phoneNumber, role, department } as any,
+          ipAddress: "Internal System"
+        }
+      });
+
+      return NextResponse.json({ success: true, user: updatedUser });
+    }
+
+    if (action === "RESET_PASSWORD") {
+      // Compliance: Admin cannot set the password directly to a known value
+      // We generate a temporary one-time password
+      const tempPassword = Math.random().toString(36).substring(7).toUpperCase();
+      
+      await prisma.user.update({
+        where: { id: userId },
+        data: { password: tempPassword } // In production, this would be hashed and emailed
+      });
+
+      await prisma.auditLog.create({
+        data: {
+          action: "USER_PASSWORD_RESET_BY_ADMIN",
+          entity: "User",
+          entityId: userId,
+          userId: adminId,
+          ipAddress: "Internal System"
+        }
+      });
+
+      return NextResponse.json({ success: true, tempPassword });
+    }
+
+    if (action === "DELETE_USER") {
+      // Compliance: Soft delete only to preserve audit trails
+      const updatedUser = await prisma.user.update({
+        where: { id: userId },
+        data: { 
+          role: "DEACTIVATED" as any,
+          email: `deleted_${Date.now()}_${userId}@budolpay.com` // Anonymize email but keep ID
+        }
+      });
+
+      await prisma.auditLog.create({
+        data: {
+          action: "USER_DEACTIVATED_BY_ADMIN",
+          entity: "User",
+          entityId: userId,
+          userId: adminId,
+          ipAddress: "Internal System"
+        }
+      });
+
+      return NextResponse.json({ success: true, message: "User deactivated successfully" });
+    }
+
     if (action === "PROVISION_ACCOUNT") {
       const { email, firstName, lastName, role, phoneNumber } = await request.json();
 

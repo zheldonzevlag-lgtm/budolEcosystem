@@ -3,6 +3,7 @@
 import React, { useState, useEffect } from "react";
 import PermissionsMatrix from "@/components/PermissionsMatrix";
 import ProvisionAccountModal from "@/components/ProvisionAccountModal";
+import EditUserModal from "@/components/EditUserModal";
 import { realtime } from "@/lib/realtime";
 import { 
   Users, 
@@ -147,52 +148,12 @@ export default function EmployeesPage() {
         onSuccess={fetchData}
       />
 
-      {/* Role Assignment Modal */}
-      {isRoleModalOpen && selectedEmployee && (
-        <div className="fixed inset-0 z-[110] flex items-center justify-center bg-slate-900/50 backdrop-blur-sm p-4">
-          <div className="bg-white w-full max-w-md rounded-2xl shadow-2xl p-6 border border-slate-200">
-            <h3 className="text-lg font-bold text-slate-800 mb-2">Modify Authorization</h3>
-            <p className="text-xs text-slate-500 mb-6">Updating access for <span className="font-bold text-slate-700">{selectedEmployee.firstName} {selectedEmployee.lastName}</span></p>
-            
-            <div className="space-y-3 mb-8">
-              {['ADMIN', 'STAFF'].map((role) => (
-                <button
-                  key={role}
-                  onClick={() => handleUpdateRole(selectedEmployee.id, role)}
-                  className={`w-full p-4 rounded-xl border-2 transition-all flex justify-between items-center ${
-                    selectedEmployee.role === role 
-                    ? 'border-budolshap-primary bg-budolshap-primary/5' 
-                    : 'border-slate-100 hover:border-slate-200'
-                  }`}
-                >
-                  <div className="text-left">
-                    <div className={`font-bold text-sm ${selectedEmployee.role === role ? 'text-budolshap-primary' : 'text-slate-700'}`}>
-                      {role}
-                    </div>
-                    <div className="text-[10px] text-slate-400">
-                      {role === 'ADMIN' ? 'Full system access & root privileges' : 'Operations access with limited visibility'}
-                    </div>
-                  </div>
-                  {selectedEmployee.role === role && (
-                    <div className="w-5 h-5 bg-budolshap-primary rounded-full flex items-center justify-center text-white">
-                      <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="3" d="M5 13l4 4L19 7"></path></svg>
-                    </div>
-                  )}
-                </button>
-              ))}
-            </div>
-
-            <div className="flex gap-3">
-              <button 
-                onClick={() => setIsRoleModalOpen(false)}
-                className="flex-1 px-4 py-2.5 rounded-lg border border-slate-200 text-slate-600 font-bold text-sm hover:bg-slate-50 transition"
-              >
-                Cancel
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
+      <EditUserModal 
+        isOpen={isRoleModalOpen} 
+        onClose={() => setIsRoleModalOpen(false)} 
+        onSuccess={fetchData}
+        user={selectedEmployee}
+      />
 
       <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
         {/* Workforce Stats */}
@@ -317,9 +278,9 @@ export default function EmployeesPage() {
                             setIsRoleModalOpen(true);
                           }}
                           className="p-1.5 text-slate-400 hover:text-budolshap-primary transition" 
-                          title="Edit Authorization"
+                          title="Edit Profile"
                         >
-                          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"></path></svg>
+                          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"></path></svg>
                         </button>
                         <button className="p-1.5 text-slate-400 hover:text-slate-900 transition" title="View Audit Logs">
                           <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-3 7h3m-3 4h3m-6-4h.01M9 16h.01"></path></svg>
