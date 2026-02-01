@@ -258,6 +258,50 @@ app.post('/auth/register', async (req, res) => {
     }
 });
 
+// 2.1 Quick Registration (Shopee Style)
+app.post('/auth/register/quick', async (req, res) => {
+    const { phoneNumber, firstName, deviceId } = req.body;
+    console.log('[Quick Reg] Attempt for:', phoneNumber);
+    
+    try {
+        const normalizedPhone = normalizePhilippinePhone(phoneNumber);
+        if (!normalizedPhone) {
+            return res.status(400).json({ error: 'Invalid phone number format' });
+        }
+
+        // Check if phone number already exists
+        const existingUser = await prisma.user.findFirst({ where: { phoneNumber: normalizedPhone } });
+        if (existingUser) {
+            return res.status(409).json({ error: 'Phone number already registered', userId: existingUser.id });
+        }
+
+        // Create user with minimal info
+        // We generate a random temporary password for quick registration
+        const tempPassword = Math.random().toString(36).substring(7);
+        const hashedPassword = await bcrypt.hash(tempPassword, 10);
+        
+        const user = await prisma.user.create({
+            data: {
+                phoneNumber: normalizedPhone,
+                firstName: firstName || 'Budol',
+                lastName: 'User',
+                password: hashedPassword,
+                email: `${normalizedPhone}@quick.budolpay.com`, // Temporary email
+            }
+        });
+
+        console.log('[Quick Reg] Success for:', user.id);
+        res.status(201).json({ 
+            message: 'Quick registration successful', 
+            userId: user.id,
+            phoneNumber: normalizedPhone
+        });
+    } catch (error) {
+        console.error('[Quick Reg] Error:', error.message);
+        res.status(400).json({ error: error.message });
+    }
+});
+
 // 3. SSO Login (The main entry point for all apps)
 app.post('/auth/sso/login', async (req, res) => {
     const { email, password, apiKey } = req.body;

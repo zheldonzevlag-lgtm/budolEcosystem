@@ -296,7 +296,7 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
             style: const TextStyle(color: Colors.white),
             decoration: _inputDecoration(
               'Phone Number', 
-              Icons.phone,
+              Icons.phone_android,
               suffixIcon: _checkingPhone 
                 ? const SizedBox(width: 20, height: 20, child: Padding(padding: EdgeInsets.all(12), child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white70)))
                 : _phoneExists 
@@ -425,7 +425,7 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
             keyboardType: TextInputType.number,
             obscureText: true,
             maxLength: 6,
-            style: const TextStyle(color: Colors.white, letterSpacing: 8, fontSize: 24),
+            style: const TextStyle(color: Colors.white, letterSpacing: 8, fontSize: 18),
             textAlign: TextAlign.center,
             decoration: _inputDecoration('Confirm PIN', Icons.lock_outline),
           ),

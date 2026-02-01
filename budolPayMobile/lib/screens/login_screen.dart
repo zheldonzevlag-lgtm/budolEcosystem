@@ -661,7 +661,7 @@ class _LoginScreenState extends State<LoginScreen> with WidgetsBindingObserver {
   Widget _buildPhoneStep() {
     return Column(
       children: [
-        const Text('Enter your mobile number or email to continue', 
+        const Text('Login to continue', 
           style: TextStyle(color: Colors.white70)),
         const SizedBox(height: 24),
         TextField(
@@ -670,8 +670,8 @@ class _LoginScreenState extends State<LoginScreen> with WidgetsBindingObserver {
           style: const TextStyle(color: Colors.white),
           onChanged: _validateIdentifier,
           decoration: _inputDecoration(
-            'Mobile Number or Email', 
-            Icons.person_outline, 
+            'Mobile or Email', 
+            Icons.phone_android, 
             iconColor: Colors.indigoAccent,
             suffixIcon: _checkingIdentifier 
               ? const SizedBox(width: 20, height: 20, child: Padding(padding: EdgeInsets.all(12), child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white70)))
