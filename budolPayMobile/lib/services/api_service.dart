@@ -22,7 +22,7 @@ class ApiService extends ChangeNotifier {
   Map<String, dynamic>? _systemSettings;
   String? _deviceId;
   bool _hasSeenAds = false;
-  String _appVersion = '1.3.59'; // v1.3.59 - Release Build (SSO Linking & OTP Login)
+  String _appVersion = '1.3.60'; // v1.3.60 - Release Build
 
   String get appVersion => _appVersion;
   Future<void>? _initFuture;
@@ -367,7 +367,7 @@ class ApiService extends ChangeNotifier {
 
   // --- Auth Methods ---
 
-  Future<Map<String, dynamic>> identifyMobile(String phoneNumber, {String? mode}) async {
+  Future<Map<String, dynamic>> identifyMobile(String phoneNumber) async {
     final url = '$authUrl/login/mobile/identify';
     final response = await http.post(
       Uri.parse(url),
@@ -375,7 +375,6 @@ class ApiService extends ChangeNotifier {
       body: json.encode({
         'phoneNumber': phoneNumber,
         'deviceId': deviceId,
-        if (mode != null) 'mode': mode,
       }),
     ).timeout(const Duration(seconds: 10));
 

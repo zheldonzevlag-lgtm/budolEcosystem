@@ -409,11 +409,10 @@ app.get('/check-phone', async (req, res) => {
 
 // Mobile Login - Phase 1: Identify & Challenge (GoTyme Style)
 app.post('/login/mobile/identify', async (req, res) => {
-    let { phoneNumber, deviceId, mode } = req.body;
+    let { phoneNumber, deviceId } = req.body;
     
     if (!phoneNumber) return res.status(400).json({ error: 'Mobile number or email is required' });
 
-    const isForceOtp = mode === 'OTP';
     // Detect if input is an email
     const isEmail = phoneNumber.includes('@');
     let normalizedPhone = '';
@@ -469,12 +468,11 @@ app.post('/login/mobile/identify', async (req, res) => {
         // Audit: Mobile Identification (Phase 1)
         await createAuditLog(req, user.id, 'SECURITY_MOBILE_IDENTIFY_SUCCESS', {
             deviceId,
-            isDeviceTrusted,
-            mode
+            isDeviceTrusted
         }, 'Security', user.id);
 
-        if (isForceOtp || !isDeviceTrusted || !user.pinHash) {
-            // New Device, Untrusted, OR No PIN set, OR Force OTP -> Trigger OTP
+        if (!isDeviceTrusted || !user.pinHash) {
+            // New Device, Untrusted, OR No PIN set -> Trigger OTP
             // LOCAL BYPASS: Use fixed OTP for local development
             const isLocal = process.env.LOCAL_IP || !process.env.VERCEL;
             const otpCode = isLocal ? '123456' : Math.floor(100000 + Math.random() * 900000).toString();
@@ -488,20 +486,20 @@ app.post('/login/mobile/identify', async (req, res) => {
             await sendOTP(user.phoneNumber, otpCode, 'SMS');
 
             if (isLocal) {
-                console.log(`[LOCAL] OTP for ${user.phoneNumber}: ${otpCode}`);
-            }
+            console.log(`[LOCAL] OTP for ${user.phoneNumber}: ${otpCode}`);
+        }
 
-            return res.json({ 
-                status: 'OTP_REQUIRED', 
-                userId: user.id,
-                user: {
-                    id: user.id,
-                    phoneNumber: user.phoneNumber,
-                    firstName: user.firstName,
-                    lastName: user.lastName
-                },
-                message: isForceOtp ? 'OTP sent for secure login' : 'New device detected. OTP sent.'
-            });
+        return res.json({ 
+            status: 'OTP_REQUIRED', 
+            userId: user.id,
+            user: {
+                id: user.id,
+                phoneNumber: user.phoneNumber,
+                firstName: user.firstName,
+                lastName: user.lastName
+            },
+            message: 'OTP sent to your registered mobile number'
+        });
         }
 
         // Trusted Device -> Proceed to PIN or Biometrics
@@ -707,8 +705,8 @@ app.post('/verify-otp', async (req, res) => {
             console.error('[Verification Notification Error]', notifError);
         }
 
-        // If it was a device verification login OR a quick registration verification, return a token immediately
-        if (deviceId || type === 'REGISTRATION') {
+        // If it was a device verification login, return a token immediately
+        if (deviceId) {
             const hasPin = !!updatedUser.pinHash;
             // If no PIN is set, we return a limited token or just the status to force PIN setup
             const token = jwt.sign(
@@ -719,7 +717,7 @@ app.post('/verify-otp', async (req, res) => {
 
             return res.json({ 
                 status: hasPin ? 'SUCCESS' : 'PIN_SETUP_REQUIRED',
-                message: hasPin ? 'Verification and login successful' : 'Verification successful. Please set up your 6-digit PIN.', 
+                message: hasPin ? 'Device verified and login successful' : 'Device verified. Please set up your 6-digit PIN.', 
                 token,
                 user: { 
                     id: updatedUser.id, 

@@ -16,8 +16,30 @@ const prisma = new PrismaClient({
 
 // Debug connection on startup
 prisma.$connect()
-    .then(() => {
+    .then(async () => {
         console.log('✅ Connected to Database');
+        
+        // Auto-seed core apps if missing
+        const localIP = process.env.LOCAL_IP || '192.168.1.2';
+        const coreApps = [
+            { name: 'budolPay', apiKey: 'bp_key_2025', redirectUri: `http://${localIP}:3000/api/auth/callback` },
+            { name: 'budolShap', apiKey: 'bs_key_2025', redirectUri: `http://${localIP}:3001/api/auth/sso/callback` }
+        ];
+
+        for (const app of coreApps) {
+            await prisma.ecosystemApp.upsert({
+                where: { apiKey: app.apiKey },
+                update: { redirectUri: app.redirectUri },
+                create: {
+                    name: app.name,
+                    apiKey: app.apiKey,
+                    apiSecret: require('crypto').randomBytes(32).toString('hex'),
+                    redirectUri: app.redirectUri
+                }
+            });
+        }
+        console.log('✅ Core Ecosystem Apps verified/seeded');
+
         return prisma.$queryRaw`SELECT current_schema()`;
     })
     .then(schema => {

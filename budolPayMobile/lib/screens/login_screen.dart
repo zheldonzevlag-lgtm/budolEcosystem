@@ -216,14 +216,14 @@ class _LoginScreenState extends State<LoginScreen> with WidgetsBindingObserver {
     _showError('No face profile or biometric login enabled. Please login with PIN once to enable.');
   }
 
-  Future<void> _handleIdentify({String? mode}) async {
+  Future<void> _handleIdentify() async {
     final phone = _phoneController.text.trim();
     if (phone.isEmpty) return;
 
     setState(() => _isLoading = true);
     try {
       final apiService = context.read<ApiService>();
-      final result = await apiService.identifyMobile(phone, mode: mode);
+      final result = await apiService.identifyMobile(phone);
       if (!mounted) return;
       
       final String? error = result['error']?.toString();
@@ -245,7 +245,7 @@ class _LoginScreenState extends State<LoginScreen> with WidgetsBindingObserver {
         });
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(content: Text(result['message'] ?? 'Please verify OTP.')),
+            const SnackBar(content: Text('New device detected. Please verify OTP.')),
           );
         }
       } else if (status == 'AUTH_REQUIRED') {
@@ -268,10 +268,6 @@ class _LoginScreenState extends State<LoginScreen> with WidgetsBindingObserver {
     } finally {
       setState(() => _isLoading = false);
     }
-  }
-
-  Future<void> _handleIdentifyWithOtp() async {
-    await _handleIdentify(mode: 'OTP');
   }
 
   Future<void> _handleVerifyOtp() async {
@@ -687,31 +683,6 @@ class _LoginScreenState extends State<LoginScreen> with WidgetsBindingObserver {
         ),
         const SizedBox(height: 24),
         _buildButton('Continue', _handleIdentify, isEnabled: _isPhoneValid),
-        const SizedBox(height: 16),
-        const Row(
-          children: [
-            Expanded(child: Divider(color: Colors.white24)),
-            Padding(
-              padding: EdgeInsets.symmetric(horizontal: 16),
-              child: Text('OR', style: TextStyle(color: Colors.white38, fontSize: 12)),
-            ),
-            Expanded(child: Divider(color: Colors.white24)),
-          ],
-        ),
-        const SizedBox(height: 16),
-        SizedBox(
-          width: double.infinity,
-          height: 56,
-          child: OutlinedButton(
-            onPressed: (_isLoading || !_isPhoneValid) ? null : _handleIdentifyWithOtp,
-            style: OutlinedButton.styleFrom(
-              side: const BorderSide(color: Colors.white24),
-              foregroundColor: Colors.white,
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-            ),
-            child: const Text('Login with OTP', style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600)),
-          ),
-        ),
       ],
     );
   }

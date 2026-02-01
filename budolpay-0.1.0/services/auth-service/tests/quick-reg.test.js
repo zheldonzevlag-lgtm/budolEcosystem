@@ -1,7 +1,7 @@
 const request = require('supertest');
 const app = require('../index');
 
-describe('Quick Registration & SSO Linking API', () => {
+describe('Quick Registration API', () => {
   jest.setTimeout(30000); // Increase timeout for slow audit/notification calls
   let testPhone = `09${Math.floor(100000000 + Math.random() * 900000000)}`;
 
