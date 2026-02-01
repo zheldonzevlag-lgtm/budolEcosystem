@@ -1,0 +1,54 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Mitigation Plan - v2.1.4</title>
+    <style>
+        body { font-family: sans-serif; line-height: 1.6; max-width: 800px; margin: 0 auto; padding: 20px; }
+        .mitigation-strategy { background: #fff3cd; border-left: 5px solid #ffc107; padding: 15px; margin-bottom: 20px; }
+        .mitigation-card { background: white; padding: 15px; border-radius: 8px; border: 1px solid #ffeeba; margin-top: 10px; }
+        .mitigation-title { font-weight: bold; color: #856404; margin-bottom: 10px; font-size: 1.1em; }
+        .risk-tag { font-size: 0.8em; font-weight: bold; padding: 2px 6px; border-radius: 4px; }
+        .risk-high { background: #f8d7da; color: #721c24; }
+    </style>
+</head>
+<body>
+    <h1>Mitigation Plan - v2.1.4</h1>
+
+    <div class="mitigation-strategy">
+        <div class="mitigation-card">
+            <div class="mitigation-title">M-005: Compliance-Controlled User Management</div>
+            <p><strong>PCI DSS/BSP Guard:</strong> Admins are restricted from viewing or setting user passwords directly. Only "Force Reset" with system-generated temporary credentials is allowed.</p>
+            <p><strong>NPC Guard:</strong> All profile changes are logged with Old vs New values to prevent undetected administrative account takeover.</p>
+            <p><strong>Data Integrity:</strong> Soft-delete (Deactivation) is enforced to preserve the integrity of the transaction ledger and audit logs.</p>
+            <div class="mitigation-card">
+            <div class="mitigation-title">M-007: Administrative Self-Action Restrictions <span class="risk-tag risk-high">NEW</span></div>
+            <p><strong>Risk:</strong> Admin Account Takeover (Attacker uses admin session to reset own password and lock out legitimate owner).</p>
+            <p><strong>Mitigation:</strong> Enforce server-side and client-side checks to prevent administrators from resetting their own passwords or deactivating their own accounts via the Administrative Interface.</p>
+            <p><strong>Compliance:</strong> PCI DSS 8.1.2, BSP Dual Control Principles.</p>
+        </div>
+    </div>
+
+        <div class="mitigation-card">
+            <div class="mitigation-title">M-006: Zero-Knowledge Password Delivery <span class="risk-tag risk-high">NEW</span></div>
+            <p><strong>Risk:</strong> Admin Account Takeover (Admin resets user password and logs in as user).</p>
+            <p><strong>Mitigation:</strong> System sends temporary credentials directly to user via verified out-of-band channels (SMS/Email). The Administrative Interface is restricted from viewing the clear-text password after generation.</p>
+            <p><strong>Compliance:</strong> BSP Circular 808 (Authentication Management), PCI DSS 8.2.4.</p>
+        </div>
+    </div>
+
+    <div class="mitigation-strategy">
+        <h3>S-001: Automated SSO Health Checks</h3>
+        <p>Implement a watchdog service that pings the <code>/auth/sso/login</code> endpoint every 5 minutes and alerts administrators if the API key validation fails.</p>
+    </div>
+
+    <div class="mitigation-strategy">
+        <h3>S-002: Build Artifact Signing</h3>
+        <p>Ensure all APKs in the <code>android-installer</code> directory are cryptographically signed and their SHA-256 hashes are published in the <code>test_results.html</code>.</p>
+    </div>
+
+    <div class="version-info">
+        <a href="index.html">Back to Index</a>
+    </div>
+</body>
+</html>

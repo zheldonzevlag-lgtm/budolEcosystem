@@ -83,6 +83,11 @@ export async function POST(request: Request) {
     }
 
     if (action === "RESET_PASSWORD") {
+      // Compliance: Admin cannot reset their own password via the Admin Dashboard
+      if (adminId === userId) {
+        return NextResponse.json({ error: "Self-password reset is prohibited for compliance." }, { status: 403 });
+      }
+
       // Compliance: Admin cannot set the password directly to a known value
       // We generate a temporary one-time password
       const tempPassword = Math.random().toString(36).substring(7).toUpperCase();
@@ -125,6 +130,11 @@ export async function POST(request: Request) {
     }
 
     if (action === "DELETE_USER") {
+      // Compliance: Admin cannot deactivate their own account
+      if (adminId === userId) {
+        return NextResponse.json({ error: "Self-deactivation is prohibited for compliance." }, { status: 403 });
+      }
+
       // Compliance: Soft delete only to preserve audit trails
       const updatedUser = await prisma.user.update({
         where: { id: userId },

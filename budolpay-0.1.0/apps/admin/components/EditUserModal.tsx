@@ -22,8 +22,20 @@ export default function EditUserModal({ isOpen, onClose, onSuccess, user }: Edit
     const [isSubmitting, setIsSubmitting] = useState(false);
     const [isResetting, setIsResetting] = useState(false);
     const [isDeleting, setIsDeleting] = useState(false);
+    const [currentUser, setCurrentUser] = useState<any>(null);
     const [tempPassword, setTempPassword] = useState<string | null>(null);
     const [deliveryInfo, setDeliveryInfo] = useState<{ target: string, method: string } | null>(null);
+
+    useEffect(() => {
+        const fetchMe = async () => {
+            const res = await fetch('/api/auth/me');
+            if (res.ok) {
+                const data = await res.json();
+                setCurrentUser(data.user);
+            }
+        };
+        fetchMe();
+    }, []);
 
     useEffect(() => {
         if (user) {
@@ -256,8 +268,9 @@ export default function EditUserModal({ isOpen, onClose, onSuccess, user }: Edit
                             <button 
                                 type="button"
                                 onClick={handleResetPassword}
-                                disabled={isResetting}
-                                className="bg-white border border-slate-200 text-slate-700 py-2.5 rounded-xl font-bold text-xs flex items-center justify-center gap-2 hover:bg-slate-50 transition"
+                                disabled={isResetting || currentUser?.id === user.id}
+                                className="bg-white border border-slate-200 text-slate-700 py-2.5 rounded-xl font-bold text-xs flex items-center justify-center gap-2 hover:bg-slate-50 transition disabled:opacity-50 disabled:cursor-not-allowed"
+                                title={currentUser?.id === user.id ? "Compliance: You cannot reset your own password via the Admin Dashboard." : ""}
                             >
                                 <Key className="w-4 h-4" />
                                 Reset Password
@@ -265,13 +278,19 @@ export default function EditUserModal({ isOpen, onClose, onSuccess, user }: Edit
                             <button 
                                 type="button"
                                 onClick={handleDelete}
-                                disabled={isDeleting}
-                                className="bg-red-50 text-red-600 border border-red-100 py-2.5 rounded-xl font-bold text-xs flex items-center justify-center gap-2 hover:bg-red-100 transition"
+                                disabled={isDeleting || currentUser?.id === user.id}
+                                className="bg-red-50 text-red-600 border border-red-100 py-2.5 rounded-xl font-bold text-xs flex items-center justify-center gap-2 hover:bg-red-100 transition disabled:opacity-50 disabled:cursor-not-allowed"
+                                title={currentUser?.id === user.id ? "Compliance: You cannot deactivate your own account." : ""}
                             >
                                 <Trash2 className="w-4 h-4" />
                                 Deactivate User
                             </button>
                         </div>
+                        {currentUser?.id === user.id && (
+                            <p className="text-[9px] text-amber-600 font-bold uppercase text-center">
+                                Security Restriction: Self-management of credentials is prohibited via administrative dashboard.
+                            </p>
+                        )}
                     </div>
                 </form>
 
