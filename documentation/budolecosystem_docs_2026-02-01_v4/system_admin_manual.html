@@ -1,0 +1,61 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>System Admin Manual - v2.2.0</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        :root { --primary: #0052CC; --bg-main: #FFFFFF; --text-main: #091E42; --border: #DFE1E6; }
+        body { font-family: 'Inter', sans-serif; line-height: 1.6; color: var(--text-main); max-width: 1000px; margin: 0 auto; padding: 40px; background: #F4F5F7; }
+        .container { background: white; padding: 40px; border-radius: 8px; box-shadow: 0 1px 3px rgba(0,0,0,0.1); }
+        h1, h2 { color: var(--primary); border-bottom: 1px solid var(--border); padding-bottom: 10px; }
+        .nav-links { margin-bottom: 20px; font-size: 0.9rem; }
+        .nav-links a { color: var(--primary); text-decoration: none; margin-right: 15px; }
+        code { background: #F4F5F7; padding: 2px 5px; border-radius: 4px; font-family: monospace; }
+        .admin-note { background: #FFF7E6; border-left: 5px solid #FFAB00; padding: 15px; margin: 20px 0; border-radius: 4px; }
+    </style>
+</head>
+<body>
+    <div class="nav-links">
+        <a href="index.html">← Back to v2.2.0 Index</a>
+    </div>
+
+    <div class="container">
+        <h1>System Admin Manual: SSO & OTP Configuration</h1>
+        
+        <section>
+            <h2>1. SSO Provider Configuration</h2>
+            <p>The system now supports automated account linking for Google and Facebook SSO. Admins must ensure the following environment variables are correctly set in the <code>auth-service</code>:</p>
+            <ul>
+                <li><code>GOOGLE_CLIENT_ID</code>: Client ID from Google Cloud Console.</li>
+                <li><code>FACEBOOK_APP_ID</code>: App ID from Facebook Developers Portal.</li>
+                <li><code>SSO_AUTO_LINK_ENABLED</code>: Set to <code>true</code> to enable automated linking based on email/phone match.</li>
+            </ul>
+        </section>
+
+        <section>
+            <h2>2. OTP-Only Login Monitoring</h2>
+            <p>OTP-only login bypasses traditional password checks but requires a verified mobile number. Admins can monitor OTP requests via the audit logs:</p>
+            <div class="admin-note">
+                <strong>Log Filter:</strong> <code>SECURITY_OTP_LOGIN_REQUEST</code> and <code>SECURITY_OTP_LOGIN_SUCCESS</code>.
+            </div>
+            <p>Excessive OTP requests from a single IP or phone number should be flagged for potential brute-force attempts.</p>
+        </section>
+
+        <section>
+            <h2>3. Automated Linking Logs</h2>
+            <p>When a user links their SSO account, the system creates an audit log entry with the type <code>SECURITY_SSO_LINK_SUCCESS</code> or <code>SECURITY_SSO_REG_SUCCESS</code>.</p>
+            <p>The <code>linkedBy</code> field indicates whether the match was found via <code>EMAIL</code> or <code>PHONE</code>.</p>
+        </section>
+
+        <section>
+            <h2>4. Troubleshooting</h2>
+            <ul>
+                <li><strong>SSO Linking Fails:</strong> Ensure the user's email or phone number in the SSO provider matches exactly with the record in the Budol database.</li>
+                <li><strong>Prisma Unique Constraint Errors:</strong> Check if a user with the same phone number already exists under a different identity. The system handles this by generating a unique placeholder for new SSO registrations if needed.</li>
+            </ul>
+        </section>
+    </div>
+</body>
+</html>

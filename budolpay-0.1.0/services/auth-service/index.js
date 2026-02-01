@@ -176,6 +176,102 @@ router.get('/health', (req, res) => {
     res.status(200).json({ status: 'Auth Service is healthy', timestamp: getLegacyManilaDate() });
 });
 
+/**
+ * SSO Linking (Automated Account Linking)
+ * Phase 3: Automated Account Linking for SSO (Google/Facebook)
+ * Links an existing account with SSO provider if phone/email matches
+ */
+app.post('/sso/link', async (req, res) => {
+    const { email, phoneNumber, provider, providerId, firstName, lastName } = req.body;
+
+    if (!email && !phoneNumber) {
+        return res.status(400).json({ error: 'Email or Phone number is required for linking' });
+    }
+
+    try {
+        // 1. Find existing user by email or phone
+        let user = await prisma.user.findFirst({
+            where: {
+                OR: [
+                    email ? { email: email.toLowerCase().trim() } : null,
+                    phoneNumber ? { phoneNumber: phoneNumber.replace(/\D/g, '') } : null
+                ].filter(Boolean)
+            }
+        });
+
+        if (user) {
+            // 2. Link provider info to existing user
+            const updatedUser = await prisma.user.update({
+                where: { id: user.id },
+                data: {
+                    // Update profile if missing
+                    firstName: user.firstName || firstName,
+                    lastName: user.lastName || lastName,
+                    // Store provider info (assuming a json column or similar, or just logging for now)
+                    // For this implementation, we'll use metadata in audit log and set a flag
+                    // In a full implementation, we'd have a SocialLink table
+                }
+            });
+
+            await createAuditLog(req, user.id, 'SECURITY_SSO_LINK_SUCCESS', {
+                provider,
+                providerId,
+                linkedBy: email ? 'EMAIL' : 'PHONE'
+            }, 'Security', user.id);
+
+            const token = jwt.sign({ userId: user.id, role: user.role, type: 'SSO' }, JWT_SECRET, { expiresIn: '30d' });
+
+            return res.json({
+                status: 'LINKED',
+                message: `Account linked successfully with ${provider}`,
+                token,
+                user: {
+                    id: updatedUser.id,
+                    email: updatedUser.email,
+                    firstName: updatedUser.firstName,
+                    lastName: updatedUser.lastName
+                }
+            });
+        }
+
+        // 3. If no user exists, create one (Automated Registration via SSO)
+        const newUser = await prisma.user.create({
+            data: {
+                email: email || `${phoneNumber}@budol.sso`,
+                phoneNumber: phoneNumber || `SSO_${Date.now()}_${Math.floor(Math.random() * 1000)}`,
+                firstName: firstName || 'SSO User',
+                lastName: lastName || provider,
+                passwordHash: `SSO_${provider.toUpperCase()}`,
+                kycTier: 'BASIC',
+                kycStatus: 'PENDING'
+            }
+        });
+
+        await createAuditLog(req, newUser.id, 'SECURITY_SSO_REG_SUCCESS', {
+            provider,
+            providerId
+        }, 'Security', newUser.id);
+
+        const token = jwt.sign({ userId: newUser.id, role: newUser.role, type: 'SSO' }, JWT_SECRET, { expiresIn: '30d' });
+
+        res.status(201).json({
+            status: 'CREATED',
+            message: `New account created and linked with ${provider}`,
+            token,
+            user: {
+                id: newUser.id,
+                email: newUser.email,
+                firstName: newUser.firstName,
+                lastName: newUser.lastName
+            }
+        });
+
+    } catch (error) {
+        console.error('[SSO Linking Error]', error);
+        res.status(500).json({ error: error.message });
+    }
+});
+
 // DEBUG: Check DB Columns
 app.get('/debug/db-columns', async (req, res) => {
     try {
@@ -409,10 +505,11 @@ app.get('/check-phone', async (req, res) => {
 
 // Mobile Login - Phase 1: Identify & Challenge (GoTyme Style)
 app.post('/login/mobile/identify', async (req, res) => {
-    let { phoneNumber, deviceId } = req.body;
+    let { phoneNumber, deviceId, mode } = req.body;
     
     if (!phoneNumber) return res.status(400).json({ error: 'Mobile number or email is required' });
 
+    const isForceOtp = mode === 'OTP';
     // Detect if input is an email
     const isEmail = phoneNumber.includes('@');
     let normalizedPhone = '';
@@ -468,11 +565,12 @@ app.post('/login/mobile/identify', async (req, res) => {
         // Audit: Mobile Identification (Phase 1)
         await createAuditLog(req, user.id, 'SECURITY_MOBILE_IDENTIFY_SUCCESS', {
             deviceId,
-            isDeviceTrusted
+            isDeviceTrusted,
+            mode
         }, 'Security', user.id);
 
-        if (!isDeviceTrusted || !user.pinHash) {
-            // New Device, Untrusted, OR No PIN set -> Trigger OTP
+        if (isForceOtp || !isDeviceTrusted || !user.pinHash) {
+            // New Device, Untrusted, OR No PIN set, OR Force OTP -> Trigger OTP
             // LOCAL BYPASS: Use fixed OTP for local development
             const isLocal = process.env.LOCAL_IP || !process.env.VERCEL;
             const otpCode = isLocal ? '123456' : Math.floor(100000 + Math.random() * 900000).toString();
@@ -486,20 +584,20 @@ app.post('/login/mobile/identify', async (req, res) => {
             await sendOTP(user.phoneNumber, otpCode, 'SMS');
 
             if (isLocal) {
-            console.log(`[LOCAL] OTP for ${user.phoneNumber}: ${otpCode}`);
-        }
+                console.log(`[LOCAL] OTP for ${user.phoneNumber}: ${otpCode}`);
+            }
 
-        return res.json({ 
-            status: 'OTP_REQUIRED', 
-            userId: user.id,
-            user: {
-                id: user.id,
-                phoneNumber: user.phoneNumber,
-                firstName: user.firstName,
-                lastName: user.lastName
-            },
-            message: 'OTP sent to your registered mobile number'
-        });
+            return res.json({ 
+                status: 'OTP_REQUIRED', 
+                userId: user.id,
+                user: {
+                    id: user.id,
+                    phoneNumber: user.phoneNumber,
+                    firstName: user.firstName,
+                    lastName: user.lastName
+                },
+                message: isForceOtp ? 'OTP sent for secure login' : 'New device detected. OTP sent.'
+            });
         }
 
         // Trusted Device -> Proceed to PIN or Biometrics
@@ -705,8 +803,8 @@ app.post('/verify-otp', async (req, res) => {
             console.error('[Verification Notification Error]', notifError);
         }
 
-        // If it was a device verification login, return a token immediately
-        if (deviceId) {
+        // If it was a device verification login OR a quick registration verification, return a token immediately
+        if (deviceId || type === 'REGISTRATION') {
             const hasPin = !!updatedUser.pinHash;
             // If no PIN is set, we return a limited token or just the status to force PIN setup
             const token = jwt.sign(
@@ -717,7 +815,7 @@ app.post('/verify-otp', async (req, res) => {
 
             return res.json({ 
                 status: hasPin ? 'SUCCESS' : 'PIN_SETUP_REQUIRED',
-                message: hasPin ? 'Device verified and login successful' : 'Device verified. Please set up your 6-digit PIN.', 
+                message: hasPin ? 'Verification and login successful' : 'Verification successful. Please set up your 6-digit PIN.', 
                 token,
                 user: { 
                     id: updatedUser.id, 

@@ -216,14 +216,14 @@ class _LoginScreenState extends State<LoginScreen> with WidgetsBindingObserver {
     _showError('No face profile or biometric login enabled. Please login with PIN once to enable.');
   }
 
-  Future<void> _handleIdentify() async {
+  Future<void> _handleIdentify({String? mode}) async {
     final phone = _phoneController.text.trim();
     if (phone.isEmpty) return;
 
     setState(() => _isLoading = true);
     try {
       final apiService = context.read<ApiService>();
-      final result = await apiService.identifyMobile(phone);
+      final result = await apiService.identifyMobile(phone, mode: mode);
       if (!mounted) return;
       
       final String? error = result['error']?.toString();
@@ -245,7 +245,7 @@ class _LoginScreenState extends State<LoginScreen> with WidgetsBindingObserver {
         });
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text('New device detected. Please verify OTP.')),
+            SnackBar(content: Text(result['message'] ?? 'Please verify OTP.')),
           );
         }
       } else if (status == 'AUTH_REQUIRED') {
@@ -268,6 +268,10 @@ class _LoginScreenState extends State<LoginScreen> with WidgetsBindingObserver {
     } finally {
       setState(() => _isLoading = false);
     }
+  }
+
+  Future<void> _handleIdentifyWithOtp() async {
+    await _handleIdentify(mode: 'OTP');
   }
 
   Future<void> _handleVerifyOtp() async {
@@ -683,8 +687,112 @@ class _LoginScreenState extends State<LoginScreen> with WidgetsBindingObserver {
         ),
         const SizedBox(height: 24),
         _buildButton('Continue', _handleIdentify, isEnabled: _isPhoneValid),
+        const SizedBox(height: 16),
+        Row(
+          children: [
+            Expanded(child: Divider(color: Colors.white24)),
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 16),
+              child: Text('OR', style: TextStyle(color: Colors.white38, fontSize: 12)),
+            ),
+            Expanded(child: Divider(color: Colors.white24)),
+          ],
+        ),
+        const SizedBox(height: 16),
+        SizedBox(
+          width: double.infinity,
+          height: 56,
+          child: OutlinedButton(
+            onPressed: (_isLoading || !_isPhoneValid) ? null : _handleIdentifyWithOtp,
+            style: OutlinedButton.styleFrom(
+              side: const BorderSide(color: Colors.white24),
+              foregroundColor: Colors.white,
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+            ),
+            child: const Text('Login with OTP', style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600)),
+          ),
+        ),
+        const SizedBox(height: 16),
+        Row(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            _buildSsoButton(
+              'Google',
+              Icons.g_mobiledata,
+              Colors.redAccent,
+              () => _handleSsoLogin('Google'),
+            ),
+            const SizedBox(width: 16),
+            _buildSsoButton(
+              'Facebook',
+              Icons.facebook,
+              Colors.blueAccent,
+              () => _handleSsoLogin('Facebook'),
+            ),
+          ],
+        ),
       ],
     );
+  }
+
+  Widget _buildSsoButton(String label, IconData icon, Color color, VoidCallback onPressed) {
+    return InkWell(
+      onTap: _isLoading ? null : onPressed,
+      borderRadius: BorderRadius.circular(12),
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+        decoration: BoxDecoration(
+          border: Border.all(color: Colors.white24),
+          borderRadius: BorderRadius.circular(12),
+          color: Colors.white.withValues(alpha: 0.05),
+        ),
+        child: Row(
+          children: [
+            Icon(icon, color: color, size: 28),
+            const SizedBox(width: 8),
+            Text(label, style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w600)),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Future<void> _handleSsoLogin(String provider) async {
+    // In a real implementation, we would call GoogleSignIn or FacebookLogin SDKs
+    // For this prototype, we simulate a successful SSO auth and call linkSso
+    
+    setState(() => _isLoading = true);
+    try {
+      final apiService = context.read<ApiService>();
+      
+      // Simulate SSO data (this would come from the SDK)
+      final String simulatedEmail = "sso_${provider.toLowerCase()}@example.com";
+      final String simulatedProviderId = "sso_${provider.toLowerCase()}_12345";
+      final String firstName = "SSO";
+      final String lastName = provider;
+
+      final result = await apiService.linkSso(
+        email: simulatedEmail,
+        phoneNumber: null,
+        provider: provider,
+        providerId: simulatedProviderId,
+        firstName: firstName,
+        lastName: lastName,
+      );
+
+      if (!mounted) return;
+
+      if (result['status'] == 'LINKED' || result['status'] == 'CREATED') {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(result['message'] ?? 'Login successful via $provider'), backgroundColor: Colors.green),
+        );
+        Navigator.pushReplacementNamed(context, Routes.home);
+      }
+    } catch (e) {
+      _showError(e.toString());
+    } finally {
+      if (mounted) setState(() => _isLoading = false);
+    }
   }
 
   Widget _buildOtpStep() {

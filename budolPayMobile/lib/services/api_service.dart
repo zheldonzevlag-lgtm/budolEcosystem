@@ -367,7 +367,7 @@ class ApiService extends ChangeNotifier {
 
   // --- Auth Methods ---
 
-  Future<Map<String, dynamic>> identifyMobile(String phoneNumber) async {
+  Future<Map<String, dynamic>> identifyMobile(String phoneNumber, {String? mode}) async {
     final url = '$authUrl/login/mobile/identify';
     final response = await http.post(
       Uri.parse(url),
@@ -375,6 +375,7 @@ class ApiService extends ChangeNotifier {
       body: json.encode({
         'phoneNumber': phoneNumber,
         'deviceId': deviceId,
+        if (mode != null) 'mode': mode,
       }),
     ).timeout(const Duration(seconds: 10));
 
@@ -638,6 +639,47 @@ class ApiService extends ChangeNotifier {
     } catch (e) {
       if (kDebugMode) print('ApiService: Error checking phone: $e');
       return {'exists': false};
+    }
+  }
+
+  // SSO Linking & Registration
+  Future<Map<String, dynamic>> linkSso({
+    String? email,
+    String? phoneNumber,
+    required String provider,
+    required String providerId,
+    String? firstName,
+    String? lastName,
+  }) async {
+    await _ensureInitialized();
+    final url = '$authUrl/sso/link';
+    
+    final response = await http.post(
+      Uri.parse(url),
+      headers: {'Content-Type': 'application/json'},
+      body: json.encode({
+        'email': email,
+        'phoneNumber': phoneNumber,
+        'provider': provider,
+        'providerId': providerId,
+        'firstName': firstName,
+        'lastName': lastName,
+      }),
+    ).timeout(const Duration(seconds: 10));
+
+    final decoded = json.decode(response.body);
+    final Map<String, dynamic> data = decoded is Map ? Map<String, dynamic>.from(decoded) : {};
+    
+    if (response.statusCode == 200 || response.statusCode == 201) {
+      if (data['token'] != null) {
+        token = data['token'];
+        user = data['user'];
+        await _saveSession();
+        notifyListeners();
+      }
+      return data;
+    } else {
+      throw Exception(data['error'] ?? 'SSO linking failed');
     }
   }
 
