@@ -208,7 +208,17 @@ export default function UsersPage() {
 
   const getDocUrl = (doc: any) => {
     if (!doc) return null;
-    if (doc.remoteUrl) return doc.remoteUrl;
+    
+    // Handle remote URLs (e.g., from verification service)
+    if (doc.remoteUrl) {
+      if (doc.remoteUrl.startsWith('http')) {
+        return doc.remoteUrl;
+      }
+      // Prefix with Gateway URL if relative
+      const GATEWAY_URL = process.env.NEXT_PUBLIC_GATEWAY_URL || "http://localhost:8080";
+      return `${GATEWAY_URL}${doc.remoteUrl.startsWith('/') ? '' : '/'}${doc.remoteUrl}`;
+    }
+
     if (!doc.blobData) return null;
 
     try {

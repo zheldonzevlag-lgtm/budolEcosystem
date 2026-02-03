@@ -135,7 +135,11 @@ exports.Prisma.UserScalarFieldEnum = {
   createdAt: 'createdAt',
   updatedAt: 'updatedAt',
   avatarUrl: 'avatarUrl',
-  lastLoginAt: 'lastLoginAt'
+  lastLoginAt: 'lastLoginAt',
+  resetToken: 'resetToken',
+  resetTokenExpires: 'resetTokenExpires',
+  otp: 'otp',
+  otpExpires: 'otpExpires'
 };
 
 exports.Prisma.EcosystemAppScalarFieldEnum = {

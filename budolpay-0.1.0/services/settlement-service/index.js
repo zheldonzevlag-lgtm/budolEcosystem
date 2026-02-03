@@ -28,11 +28,12 @@ const notifyAdmin = async (event, data) => {
     try {
         const axios = require('axios');
         console.log(`[Settlement] Attempting to notify Admin (${event}) at ${GATEWAY_URL}/internal/notify`);
+        // Add a short timeout to prevent blocking critical user flows if Gateway is down
         const response = await axios.post(`${GATEWAY_URL}/internal/notify`, {
             isAdmin: true,
             event,
             data
-        });
+        }, { timeout: 2000 });
         console.log(`[Settlement] Admin notification (${event}) response:`, response.data);
     } catch (err) {
         console.error(`[Settlement] Failed to notify Admin (${event}): ${err.message}`);
@@ -77,7 +78,7 @@ const createAuditLog = async (req, userId, action, metadata = {}, entity = 'Fina
         console.log(`[Audit] Logged action: ${action} for user: ${userId} (Entity: ${entity})`);
         
         // Notify Admin in Real-time
-        await notifyAdmin('AUDIT_LOG_CREATED', log);
+        notifyAdmin('AUDIT_LOG_CREATED', log);
     } catch (err) {
         console.error(`[Audit] Failed to create audit log: ${err.message}`);
     }
@@ -267,7 +268,7 @@ router.patch('/disputes/:id/resolve', async (req, res) => {
         });
 
         // Notify Admin in Real-time (AUDIT_LOG_CREATED)
-        await notifyAdmin('AUDIT_LOG_CREATED', auditLog);
+        notifyAdmin('AUDIT_LOG_CREATED', auditLog);
 
         res.json(dispute);
     } catch (error) {
@@ -340,7 +341,7 @@ router.get('/reconciliation/summary', async (req, res) => {
         });
 
         // Notify Admin in Real-time (AUDIT_LOG_CREATED)
-        await notifyAdmin('AUDIT_LOG_CREATED', auditLog);
+        notifyAdmin('AUDIT_LOG_CREATED', auditLog);
 
         res.json(report);
     } catch (error) {

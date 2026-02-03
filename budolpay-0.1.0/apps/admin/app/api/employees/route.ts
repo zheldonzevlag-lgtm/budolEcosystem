@@ -26,7 +26,8 @@ export async function GET() {
 
 export async function POST(request: Request) {
   try {
-    const { action, userId, newRole, adminId } = await request.json();
+    const body = await request.json();
+    const { action, userId, newRole, adminId } = body;
 
     if (action === "UPDATE_ROLE") {
       const updatedUser = await prisma.user.update({
@@ -50,34 +51,57 @@ export async function POST(request: Request) {
     }
 
     if (action === "UPDATE_PROFILE") {
-      const { firstName, lastName, email, phoneNumber, role, department } = await request.json();
+      const { firstName, lastName, email, phoneNumber, role, department } = body;
       
+      console.log(`[API] Updating profile for user ${userId}:`, {
+        firstName, lastName, email, phoneNumber, role, department
+      });
+
       const oldUser = await prisma.user.findUnique({ where: { id: userId } });
+      if (!oldUser) {
+        console.error(`[API] User ${userId} not found for profile update.`);
+        return NextResponse.json({ error: "User not found" }, { status: 404 });
+      }
       
       const updatedUser = await prisma.user.update({
         where: { id: userId },
         data: { 
-          firstName, 
-          lastName, 
-          email, 
-          phoneNumber, 
-          role: role as any,
-          department 
+          firstName: firstName !== undefined ? firstName : oldUser.firstName, 
+          lastName: lastName !== undefined ? lastName : oldUser.lastName, 
+          email: email !== undefined ? email : oldUser.email, 
+          phoneNumber: phoneNumber !== undefined ? phoneNumber : oldUser.phoneNumber, 
+          role: role !== undefined ? (role as any) : oldUser.role,
+          department: department !== undefined ? department : oldUser.department
         }
       });
 
+      console.log(`[API] Successfully updated user ${userId}. New phone: ${updatedUser.phoneNumber}`);
+
       // Forensic Audit Log
-      await prisma.auditLog.create({
-        data: {
-          action: "USER_PROFILE_UPDATED",
-          entity: "User",
-          entityId: userId,
-          userId: adminId,
-          oldValue: oldUser as any,
-          newValue: { firstName, lastName, email, phoneNumber, role, department } as any,
-          ipAddress: "Internal System"
-        }
-      });
+      try {
+        await prisma.auditLog.create({
+          data: {
+            action: "USER_PROFILE_UPDATED",
+            entity: "User",
+            entityId: userId,
+            userId: adminId || "SYSTEM",
+            oldValue: oldUser as any,
+            newValue: { 
+              firstName: updatedUser.firstName, 
+              lastName: updatedUser.lastName, 
+              email: updatedUser.email, 
+              phoneNumber: updatedUser.phoneNumber, 
+              role: updatedUser.role, 
+              department: updatedUser.department 
+            } as any,
+            ipAddress: "Internal System"
+          }
+        });
+        console.log(`[API] Audit log created for user ${userId}`);
+      } catch (logError) {
+        console.error(`[API] Failed to create audit log:`, logError);
+        // We don't return error here to ensure the user update is still considered successful in UI
+      }
 
       return NextResponse.json({ success: true, user: updatedUser });
     }

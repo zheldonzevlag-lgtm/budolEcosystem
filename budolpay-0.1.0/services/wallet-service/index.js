@@ -48,11 +48,12 @@ const axios = require('axios');
 const notifyAdmin = async (event, data) => {
     try {
         console.log(`[Wallet] Attempting to notify Admin (${event}) at ${GATEWAY_URL}/internal/notify`);
+        // Add a short timeout to prevent blocking critical user flows if Gateway is down
         const response = await axios.post(`${GATEWAY_URL}/internal/notify`, {
             isAdmin: true,
             event,
             data
-        });
+        }, { timeout: 2000 }); 
         console.log(`[Wallet] Admin notification (${event}) response:`, response.data);
     } catch (err) {
         console.error(`[Wallet] Failed to notify Admin (${event}): ${err.message}`);
@@ -97,7 +98,7 @@ const createAuditLog = async (req, userId, action, metadata = {}, entity = 'Fina
         console.log(`[Audit] Logged action: ${action} for user: ${userId} (Entity: ${entity})`);
         
         // Notify Admin in Real-time
-        await notifyAdmin('AUDIT_LOG_CREATED', log);
+        notifyAdmin('AUDIT_LOG_CREATED', log);
     } catch (err) {
         console.error(`[Audit] Failed to create audit log: ${err.message}`);
     }

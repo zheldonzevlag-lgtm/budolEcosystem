@@ -130,6 +130,5 @@ export const realtime = new RealtimeService();
 
 // Auto-connect in browser environment
 if (typeof window !== 'undefined') {
-    // Uncomment to enable auto-connect
-    // realtime.connect();
+    realtime.connect();
 }

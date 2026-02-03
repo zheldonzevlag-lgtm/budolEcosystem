@@ -50,7 +50,7 @@ const notifyUpdate = async (userId, event, data) => {
             userId,
             event,
             data
-        });
+        }, { timeout: 2000 });
         console.log(`[Transaction] Notification (${event}) sent to Gateway for user ${userId}`);
     } catch (err) {
         console.error(`[Transaction] Failed to notify Gateway (${event}): ${err.message}`);
@@ -63,7 +63,7 @@ const notifyAdmin = async (event, data) => {
             isAdmin: true,
             event,
             data
-        });
+        }, { timeout: 2000 });
         console.log(`[Transaction] Admin notification (${event}) sent to Gateway`);
     } catch (err) {
         console.error(`[Transaction] Failed to notify Admin (${event}): ${err.message}`);
@@ -108,7 +108,7 @@ const createAuditLog = async (req, userId, action, metadata = {}, entity = 'Fina
         console.log(`[Audit] Logged action: ${action} for user: ${userId} (Entity: ${entity})`);
         
         // Notify Admin in Real-time
-        await notifyAdmin('AUDIT_LOG_CREATED', log);
+        notifyAdmin('AUDIT_LOG_CREATED', log);
     } catch (err) {
         console.error(`[Audit] Failed to create audit log: ${err.message}`);
     }
@@ -293,7 +293,7 @@ router.post('/transfer', async (req, res, next) => {
         });
 
         // 5.2 Notify Admin in Real-time (AUDIT_LOG_CREATED)
-        await notifyAdmin('AUDIT_LOG_CREATED', auditLog);
+        notifyAdmin('AUDIT_LOG_CREATED', auditLog);
 
         // 6. Notify Parties in Real-time
         const receiverName = `${completedTransaction.receiver.firstName || ''} ${completedTransaction.receiver.lastName || ''}`.trim() || completedTransaction.receiver.email;
@@ -365,7 +365,7 @@ router.post('/transfer', async (req, res, next) => {
             }).catch(() => null);
 
             if (auditLog) {
-                await notifyAdmin('AUDIT_LOG_CREATED', auditLog);
+                notifyAdmin('AUDIT_LOG_CREATED', auditLog);
             }
         }
         
@@ -497,7 +497,7 @@ router.post('/cash-in', async (req, res) => {
         });
 
         // 4.2 Notify Admin in Real-time (AUDIT_LOG_CREATED)
-        await notifyAdmin('AUDIT_LOG_CREATED', auditLog);
+        notifyAdmin('AUDIT_LOG_CREATED', auditLog);
 
         // 5. Notify Parties in Real-time
         notifyUpdate(userId, 'transaction_update', { 
@@ -550,7 +550,7 @@ router.post('/cash-in', async (req, res) => {
             }).catch(() => null);
 
             if (auditLog) {
-                await notifyAdmin('AUDIT_LOG_CREATED', auditLog);
+                notifyAdmin('AUDIT_LOG_CREATED', auditLog);
             }
         }
         
@@ -697,7 +697,7 @@ router.post('/cash-out', async (req, res) => {
         });
 
         // 4.2 Notify Admin in Real-time (AUDIT_LOG_CREATED)
-        await notifyAdmin('AUDIT_LOG_CREATED', auditLog);
+        notifyAdmin('AUDIT_LOG_CREATED', auditLog);
 
         // 5. Notify Parties in Real-time
         notifyUpdate(userId, 'transaction_update', { 
@@ -751,7 +751,7 @@ router.post('/cash-out', async (req, res) => {
             }).catch(() => null);
 
             if (auditLog) {
-                await notifyAdmin('AUDIT_LOG_CREATED', auditLog);
+                notifyAdmin('AUDIT_LOG_CREATED', auditLog);
             }
         }
         

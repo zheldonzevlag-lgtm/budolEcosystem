@@ -8,14 +8,14 @@ async function main() {
 
   // Create Admin User
   const admin = await prisma.user.upsert({
-    where: { email: 'admin@budolpay.com' },
+    where: { email: 'reynaldomgalvez@gmail.com' },
     update: {},
     create: {
       email: 'admin@budolpay.com',
-      phoneNumber: '09170000000',
+      phoneNumber: '09484099388',
       passwordHash: hashedPassword,
-      firstName: 'Budol',
-      lastName: 'Admin',
+      firstName: 'Jon',
+      lastName: 'Galvez',
       role: 'ADMIN',
       kycStatus: 'VERIFIED',
     },

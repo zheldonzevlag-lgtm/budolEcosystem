@@ -2,68 +2,82 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <title>Developer Manual - v2.1.2</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Developer Manual - Budol Ecosystem v1</title>
     <style>
-        body { font-family: sans-serif; line-height: 1.6; max-width: 1000px; margin: 0 auto; padding: 20px; }
-        pre { background: #1e1e1e; color: #d4d4d4; padding: 15px; border-radius: 5px; overflow-x: auto; }
-        code { font-family: 'Consolas', monospace; }
-        .code-link { color: #0052cc; text-decoration: none; font-weight: bold; }
-        .section { margin-bottom: 40px; border-bottom: 1px solid #eee; padding-bottom: 20px; }
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; line-height: 1.6; color: #333; max-width: 1200px; margin: 0 auto; padding: 20px; background-color: #f4f7f6; }
+        header { background-color: #0052cc; color: white; padding: 20px; border-radius: 8px 8px 0 0; margin-bottom: 20px; }
+        .container { background-color: white; padding: 30px; border-radius: 0 0 8px 8px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); }
+        h1, h2, h3 { color: #0052cc; }
+        code { background-color: #282c34; color: #abb2bf; padding: 2px 5px; border-radius: 4px; font-family: 'Courier New', Courier, monospace; }
+        pre { background-color: #282c34; color: #abb2bf; padding: 15px; border-radius: 8px; overflow-x: auto; }
+        .code-link { color: #4db6ac; text-decoration: underline; cursor: pointer; }
+        .explanation { margin-bottom: 20px; }
     </style>
 </head>
 <body>
-    <h1>Developer Manual - Version 2.1.2</h1>
-    
-    <div class="section">
-        <h2>1. Purpose & Rationale</h2>
-        <p>This release focuses on finalizing the Shopee-style quick registration flow for budolPay and synchronizing the Android build version (v1.3.60). It also addresses critical SSO "Unauthorized Application" errors discovered during the release verification phase.</p>
-    </div>
+    <header>
+        <h1>Developer Manual</h1>
+        <div>Version: v1 | Release Date: 2026-02-02</div>
+    </header>
+    <div class="container">
+        <section>
+            <h2>Purpose & Rationale</h2>
+            <p>This document details the technical implementation of the administrative role elevation for the Budol Ecosystem. The rationale is to ensure that authorized administrators have consistent access across all integrated services (BudolPay, BudolID, BudolShap).</p>
+        </section>
 
-    <div class="section">
-        <h2>2. Technical Explanation</h2>
-        <p>The mobile application versioning was synchronized across <code>pubspec.yaml</code> and <code>api_service.dart</code>. The build process utilizes obfuscation for enhanced security. On the backend, the SSO flow was hardened by ensuring proper ecosystem app registration and admin account provisioning.</p>
-    </div>
+        <section>
+            <h2>Technical Explanation</h2>
+            <p>The role elevation involves updating the <code>role</code> column in the <code>User</code> table across multiple PostgreSQL databases. Due to the distributed nature of the ecosystem, synchronization is handled at the database level using raw SQL queries where Prisma schema synchronization is not yet fully propagated.</p>
+        </section>
 
-    <div class="section">
-        <h2>3. Code References</h2>
-        <ul>
-            <li><strong>Version Sync:</strong> <a class="code-link" href="file:///d:/IT%20Projects/budolEcosystem/budolPayMobile/lib/services/api_service.dart">api_service.dart</a> - Updated <code>_appVersion</code> to 1.3.60.</li>
-            <li><strong>Build Config:</strong> <a class="code-link" href="file:///d:/IT%20Projects/budolEcosystem/budolPayMobile/pubspec.yaml">pubspec.yaml</a> - Incremented version to 1.3.60+158.</li>
-            <li><strong>SSO Login:</strong> <a class="code-link" href="file:///d:/IT%20Projects/budolEcosystem/budolID-0.1.0/index.js">budolID index.js</a> - Validates API Key <code>bp_key_2025</code>.</li>
-            <li><strong>Quick Registration:</strong> <a class="code-link" href="file:///d:/IT%20Projects/budolEcosystem/budolID-0.1.0/index.js">budolID index.js</a> - Added <code>/auth/register/quick</code> endpoint.</li>
-            <li><strong>Workforce API:</strong> <a class="code-link" href="file:///d:/IT%20Projects/budolEcosystem/budolpay-0.1.0/apps/admin/app/api/employees/route.ts">employees/route.ts</a> - Management and Role updates.</li>
-            <li><strong>Audit API:</strong> <a class="code-link" href="file:///d:/IT%20Projects/budolEcosystem/budolpay-0.1.0/apps/admin/app/api/audit-logs/route.ts">audit-logs/route.ts</a> - Forensic activity logging.</li>
-            <li><strong>User Management UI:</strong> <a class="code-link" href="file:///d:/IT%20Projects/budolEcosystem/budolpay-0.1.0/apps/admin/components/EditUserModal.tsx">EditUserModal.tsx</a> - Compliance-controlled profile editor.</li>
-            <li><strong>Admin Actions:</strong> <a class="code-link" href="file:///d:/IT%20Projects/budolEcosystem/budolpay-0.1.0/apps/admin/app/api/employees/route.ts">employees/route.ts</a> - Added <code>UPDATE_PROFILE</code>, <code>RESET_PASSWORD</code>, <code>DELETE_USER</code>.</li>
-        </ul>
+        <section>
+            <h2>Code References</h2>
+            
+            <div class="explanation">
+                <h3>Role Verification Test</h3>
+                <p>The following script verifies that the user <code>reynaldomgalvez@gmail.com</code> has the <code>ADMIN</code> role across all target databases.</p>
+                <pre><code><a class="code-link" href="file:///d:/IT Projects/budolEcosystem/budolpay-0.1.0/scripts/test_scripts/verify_admin_role.test.ts">verify_admin_role.test.ts</a>
+// Test logic using Prisma $queryRaw for cross-database verification
+test('User should have ADMIN role in budolpay database', async () => {
+    const users: any[] = await prisma.$queryRaw`
+      SELECT role FROM "User" WHERE email = ${testEmail}
+    `;
+    expect(users[0].role).toBe('ADMIN');
+});</code></pre>
+            </div>
 
-        <h2>Banking-Grade Secure Password Flow</h2>
-        <p>In alignment with BSP Circular 808 and PCI DSS 8.2.4, the password reset process follows these steps:</p>
-        <ol>
-            <li><strong>Admin Initiation:</strong> Admin triggers a reset via the dashboard.</li>
-            <li><strong>Cryptographic Generation:</strong> System generates a 128-bit random temporary credential.</li>
-            <li><strong>Secure Delivery:</strong> The password is sent via a verified out-of-band channel (SMS/Email) directly to the user.</li>
-            <li><strong>Zero-Knowledge Admin:</strong> The Admin Interface **never** displays the clear-text password to the administrator to prevent impersonation risk.</li>
-            <li><strong>Mandatory Rotation:</strong> Upon first login, the user is forced to change the temporary password (Status: <code>MUST_CHANGE_PASSWORD</code>).</li>
-        </ol>
+            <div class="explanation">
+                <h3>Database Promotion Script (BudolPay)</h3>
+                <p>This script updates the user role in the primary BudolPay database.</p>
+                <pre><code><a class="code-link" href="file:///d:/IT Projects/budolEcosystem/scripts/test_scripts/budolPay/promote_to_admin_v2.js">promote_to_admin_v2.js</a>
+const result = await prisma.$executeRaw`
+  UPDATE "User" SET role = 'ADMIN' WHERE email = ${email};
+`;</code></pre>
+            </div>
 
-        <h3>Key Implementation Details:</h3>
-        <pre><code>// From api_service.dart
-String _appVersion = '1.3.60'; // v1.3.60 - Release Build
-String get appVersion => _appVersion;</code></pre>
-    </div>
+            <div class="explanation">
+                <h3>Database Promotion Script (BudolID Schema)</h3>
+                <p>This script updates the user role in the BudolID schema within the shared database.</p>
+                <pre><code><a class="code-link" href="file:///d:/IT Projects/budolEcosystem/budolpay-0.1.0/packages/database/update-budolid-role.js">update-budolid-role.js</a>
+const result = await prisma.$executeRaw`
+  UPDATE "budolid"."User" SET role = 'ADMIN' WHERE email = ${email}
+`;</code></pre>
+            </div>
+        </section>
 
-    <div class="section">
-        <h2>4. Compliance</h2>
-        <ul>
-            <li><strong>NPC (Data Privacy):</strong> Hashed passwords using bcryptjs (10 rounds).</li>
-            <li><strong>Cybersecurity Law:</strong> Obfuscated Android build to prevent reverse engineering.</li>
-            <li><strong>BSP/PCI DSS:</strong> API Key validation for server-to-server communication.</li>
-        </ul>
-    </div>
+        <section>
+            <h2>Dependencies</h2>
+            <ul>
+                <li><code>@prisma/client</code>: Database ORM</li>
+                <li><code>jest</code>: Testing framework</li>
+                <li><code>ts-jest</code>: TypeScript support for Jest</li>
+            </ul>
+        </section>
 
-    <div class="version-info">
-        <a href="index.html">Back to Index</a>
+        <nav>
+            <p><a href="index.html">Back to Index</a></p>
+        </nav>
     </div>
 </body>
 </html>

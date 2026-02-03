@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 import 'dart:async';
 import '../services/api_service.dart';
@@ -66,7 +67,10 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
   }
 
   Future<void> _checkPhone(String phone) async {
-    if (phone.length < 10) {
+    // Strictly enforce PH phone format: 09XXXXXXXXX (11 digits) or 9XXXXXXXXX (10 digits)
+    final RegExp phoneRegex = RegExp(r'^(09|9)\d{9}$');
+    
+    if (!phoneRegex.hasMatch(phone)) {
       setState(() {
         _phoneExists = false;
         _checkingPhone = false;
@@ -187,7 +191,10 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
             }
           },
         ),
-        title: const Text('Create Account', style: TextStyle(color: Colors.white)),
+        title: GestureDetector(
+          onLongPress: () => Navigator.pushNamed(context, Routes.debugConsole),
+          child: const Text('Create Account', style: TextStyle(color: Colors.white)),
+        ),
       ),
       body: Column(
         children: [
@@ -250,7 +257,7 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
                   child: GestureDetector(
                     onTap: () => setState(() => _isQuickReg = false),
                     child: Container(
-                      padding: const EdgeInsets.symmetric(vertical: 12),
+                      padding: const EdgeInsets.symmetric(vertical: 8),
                       decoration: BoxDecoration(
                         color: !_isQuickReg ? Colors.white.withValues(alpha: 0.1) : Colors.transparent,
                         borderRadius: BorderRadius.circular(8),
@@ -258,9 +265,11 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
                       alignment: Alignment.center,
                       child: Text(
                         'Standard',
+                        maxLines: 1,
                         style: TextStyle(
                           color: !_isQuickReg ? Colors.white : Colors.white60,
                           fontWeight: FontWeight.bold,
+                          fontSize: 13,
                         ),
                       ),
                     ),
@@ -270,7 +279,7 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
                   child: GestureDetector(
                     onTap: () => setState(() => _isQuickReg = true),
                     child: Container(
-                      padding: const EdgeInsets.symmetric(vertical: 12),
+                      padding: const EdgeInsets.symmetric(vertical: 8),
                       decoration: BoxDecoration(
                         color: _isQuickReg ? const Color(0xFF10B981) : Colors.transparent,
                         borderRadius: BorderRadius.circular(8),
@@ -278,9 +287,12 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
                       alignment: Alignment.center,
                       child: Text(
                         'Quick (Phone Only)',
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
                         style: TextStyle(
                           color: _isQuickReg ? Colors.white : Colors.white60,
                           fontWeight: FontWeight.bold,
+                          fontSize: 13,
                         ),
                       ),
                     ),
@@ -293,6 +305,10 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
           TextField(
             controller: _phoneController,
             keyboardType: TextInputType.phone,
+            inputFormatters: [
+              FilteringTextInputFormatter.digitsOnly,
+              LengthLimitingTextInputFormatter(11),
+            ],
             style: const TextStyle(color: Colors.white),
             decoration: _inputDecoration(
               'Phone Number', 
@@ -301,7 +317,7 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
                 ? const SizedBox(width: 20, height: 20, child: Padding(padding: EdgeInsets.all(12), child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white70)))
                 : _phoneExists 
                   ? const Icon(Icons.error_outline, color: Colors.redAccent)
-                  : _phoneController.text.length >= 10 ? const Icon(Icons.check_circle_outline, color: Colors.greenAccent) : null,
+                  : RegExp(r'^(09|9)\d{9}$').hasMatch(_phoneController.text) ? const Icon(Icons.check_circle_outline, color: Colors.greenAccent) : null,
               errorText: _phoneExists ? 'This number is already registered' : null,
             ),
           ),
@@ -313,8 +329,12 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
           _showError('This phone number is already taken');
           return;
         }
-        if (_phoneController.text.length < 10) {
-          _showError('Enter a valid phone number');
+        
+        final String phone = _phoneController.text.trim();
+        final RegExp phoneRegex = RegExp(r'^(09|9)\d{9}$');
+        
+        if (!phoneRegex.hasMatch(phone)) {
+          _showError('Enter a valid phone number (e.g. 09123456789)');
           return;
         }
 

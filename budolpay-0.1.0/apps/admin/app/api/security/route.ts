@@ -36,8 +36,11 @@ export async function GET(request: Request) {
         OR: [
           { entity: "System" },
           { entity: "Regulatory" },
+          { entity: "SystemSetting" },
           { action: { contains: "AUDIT" } },
-          { action: { contains: "REPORT" } }
+          { action: { contains: "REPORT" } },
+          { action: { contains: "ENV_VAR" } },
+          { action: { contains: "VERCEL" } }
         ]
       };
     }

@@ -637,24 +637,28 @@ class _LoginScreenState extends State<LoginScreen> with WidgetsBindingObserver {
   }
 
   Widget _buildLogo() {
-    return Column(
-      children: [
-        Container(
-          padding: const EdgeInsets.all(20),
-          decoration: BoxDecoration(
-            color: const Color(0xFFF43F5E).withValues(alpha: 0.15),
-            shape: BoxShape.circle,
+    return GestureDetector(
+      onLongPress: () => Navigator.pushNamed(context, Routes.debugConsole),
+      behavior: HitTestBehavior.opaque,
+      child: Column(
+        children: [
+          Container(
+            padding: const EdgeInsets.all(20),
+            decoration: BoxDecoration(
+              color: const Color(0xFFF43F5E).withValues(alpha: 0.15),
+              shape: BoxShape.circle,
+            ),
+            child: const Text('₱',
+              style: TextStyle(color: Color(0xFFF43F5E), fontSize: 70, fontWeight: FontWeight.bold),
+            ),
           ),
-          child: const Text('₱',
-            style: TextStyle(color: Color(0xFFF43F5E), fontSize: 70, fontWeight: FontWeight.bold),
+          const SizedBox(height: 24),
+          UIUtils.formatBudolPayText(
+            'budol₱ay',
+            baseStyle: const TextStyle(fontSize: 32, fontWeight: FontWeight.bold),
           ),
-        ),
-        const SizedBox(height: 24),
-        UIUtils.formatBudolPayText(
-          'budol₱ay',
-          baseStyle: const TextStyle(fontSize: 32, fontWeight: FontWeight.bold),
-        ),
-      ],
+        ],
+      ),
     );
   }
 

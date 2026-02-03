@@ -1100,6 +1100,10 @@ export namespace Prisma {
     updatedAt: Date | null
     avatarUrl: string | null
     lastLoginAt: Date | null
+    resetToken: string | null
+    resetTokenExpires: Date | null
+    otp: string | null
+    otpExpires: Date | null
   }
 
   export type UserMaxAggregateOutputType = {
@@ -1116,6 +1120,10 @@ export namespace Prisma {
     updatedAt: Date | null
     avatarUrl: string | null
     lastLoginAt: Date | null
+    resetToken: string | null
+    resetTokenExpires: Date | null
+    otp: string | null
+    otpExpires: Date | null
   }
 
   export type UserCountAggregateOutputType = {
@@ -1132,6 +1140,10 @@ export namespace Prisma {
     updatedAt: number
     avatarUrl: number
     lastLoginAt: number
+    resetToken: number
+    resetTokenExpires: number
+    otp: number
+    otpExpires: number
     _all: number
   }
 
@@ -1150,6 +1162,10 @@ export namespace Prisma {
     updatedAt?: true
     avatarUrl?: true
     lastLoginAt?: true
+    resetToken?: true
+    resetTokenExpires?: true
+    otp?: true
+    otpExpires?: true
   }
 
   export type UserMaxAggregateInputType = {
@@ -1166,6 +1182,10 @@ export namespace Prisma {
     updatedAt?: true
     avatarUrl?: true
     lastLoginAt?: true
+    resetToken?: true
+    resetTokenExpires?: true
+    otp?: true
+    otpExpires?: true
   }
 
   export type UserCountAggregateInputType = {
@@ -1182,6 +1202,10 @@ export namespace Prisma {
     updatedAt?: true
     avatarUrl?: true
     lastLoginAt?: true
+    resetToken?: true
+    resetTokenExpires?: true
+    otp?: true
+    otpExpires?: true
     _all?: true
   }
 
@@ -1271,6 +1295,10 @@ export namespace Prisma {
     updatedAt: Date
     avatarUrl: string | null
     lastLoginAt: Date | null
+    resetToken: string | null
+    resetTokenExpires: Date | null
+    otp: string | null
+    otpExpires: Date | null
     _count: UserCountAggregateOutputType | null
     _min: UserMinAggregateOutputType | null
     _max: UserMaxAggregateOutputType | null
@@ -1304,6 +1332,10 @@ export namespace Prisma {
     updatedAt?: boolean
     avatarUrl?: boolean
     lastLoginAt?: boolean
+    resetToken?: boolean
+    resetTokenExpires?: boolean
+    otp?: boolean
+    otpExpires?: boolean
     sessions?: boolean | User$sessionsArgs<ExtArgs>
     _count?: boolean | UserCountOutputTypeDefaultArgs<ExtArgs>
   }, ExtArgs["result"]["user"]>
@@ -1322,6 +1354,10 @@ export namespace Prisma {
     updatedAt?: boolean
     avatarUrl?: boolean
     lastLoginAt?: boolean
+    resetToken?: boolean
+    resetTokenExpires?: boolean
+    otp?: boolean
+    otpExpires?: boolean
   }, ExtArgs["result"]["user"]>
 
   export type UserSelectScalar = {
@@ -1338,6 +1374,10 @@ export namespace Prisma {
     updatedAt?: boolean
     avatarUrl?: boolean
     lastLoginAt?: boolean
+    resetToken?: boolean
+    resetTokenExpires?: boolean
+    otp?: boolean
+    otpExpires?: boolean
   }
 
   export type UserInclude<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
@@ -1365,6 +1405,10 @@ export namespace Prisma {
       updatedAt: Date
       avatarUrl: string | null
       lastLoginAt: Date | null
+      resetToken: string | null
+      resetTokenExpires: Date | null
+      otp: string | null
+      otpExpires: Date | null
     }, ExtArgs["result"]["user"]>
     composites: {}
   }
@@ -1772,6 +1816,10 @@ export namespace Prisma {
     readonly updatedAt: FieldRef<"User", 'DateTime'>
     readonly avatarUrl: FieldRef<"User", 'String'>
     readonly lastLoginAt: FieldRef<"User", 'DateTime'>
+    readonly resetToken: FieldRef<"User", 'String'>
+    readonly resetTokenExpires: FieldRef<"User", 'DateTime'>
+    readonly otp: FieldRef<"User", 'String'>
+    readonly otpExpires: FieldRef<"User", 'DateTime'>
   }
     
 
@@ -4058,7 +4106,11 @@ export namespace Prisma {
     createdAt: 'createdAt',
     updatedAt: 'updatedAt',
     avatarUrl: 'avatarUrl',
-    lastLoginAt: 'lastLoginAt'
+    lastLoginAt: 'lastLoginAt',
+    resetToken: 'resetToken',
+    resetTokenExpires: 'resetTokenExpires',
+    otp: 'otp',
+    otpExpires: 'otpExpires'
   };
 
   export type UserScalarFieldEnum = (typeof UserScalarFieldEnum)[keyof typeof UserScalarFieldEnum]
@@ -4186,6 +4238,10 @@ export namespace Prisma {
     updatedAt?: DateTimeFilter<"User"> | Date | string
     avatarUrl?: StringNullableFilter<"User"> | string | null
     lastLoginAt?: DateTimeNullableFilter<"User"> | Date | string | null
+    resetToken?: StringNullableFilter<"User"> | string | null
+    resetTokenExpires?: DateTimeNullableFilter<"User"> | Date | string | null
+    otp?: StringNullableFilter<"User"> | string | null
+    otpExpires?: DateTimeNullableFilter<"User"> | Date | string | null
     sessions?: SessionListRelationFilter
   }
 
@@ -4203,6 +4259,10 @@ export namespace Prisma {
     updatedAt?: SortOrder
     avatarUrl?: SortOrderInput | SortOrder
     lastLoginAt?: SortOrderInput | SortOrder
+    resetToken?: SortOrderInput | SortOrder
+    resetTokenExpires?: SortOrderInput | SortOrder
+    otp?: SortOrderInput | SortOrder
+    otpExpires?: SortOrderInput | SortOrder
     sessions?: SessionOrderByRelationAggregateInput
   }
 
@@ -4210,6 +4270,7 @@ export namespace Prisma {
     id?: string
     email?: string
     phoneNumber?: string
+    resetToken?: string
     AND?: UserWhereInput | UserWhereInput[]
     OR?: UserWhereInput[]
     NOT?: UserWhereInput | UserWhereInput[]
@@ -4223,8 +4284,11 @@ export namespace Prisma {
     updatedAt?: DateTimeFilter<"User"> | Date | string
     avatarUrl?: StringNullableFilter<"User"> | string | null
     lastLoginAt?: DateTimeNullableFilter<"User"> | Date | string | null
+    resetTokenExpires?: DateTimeNullableFilter<"User"> | Date | string | null
+    otp?: StringNullableFilter<"User"> | string | null
+    otpExpires?: DateTimeNullableFilter<"User"> | Date | string | null
     sessions?: SessionListRelationFilter
-  }, "id" | "email" | "phoneNumber">
+  }, "id" | "email" | "phoneNumber" | "resetToken">
 
   export type UserOrderByWithAggregationInput = {
     id?: SortOrder
@@ -4240,6 +4304,10 @@ export namespace Prisma {
     updatedAt?: SortOrder
     avatarUrl?: SortOrderInput | SortOrder
     lastLoginAt?: SortOrderInput | SortOrder
+    resetToken?: SortOrderInput | SortOrder
+    resetTokenExpires?: SortOrderInput | SortOrder
+    otp?: SortOrderInput | SortOrder
+    otpExpires?: SortOrderInput | SortOrder
     _count?: UserCountOrderByAggregateInput
     _max?: UserMaxOrderByAggregateInput
     _min?: UserMinOrderByAggregateInput
@@ -4262,6 +4330,10 @@ export namespace Prisma {
     updatedAt?: DateTimeWithAggregatesFilter<"User"> | Date | string
     avatarUrl?: StringNullableWithAggregatesFilter<"User"> | string | null
     lastLoginAt?: DateTimeNullableWithAggregatesFilter<"User"> | Date | string | null
+    resetToken?: StringNullableWithAggregatesFilter<"User"> | string | null
+    resetTokenExpires?: DateTimeNullableWithAggregatesFilter<"User"> | Date | string | null
+    otp?: StringNullableWithAggregatesFilter<"User"> | string | null
+    otpExpires?: DateTimeNullableWithAggregatesFilter<"User"> | Date | string | null
   }
 
   export type EcosystemAppWhereInput = {
@@ -4401,6 +4473,10 @@ export namespace Prisma {
     updatedAt?: Date | string
     avatarUrl?: string | null
     lastLoginAt?: Date | string | null
+    resetToken?: string | null
+    resetTokenExpires?: Date | string | null
+    otp?: string | null
+    otpExpires?: Date | string | null
     sessions?: SessionCreateNestedManyWithoutUserInput
   }
 
@@ -4418,6 +4494,10 @@ export namespace Prisma {
     updatedAt?: Date | string
     avatarUrl?: string | null
     lastLoginAt?: Date | string | null
+    resetToken?: string | null
+    resetTokenExpires?: Date | string | null
+    otp?: string | null
+    otpExpires?: Date | string | null
     sessions?: SessionUncheckedCreateNestedManyWithoutUserInput
   }
 
@@ -4435,6 +4515,10 @@ export namespace Prisma {
     updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
     avatarUrl?: NullableStringFieldUpdateOperationsInput | string | null
     lastLoginAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    resetToken?: NullableStringFieldUpdateOperationsInput | string | null
+    resetTokenExpires?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    otp?: NullableStringFieldUpdateOperationsInput | string | null
+    otpExpires?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
     sessions?: SessionUpdateManyWithoutUserNestedInput
   }
 
@@ -4452,6 +4536,10 @@ export namespace Prisma {
     updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
     avatarUrl?: NullableStringFieldUpdateOperationsInput | string | null
     lastLoginAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    resetToken?: NullableStringFieldUpdateOperationsInput | string | null
+    resetTokenExpires?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    otp?: NullableStringFieldUpdateOperationsInput | string | null
+    otpExpires?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
     sessions?: SessionUncheckedUpdateManyWithoutUserNestedInput
   }
 
@@ -4469,6 +4557,10 @@ export namespace Prisma {
     updatedAt?: Date | string
     avatarUrl?: string | null
     lastLoginAt?: Date | string | null
+    resetToken?: string | null
+    resetTokenExpires?: Date | string | null
+    otp?: string | null
+    otpExpires?: Date | string | null
   }
 
   export type UserUpdateManyMutationInput = {
@@ -4485,6 +4577,10 @@ export namespace Prisma {
     updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
     avatarUrl?: NullableStringFieldUpdateOperationsInput | string | null
     lastLoginAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    resetToken?: NullableStringFieldUpdateOperationsInput | string | null
+    resetTokenExpires?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    otp?: NullableStringFieldUpdateOperationsInput | string | null
+    otpExpires?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   }
 
   export type UserUncheckedUpdateManyInput = {
@@ -4501,6 +4597,10 @@ export namespace Prisma {
     updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
     avatarUrl?: NullableStringFieldUpdateOperationsInput | string | null
     lastLoginAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    resetToken?: NullableStringFieldUpdateOperationsInput | string | null
+    resetTokenExpires?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    otp?: NullableStringFieldUpdateOperationsInput | string | null
+    otpExpires?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   }
 
   export type EcosystemAppCreateInput = {
@@ -4717,6 +4817,10 @@ export namespace Prisma {
     updatedAt?: SortOrder
     avatarUrl?: SortOrder
     lastLoginAt?: SortOrder
+    resetToken?: SortOrder
+    resetTokenExpires?: SortOrder
+    otp?: SortOrder
+    otpExpires?: SortOrder
   }
 
   export type UserMaxOrderByAggregateInput = {
@@ -4733,6 +4837,10 @@ export namespace Prisma {
     updatedAt?: SortOrder
     avatarUrl?: SortOrder
     lastLoginAt?: SortOrder
+    resetToken?: SortOrder
+    resetTokenExpires?: SortOrder
+    otp?: SortOrder
+    otpExpires?: SortOrder
   }
 
   export type UserMinOrderByAggregateInput = {
@@ -4749,6 +4857,10 @@ export namespace Prisma {
     updatedAt?: SortOrder
     avatarUrl?: SortOrder
     lastLoginAt?: SortOrder
+    resetToken?: SortOrder
+    resetTokenExpires?: SortOrder
+    otp?: SortOrder
+    otpExpires?: SortOrder
   }
 
   export type StringWithAggregatesFilter<$PrismaModel = never> = {
@@ -5299,6 +5411,10 @@ export namespace Prisma {
     updatedAt?: Date | string
     avatarUrl?: string | null
     lastLoginAt?: Date | string | null
+    resetToken?: string | null
+    resetTokenExpires?: Date | string | null
+    otp?: string | null
+    otpExpires?: Date | string | null
   }
 
   export type UserUncheckedCreateWithoutSessionsInput = {
@@ -5315,6 +5431,10 @@ export namespace Prisma {
     updatedAt?: Date | string
     avatarUrl?: string | null
     lastLoginAt?: Date | string | null
+    resetToken?: string | null
+    resetTokenExpires?: Date | string | null
+    otp?: string | null
+    otpExpires?: Date | string | null
   }
 
   export type UserCreateOrConnectWithoutSessionsInput = {
@@ -5376,6 +5496,10 @@ export namespace Prisma {
     updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
     avatarUrl?: NullableStringFieldUpdateOperationsInput | string | null
     lastLoginAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    resetToken?: NullableStringFieldUpdateOperationsInput | string | null
+    resetTokenExpires?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    otp?: NullableStringFieldUpdateOperationsInput | string | null
+    otpExpires?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   }
 
   export type UserUncheckedUpdateWithoutSessionsInput = {
@@ -5392,6 +5516,10 @@ export namespace Prisma {
     updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
     avatarUrl?: NullableStringFieldUpdateOperationsInput | string | null
     lastLoginAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    resetToken?: NullableStringFieldUpdateOperationsInput | string | null
+    resetTokenExpires?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    otp?: NullableStringFieldUpdateOperationsInput | string | null
+    otpExpires?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   }
 
   export type SessionCreateManyUserInput = {

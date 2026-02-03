@@ -1,9 +1,38 @@
 import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
+import { checkRateLimit } from '@/lib/rate-limit';
 
 export async function POST(request: Request) {
     try {
         const { email, password } = await request.json();
+
+        // 0. Rate Limiting (Budol Ecosystem Security Standard Phase 3)
+        // Protect against brute force attacks on authentication endpoints.
+        const ip = request.headers.get('x-forwarded-for') || '127.0.0.1';
+        const rateLimitKey = `auth_login_${ip}`;
+        
+        // Fetch rate limit setting from database (default to 5 attempts per 15 mins if not set)
+        const limitSetting = await prisma.systemSetting.findUnique({ where: { key: 'SECURITY_RATE_LIMIT_AUTH' } });
+        const limit = limitSetting ? parseInt(limitSetting.value) : 5;
+        const window = 15 * 60; // 15 minutes
+
+        const limiter = await checkRateLimit(rateLimitKey, limit, window);
+        
+        if (!limiter.success) {
+            console.warn(`[Login API] Rate limit exceeded for IP: ${ip}`);
+            return NextResponse.json(
+                { 
+                    error: 'Too many login attempts. Please try again later.',
+                    retryAfter: limiter.reset
+                },
+                { 
+                    status: 429,
+                    headers: {
+                        'Retry-After': Math.ceil((limiter.reset.getTime() - Date.now()) / 1000).toString()
+                    }
+                }
+            );
+        }
 
         // 1. Authenticate against budolID API (Server-to-Server)
         const LOCAL_IP = process.env.LOCAL_IP || 'localhost';
@@ -68,6 +97,24 @@ export async function POST(request: Request) {
         // 4. Set Session Cookie
         const response = NextResponse.json({ success: true });
         
+        // Log Login Action for Forensic Audit Trail
+        await prisma.auditLog.create({
+            data: {
+                action: 'USER_LOGIN',
+                userId: localUser.id,
+                entity: 'Security',
+                ipAddress: ip,
+                userAgent: request.headers.get('user-agent'),
+                metadata: {
+                    authMethod: 'SSO_BUDOLID',
+                    compliance: {
+                        pci_dss: '10.2.1',
+                        bsp: 'Circular 808'
+                    }
+                }
+            }
+        });
+
         console.log(`[Login API] Setting budolpay_token for ${email}`);
         response.cookies.set('budolpay_token', token, {
             httpOnly: true,

@@ -31,6 +31,7 @@ import { formatManilaTime } from "@/lib/utils";
 export default function EmployeesPage() {
   const [employees, setEmployees] = useState<any[]>([]);
   const [auditLogs, setAuditLogs] = useState<any[]>([]);
+  const [securitySettings, setSecuritySettings] = useState<Record<string, string>>({});
   const [isMatrixOpen, setIsMatrixOpen] = useState(false);
   const [isProvisionModalOpen, setIsProvisionModalOpen] = useState(false);
   const [selectedEmployee, setSelectedEmployee] = useState<any>(null);
@@ -40,13 +41,15 @@ export default function EmployeesPage() {
   async function fetchData() {
     setIsLoading(true);
     try {
-      const [empRes, logsRes] = await Promise.all([
+      const [empRes, logsRes, settingsRes] = await Promise.all([
         fetch('/api/employees'),
-        fetch('/api/audit-logs?limit=15')
+        fetch('/api/audit-logs?limit=15'),
+        fetch('/api/settings/security')
       ]);
       
       if (empRes.ok) setEmployees(await empRes.json());
       if (logsRes.ok) setAuditLogs(await logsRes.json());
+      if (settingsRes.ok) setSecuritySettings(await settingsRes.json());
     } catch (error) {
       console.error("Failed to fetch data:", error);
     } finally {
@@ -150,7 +153,10 @@ export default function EmployeesPage() {
 
       <EditUserModal 
         isOpen={isRoleModalOpen} 
-        onClose={() => setIsRoleModalOpen(false)} 
+        onClose={() => {
+          setIsRoleModalOpen(false);
+          setSelectedEmployee(null);
+        }} 
         onSuccess={fetchData}
         user={selectedEmployee}
       />
@@ -188,22 +194,50 @@ export default function EmployeesPage() {
             <h3 className="font-bold text-sm mb-4 text-budolshap-primary">Access Policy (v2.1)</h3>
             <div className="space-y-3">
               <div className="flex items-start gap-3">
-                <div className="w-5 h-5 rounded bg-green-500/20 flex items-center justify-center shrink-0">
-                  <span className="text-green-500 text-[10px]">✓</span>
+                <div className={`w-5 h-5 rounded flex items-center justify-center shrink-0 ${
+                  securitySettings['SECURITY_MFA_ENFORCED'] === 'true' ? 'bg-green-500/20' : 'bg-amber-500/20'
+                }`}>
+                  <span className={`${
+                    securitySettings['SECURITY_MFA_ENFORCED'] === 'true' ? 'text-green-500' : 'text-amber-500'
+                  } text-[10px]`}>
+                    {securitySettings['SECURITY_MFA_ENFORCED'] === 'true' ? '✓' : '!'}
+                  </span>
                 </div>
-                <p className="text-[10px] text-slate-400">Hardware Security Keys (Yubikey) enforced for Admins.</p>
+                <p className="text-[10px] text-slate-400">
+                  {securitySettings['SECURITY_MFA_ENFORCED'] === 'true' 
+                    ? 'Hardware Security Keys (Yubikey) enforced for Admins.' 
+                    : 'MFA Enforcement is currently DISABLED for Admins.'}
+                </p>
               </div>
+
               <div className="flex items-start gap-3">
-                <div className="w-5 h-5 rounded bg-green-500/20 flex items-center justify-center shrink-0">
-                  <span className="text-green-500 text-[10px]">✓</span>
+                <div className={`w-5 h-5 rounded flex items-center justify-center shrink-0 ${
+                  Number(securitySettings['SECURITY_SESSION_IDLE_TIMEOUT'] || 30) <= 30 ? 'bg-green-500/20' : 'bg-amber-500/20'
+                }`}>
+                  <span className={`${
+                    Number(securitySettings['SECURITY_SESSION_IDLE_TIMEOUT'] || 30) <= 30 ? 'text-green-500' : 'text-amber-500'
+                  } text-[10px]`}>
+                    {Number(securitySettings['SECURITY_SESSION_IDLE_TIMEOUT'] || 30) <= 30 ? '✓' : '!'}
+                  </span>
                 </div>
-                <p className="text-[10px] text-slate-400">Session timeout reduced to 30 mins for Staff.</p>
+                <p className="text-[10px] text-slate-400">
+                  Session timeout set to {securitySettings['SECURITY_SESSION_IDLE_TIMEOUT'] || '30'} mins for Staff.
+                </p>
               </div>
+
               <div className="flex items-start gap-3">
-                <div className="w-5 h-5 rounded bg-amber-500/20 flex items-center justify-center shrink-0">
-                  <span className="text-amber-500 text-[10px]">!</span>
+                <div className={`w-5 h-5 rounded flex items-center justify-center shrink-0 ${
+                  Number(securitySettings['SECURITY_PASSWORD_EXPIRY_DAYS'] || 90) <= 90 ? 'bg-green-500/20' : 'bg-amber-500/20'
+                }`}>
+                  <span className={`${
+                    Number(securitySettings['SECURITY_PASSWORD_EXPIRY_DAYS'] || 90) <= 90 ? 'text-green-500' : 'text-amber-500'
+                  } text-[10px]`}>
+                    {Number(securitySettings['SECURITY_PASSWORD_EXPIRY_DAYS'] || 90) <= 90 ? '✓' : '!'}
+                  </span>
                 </div>
-                <p className="text-[10px] text-slate-400">Mandatory password rotation every 90 days.</p>
+                <p className="text-[10px] text-slate-400">
+                  Mandatory password rotation every {securitySettings['SECURITY_PASSWORD_EXPIRY_DAYS'] || '90'} days.
+                </p>
               </div>
             </div>
           </div>
@@ -226,6 +260,7 @@ export default function EmployeesPage() {
               <thead className="bg-slate-50 text-slate-500 uppercase text-[10px] tracking-wider">
                 <tr>
                   <th className="px-6 py-3 font-bold">Identity</th>
+                  <th className="px-6 py-3 font-bold">Contact & Dept</th>
                   <th className="px-6 py-3 font-bold">Authorization</th>
                   <th className="px-6 py-3 font-bold">Activity</th>
                   <th className="px-6 py-3 font-bold">Status</th>
@@ -245,6 +280,18 @@ export default function EmployeesPage() {
                         <div>
                           <div className="font-bold text-slate-900">{emp.firstName} {emp.lastName}</div>
                           <div className="text-[10px] text-slate-400 font-mono">{emp.email}</div>
+                        </div>
+                      </div>
+                    </td>
+                    <td className="px-6 py-4">
+                      <div className="flex flex-col gap-1">
+                        <div className="flex items-center gap-2 text-xs text-slate-600">
+                          <Phone className="w-3 h-3 text-slate-400" />
+                          <span className="font-mono">{emp.phoneNumber}</span>
+                        </div>
+                        <div className="flex items-center gap-2 text-[10px] text-slate-500 font-bold uppercase tracking-tight">
+                          <Users className="w-3 h-3 text-slate-400" />
+                          {emp.department || 'Unassigned'}
                         </div>
                       </div>
                     </td>

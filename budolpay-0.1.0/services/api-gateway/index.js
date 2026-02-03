@@ -44,6 +44,26 @@ app.use(helmet({
 }));
 app.use(morgan('dev'));
 
+// Custom logging middleware for deep visibility
+app.use((req, res, next) => {
+    const start = Date.now();
+    console.log(`\x1b[36m[Gateway Request]\x1b[0m ${req.method} ${req.url} - ${new Date().toISOString()}`);
+    if (['POST', 'PUT', 'PATCH'].includes(req.method) && req.body) {
+        // Only log body for non-sensitive routes
+        if (!req.url.includes('login') && !req.url.includes('pin') && !req.url.includes('register')) {
+            console.log(`[Gateway Body]`, JSON.stringify(req.body, null, 2));
+        } else {
+            console.log(`[Gateway Body] [REDACTED SENSITIVE DATA]`);
+        }
+    }
+
+    res.on('finish', () => {
+        const duration = Date.now() - start;
+        console.log(`\x1b[32m[Gateway Response]\x1b[0m ${req.method} ${req.url} ${res.statusCode} (${duration}ms)`);
+    });
+    next();
+});
+
 // Pusher instance (lazy loaded)
 let pusher = null;
 
@@ -62,18 +82,23 @@ const initPusher = async () => {
             return acc;
         }, {});
 
-        if (settingsMap['REALTIME_METHOD'] === 'PUSHER') {
-            if (settingsMap['PUSHER_APP_ID'] && settingsMap['PUSHER_KEY'] && settingsMap['PUSHER_SECRET'] && settingsMap['PUSHER_CLUSTER']) {
+        if (settingsMap['REALTIME_METHOD'] === 'PUSHER' || process.env.PUSHER_APP_ID) {
+            const appId = settingsMap['REALTIME_PUSHER_APP_ID'] || settingsMap['PUSHER_APP_ID'] || process.env.PUSHER_APP_ID || "2090861";
+            const key = settingsMap['REALTIME_PUSHER_KEY'] || settingsMap['PUSHER_KEY'] || process.env.PUSHER_KEY || "7c449017a85bda0ae88a";
+            const secret = settingsMap['REALTIME_PUSHER_SECRET'] || settingsMap['PUSHER_SECRET'] || process.env.PUSHER_SECRET || "2ceb82a5951aa226ce93";
+            const cluster = settingsMap['REALTIME_PUSHER_CLUSTER'] || settingsMap['PUSHER_CLUSTER'] || process.env.PUSHER_CLUSTER || "ap1";
+
+            if (appId && key && secret && cluster) {
                 pusher = new Pusher({
-                    appId: settingsMap['PUSHER_APP_ID'] || process.env.PUSHER_APP_ID || "2090861",
-                    key: settingsMap['PUSHER_KEY'] || process.env.PUSHER_KEY || "7c449017a85bda0ae88a",
-                    secret: settingsMap['PUSHER_SECRET'] || process.env.PUSHER_SECRET || "2ceb82a5951aa226ce93",
-                    cluster: settingsMap['PUSHER_CLUSTER'] || process.env.PUSHER_CLUSTER || "ap1",
+                    appId,
+                    key,
+                    secret,
+                    cluster,
                     useTLS: true
                 });
-                console.log('[Pusher] Initialized successfully');
+                console.log(`[Pusher] Initialized successfully (Cluster: ${cluster})`);
             } else {
-                console.warn('[Pusher] Configuration missing but REALTIME_METHOD is set to PUSHER');
+                console.warn('[Pusher] Configuration missing. Realtime events may not be delivered.');
             }
         }
     } catch (err) {

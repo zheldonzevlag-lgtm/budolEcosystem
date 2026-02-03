@@ -37,7 +37,7 @@ const notifyAdmin = async (event, data) => {
       isAdmin: true,
       event,
       data
-    });
+    }, { timeout: 2000 });
     console.log(`[Gateway] Admin notification (${event}) sent to Gateway`);
   } catch (err) {
     console.error(`[Gateway] Failed to notify Admin (${event}): ${err.message}`);
@@ -50,7 +50,7 @@ const notifyUser = async (userId, event, data) => {
       userId,
       event,
       data
-    });
+    }, { timeout: 2000 });
     console.log(`[Gateway] User notification (${event}) sent to Gateway for user ${userId}`);
   } catch (err) {
     console.error(`[Gateway] Failed to notify User (${event}): ${err.message}`);
@@ -146,7 +146,7 @@ router.post('/create-intent', async (req, res) => {
     });
 
     // 1.2 Notify Admin in Real-time (AUDIT_LOG_CREATED)
-    await notifyAdmin('AUDIT_LOG_CREATED', auditLog);
+    notifyAdmin('AUDIT_LOG_CREATED', auditLog);
 
     // 2. If provider is external, call the respective provider API
     let providerResponse = null;
@@ -613,12 +613,12 @@ router.post('/webhooks/:provider', async (req, res) => {
       });
 
       // 3.2 Notify Admin in Real-time (AUDIT_LOG_CREATED and new_transaction)
-      await notifyAdmin('AUDIT_LOG_CREATED', auditLog);
-      await notifyAdmin('new_transaction', transaction); // Critical for Admin Dashboard Sync
+      notifyAdmin('AUDIT_LOG_CREATED', auditLog);
+      notifyAdmin('new_transaction', transaction); // Critical for Admin Dashboard Sync
 
       // 3.3 Notify User in Real-time (transaction_update) for Mobile App Sync
       if (transaction.senderId) {
-        await notifyUser(transaction.senderId, 'transaction_update', {
+        notifyUser(transaction.senderId, 'transaction_update', {
           transaction: transaction,
           message: `Your payment of ₱${transaction.amount} has been processed successfully.`
         });
@@ -723,11 +723,11 @@ router.post('/webhooks/:provider', async (req, res) => {
       });
 
       // Notify Admin in Real-time (AUDIT_LOG_CREATED)
-      await notifyAdmin('AUDIT_LOG_CREATED', auditLog);
+      notifyAdmin('AUDIT_LOG_CREATED', auditLog);
 
       // 3.3 Notify User in Real-time (transaction_update) for Mobile App Sync
       if (transaction.senderId) {
-        await notifyUser(transaction.senderId, 'transaction_update', {
+        notifyUser(transaction.senderId, 'transaction_update', {
           transaction: transaction,
           message: `Your payment of ₱${transaction.amount} has failed or was cancelled.`
         });

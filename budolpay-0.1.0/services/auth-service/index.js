@@ -32,17 +32,15 @@ const GATEWAY_URL = process.env.NODE_ENV === 'development'
 const notifyAdmin = async (event, data) => {
     try {
         console.log(`[Auth] Attempting to notify Admin (${event}) at ${GATEWAY_URL}/internal/notify`);
+        // Add a short timeout to prevent blocking critical user flows if Gateway is down
         const response = await axios.post(`${GATEWAY_URL}/internal/notify`, {
             isAdmin: true,
             event,
             data
-        });
+        }, { timeout: 2000 }); 
         console.log(`[Auth] Admin notification (${event}) response:`, response.data);
     } catch (err) {
         console.error(`[Auth] Failed to notify Admin (${event}): ${err.message}`);
-        if (err.response) {
-            console.error(`[Auth] Error response:`, err.response.data);
-        }
     }
 };
 
@@ -84,7 +82,7 @@ const createAuditLog = async (req, userId, action, metadata = {}, entity = 'Secu
         console.log(`[Audit] Logged action: ${action} for user: ${userId} (Entity: ${entity})`);
         
         // Notify Admin in Real-time (Provider Agnostic via Gateway)
-        await notifyAdmin('AUDIT_LOG_CREATED', log);
+        notifyAdmin('AUDIT_LOG_CREATED', log);
     } catch (err) {
         console.error(`[Audit] Failed to create audit log: ${err.message}`);
     }
@@ -92,6 +90,26 @@ const createAuditLog = async (req, userId, action, metadata = {}, entity = 'Secu
 
 app.use(cors());
 app.use(express.json());
+
+// Custom logging middleware for deep visibility
+app.use((req, res, next) => {
+    const start = Date.now();
+    console.log(`\x1b[35m[Auth Request]\x1b[0m ${req.method} ${req.url} - ${new Date().toISOString()}`);
+    if (['POST', 'PUT', 'PATCH'].includes(req.method) && req.body) {
+        // Only log body for non-sensitive routes
+        if (!req.url.includes('login') && !req.url.includes('pin') && !req.url.includes('register')) {
+            console.log(`[Auth Body]`, JSON.stringify(req.body, null, 2));
+        } else {
+            console.log(`[Auth Body] [REDACTED SENSITIVE DATA]`);
+        }
+    }
+
+    res.on('finish', () => {
+        const duration = Date.now() - start;
+        console.log(`\x1b[34m[Auth Response]\x1b[0m ${req.method} ${req.url} ${res.statusCode} (${duration}ms)`);
+    });
+    next();
+});
 
 // Vercel Support: Handle API prefix
 const router = express.Router();
@@ -235,9 +253,9 @@ app.post('/register', async (req, res) => {
         });
 
         // Notify Admin about new user registration for real-time dashboard
-        try {
-            const totalUsers = await prisma.user.count();
-            await notifyAdmin('new_user', { 
+        // We do NOT await these to prevent blocking the registration response
+        prisma.user.count().then(totalUsers => {
+            notifyAdmin('new_user', { 
                 count: totalUsers,
                 user: {
                     id: user.id,
@@ -247,27 +265,30 @@ app.post('/register', async (req, res) => {
                     createdAt: user.createdAt
                 }
             });
-        } catch (adminNotifyError) {
+        }).catch(adminNotifyError => {
             console.error('[Admin Notification Error]', adminNotifyError);
-        }
+        });
 
         // Notify user about successful account creation and send OTP
-        try {
-            if (user.email && !user.email.endsWith('@budolpay.local')) {
-                await sendAccountCreationSuccess(user.email, user.firstName || 'User', 'EMAIL');
-                await sendOTP(user.email, otpCode, 'EMAIL');
-            }
-            
-            if (user.phoneNumber) {
-                await sendAccountCreationSuccess(user.phoneNumber, user.firstName || 'User', 'SMS');
-                await sendOTP(user.phoneNumber, otpCode, 'SMS');
-                if (isLocal) {
-                    console.log(`[LOCAL] OTP for ${user.phoneNumber}: ${otpCode}`);
+        // We do NOT await these to prevent blocking the registration response
+        (async () => {
+            try {
+                if (user.email && !user.email.endsWith('@budolpay.local')) {
+                    await sendAccountCreationSuccess(user.email, user.firstName || 'User', 'EMAIL');
+                    await sendOTP(user.email, otpCode, 'EMAIL');
                 }
+                
+                if (user.phoneNumber) {
+                    await sendAccountCreationSuccess(user.phoneNumber, user.firstName || 'User', 'SMS');
+                    await sendOTP(user.phoneNumber, otpCode, 'SMS');
+                    if (isLocal) {
+                        console.log(`[LOCAL] OTP for ${user.phoneNumber}: ${otpCode}`);
+                    }
+                }
+            } catch (notifError) {
+                console.error('[Registration Notification Error]', notifError);
             }
-        } catch (notifError) {
-            console.error('[Registration Notification Error]', notifError);
-        }
+        })();
 
         res.status(201).json({ 
             message: 'User registered successfully. Please verify OTP.', 
@@ -350,7 +371,8 @@ app.post('/register/quick', async (req, res) => {
         }, 'Security', user.id);
 
         // Send OTP
-        await sendOTP(user.phoneNumber, otpCode, 'SMS');
+        // We do NOT await this to prevent blocking the registration response
+        sendOTP(user.phoneNumber, otpCode, 'SMS').catch(err => console.error('[Quick Reg OTP Error]', err));
         if (isLocal) console.log(`[LOCAL] Quick-Reg OTP for ${user.phoneNumber}: ${otpCode}`);
 
         res.status(201).json({

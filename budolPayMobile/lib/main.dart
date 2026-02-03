@@ -28,6 +28,7 @@ import 'screens/change_mpin_screen.dart';
 import 'screens/marketing_ads_screen.dart';
 import 'screens/splash_screen.dart';
 import 'screens/favorites_screen.dart';
+import 'screens/debug_console_screen.dart';
 import 'screens/payment_status_screen.dart';
 import 'constants/routes.dart';
 import 'package:flutter/foundation.dart';
@@ -304,6 +305,7 @@ class _BudolPayAppState extends State<BudolPayApp> {
         Routes.changeMpin: (context) => const ChangeMpinScreen(),
         Routes.marketing: (context) => const MarketingAdsScreen(),
         Routes.favorites: (context) => const FavoritesScreen(),
+        Routes.debugConsole: (context) => const DebugConsoleScreen(),
         '/payment-status': (context) {
           final args = ModalRoute.of(context)?.settings.arguments as Map<String, dynamic>? ?? {};
           return PaymentStatusScreen(

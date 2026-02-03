@@ -9,7 +9,43 @@ import 'discovery_service.dart';
 
 import 'package:package_info_plus/package_info_plus.dart';
 
+enum LogType { request, response, error, info }
+
+class ApiLog {
+  final LogType type;
+  final String url;
+  final String? method;
+  final int? statusCode;
+  final String? requestBody;
+  final String? responseBody;
+  final String? error;
+  final DateTime timestamp;
+
+  ApiLog({
+    required this.type,
+    required this.url,
+    this.method,
+    this.statusCode,
+    this.requestBody,
+    this.responseBody,
+    this.error,
+  }) : timestamp = DateTime.now();
+}
+
 class ApiService extends ChangeNotifier {
+  final List<ApiLog> _debugLogs = [];
+  List<ApiLog> get debugLogs => List.unmodifiable(_debugLogs);
+
+  void _addLog(ApiLog log) {
+    _debugLogs.add(log);
+    if (_debugLogs.length > 50) _debugLogs.removeAt(0);
+    notifyListeners();
+  }
+
+  void clearDebugLogs() {
+    _debugLogs.clear();
+    notifyListeners();
+  }
   static const String _tokenKey = 'budolpay_token';
   static const String _userKey = 'budolpay_user';
   static const String _hostKey = 'budolpay_custom_host';
@@ -22,7 +58,7 @@ class ApiService extends ChangeNotifier {
   Map<String, dynamic>? _systemSettings;
   String? _deviceId;
   bool _hasSeenAds = false;
-  String _appVersion = '1.3.60'; // v1.3.60 - Release Build
+  String _appVersion = '1.3.63'; // v1.3.63 - Build Release
 
   String get appVersion => _appVersion;
   Future<void>? _initFuture;
@@ -369,25 +405,52 @@ class ApiService extends ChangeNotifier {
 
   Future<Map<String, dynamic>> identifyMobile(String phoneNumber) async {
     final url = '$authUrl/login/mobile/identify';
-    final response = await http.post(
-      Uri.parse(url),
-      headers: {'Content-Type': 'application/json'},
-      body: json.encode({
-        'phoneNumber': phoneNumber,
-        'deviceId': deviceId,
-      }),
-    ).timeout(const Duration(seconds: 10));
+    final body = json.encode({
+      'phoneNumber': phoneNumber,
+      'deviceId': deviceId,
+    });
+    
+    _addLog(ApiLog(
+      type: LogType.request,
+      method: 'POST',
+      url: url,
+      requestBody: body,
+    ));
 
-    if (response.statusCode == 200 || response.statusCode == 404) {
-      final decoded = json.decode(response.body);
-      final Map<String, dynamic> data = decoded is Map ? Map<String, dynamic>.from(decoded) : {};
-      if (data['user'] != null && data['user'] is Map) {
-        user = Map<String, dynamic>.from(data['user'] as Map);
-        notifyListeners();
+    try {
+      final response = await http.post(
+        Uri.parse(url),
+        headers: {'Content-Type': 'application/json'},
+        body: body,
+      ).timeout(const Duration(seconds: 30));
+
+      _addLog(ApiLog(
+        type: LogType.response,
+        method: 'POST',
+        url: url,
+        statusCode: response.statusCode,
+        responseBody: response.body,
+      ));
+
+      if (response.statusCode == 200 || response.statusCode == 404) {
+        final decoded = json.decode(response.body);
+        final Map<String, dynamic> data = decoded is Map ? Map<String, dynamic>.from(decoded) : {};
+        if (data['user'] != null && data['user'] is Map) {
+          user = Map<String, dynamic>.from(data['user'] as Map);
+          notifyListeners();
+        }
+        return data;
+      } else {
+        throw Exception('Identification failed: ${response.statusCode}');
       }
-      return data;
-    } else {
-      throw Exception('Identification failed: ${response.statusCode}');
+    } catch (e) {
+      _addLog(ApiLog(
+        type: LogType.error,
+        method: 'POST',
+        url: url,
+        error: e.toString(),
+      ));
+      rethrow;
     }
   }
 
@@ -406,7 +469,7 @@ class ApiService extends ChangeNotifier {
         'type': type,
         'deviceId': deviceId,
       }),
-    ).timeout(const Duration(seconds: 10));
+    ).timeout(const Duration(seconds: 30));
 
     final decoded = json.decode(response.body);
     final Map<String, dynamic> data = decoded is Map ? Map<String, dynamic>.from(decoded) : {};
@@ -430,26 +493,53 @@ class ApiService extends ChangeNotifier {
     required String pin,
   }) async {
     final url = '$authUrl/login/mobile/verify-pin';
-    final response = await http.post(
-      Uri.parse(url),
-      headers: {'Content-Type': 'application/json'},
-      body: json.encode({
-        'userId': userId,
-        'pin': pin,
-        'deviceId': deviceId,
-      }),
-    ).timeout(const Duration(seconds: 10));
+    final body = json.encode({
+      'userId': userId,
+      'pin': pin,
+      'deviceId': deviceId,
+    });
 
-    final decoded = json.decode(response.body);
-    final Map<String, dynamic> data = decoded is Map ? Map<String, dynamic>.from(decoded) : {};
-    if (response.statusCode == 200) {
-      token = data['token'];
-      user = data['user'];
-      await _saveSession();
-      notifyListeners();
-      return data;
-    } else {
-      throw Exception(data['error'] ?? 'PIN verification failed');
+    _addLog(ApiLog(
+      type: LogType.request,
+      method: 'POST',
+      url: url,
+      requestBody: body,
+    ));
+
+    try {
+      final response = await http.post(
+        Uri.parse(url),
+        headers: {'Content-Type': 'application/json'},
+        body: body,
+      ).timeout(const Duration(seconds: 30));
+
+      _addLog(ApiLog(
+        type: LogType.response,
+        method: 'POST',
+        url: url,
+        statusCode: response.statusCode,
+        responseBody: response.body,
+      ));
+
+      final decoded = json.decode(response.body);
+      final Map<String, dynamic> data = decoded is Map ? Map<String, dynamic>.from(decoded) : {};
+      if (response.statusCode == 200) {
+        token = data['token'];
+        user = data['user'];
+        await _saveSession();
+        notifyListeners();
+        return data;
+      } else {
+        throw Exception(data['error'] ?? 'PIN verification failed');
+      }
+    } catch (e) {
+      _addLog(ApiLog(
+        type: LogType.error,
+        method: 'POST',
+        url: url,
+        error: e.toString(),
+      ));
+      rethrow;
     }
   }
 
@@ -458,25 +548,52 @@ class ApiService extends ChangeNotifier {
     required String pin,
   }) async {
     final url = '$authUrl/login/mobile/setup-pin';
-    final response = await http.post(
-      Uri.parse(url),
-      headers: {'Content-Type': 'application/json'},
-      body: json.encode({
-        'userId': userId,
-        'pin': pin,
-      }),
-    ).timeout(const Duration(seconds: 10));
+    final body = json.encode({
+      'userId': userId,
+      'pin': pin,
+    });
 
-    final decoded = json.decode(response.body);
-    final Map<String, dynamic> data = decoded is Map ? Map<String, dynamic>.from(decoded) : {};
-    if (response.statusCode == 200) {
-      token = data['token'];
-      user = data['user'];
-      await _saveSession();
-      notifyListeners();
-      return data;
-    } else {
-      throw Exception(data['error'] ?? 'PIN setup failed');
+    _addLog(ApiLog(
+      type: LogType.request,
+      method: 'POST',
+      url: url,
+      requestBody: body,
+    ));
+
+    try {
+      final response = await http.post(
+        Uri.parse(url),
+        headers: {'Content-Type': 'application/json'},
+        body: body,
+      ).timeout(const Duration(seconds: 30));
+
+      _addLog(ApiLog(
+        type: LogType.response,
+        method: 'POST',
+        url: url,
+        statusCode: response.statusCode,
+        responseBody: response.body,
+      ));
+
+      final decoded = json.decode(response.body);
+      final Map<String, dynamic> data = decoded is Map ? Map<String, dynamic>.from(decoded) : {};
+      if (response.statusCode == 200) {
+        token = data['token'];
+        user = data['user'];
+        await _saveSession();
+        notifyListeners();
+        return data;
+      } else {
+        throw Exception(data['error'] ?? 'PIN setup failed');
+      }
+    } catch (e) {
+      _addLog(ApiLog(
+        type: LogType.error,
+        method: 'POST',
+        url: url,
+        error: e.toString(),
+      ));
+      rethrow;
     }
   }
 
@@ -489,27 +606,53 @@ class ApiService extends ChangeNotifier {
     required String pin,
   }) async {
     final url = '$authUrl/register';
-    
-    final response = await http.post(
-      Uri.parse(url),
-      headers: {'Content-Type': 'application/json'},
-      body: json.encode({
-        'email': email,
-        'password': password,
-        'firstName': firstName,
-        'lastName': lastName,
-        'phoneNumber': phoneNumber,
-        'pin': pin,
-        'deviceId': deviceId,
-      }),
-    ).timeout(const Duration(seconds: 10));
+    final body = json.encode({
+      'email': email,
+      'password': password,
+      'firstName': firstName,
+      'lastName': lastName,
+      'phoneNumber': phoneNumber,
+      'pin': pin,
+      'deviceId': deviceId,
+    });
 
-    final decoded = json.decode(response.body);
-    final Map<String, dynamic> data = decoded is Map ? Map<String, dynamic>.from(decoded) : {};
-    if (response.statusCode == 201) {
-      return data;
-    } else {
-      throw Exception(data['error'] ?? 'Registration failed');
+    _addLog(ApiLog(
+      type: LogType.request,
+      method: 'POST',
+      url: url,
+      requestBody: body,
+    ));
+    
+    try {
+      final response = await http.post(
+        Uri.parse(url),
+        headers: {'Content-Type': 'application/json'},
+        body: body,
+      ).timeout(const Duration(seconds: 30));
+
+      _addLog(ApiLog(
+        type: LogType.response,
+        method: 'POST',
+        url: url,
+        statusCode: response.statusCode,
+        responseBody: response.body,
+      ));
+
+      final decoded = json.decode(response.body);
+      final Map<String, dynamic> data = decoded is Map ? Map<String, dynamic>.from(decoded) : {};
+      if (response.statusCode == 201) {
+        return data;
+      } else {
+        throw Exception(data['error'] ?? 'Registration failed');
+      }
+    } catch (e) {
+      _addLog(ApiLog(
+        type: LogType.error,
+        method: 'POST',
+        url: url,
+        error: e.toString(),
+      ));
+      rethrow;
     }
   }
 
@@ -518,23 +661,49 @@ class ApiService extends ChangeNotifier {
     String? firstName,
   }) async {
     final url = '$authUrl/register/quick';
-    
-    final response = await http.post(
-      Uri.parse(url),
-      headers: {'Content-Type': 'application/json'},
-      body: json.encode({
-        'phoneNumber': phoneNumber,
-        'firstName': firstName,
-        'deviceId': deviceId,
-      }),
-    ).timeout(const Duration(seconds: 10));
+    final body = json.encode({
+      'phoneNumber': phoneNumber,
+      'firstName': firstName,
+      'deviceId': deviceId,
+    });
 
-    final decoded = json.decode(response.body);
-    final Map<String, dynamic> data = decoded is Map ? Map<String, dynamic>.from(decoded) : {};
-    if (response.statusCode == 201) {
-      return data;
-    } else {
-      throw Exception(data['error'] ?? 'Quick registration failed');
+    _addLog(ApiLog(
+      type: LogType.request,
+      method: 'POST',
+      url: url,
+      requestBody: body,
+    ));
+    
+    try {
+      final response = await http.post(
+        Uri.parse(url),
+        headers: {'Content-Type': 'application/json'},
+        body: body,
+      ).timeout(const Duration(seconds: 10));
+
+      _addLog(ApiLog(
+        type: LogType.response,
+        method: 'POST',
+        url: url,
+        statusCode: response.statusCode,
+        responseBody: response.body,
+      ));
+
+      final decoded = json.decode(response.body);
+      final Map<String, dynamic> data = decoded is Map ? Map<String, dynamic>.from(decoded) : {};
+      if (response.statusCode == 201) {
+        return data;
+      } else {
+        throw Exception(data['error'] ?? 'Quick registration failed');
+      }
+    } catch (e) {
+      _addLog(ApiLog(
+        type: LogType.error,
+        method: 'POST',
+        url: url,
+        error: e.toString(),
+      ));
+      rethrow;
     }
   }
 
@@ -547,34 +716,61 @@ class ApiService extends ChangeNotifier {
     if (user == null || token == null) throw Exception('User session expired. Please login again.');
 
     final url = '$authUrl/profile';
-    final response = await http.patch(
-      Uri.parse(url),
-      headers: {
-        'Authorization': 'Bearer $token',
-        'Content-Type': 'application/json',
-      },
-      body: json.encode({
-        if (firstName != null) 'firstName': firstName,
-        if (lastName != null) 'lastName': lastName,
-        if (email != null) 'email': email,
-      }),
-    ).timeout(const Duration(seconds: 10));
+    final body = json.encode({
+      if (firstName != null) 'firstName': firstName,
+      if (lastName != null) 'lastName': lastName,
+      if (email != null) 'email': email,
+    });
 
-    final decoded = json.decode(response.body);
-    final Map<String, dynamic> data = decoded is Map ? Map<String, dynamic>.from(decoded) : {};
+    _addLog(ApiLog(
+      type: LogType.request,
+      method: 'PATCH',
+      url: url,
+      requestBody: body,
+    ));
 
-    if (response.statusCode == 200) {
-      if (data['user'] != null) {
-        // Update local user data but preserve other fields
-        final updatedUser = Map<String, dynamic>.from(user!);
-        updatedUser.addAll(Map<String, dynamic>.from(data['user']));
-        user = updatedUser;
-        await _saveSession();
-        notifyListeners();
+    try {
+      final response = await http.patch(
+        Uri.parse(url),
+        headers: {
+          'Authorization': 'Bearer $token',
+          'Content-Type': 'application/json',
+        },
+        body: body,
+      ).timeout(const Duration(seconds: 30));
+
+      _addLog(ApiLog(
+        type: LogType.response,
+        method: 'PATCH',
+        url: url,
+        statusCode: response.statusCode,
+        responseBody: response.body,
+      ));
+
+      final decoded = json.decode(response.body);
+      final Map<String, dynamic> data = decoded is Map ? Map<String, dynamic>.from(decoded) : {};
+
+      if (response.statusCode == 200) {
+        if (data['user'] != null) {
+          // Update local user data but preserve other fields
+          final updatedUser = Map<String, dynamic>.from(user!);
+          updatedUser.addAll(Map<String, dynamic>.from(data['user']));
+          user = updatedUser;
+          await _saveSession();
+          notifyListeners();
+        }
+        return data;
+      } else {
+        throw Exception(data['error'] ?? 'Failed to update profile');
       }
-      return data;
-    } else {
-      throw Exception(data['error'] ?? 'Failed to update profile');
+    } catch (e) {
+      _addLog(ApiLog(
+        type: LogType.error,
+        method: 'PATCH',
+        url: url,
+        error: e.toString(),
+      ));
+      rethrow;
     }
   }
 

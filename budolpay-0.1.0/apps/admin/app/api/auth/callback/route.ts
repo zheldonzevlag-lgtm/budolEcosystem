@@ -75,6 +75,25 @@ export async function GET(request: Request) {
 
         const response = NextResponse.redirect(new URL('/', appUrl));
         
+        // Log Login Action for Forensic Audit Trail
+        const ip = request.headers.get('x-forwarded-for') || '127.0.0.1';
+        await prisma.auditLog.create({
+            data: {
+                action: 'USER_LOGIN',
+                userId: localUser.id,
+                entity: 'Security',
+                ipAddress: ip,
+                userAgent: request.headers.get('user-agent'),
+                metadata: {
+                    authMethod: 'SSO_CALLBACK',
+                    compliance: {
+                        pci_dss: '10.2.1',
+                        bsp: 'Circular 808'
+                    }
+                }
+            }
+        });
+
         console.log(`[SSO Callback] Setting budolpay_token cookie and redirecting to / via ${appUrl}`);
         // Use the same token for the local cookie so the middleware can verify it
         response.cookies.set('budolpay_token', token, {

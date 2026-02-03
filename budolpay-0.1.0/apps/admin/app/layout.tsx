@@ -7,8 +7,8 @@ import MainContent from "@/components/MainContent";
 const inter = Inter({ subsets: ["latin"] });
 
 export const metadata: Metadata = {
-  title: "budolPay Admin",
-  description: "Administrative control panel for budolPay",
+title: "budol₱ay Admin",
+  description: "Administrative control panel for budol₱ay",
 };
 
 export default function RootLayout({

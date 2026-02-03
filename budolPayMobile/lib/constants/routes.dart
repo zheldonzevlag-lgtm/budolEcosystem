@@ -19,4 +19,5 @@ class Routes {
   static const String changeMpin = '/change-mpin';
   static const String marketing = '/marketing';
   static const String favorites = '/favorites';
+  static const String debugConsole = '/debug-console';
 }

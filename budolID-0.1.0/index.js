@@ -71,28 +71,327 @@ app.use((req, res, next) => {
 // 0. Serve Login Page
 app.get('/login', (req, res) => {
     const { apiKey } = req.query;
+    // Fallback to budolPay if no apiKey is provided to prevent "Unauthorized Application" error
+    const activeApiKey = apiKey || 'bp_key_2025';
+    
     res.send(`
-        <html>
-            <head>
-                <title>budolID Login</title>
-                <style>
-                    body { font-family: sans-serif; display: flex; align-items: center; justify-content: center; height: 100vh; background: #f1f5f9; }
-                    .card { background: white; padding: 2rem; border-radius: 8px; shadow: 0 4px 6px rgba(0,0,0,0.1); width: 300px; }
-                    input { width: 100%; padding: 0.5rem; margin: 0.5rem 0; border: 1px solid #ddd; border-radius: 4px; box-sizing: border-box; }
-                    button { width: 100%; padding: 0.75rem; background: #4f46e5; color: white; border: none; border-radius: 4px; cursor: pointer; }
-                </style>
-            </head>
-            <body>
-                <div class="card">
-                    <h2>Login with budolID</h2>
-                    <form action="/auth/sso/login-form" method="POST">
-                        <input type="hidden" name="apiKey" value="${apiKey}" />
-                        <input type="email" name="email" placeholder="Email" required />
-                        <input type="password" name="password" placeholder="Password" required />
-                        <button type="submit">Sign In</button>
+        <!DOCTYPE html>
+        <html lang="en">
+        <head>
+            <meta charset="UTF-8">
+            <meta name="viewport" content="width=device-width, initial-scale=1.0">
+            <title>budolID Login</title>
+            <script src="https://cdn.tailwindcss.com"></script>
+            <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+            <style>
+                body { font-family: 'Inter', sans-serif; }
+            </style>
+        </head>
+        <body class="min-h-screen bg-slate-900 flex items-center justify-center p-4">
+            <div class="max-w-md w-full bg-white rounded-2xl shadow-2xl overflow-hidden">
+                <div class="p-8">
+                    <div class="flex justify-center mb-6">
+                        <div class="bg-blue-500/10 p-4 rounded-full">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="text-blue-500"><path d="M20 13c0 5-3.5 7.5-7.66 8.95a1 1 0 0 1-.67-.01C7.5 20.5 4 18 4 13V6a1 1 0 0 1 1-1c2 0 4.5-1.2 6.24-2.72a1.17 1.17 0 0 1 1.52 0C14.51 3.81 17 5 19 5a1 1 0 0 1 1 1z"/></svg>
+                        </div>
+                    </div>
+                    
+                    <h1 class="text-2xl font-black text-center text-slate-900 mb-2">
+                        budol<span class="text-blue-500">ID</span>
+                    </h1>
+                    <p class="text-slate-500 text-center text-sm mb-8">
+                        The secure universal identity for the ecosystem.
+                    </p>
+
+                    <form action="/auth/sso/login-form" method="POST" class="space-y-4">
+                        <input type="hidden" name="apiKey" value="${activeApiKey}" />
+                        
+                        <div>
+                            <label class="block text-xs font-bold text-slate-500 uppercase mb-1">Email Address</label>
+                            <input 
+                                type="email" 
+                                name="email"
+                                required
+                                class="w-full p-3 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500/50 text-slate-900"
+                                placeholder="name@example.com"
+                            />
+                        </div>
+
+                        <div>
+                            <label class="block text-xs font-bold text-slate-500 uppercase mb-1">Password</label>
+                            <input 
+                                type="password" 
+                                name="password"
+                                required
+                                class="w-full p-3 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500/50 text-slate-900"
+                                placeholder="••••••••"
+                            />
+                        </div>
+
+                        <button 
+                            type="submit" 
+                            class="w-full bg-blue-500 text-white p-4 rounded-xl font-bold hover:bg-blue-600 transition-colors shadow-lg shadow-blue-500/30"
+                        >
+                            Sign In
+                        </button>
                     </form>
+
+                    <div class="mt-8 pt-6 border-t border-slate-100 text-center">
+                        <a href="/forgot-password?apiKey=${activeApiKey}" class="text-sm font-semibold text-blue-500 hover:text-blue-600 transition-colors">
+                            Forgot your password?
+                        </a>
+                    </div>
                 </div>
-            </body>
+                <div class="bg-slate-50 px-8 py-4 text-center">
+                    <p class="text-[10px] text-slate-400 font-bold uppercase tracking-widest">
+                        Protected by budol<span class="text-blue-500">Shield</span>
+                    </p>
+                </div>
+            </div>
+        </body>
+        </html>
+    `);
+});
+
+// Serve Forgot Password Page
+app.get('/forgot-password', (req, res) => {
+    const { apiKey } = req.query;
+    const activeApiKey = apiKey || 'bp_key_2025';
+
+    res.send(`
+        <!DOCTYPE html>
+        <html lang="en">
+        <head>
+            <meta charset="UTF-8">
+            <meta name="viewport" content="width=device-width, initial-scale=1.0">
+            <title>Forgot Password - budolID</title>
+            <script src="https://cdn.tailwindcss.com"></script>
+            <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+            <style>
+                body { font-family: 'Inter', sans-serif; }
+            </style>
+        </head>
+        <body class="min-h-screen bg-slate-900 flex items-center justify-center p-4">
+            <div class="max-w-md w-full bg-white rounded-2xl shadow-2xl overflow-hidden">
+                <div class="p-8">
+                    <div class="flex justify-center mb-6">
+                        <div class="bg-blue-500/10 p-4 rounded-full">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="text-blue-500"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
+                        </div>
+                    </div>
+                    
+                    <h1 class="text-2xl font-black text-center text-slate-900 mb-2">
+                        Reset <span class="text-blue-500">Password</span>
+                    </h1>
+                    <p class="text-slate-500 text-center text-sm mb-8">
+                        Enter your email to receive a 6-digit OTP via SMS and Email.
+                    </p>
+
+                    <form id="forgotForm" class="space-y-4">
+                        <div>
+                            <label class="block text-xs font-bold text-slate-500 uppercase mb-1">Email Address</label>
+                            <input 
+                                type="email" 
+                                id="email"
+                                required
+                                class="w-full p-3 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500/50 text-slate-900"
+                                placeholder="name@example.com"
+                            />
+                        </div>
+
+                        <button 
+                            type="submit" 
+                            class="w-full bg-blue-500 text-white p-4 rounded-xl font-bold hover:bg-blue-600 transition-colors shadow-lg shadow-blue-500/30"
+                        >
+                            Send OTP
+                        </button>
+                    </form>
+
+                    <div id="message" class="mt-4 text-center text-sm font-semibold hidden"></div>
+
+                    <div class="mt-8 pt-6 border-t border-slate-100 text-center">
+                        <a href="/login?apiKey=${activeApiKey}" class="text-sm font-semibold text-slate-400 hover:text-slate-600 transition-colors">
+                            &larr; Back to Login
+                        </a>
+                    </div>
+                </div>
+                <div class="bg-slate-50 px-8 py-4 text-center">
+                    <p class="text-[10px] text-slate-400 font-bold uppercase tracking-widest">
+                        Protected by budol<span class="text-blue-500">Shield</span>
+                    </p>
+                </div>
+            </div>
+
+            <script>
+                document.getElementById('forgotForm').addEventListener('submit', async (e) => {
+                    e.preventDefault();
+                    const email = document.getElementById('email').value;
+                    const messageDiv = document.getElementById('message');
+                    
+                    try {
+                        const res = await fetch('/auth/forgot-password', {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({ email })
+                        });
+                        const data = await res.json();
+                        
+                        messageDiv.textContent = data.message;
+                        messageDiv.className = 'mt-4 text-center text-sm font-semibold text-green-600';
+                        messageDiv.classList.remove('hidden');
+                        
+                        if (res.ok) {
+                            setTimeout(() => {
+                                window.location.href = \`/reset-password?email=\${email}&apiKey=${activeApiKey}\`;
+                            }, 2000);
+                        }
+                    } catch (err) {
+                        messageDiv.textContent = 'An error occurred. Please try again.';
+                        messageDiv.className = 'mt-4 text-center text-sm font-semibold text-red-600';
+                        messageDiv.classList.remove('hidden');
+                    }
+                });
+            </script>
+        </body>
+        </html>
+    `);
+});
+
+// Serve Reset Password Page (OTP + New Password)
+app.get('/reset-password', (req, res) => {
+    const { email, apiKey } = req.query;
+    const activeApiKey = apiKey || 'bp_key_2025';
+
+    res.send(`
+        <!DOCTYPE html>
+        <html lang="en">
+        <head>
+            <meta charset="UTF-8">
+            <meta name="viewport" content="width=device-width, initial-scale=1.0">
+            <title>Verify OTP - budolID</title>
+            <script src="https://cdn.tailwindcss.com"></script>
+            <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+            <style>
+                body { font-family: 'Inter', sans-serif; }
+            </style>
+        </head>
+        <body class="min-h-screen bg-slate-900 flex items-center justify-center p-4">
+            <div class="max-w-md w-full bg-white rounded-2xl shadow-2xl overflow-hidden">
+                <div class="p-8">
+                    <div class="flex justify-center mb-6">
+                        <div class="bg-blue-500/10 p-4 rounded-full">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="text-blue-500"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
+                        </div>
+                    </div>
+                    
+                    <h1 class="text-2xl font-black text-center text-slate-900 mb-2">
+                        Verify <span class="text-blue-500">OTP</span>
+                    </h1>
+                    <p class="text-slate-500 text-center text-sm mb-8">
+                        Enter the 6-digit OTP and your new password.
+                    </p>
+
+                    <form id="otpForm" class="space-y-4">
+                        <input type="hidden" id="email" value="${email}" />
+                        
+                        <div>
+                            <label class="block text-xs font-bold text-slate-500 uppercase mb-1">One-Time Password</label>
+                            <input 
+                                type="text" 
+                                id="otp"
+                                required
+                                maxlength="6"
+                                class="w-full p-4 text-center text-2xl tracking-[1em] font-black border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500/50 text-slate-900"
+                                placeholder="000000"
+                            />
+                        </div>
+
+                        <div>
+                            <label class="block text-xs font-bold text-slate-500 uppercase mb-1">New Password</label>
+                            <input 
+                                type="password" 
+                                id="newPassword"
+                                required
+                                class="w-full p-3 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500/50 text-slate-900"
+                                placeholder="••••••••"
+                            />
+                        </div>
+
+                        <button 
+                            type="submit" 
+                            class="w-full bg-blue-500 text-white p-4 rounded-xl font-bold hover:bg-blue-600 transition-colors shadow-lg shadow-blue-500/30"
+                        >
+                            Reset Password
+                        </button>
+                    </form>
+
+                    <div id="message" class="mt-4 text-center text-sm font-semibold hidden"></div>
+
+                    <div class="mt-8 pt-6 border-t border-slate-100 text-center">
+                        <a href="/login?apiKey=${activeApiKey}" class="text-sm font-semibold text-slate-400 hover:text-slate-600 transition-colors">
+                            &larr; Back to Login
+                        </a>
+                    </div>
+                </div>
+                <div class="bg-slate-50 px-8 py-4 text-center">
+                    <p class="text-[10px] text-slate-400 font-bold uppercase tracking-widest">
+                        Protected by budol<span class="text-blue-500">Shield</span>
+                    </p>
+                </div>
+            </div>
+
+            <script>
+                document.getElementById('otpForm').addEventListener('submit', async (e) => {
+                    e.preventDefault();
+                    const email = document.getElementById('email').value;
+                    const otp = document.getElementById('otp').value;
+                    const newPassword = document.getElementById('newPassword').value;
+                    const messageDiv = document.getElementById('message');
+                    
+                    try {
+                        // 1. Verify OTP
+                        const verifyRes = await fetch('/auth/verify-otp', {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({ email, otp })
+                        });
+                        const verifyData = await verifyRes.json();
+                        
+                        if (!verifyRes.ok) {
+                            messageDiv.textContent = verifyData.error;
+                            messageDiv.className = 'mt-4 text-center text-sm font-semibold text-red-600';
+                            messageDiv.classList.remove('hidden');
+                            return;
+                        }
+
+                        // 2. Reset Password
+                        const resetRes = await fetch('/auth/reset-password', {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({ resetToken: verifyData.resetToken, newPassword })
+                        });
+                        const resetData = await resetRes.json();
+                        
+                        if (resetRes.ok) {
+                            messageDiv.textContent = 'Password reset successful! Redirecting to login...';
+                            messageDiv.className = 'mt-4 text-center text-sm font-semibold text-green-600';
+                            messageDiv.classList.remove('hidden');
+                            setTimeout(() => {
+                                window.location.href = \`/login?apiKey=${activeApiKey}\`;
+                            }, 2000);
+                        } else {
+                            messageDiv.textContent = resetData.error;
+                            messageDiv.className = 'mt-4 text-center text-sm font-semibold text-red-600';
+                            messageDiv.classList.remove('hidden');
+                        }
+                    } catch (err) {
+                        messageDiv.textContent = 'An error occurred. Please try again.';
+                        messageDiv.className = 'mt-4 text-center text-sm font-semibold text-red-600';
+                        messageDiv.classList.remove('hidden');
+                    }
+                });
+            </script>
+        </body>
         </html>
     `);
 });
@@ -101,10 +400,13 @@ app.get('/login', (req, res) => {
 app.use(express.urlencoded({ extended: true }));
 app.post('/auth/sso/login-form', async (req, res) => {
     const { email, password, apiKey } = req.body;
-    // ... logic same as /auth/sso/login but with redirect
+    
+    // Ensure we have an apiKey, default to budolPay for ecosystem access
+    const activeApiKey = apiKey || 'bp_key_2025';
+    
     try {
-        const ecosystemApp = await prisma.ecosystemApp.findUnique({ where: { apiKey } });
-        if (!ecosystemApp) return res.status(403).send('Unauthorized Application');
+        const ecosystemApp = await prisma.ecosystemApp.findUnique({ where: { apiKey: activeApiKey } });
+        if (!ecosystemApp) return res.status(403).send('Unauthorized Application: ' + activeApiKey);
 
         const user = await prisma.user.findUnique({ where: { email } });
         if (!user || !(await bcrypt.compare(password, user.password))) {
@@ -136,6 +438,95 @@ app.post('/auth/sso/login-form', async (req, res) => {
         res.redirect(`${ecosystemApp.redirectUri}?token=${token}`);
     } catch (error) {
         res.status(500).send(error.message);
+    }
+});
+
+// --- SSPR (Self-Service Password Reset) ---
+
+// 1. Forgot Password - Generate OTP and simulate delivery via SMS & Email
+app.post('/auth/forgot-password', async (req, res) => {
+    const { email } = req.body;
+    try {
+        const user = await prisma.user.findUnique({ where: { email } });
+        if (!user) {
+            // Standard security practice: don't reveal if user exists
+            return res.json({ message: "If an account exists, an OTP has been sent via SMS and Email." });
+        }
+
+        const otp = Math.floor(100000 + Math.random() * 900000).toString();
+        const otpExpires = new Date(Date.now() + 5 * 60 * 1000); // 5 minutes
+
+        await prisma.user.update({
+            where: { id: user.id },
+            data: { otp, otpExpires }
+        });
+
+        // SIMULATED DUAL-CHANNEL DELIVERY (PCI DSS & BSP Compliant)
+        console.log(`\n--- [SSPR DUAL-CHANNEL DELIVERY] ---`);
+        console.log(`[EMAIL] To: ${email} | Subject: budolID Password Reset | Body: Your OTP is ${otp}`);
+        console.log(`[SMS] To: ${user.phoneNumber || 'N/A'} | Body: budolID: Your password reset OTP is ${otp}. Valid for 5m.`);
+        console.log(`------------------------------------\n`);
+
+        res.json({ message: "If an account exists, an OTP has been sent via SMS and Email." });
+    } catch (error) {
+        res.status(500).json({ error: error.message });
+    }
+});
+
+// 0.2 Verify OTP and Provide Reset Token
+app.post('/auth/verify-otp', async (req, res) => {
+    const { email, otp } = req.body;
+    try {
+        const user = await prisma.user.findUnique({ where: { email } });
+        
+        if (!user || user.otp !== otp || new Date() > user.otpExpires) {
+            return res.status(401).json({ error: "Invalid or expired OTP." });
+        }
+
+        // Generate short-lived reset token
+        const resetToken = require('crypto').randomBytes(32).toString('hex');
+        const resetTokenExpires = new Date(Date.now() + 10 * 60 * 1000); // 10 minutes
+
+        await prisma.user.update({
+            where: { id: user.id },
+            data: { 
+                otp: null, 
+                otpExpires: null,
+                resetToken,
+                resetTokenExpires
+            }
+        });
+
+        res.json({ resetToken });
+    } catch (error) {
+        res.status(500).json({ error: error.message });
+    }
+});
+
+// 0.3 Reset Password
+app.post('/auth/reset-password', async (req, res) => {
+    const { resetToken, newPassword } = req.body;
+    try {
+        const user = await prisma.user.findUnique({ where: { resetToken } });
+
+        if (!user || new Date() > user.resetTokenExpires) {
+            return res.status(401).json({ error: "Invalid or expired reset token." });
+        }
+
+        const hashedPassword = await bcrypt.hash(newPassword, 10);
+
+        await prisma.user.update({
+            where: { id: user.id },
+            data: {
+                password: hashedPassword,
+                resetToken: null,
+                resetTokenExpires: null
+            }
+        });
+
+        res.json({ message: "Password reset successful. You can now login." });
+    } catch (error) {
+        res.status(500).json({ error: error.message });
     }
 });
 

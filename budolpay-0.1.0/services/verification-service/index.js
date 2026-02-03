@@ -23,14 +23,38 @@ const upload = multer({ storage });
 
 app.use(cors());
 app.use(express.json());
+app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 
-// KYC Verification Logic
-app.post('/verify', upload.single('document'), async (req, res) => {
+// KYC Verification Logic (Aliased as /upload for mobile app compatibility)
+app.post(['/verify', '/upload'], upload.single('document'), async (req, res) => {
   try {
-    const { userId, type, faceTemplate } = req.body;
+    const { userId, type, faceTemplate, documentType } = req.body;
 
     if (!userId) {
       return res.status(400).json({ error: 'User ID is required' });
+    }
+
+    // Store document record in DB if a file was uploaded
+    if (req.file) {
+      // For local development, we want the admin to see this via the gateway or direct service URL
+      // If using gateway (8080), the path should be /verification/uploads/...
+      const remoteUrl = `/verification/uploads/${req.file.filename}`;
+      
+      await prisma.verificationDocument.create({
+        data: {
+          userId,
+          type: type || 'ID_DOCUMENT',
+          documentType: documentType || 'GOVERNMENT_ID',
+          status: 'PENDING',
+          remoteUrl: remoteUrl,
+          faceTemplate: faceTemplate || null,
+          ocrData: {
+            originalName: req.file.originalname,
+            mimeType: req.file.mimetype,
+            size: req.file.size
+          }
+        }
+      });
     }
 
     const updateData = {};
@@ -54,7 +78,7 @@ app.post('/verify', upload.single('document'), async (req, res) => {
       await sendVerificationSuccess(updatedUser.email);
     }
 
-    res.json({
+    res.status(201).json({
       success: true,
       status: updateData.kycStatus,
       tier: updateData.kycTier

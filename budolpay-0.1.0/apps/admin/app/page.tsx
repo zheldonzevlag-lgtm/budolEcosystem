@@ -44,7 +44,7 @@ export default async function DashboardPage() {
       <div className="flex justify-between items-start">
         <div>
           <h2 className="text-2xl font-black text-[#0f172a] tracking-tight">Ecosystem Command</h2>
-          <p className="text-slate-500 text-sm mt-1">Unified oversight of budolPay & budolShap financial operations.</p>
+          <p className="text-slate-500 text-sm mt-1">Unified oversight of budol₱ay & budolShap financial operations.</p>
         </div>
         <div className="text-right">
           <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1">Global Status</p>

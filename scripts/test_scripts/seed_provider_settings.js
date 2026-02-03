@@ -1,0 +1,106 @@
+
+const { PrismaClient } = require('@prisma/client');
+const prisma = new PrismaClient();
+
+async function main() {
+  const settings = [
+    // Notification - SMS
+    {
+      key: 'NOTIFICATION_SMS_PROVIDER',
+      value: 'twilio',
+      group: 'NOTIFICATION',
+      description: 'Active SMS gateway provider (twilio, infobip, vonage)',
+      isSecret: false,
+      isActive: true
+    },
+    {
+      key: 'TWILIO_FROM_NUMBER',
+      value: '',
+      group: 'NOTIFICATION',
+      description: 'Twilio registered phone number or Alphanumeric Sender ID',
+      isSecret: false,
+      isActive: true
+    },
+    // Notification - Email (Detailed)
+    {
+      key: 'NOTIFICATION_EMAIL_USER',
+      value: '',
+      group: 'NOTIFICATION',
+      description: 'Username for Email service (e.g. Gmail address)',
+      isSecret: false,
+      isActive: true
+    },
+    {
+      key: 'NOTIFICATION_EMAIL_PASSWORD',
+      value: '',
+      group: 'NOTIFICATION',
+      description: 'Password or App Password for Email service',
+      isSecret: true,
+      isActive: true
+    },
+    {
+      key: 'NOTIFICATION_EMAIL_HOST',
+      value: 'smtp.gmail.com',
+      group: 'NOTIFICATION',
+      description: 'SMTP Host address',
+      isSecret: false,
+      isActive: true
+    },
+    {
+      key: 'NOTIFICATION_EMAIL_PORT',
+      value: '587',
+      group: 'NOTIFICATION',
+      description: 'SMTP Port (587 for TLS, 465 for SSL)',
+      isSecret: false,
+      isActive: true
+    },
+    // Payment - PayMongo
+    {
+      key: 'PAYMONGO_PUBLIC_KEY',
+      value: '',
+      group: 'PAYMENT',
+      description: 'PayMongo Public Key for frontend integrations',
+      isSecret: false,
+      isActive: true
+    },
+    {
+      key: 'PAYMONGO_SECRET_KEY',
+      value: '',
+      group: 'PAYMENT',
+      description: 'PayMongo Secret Key for backend transactions',
+      isSecret: true,
+      isActive: true
+    },
+    // Payment - Xendit
+    {
+      key: 'XENDIT_SECRET_KEY',
+      value: '',
+      group: 'PAYMENT',
+      description: 'Xendit Secret API Key',
+      isSecret: true,
+      isActive: true
+    }
+  ];
+
+  console.log('Seeding additional provider settings...');
+
+  for (const setting of settings) {
+    await prisma.systemSetting.upsert({
+      where: { key: setting.key },
+      update: {},
+      create: setting,
+    });
+    console.log(`- ${setting.key} seeded.`);
+  }
+
+  console.log('Seeding completed.');
+}
+
+main()
+  .catch((e) => {
+    console.error(e);
+    process.exit(1);
+  })
+  .finally(async () => {
+    await prisma.$disconnect();
+  });

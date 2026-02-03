@@ -1,0 +1,55 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Developer Manual - v2.5.0</title>
+    <style>
+        body { font-family: sans-serif; line-height: 1.6; color: #333; max-width: 900px; margin: 0 auto; padding: 40px; }
+        .code-block { background: #1e1e1e; color: #d4d4d4; padding: 20px; border-radius: 8px; font-family: 'Courier New', monospace; white-space: pre-wrap; margin-bottom: 20px; }
+        .file-link { color: #0052cc; text-decoration: none; font-weight: bold; }
+        .file-link:hover { text-decoration: underline; }
+    </style>
+</head>
+<body>
+    <h1>Developer Manual - v2.5.0</h1>
+    <p><a href="index.html">← Back to Overview</a></p>
+
+    <h2>1. Forensic Audit Testing (Phase 10)</h2>
+    <p>Developers must now use Jest to verify any changes to the audit logging system. The test suite ensures that metadata structures remain compliant with PCI DSS and BSP standards.</p>
+    
+    <h3>Running Tests</h3>
+    <div class="code-block">
+# Run all forensic tests
+npm test scripts/test_scripts/forensic-audit.test.ts
+    </div>
+    <p>Reference: <a class="file-link" href="file:///d:/IT Projects/budolEcosystem/budolpay-0.1.0/scripts/test_scripts/forensic-audit.test.ts">forensic-audit.test.ts</a></p>
+
+    <h2>2. Bootstrap Auditing</h2>
+    <p>Any script that modifies user accounts or security settings must implement forensic logging. The `create-admin-account.js` script serves as the reference implementation.</p>
+    
+    <h3>Implementation Example</h3>
+    <div class="code-block">
+await prisma.auditLog.create({
+    data: {
+        action: 'ADMIN_ACCOUNT_UPDATED',
+        userId: updatedUser.id,
+        entity: 'Security',
+        ipAddress: '127.0.0.1',
+        userAgent: 'Budol Bootstrap Engine/1.0',
+        metadata: {
+            method: 'create-admin-account.js',
+            compliance: {
+                pci_dss: '10.2.2',
+                bsp: 'Circular 808'
+            }
+        }
+    }
+});
+    </div>
+    <p>Reference: <a class="file-link" href="file:///d:/IT Projects/budolEcosystem/scripts/test_scripts/budolPay/create-admin-account.js">create-admin-account.js</a></p>
+
+    <h2>3. Root Test Script</h2>
+    <p>The root `package.json` now includes a `test` command that defaults to Jest. This is part of Phase 10 implementation to standardize verification across the monorepo.</p>
+    <p>Reference: <a class="file-link" href="file:///d:/IT Projects/budolEcosystem/budolpay-0.1.0/package.json">package.json</a></p>
+</body>
+</html>

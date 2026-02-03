@@ -1,0 +1,99 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Developer Manual - v3.0.3</title>
+    <style>
+        :root { --primary: #0052CC; --text: #172B4D; --bg: #F4F5F7; --code-bg: #272822; }
+        body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; line-height: 1.6; color: var(--text); background: var(--bg); padding: 40px; }
+        .container { max-width: 1000px; margin: 0 auto; background: white; padding: 40px; border-radius: 8px; box-shadow: 0 4px 12px rgba(9, 30, 66, 0.15); }
+        h1, h2, h3 { color: var(--primary); }
+        pre { background: var(--code-bg); color: #f8f8f2; padding: 15px; border-radius: 6px; overflow-x: auto; font-size: 0.9rem; }
+        code { font-family: 'Courier New', Courier, monospace; }
+        .file-link { color: var(--primary); font-weight: bold; text-decoration: none; border-bottom: 1px dashed var(--primary); }
+        .file-link:hover { background: #DEEBFF; }
+        .section { margin-bottom: 40px; border-bottom: 1px solid #DFE1E6; padding-bottom: 20px; }
+        .back-link { display: inline-block; margin-bottom: 20px; color: var(--primary); text-decoration: none; font-weight: 600; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <a href="index.html" class="back-link">← Back to Index</a>
+        <h1>🛠️ Developer Manual - v3.0.3</h1>
+
+        <div class="section">
+            <h2>1. Purpose & Rationale</h2>
+            <p>This version addresses two critical operational bottlenecks: <strong>Request Timeouts</strong> during registration and <strong>Zero Visibility</strong> into mobile API failures. By shifting non-critical external calls (OTP, Admin Notifications) to asynchronous patterns, we guarantee response times within the 10s mobile timeout window. The Debug Console provides on-device log inspection for faster field troubleshooting.</p>
+        </div>
+
+        <div class="section">
+            <h2>2. Technical Explanation: Non-Blocking Architecture</h2>
+            <p>In the <code>auth-service</code>, operations like sending SMS or notifying the admin dashboard were previously <code>awaited</code>, causing the user's registration request to hang if these third-party or internal services were slow.</p>
+            <h3>Implementation Detail:</h3>
+            <p>We replaced blocking <code>await</code> calls with fire-and-forget patterns using <code>.then().catch()</code> and self-invoking async functions.</p>
+            <p><strong>File Reference:</strong> <a href="file:///d:/IT Projects/budolEcosystem/budolpay-0.1.0/services/auth-service/index.js" class="file-link">auth-service/index.js</a></p>
+            <pre><code>// Non-blocking Admin Notification
+prisma.user.count().then(totalUsers => {
+    notifyAdmin('new_user', { count: totalUsers, user: { ... } });
+}).catch(err => console.error(err));
+
+// Non-blocking OTP/Email Notification
+(async () => {
+    try {
+        await sendAccountCreationSuccess(...);
+        await sendOTP(...);
+    } catch (err) {
+        console.error(err);
+    }
+})();</code></pre>
+        </div>
+
+        <div class="section">
+            <h2>3. Mobile Debug Console Architecture</h2>
+            <p>The <code>DebugConsoleScreen</code> is a dedicated Flutter screen that displays a rolling buffer of <code>ApiLog</code> objects captured by the <code>ApiService</code>.</p>
+            
+            <h3>Data Contract: ApiLog</h3>
+            <p><strong>File Reference:</strong> <a href="file:///d:/IT Projects/budolEcosystem/budolPayMobile/lib/services/api_service.dart" class="file-link">api_service.dart</a></p>
+            <pre><code>class ApiLog {
+  final LogType type; // request, response, error, info
+  final String url;
+  final String? method;
+  final int? statusCode;
+  final String? requestBody;
+  final String? responseBody;
+  final String? error;
+  final DateTime timestamp;
+}</code></pre>
+
+            <h3>UI Component: DebugConsoleScreen</h3>
+            <p><strong>File Reference:</strong> <a href="file:///d:/IT Projects/budolEcosystem/budolPayMobile/lib/screens/debug_console_screen.dart" class="file-link">debug_console_screen.dart</a></p>
+            <p>This screen uses a <code>ListView.separated</code> to render logs with color-coding based on the <code>LogType</code>. It includes a toggle for system information and a clear button.</p>
+        </div>
+
+        <div class="section">
+            <h2>4. Security & Hidden Gestures</h2>
+            <p>To prevent accidental access in production, the console is accessed via a <strong>long-press (500ms+)</strong> on specific UI elements:</p>
+            <ul>
+                <li><strong>Login Screen:</strong> Long-press on the BudolPay logo. (<a href="file:///d:/IT Projects/budolEcosystem/budolPayMobile/lib/screens/login_screen.dart" class="file-link">login_screen.dart</a>)</li>
+                <li><strong>Registration Screen:</strong> Long-press on the "Create Account" title. (<a href="file:///d:/IT Projects/budolEcosystem/budolPayMobile/lib/screens/registration_screen.dart" class="file-link">registration_screen.dart</a>)</li>
+            </ul>
+        </div>
+
+        <div class="section">
+            <h2>5. Dependencies</h2>
+            <ul>
+                <li><strong>Express.js (v5.2.1):</strong> Backend routing.</li>
+                <li><strong>Axios:</strong> Internal service notifications.</li>
+                <li><strong>Flutter/Dart:</strong> Mobile UI and State management.</li>
+                <li><strong>Prisma:</strong> Audit logging and database operations.</li>
+            </ul>
+        </div>
+
+        <div class="section">
+            <h2>6. Compliance</h2>
+            <p>This implementation adheres to <strong>PCI DSS 10.2.2</strong> (Audit logs for all security events) and <strong>BSP Circular 808</strong> (Ensuring system availability and response time guarantees).</p>
+        </div>
+    </div>
+</body>
+</html>

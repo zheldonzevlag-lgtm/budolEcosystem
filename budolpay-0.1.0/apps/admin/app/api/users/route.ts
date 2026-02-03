@@ -44,6 +44,8 @@ export async function POST(request: Request) {
       const otpCode = Math.floor(100000 + Math.random() * 900000).toString();
       const otpExpiresAt = new Date(getNowUTC().getTime() + 10 * 60 * 1000);
 
+      const oldUser = await prisma.user.findUnique({ where: { id: userId } });
+
       const updatedUser = await prisma.user.update({
         where: { id: userId },
         data: { 
@@ -58,6 +60,24 @@ export async function POST(request: Request) {
             orderBy: { createdAt: "desc" },
           },
         },
+      });
+
+      // Log the KYC status change
+      await prisma.auditLog.create({
+        data: {
+          action: "KYC_STATUS_UPDATED",
+          entity: "User",
+          entityId: userId,
+          oldValue: { kycStatus: oldUser?.kycStatus, kycTier: oldUser?.kycTier } as any,
+          newValue: { kycStatus: updatedUser.kycStatus, kycTier: updatedUser.kycTier } as any,
+          ipAddress: request.headers.get("x-forwarded-for") || "127.0.0.1",
+          metadata: {
+            compliance: {
+              pci_dss: "10.2.2",
+              bsp: "Circular 808"
+            }
+          }
+        }
       });
 
       if (status === "VERIFIED") {
@@ -78,9 +98,28 @@ export async function POST(request: Request) {
     }
 
     if (action === "UPDATE_DOCUMENT_ROTATION") {
+      const oldDoc = await prisma.verificationDocument.findUnique({ where: { id: documentId } });
       const updatedDoc = await prisma.verificationDocument.update({
         where: { id: documentId },
         data: { rotation: rotation },
+      });
+
+      // Log the rotation update
+      await prisma.auditLog.create({
+        data: {
+          action: "DOCUMENT_ROTATION_UPDATED",
+          entity: "VerificationDocument",
+          entityId: documentId,
+          oldValue: { rotation: oldDoc?.rotation } as any,
+          newValue: { rotation: updatedDoc.rotation } as any,
+          ipAddress: request.headers.get("x-forwarded-for") || "127.0.0.1",
+          metadata: {
+            compliance: {
+              pci_dss: '10.2.2',
+              bsp: 'Circular 808'
+            }
+          }
+        }
       });
 
       return NextResponse.json({ success: true, document: updatedDoc });
