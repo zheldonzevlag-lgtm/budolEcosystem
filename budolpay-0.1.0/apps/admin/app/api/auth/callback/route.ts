@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
+import { createAuditLog } from '@/lib/audit';
 
 export async function GET(request: Request) {
     const { searchParams } = new URL(request.url);
@@ -77,19 +78,17 @@ export async function GET(request: Request) {
         
         // Log Login Action for Forensic Audit Trail
         const ip = request.headers.get('x-forwarded-for') || '127.0.0.1';
-        await prisma.auditLog.create({
-            data: {
-                action: 'USER_LOGIN',
-                userId: localUser.id,
-                entity: 'Security',
-                ipAddress: ip,
-                userAgent: request.headers.get('user-agent'),
-                metadata: {
-                    authMethod: 'SSO_CALLBACK',
-                    compliance: {
-                        pci_dss: '10.2.1',
-                        bsp: 'Circular 808'
-                    }
+        await createAuditLog({
+            action: 'USER_LOGIN',
+            userId: localUser.id,
+            entity: 'Security',
+            ipAddress: ip,
+            userAgent: request.headers.get('user-agent'),
+            metadata: {
+                authMethod: 'SSO_CALLBACK',
+                compliance: {
+                    pci_dss: '10.2.1',
+                    bsp: 'Circular 808'
                 }
             }
         });

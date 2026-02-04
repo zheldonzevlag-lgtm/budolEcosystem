@@ -1,6 +1,8 @@
 import { prisma } from "@/lib/prisma";
 import { revalidatePath } from "next/cache";
 import { cookies } from "next/headers";
+import { createAuditLog } from "@/lib/audit";
+import { clearSettingsCache } from "@/lib/realtime-server";
 
 export const dynamic = 'force-dynamic';
 
@@ -62,22 +64,23 @@ export default async function SettingsPage() {
         isActive
       },
     });
+    
+    // Clear server-side realtime cache to pick up new settings
+    clearSettingsCache();
 
     // Audit log
-    await prisma.auditLog.create({
-      data: {
-        action: "CHANGE_ENV_VAR",
-        entity: "SystemSetting",
-        entityId: id,
-        userId: currentUser?.id,
-        newValue: { value, appId, isActive },
-        metadata: {
-          actor: currentUser?.email || "Unknown",
-          ssoId: currentUser?.ssoId || null,
-          compliance: {
-            pci_dss: "10.2.2",
-            bsp: "Circular 808"
-          }
+    await createAuditLog({
+      action: "CHANGE_ENV_VAR",
+      entity: "SystemSetting",
+      entityId: id,
+      userId: currentUser?.id,
+      newValue: { value, appId, isActive },
+      metadata: {
+        actor: currentUser?.email || "Unknown",
+        ssoId: currentUser?.ssoId || null,
+        compliance: {
+          pci_dss: "10.2.2",
+          bsp: "Circular 808"
         }
       }
     });
@@ -106,21 +109,22 @@ export default async function SettingsPage() {
       }
     });
 
+    // Clear server-side realtime cache to pick up new settings
+    clearSettingsCache();
+
     // Audit log
-    await prisma.auditLog.create({
-      data: {
-        action: "ADD_ENV_VAR",
-        entity: "SystemSetting",
-        entityId: newSetting.id,
-        userId: currentUser?.id,
-        newValue: { key, value, appId, isSecret, description },
-        metadata: {
-          actor: currentUser?.email || "Unknown",
-          ssoId: currentUser?.ssoId || null,
-          compliance: {
-            pci_dss: "10.2.2",
-            bsp: "Circular 808"
-          }
+    await createAuditLog({
+      action: "ADD_ENV_VAR",
+      entity: "SystemSetting",
+      entityId: newSetting.id,
+      userId: currentUser?.id,
+      newValue: { key, value, appId, isSecret, description },
+      metadata: {
+        actor: currentUser?.email || "Unknown",
+        ssoId: currentUser?.ssoId || null,
+        compliance: {
+          pci_dss: "10.2.2",
+          bsp: "Circular 808"
         }
       }
     });
@@ -144,18 +148,16 @@ export default async function SettingsPage() {
     }
     
     // Audit log for the sync action
-    await prisma.auditLog.create({
-      data: {
-        action: "SYNC_VERCEL",
-        entity: "SystemSetting",
-        entityId: "multiple",
-        userId: currentUser?.id,
-        newValue: { count: settings.length, timestamp: new Date().toISOString() },
-        metadata: {
-          compliance: {
-            pci_dss: "10.2.2",
-            bsp: "Circular 808"
-          }
+    await createAuditLog({
+      action: "SYNC_VERCEL",
+      entity: "SystemSetting",
+      entityId: "multiple",
+      userId: currentUser?.id,
+      newValue: { count: settings.length, timestamp: new Date().toISOString() },
+      metadata: {
+        compliance: {
+          pci_dss: "10.2.2",
+          bsp: "Circular 808"
         }
       }
     });

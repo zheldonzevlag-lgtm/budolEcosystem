@@ -3,6 +3,7 @@ import { revalidatePath } from "next/cache";
 import { cookies } from "next/headers";
 import { MessageSquare, Mail, ShieldCheck, Key, Settings, Server, Globe, Loader2, Check } from "lucide-react";
 import { SubmitButton } from "@/components/SubmitButton";
+import { createAuditLog } from "@/lib/audit";
 
 export const dynamic = 'force-dynamic';
 
@@ -91,20 +92,18 @@ export default async function NotificationSettingsPage() {
     }
 
     // Audit log
-    await prisma.auditLog.create({
-      data: {
-        action: `UPDATE_NOTIFICATION_${group}_CONFIG`,
-        entity: "SystemSetting",
-        entityId: "NOTIFICATION_CONFIG",
-        userId: currentUser?.id,
-        newValue: { group, provider: providerValue },
-        metadata: {
-          actor: currentUser?.email || "Unknown",
-          ssoId: currentUser?.ssoId || null,
-          compliance: {
-            pci_dss: "10.2.2",
-            bsp: "Circular 808"
-          }
+    await createAuditLog({
+      action: `UPDATE_NOTIFICATION_${group}_CONFIG`,
+      entity: "SystemSetting",
+      entityId: "NOTIFICATION_CONFIG",
+      userId: currentUser?.id,
+      newValue: { group, provider: providerValue },
+      metadata: {
+        actor: currentUser?.email || "Unknown",
+        ssoId: currentUser?.ssoId || null,
+        compliance: {
+          pci_dss: "10.2.2",
+          bsp: "Circular 808"
         }
       }
     });
@@ -232,7 +231,7 @@ export default async function NotificationSettingsPage() {
 
           <div className="space-y-6">
             {/* Viber */}
-            <div className={`bg-white rounded-2xl shadow-sm border p-6 space-y-4 transition-all ${activeSMSProvider === 'VIBER' ? 'border-emerald-500 ring-1 ring-emerald-500 shadow-emerald-100/50 shadow-lg' : 'border-slate-100 hover:border-slate-200'}`}>
+            <div className={`bg-white rounded-2xl shadow-sm border p-6 space-y-4 transition-all ${activeSmsProvider === 'VIBER' ? 'border-emerald-500 ring-1 ring-emerald-500 shadow-emerald-100/50 shadow-lg' : 'border-slate-100 hover:border-slate-200'}`}>
               <div className="flex justify-between items-center">
                 <div className="flex items-center gap-3">
                   <div className="w-10 h-10 rounded-xl bg-slate-50 flex items-center justify-center text-slate-400">
@@ -243,7 +242,7 @@ export default async function NotificationSettingsPage() {
                     <p className="text-[10px] text-slate-400 font-bold uppercase">Viber Business Messaging</p>
                   </div>
                 </div>
-                {activeSMSProvider === 'VIBER' ? (
+                {activeSmsProvider === 'VIBER' ? (
                   <span className="px-3 py-1 bg-emerald-600 text-[9px] font-black text-white rounded-full uppercase tracking-tighter">Active</span>
                 ) : (
                   <form action={updateSetting}>
@@ -267,7 +266,7 @@ export default async function NotificationSettingsPage() {
             </div>
 
             {/* iTextMo */}
-            <div className={`bg-white rounded-2xl shadow-sm border p-6 space-y-4 transition-all ${activeSMSProvider === 'ITEXTMO' ? 'border-emerald-500 ring-1 ring-emerald-500 shadow-emerald-100/50 shadow-lg' : 'border-slate-100 hover:border-slate-200'}`}>
+            <div className={`bg-white rounded-2xl shadow-sm border p-6 space-y-4 transition-all ${activeSmsProvider === 'ITEXTMO' ? 'border-emerald-500 ring-1 ring-emerald-500 shadow-emerald-100/50 shadow-lg' : 'border-slate-100 hover:border-slate-200'}`}>
               <div className="flex justify-between items-center">
                 <div className="flex items-center gap-3">
                   <div className="w-10 h-10 rounded-xl bg-slate-50 flex items-center justify-center text-slate-400">
@@ -278,7 +277,7 @@ export default async function NotificationSettingsPage() {
                     <p className="text-[10px] text-slate-400 font-bold uppercase">Local PH SMS Provider</p>
                   </div>
                 </div>
-                {activeSMSProvider === 'ITEXTMO' ? (
+                {activeSmsProvider === 'ITEXTMO' ? (
                   <span className="px-3 py-1 bg-emerald-600 text-[9px] font-black text-white rounded-full uppercase tracking-tighter">Active</span>
                 ) : (
                   <form action={updateSetting}>

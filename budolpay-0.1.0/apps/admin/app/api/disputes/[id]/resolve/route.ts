@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { cookies } from 'next/headers';
+import { createAuditLog } from '@/lib/audit';
 
 const SETTLEMENT_SERVICE_URL = process.env.SETTLEMENT_SERVICE_URL || 'http://settlement-service:8005';
 
@@ -40,19 +41,17 @@ export async function PATCH(
                     }
                 }
 
-                await prisma.auditLog.create({
-                    data: {
-                        action: 'DISPUTE_RESOLVED',
-                        entity: 'Dispute',
-                        entityId: id,
-                        userId: adminId,
-                        newValue: body as any,
-                        ipAddress: request.headers.get('x-forwarded-for') || '127.0.0.1',
-                        metadata: {
-                            compliance: {
-                                pci_dss: '10.2.2',
-                                bsp: 'Circular 808'
-                            }
+                await createAuditLog({
+                    action: 'DISPUTE_RESOLVED',
+                    entity: 'Dispute',
+                    entityId: id,
+                    userId: adminId,
+                    newValue: body as any,
+                    ipAddress: request.headers.get('x-forwarded-for') || '127.0.0.1',
+                    metadata: {
+                        compliance: {
+                            pci_dss: '10.2.2',
+                            bsp: 'Circular 808'
                         }
                     }
                 });

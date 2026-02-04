@@ -67,12 +67,24 @@ app.use((req, res, next) => {
 // Pusher instance (lazy loaded)
 let pusher = null;
 
-const initPusher = async () => {
+const initPusher = async (force = false) => {
     try {
+        if (pusher && !force) return;
+
         const settings = await prisma.systemSetting.findMany({
             where: {
                 key: {
-                    in: ['REALTIME_METHOD', 'PUSHER_APP_ID', 'PUSHER_KEY', 'PUSHER_SECRET', 'PUSHER_CLUSTER']
+                    in: [
+                        'REALTIME_METHOD', 
+                        'REALTIME_PUSHER_APP_ID', 
+                        'REALTIME_PUSHER_KEY', 
+                        'REALTIME_PUSHER_SECRET', 
+                        'REALTIME_PUSHER_CLUSTER',
+                        'PUSHER_APP_ID',
+                        'PUSHER_KEY',
+                        'PUSHER_SECRET',
+                        'PUSHER_CLUSTER'
+                    ]
                 }
             }
         });
@@ -82,7 +94,9 @@ const initPusher = async () => {
             return acc;
         }, {});
 
-        if (settingsMap['REALTIME_METHOD'] === 'PUSHER' || process.env.PUSHER_APP_ID) {
+        const method = settingsMap['REALTIME_METHOD'] || 'SWR';
+        
+        if (method === 'PUSHER' || process.env.PUSHER_APP_ID) {
             const appId = settingsMap['REALTIME_PUSHER_APP_ID'] || settingsMap['PUSHER_APP_ID'] || process.env.PUSHER_APP_ID || "2090861";
             const key = settingsMap['REALTIME_PUSHER_KEY'] || settingsMap['PUSHER_KEY'] || process.env.PUSHER_KEY || "7c449017a85bda0ae88a";
             const secret = settingsMap['REALTIME_PUSHER_SECRET'] || settingsMap['PUSHER_SECRET'] || process.env.PUSHER_SECRET || "2ceb82a5951aa226ce93";
@@ -99,7 +113,11 @@ const initPusher = async () => {
                 console.log(`[Pusher] Initialized successfully (Cluster: ${cluster})`);
             } else {
                 console.warn('[Pusher] Configuration missing. Realtime events may not be delivered.');
+                pusher = null;
             }
+        } else {
+            console.log(`[Realtime] Provider set to ${method}. Pusher disabled.`);
+            pusher = null;
         }
     } catch (err) {
         console.error('[Pusher] Failed to initialize:', err.message);
@@ -223,6 +241,20 @@ io.on('connection', (socket) => {
         }
     });
 
+    // Support for 'subscribe' event from useRealtime hook (Standardization)
+    socket.on('subscribe', (channel) => {
+        if (channel === 'admin') {
+            socket.join('admin');
+            console.log(`[Socket] Client subscribed to admin channel`);
+        } else if (channel && channel.startsWith('user:')) {
+            socket.join(channel);
+            console.log(`[Socket] Client subscribed to ${channel}`);
+        } else if (channel) {
+            socket.join(channel);
+            console.log(`[Socket] Client subscribed to channel: ${channel}`);
+        }
+    });
+
     socket.on('disconnect', () => {
         console.log(`[Socket] Client disconnected: ${socket.id}`);
     });
@@ -231,9 +263,15 @@ io.on('connection', (socket) => {
 // Internal Notification Endpoint (for other services)
 router.post(['/internal/notify', '/'], express.json(), async (req, res) => {
     const { userId, event, data, isAdmin } = req.body;
-    
+
     // Ensure pusher is initialized if needed
     if (!pusher) await initPusher();
+
+    // Trigger re-initialization if system config changed
+    if (event === 'SYSTEM_CONFIG_CHANGED' || event === 'REALTIME_CONFIG_CHANGED') {
+        console.log(`[Gateway] Realtime config change detected via ${event}. Re-initializing Pusher...`);
+        await initPusher(true);
+    }
 
     if (isAdmin) {
         // Socket.io

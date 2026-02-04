@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { checkRateLimit } from '@/lib/rate-limit';
+import { createAuditLog } from '@/lib/audit';
 
 export async function POST(request: Request) {
     try {
@@ -98,19 +99,17 @@ export async function POST(request: Request) {
         const response = NextResponse.json({ success: true });
         
         // Log Login Action for Forensic Audit Trail
-        await prisma.auditLog.create({
-            data: {
-                action: 'USER_LOGIN',
-                userId: localUser.id,
-                entity: 'Security',
-                ipAddress: ip,
+        await createAuditLog({
+            action: 'USER_LOGIN',
+            userId: localUser.id,
+            entity: 'Security',
+            ipAddress: ip,
+            metadata: {
                 userAgent: request.headers.get('user-agent'),
-                metadata: {
-                    authMethod: 'SSO_BUDOLID',
-                    compliance: {
-                        pci_dss: '10.2.1',
-                        bsp: 'Circular 808'
-                    }
+                authMethod: 'SSO_BUDOLID',
+                compliance: {
+                    pci_dss: '10.2.1',
+                    bsp: 'Circular 808'
                 }
             }
         });

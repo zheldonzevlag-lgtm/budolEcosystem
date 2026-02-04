@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
+import { createAuditLog } from "@/lib/audit";
 
 export async function GET() {
   try {
@@ -36,15 +37,13 @@ export async function POST(request: Request) {
       });
 
       // Log the role update action
-      await prisma.auditLog.create({
-        data: {
-          action: `ROLE_UPDATED_TO_${newRole}`,
-          entity: "User",
-          entityId: userId,
-          userId: adminId,
-          newValue: { role: newRole } as any,
-          ipAddress: "Internal System"
-        }
+      await createAuditLog({
+        action: `ROLE_UPDATED_TO_${newRole}`,
+        entity: "User",
+        entityId: userId,
+        userId: adminId,
+        newValue: { role: newRole },
+        ipAddress: "Internal System"
       });
 
       return NextResponse.json({ success: true, user: updatedUser });
@@ -79,23 +78,21 @@ export async function POST(request: Request) {
 
       // Forensic Audit Log
       try {
-        await prisma.auditLog.create({
-          data: {
-            action: "USER_PROFILE_UPDATED",
-            entity: "User",
-            entityId: userId,
-            userId: adminId || "SYSTEM",
-            oldValue: oldUser as any,
-            newValue: { 
-              firstName: updatedUser.firstName, 
-              lastName: updatedUser.lastName, 
-              email: updatedUser.email, 
-              phoneNumber: updatedUser.phoneNumber, 
-              role: updatedUser.role, 
-              department: updatedUser.department 
-            } as any,
-            ipAddress: "Internal System"
-          }
+        await createAuditLog({
+          action: "USER_PROFILE_UPDATED",
+          entity: "User",
+          entityId: userId,
+          userId: adminId || "SYSTEM",
+          oldValue: oldUser as any,
+          newValue: { 
+            firstName: updatedUser.firstName, 
+            lastName: updatedUser.lastName, 
+            email: updatedUser.email, 
+            phoneNumber: updatedUser.phoneNumber, 
+            role: updatedUser.role, 
+            department: updatedUser.department 
+          } as any,
+          ipAddress: "Internal System"
         });
         console.log(`[API] Audit log created for user ${userId}`);
       } catch (logError) {
@@ -131,15 +128,13 @@ export async function POST(request: Request) {
       const deliveryMethod = user.phoneNumber ? "SMS" : "Email";
       const deliveryTarget = user.phoneNumber || user.email;
 
-      await prisma.auditLog.create({
-        data: {
-          action: "USER_PASSWORD_RESET_BY_ADMIN",
-          entity: "User",
-          entityId: userId,
-          userId: adminId,
-          newValue: { deliveryMethod, deliveryTarget } as any,
-          ipAddress: "Internal System"
-        }
+      await createAuditLog({
+        action: "USER_PASSWORD_RESET_BY_ADMIN",
+        entity: "User",
+        entityId: userId,
+        userId: adminId,
+        newValue: { deliveryMethod, deliveryTarget } as any,
+        ipAddress: "Internal System"
       });
 
       // Compliance v2.1.4: We return the password ONLY in this sandbox environment
@@ -168,14 +163,12 @@ export async function POST(request: Request) {
         }
       });
 
-      await prisma.auditLog.create({
-        data: {
-          action: "USER_DEACTIVATED_BY_ADMIN",
-          entity: "User",
-          entityId: userId,
-          userId: adminId,
-          ipAddress: "Internal System"
-        }
+      await createAuditLog({
+        action: "USER_DEACTIVATED",
+        entity: "User",
+        entityId: userId,
+        userId: adminId,
+        ipAddress: "Internal System"
       });
 
       return NextResponse.json({ success: true, message: "User deactivated successfully" });
@@ -199,14 +192,12 @@ export async function POST(request: Request) {
       });
 
       // Log the provisioning action
-      await prisma.auditLog.create({
-        data: {
-          action: "ACCOUNT_PROVISIONED",
-          entity: "User",
-          entityId: newUser.id,
-          newValue: { email, role } as any,
-          ipAddress: "Internal System"
-        }
+      await createAuditLog({
+        action: "ACCOUNT_PROVISIONED",
+        entity: "User",
+        entityId: newUser.id,
+        newValue: { email, role } as any,
+        ipAddress: "Internal System"
       });
 
       return NextResponse.json({ success: true, user: newUser });

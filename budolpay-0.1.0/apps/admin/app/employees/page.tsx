@@ -88,7 +88,7 @@ export default function EmployeesPage() {
 
     return () => {
       isMounted = false;
-      realtime.disconnect();
+      realtime.off("AUDIT_LOG_CREATED");
     };
   }, []);
 

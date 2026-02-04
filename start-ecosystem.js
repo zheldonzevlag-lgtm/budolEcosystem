@@ -168,6 +168,14 @@ async function start() {
             args: ['run', '-d', 'web-server', '--web-hostname', '0.0.0.0', '--web-port', '9000'],
             port: 9000,
             color: '\x1b[38;5;208m' // Orange
+        },
+        {
+            name: 'Socket.io (Realtime)',
+            cwd: path.join(__dirname, 'websocket-server'),
+            command: 'node',
+            args: ['server.js'],
+            port: 4000,
+            color: '\x1b[38;5;154m' // Lime Green
         }
     ];
 

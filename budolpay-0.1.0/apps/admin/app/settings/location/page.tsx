@@ -2,6 +2,7 @@ import { prisma } from "@/lib/prisma";
 import { revalidatePath } from "next/cache";
 import { cookies } from "next/headers";
 import LocationSettingsClient from "./LocationSettingsClient";
+import { createAuditLog } from "@/lib/audit";
 
 export const dynamic = 'force-dynamic';
 
@@ -91,20 +92,18 @@ export default async function MapSettingsPage() {
     }
 
     // Audit log
-    await prisma.auditLog.create({
-      data: {
-        action: "UPDATE_MAP_CONFIG",
-        entity: "SystemSetting",
-        entityId: "MAP_CONFIG",
-        userId: currentUser?.id,
-        newValue: { provider },
-        metadata: {
-          actor: currentUser?.email || "Unknown",
-          ssoId: currentUser?.ssoId || null,
-          compliance: {
-            pci_dss: "10.2.2",
-            bsp: "Circular 808"
-          }
+    await createAuditLog({
+      action: "UPDATE_MAP_CONFIG",
+      entity: "SystemSetting",
+      entityId: "MAP_CONFIG",
+      userId: currentUser?.id,
+      newValue: { provider },
+      metadata: {
+        actor: currentUser?.email || "Unknown",
+        ssoId: currentUser?.ssoId || null,
+        compliance: {
+          pci_dss: "10.2.2",
+          bsp: "Circular 808"
         }
       }
     });

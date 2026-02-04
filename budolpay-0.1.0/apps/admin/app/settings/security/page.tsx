@@ -3,6 +3,7 @@ import { revalidatePath } from "next/cache";
 import { cookies } from "next/headers";
 import { ShieldAlert, Lock, ShieldCheck, Shield, Key, Eye, Clock, Ban, AlertTriangle } from "lucide-react";
 import { SubmitButton } from "@/components/SubmitButton";
+import { createAuditLog } from "@/lib/audit";
 
 export const dynamic = 'force-dynamic';
 
@@ -86,20 +87,18 @@ export default async function SecuritySettingsPage() {
     }
 
     // Audit log
-    await prisma.auditLog.create({
-      data: {
-        action: "UPDATE_SECURITY_POLICY",
-        entity: "SystemSetting",
-        entityId: "SECURITY_CONFIG",
-        userId: currentUser?.id,
-        newValue: { updates: updates.map(u => u.key) },
-        metadata: {
-          actor: currentUser?.email || "Unknown",
-          ssoId: currentUser?.ssoId || null,
-          compliance: {
-            pci_dss: "10.2.2",
-            bsp: "Circular 808"
-          }
+    await createAuditLog({
+      action: "UPDATE_SECURITY_POLICY",
+      entity: "SystemSetting",
+      entityId: "SECURITY_CONFIG",
+      userId: currentUser?.id,
+      newValue: { updates: updates.map(u => u.key) },
+      metadata: {
+        actor: currentUser?.email || "Unknown",
+        ssoId: currentUser?.ssoId || null,
+        compliance: {
+          pci_dss: "10.2.2",
+          bsp: "Circular 808"
         }
       }
     });

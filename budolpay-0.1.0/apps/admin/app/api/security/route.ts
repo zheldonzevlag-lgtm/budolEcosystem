@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { getNowUTC } from "@/lib/utils";
+import { createAuditLog } from "@/lib/audit";
 
 export async function GET(request: Request) {
   try {
@@ -75,14 +76,12 @@ export async function POST(request: Request) {
       };
 
       // Log the audit scan action
-      await prisma.auditLog.create({
-        data: {
-          action: "FULL_SECURITY_AUDIT_COMPLETE",
-          entity: "SecurityGateway",
-          entityId: `AUDIT-${Date.now()}`,
-          newValue: scanResults as any,
-          ipAddress: process.env.LOCAL_IP || "localhost",
-        },
+      await createAuditLog({
+        action: "FULL_SECURITY_AUDIT_COMPLETE",
+        entity: "SecurityGateway",
+        entityId: `AUDIT-${Date.now()}`,
+        newValue: scanResults as any,
+        ipAddress: process.env.LOCAL_IP || "localhost",
       });
 
       return NextResponse.json({ success: true, results: scanResults });
@@ -105,15 +104,13 @@ export async function POST(request: Request) {
         generatedAt: now.toISOString(),
       };
 
-      // Log report generation
-      await prisma.auditLog.create({
-        data: {
-          action: "REGULATORY_REPORT_GENERATED",
-          entity: "Compliance",
-          entityId: reportId,
-          newValue: reportData as any,
-          ipAddress: process.env.LOCAL_IP || "localhost",
-        },
+      // Log the regulatory report generation
+      await createAuditLog({
+        action: "REGULATORY_REPORT_GENERATED",
+        entity: "Regulatory",
+        entityId: reportId,
+        newValue: reportData as any,
+        ipAddress: process.env.LOCAL_IP || "localhost",
       });
 
       return NextResponse.json({ success: true, report: reportData });

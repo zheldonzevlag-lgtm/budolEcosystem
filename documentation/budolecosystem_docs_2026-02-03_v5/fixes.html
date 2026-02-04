@@ -1,0 +1,53 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Issues and Fixes - Realtime v5</title>
+    <style>
+        body { font-family: 'Inter', sans-serif; padding: 40px; background: #f4f5f7; }
+        .issue { border-left: 4px solid #BF2600; padding: 15px; background: #FFEBE6; margin-bottom: 20px; }
+        .fix { border-left: 4px solid #006644; padding: 15px; background: #E3FCEF; margin-bottom: 20px; }
+        h1 { color: #172b4d; }
+    </style>
+</head>
+<body>
+    <h1>Issues and Fixes</h1>
+    
+    <div class="issue">
+        <h3>Issue: Realtime updates required manual refresh</h3>
+        <p><strong>Symptoms:</strong> Forensic audit logs only updated when the page was manually reloaded.</p>
+        <p><strong>Cause:</strong> Frontend was using static fetching without a live subscription or polling mechanism.</p>
+    </div>
+    
+    <div class="fix">
+        <h3>Fix: Provider-Agnostic Realtime Hook</h3>
+        <p>Implemented <code>useRealtime</code> hook that supports Pusher, Socket.io, and SWR Polling fallback. Integrated this into <code>audit-logs/page.jsx</code>.</p>
+    </div>
+
+    <div class="issue">
+        <h3>Issue: Pusher/Socket.io misconfiguration leads to broken UI</h3>
+        <p><strong>Symptoms:</strong> If Pusher keys were missing or Socket server was down, the UI stopped updating entirely.</p>
+        <p><strong>Cause:</strong> Lack of automated fallback logic to standard polling.</p>
+    </div>
+
+    <div class="fix">
+        <h3>Fix: Automated Fallback Logic</h3>
+        <p>Added validation in <code>realtime.js</code> (backend) and <code>useRealtime.js</code> (frontend) to automatically revert to <code>POLLING</code> if credentials or connectivity fails.</p>
+    </div>
+
+    <div class="issue">
+        <h3>Issue: Inflexible Realtime Settings</h3>
+        <p><strong>Symptoms:</strong> Admin could only configure Pusher, not Socket.io or SWR Polling intervals.</p>
+        <p><strong>Cause:</strong> Hardcoded UI and missing database fields in <code>SystemSettings</code>.</p>
+    </div>
+
+    <div class="fix">
+        <h3>Fix: Comprehensive Realtime Admin UI</h3>
+        <p>Updated <code>SystemSettings</code> model with <code>swrPollingInterval</code> and <code>socketUrl</code>. Revamped <code>realtime/page.jsx</code> with a card-based provider selection and dynamic configuration forms for all three methods.</p>
+    </div>
+
+    <div class="nav">
+        <a href="index.html">← Back to Overview</a>
+    </div>
+</body>
+</html>

@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { cookies } from 'next/headers';
 import { prisma } from '@/lib/prisma';
+import { createAuditLog } from '@/lib/audit';
 
 export async function POST(request: Request) {
     const cookieStore = cookies();
@@ -37,18 +38,17 @@ export async function POST(request: Request) {
     // Log the logout event if we found a user
     if (userId) {
         const ip = request.headers.get('x-forwarded-for') || '127.0.0.1';
-        await prisma.auditLog.create({
-            data: {
-                action: 'USER_LOGOUT',
-                userId: userId,
-                entity: 'Security',
-                ipAddress: ip,
+        await createAuditLog({
+            action: 'USER_LOGOUT',
+            userId: userId,
+            entity: 'Security',
+            entityId: userId,
+            ipAddress: ip,
+            metadata: {
                 userAgent: request.headers.get('user-agent'),
-                metadata: {
-                    compliance: {
-                        pci_dss: '10.2.3',
-                        bsp: 'Circular 808'
-                    }
+                compliance: {
+                    pci_dss: '10.2.3',
+                    bsp: 'Circular 808'
                 }
             }
         });

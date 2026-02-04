@@ -42,13 +42,18 @@ export default function SecurityPage() {
           const matchesFilter = filter === "All Actions" || 
             (filter === "Security" && (newLog.entity === "Security" || newLog.action.includes("SECURITY") || newLog.action.includes("LOGIN") || newLog.action.includes("LOGOUT") || newLog.action.includes("OTP") || newLog.action.includes("AUTH"))) ||
             (filter === "Financial" && (newLog.entity === "Financial" || newLog.entity === "Dispute" || newLog.action.includes("TRANSFER") || newLog.action.includes("PAYMENT") || newLog.action.includes("SETTLEMENT") || newLog.action.includes("CASH_IN") || newLog.action.includes("CASH_OUT"))) ||
-            (filter === "System" && (newLog.entity === "System" || newLog.entity === "Regulatory" || newLog.action.includes("AUDIT") || newLog.action.includes("REPORT")));
+            (filter === "System" && (newLog.entity === "System" || newLog.entity === "Regulatory" || newLog.entity === "SystemSetting" || newLog.action.includes("AUDIT") || newLog.action.includes("REPORT") || newLog.action.includes("CONFIG")));
 
           if (matchesFilter) {
             setLogs(prevLogs => {
               // Avoid duplicates (if polling and realtime overlap)
               if (prevLogs.some(log => log.id === newLog.id)) return prevLogs;
-              return [newLog, ...prevLogs.slice(0, 49)];
+              const normalizedLog = {
+                ...newLog,
+                createdAt: newLog.createdAt || newLog.timestamp || new Date().toISOString(),
+                user: newLog.user || { firstName: 'System' }
+              };
+              return [normalizedLog, ...prevLogs.slice(0, 49)];
             });
           }
         });
@@ -61,9 +66,11 @@ export default function SecurityPage() {
 
     return () => {
       isMounted = false;
-      realtime.disconnect();
+      // Do NOT call realtime.disconnect() here as it would kill connection for other components
+      // RealtimeService should manage its own lifecycle as a singleton
+      realtime.off("AUDIT_LOG_CREATED"); 
     };
-  }, [filter]); // Re-bind listener when filter changes to ensure closure has correct filter value (though we check filter inside)
+  }, [filter]); // Re-bind listener when filter changes to ensure closure has correct filter value
 
   const fetchLogs = async () => {
     setLoading(true);

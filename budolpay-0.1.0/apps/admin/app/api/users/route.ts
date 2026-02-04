@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { sendKycSuccess, sendOTP } from "@budolpay/notifications";
 import { getNowUTC } from "@/lib/utils";
+import { createAuditLog } from "@/lib/audit";
 
 export async function GET(request: Request) {
   try {
@@ -63,19 +64,17 @@ export async function POST(request: Request) {
       });
 
       // Log the KYC status change
-      await prisma.auditLog.create({
-        data: {
-          action: "KYC_STATUS_UPDATED",
-          entity: "User",
-          entityId: userId,
-          oldValue: { kycStatus: oldUser?.kycStatus, kycTier: oldUser?.kycTier } as any,
-          newValue: { kycStatus: updatedUser.kycStatus, kycTier: updatedUser.kycTier } as any,
-          ipAddress: request.headers.get("x-forwarded-for") || "127.0.0.1",
-          metadata: {
-            compliance: {
-              pci_dss: "10.2.2",
-              bsp: "Circular 808"
-            }
+      await createAuditLog({
+        action: "KYC_STATUS_UPDATED",
+        entity: "User",
+        entityId: userId,
+        oldValue: { kycStatus: oldUser?.kycStatus, kycTier: oldUser?.kycTier } as any,
+        newValue: { kycStatus: updatedUser.kycStatus, kycTier: updatedUser.kycTier } as any,
+        ipAddress: request.headers.get("x-forwarded-for") || "127.0.0.1",
+        metadata: {
+          compliance: {
+            pci_dss: "10.2.2",
+            bsp: "Circular 808"
           }
         }
       });
@@ -104,20 +103,18 @@ export async function POST(request: Request) {
         data: { rotation: rotation },
       });
 
-      // Log the rotation update
-      await prisma.auditLog.create({
-        data: {
-          action: "DOCUMENT_ROTATION_UPDATED",
-          entity: "VerificationDocument",
-          entityId: documentId,
-          oldValue: { rotation: oldDoc?.rotation } as any,
-          newValue: { rotation: updatedDoc.rotation } as any,
-          ipAddress: request.headers.get("x-forwarded-for") || "127.0.0.1",
-          metadata: {
-            compliance: {
-              pci_dss: '10.2.2',
-              bsp: 'Circular 808'
-            }
+      // Log the document rotation update
+      await createAuditLog({
+        action: "USER_DOCUMENT_ROTATION_UPDATED",
+        entity: "VerificationDocument",
+        entityId: documentId,
+        oldValue: { rotation: oldDoc?.rotation } as any,
+        newValue: { rotation: updatedDoc.rotation } as any,
+        ipAddress: request.headers.get("x-forwarded-for") || "127.0.0.1",
+        metadata: {
+          compliance: {
+            pci_dss: "10.2.2",
+            bsp: "Circular 808"
           }
         }
       });

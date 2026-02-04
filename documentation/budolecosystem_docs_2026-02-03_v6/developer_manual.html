@@ -1,0 +1,102 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Developer Manual - Budol Architecture v6</title>
+    <style>
+        body { font-family: 'Inter', sans-serif; line-height: 1.6; padding: 40px; color: #172b4d; background: #f4f5f7; }
+        .card { background: white; padding: 30px; border-radius: 8px; box-shadow: 0 1px 3px rgba(0,0,0,0.1); margin-bottom: 30px; }
+        code { background: #091e42; color: #fff; padding: 2px 5px; border-radius: 3px; font-family: 'Fira Code', monospace; }
+        pre { background: #091e42; color: #fff; padding: 20px; border-radius: 8px; overflow-x: auto; }
+        .file-link { color: #0052cc; text-decoration: none; font-weight: bold; }
+        .file-link:hover { text-decoration: underline; }
+        h1, h2, h3 { color: #091e42; }
+        .task-list { list-style: none; padding: 0; }
+        .task-item { display: flex; items-center: center; gap: 10px; margin-bottom: 10px; }
+        .done { color: #36b37e; }
+        .fix-badge { background: #ff5630; color: white; padding: 2px 8px; border-radius: 4px; font-size: 10px; font-weight: bold; vertical-align: middle; }
+    </style>
+</head>
+<body>
+    <h1>Developer Manual: Realtime Architecture & System Fixes</h1>
+
+    <div class="card">
+        <h2>Critical Fix: Notification Settings Runtime Error <span class="fix-badge">HOTFIX</span></h2>
+        <p>A runtime error <code>activeSMSProvider is not defined</code> was resolved in the Notification Settings page.</p>
+        <p><strong>File Reference:</strong> <a class="file-link" href="file:///d:/IT Projects/budolEcosystem/budolpay-0.1.0/apps/admin/app/settings/notifications/page.tsx">app/settings/notifications/page.tsx</a></p>
+        <p><strong>Resolution:</strong> Corrected the typo where <code>activeSmsProvider</code> was incorrectly referenced as <code>activeSMSProvider</code> (case-sensitivity issue).</p>
+    </div>
+
+    <div class="card">
+        <h2>Architecture Overview</h2>
+        <p>The Budol Ecosystem now uses a unified, provider-agnostic realtime event system. Developers can trigger events from the backend without worrying about the active provider (Pusher, Socket.io, or SWR Polling).</p>
+        <p><strong>Primary Goal:</strong> Seamless switching between hosted (Pusher), self-hosted (Socket.io), and zero-config (SWR Polling) methods with automated fallback.</p>
+    </div>
+
+    <div class="card">
+        <h2>Backend Implementation</h2>
+        <p>All realtime events should be triggered via the <code>triggerRealtimeEvent</code> helper in <code>lib/realtime.js</code>.</p>
+        <p><strong>File Reference:</strong> <a class="file-link" href="file:///d:/IT Projects/budolEcosystem/budolshap-0.1.0/lib/realtime.js">lib/realtime.js</a></p>
+        <pre>
+import { triggerRealtimeEvent } from "@/lib/realtime";
+
+// Triggering an audit log event
+await triggerRealtimeEvent('admin', 'AUDIT_LOG_CREATED', {
+    action: 'LOGIN',
+    userId: 'user_123',
+    // ... metadata
+});
+        </pre>
+        <p>The backend automatically checks <code>SystemSettings</code> to determine the active provider and validates credentials before attempting to trigger.</p>
+    </div>
+
+    <div class="card">
+        <h2>Frontend Implementation</h2>
+        <p>Components should use the <code>useRealtime</code> hook to listen for events. This hook manages the subscription lifecycle and fallback polling automatically.</p>
+        <p><strong>File Reference:</strong> <a class="file-link" href="file:///d:/IT Projects/budolEcosystem/budolshap-0.1.0/hooks/useRealtime.js">hooks/useRealtime.js</a></p>
+        <pre>
+import { useRealtime } from "@/hooks/useRealtime";
+
+const { provider, isConnected, isPolling } = useRealtime({
+    channel: 'admin',
+    event: 'AUDIT_LOG_CREATED',
+    onData: (data) => {
+        console.log("New realtime data received:", data);
+        // Update local state
+    }
+});
+        </pre>
+    </div>
+
+    <div class="card">
+        <h2>Configuration & Database</h2>
+        <p>The <code>SystemSettings</code> model stores the configuration for all providers.</p>
+        <p><strong>File Reference:</strong> <a class="file-link" href="file:///d:/IT Projects/budolEcosystem/budolshap-0.1.0/prisma/schema.prisma">prisma/schema.prisma</a></p>
+        <ul>
+            <li><code>realtimeProvider</code>: ENUM ('POLLING', 'PUSHER', 'SOCKET_IO')</li>
+            <li><code>swrPollingInterval</code>: Default 10000ms</li>
+            <li><code>socketUrl</code>: Dedicated socket server URL</li>
+            <li><code>pusher*</code>: Pusher-specific credentials</li>
+        </ul>
+    </div>
+
+    <div class="card">
+        <h2>Task List (v6 Implementation)</h2>
+        <ul class="task-list">
+            <li class="task-item done">✅ Phase 0: Baseline & Risk Analysis</li>
+            <li class="task-item done">✅ Phase 1: Architecture & Data Contracts</li>
+            <li class="task-item done">✅ Phase 2: Backend Implementation (Provider logic)</li>
+            <li class="task-item done">✅ Phase 3: Frontend Implementation (useRealtime hook)</li>
+            <li class="task-item done">✅ Phase 4: Integration (Audit Log live tracking)</li>
+            <li class="task-item done">✅ Phase 5: End-to-End Testing (Provider switching scripts)</li>
+            <li class="task-item done">✅ Phase 6: Documentation & Audit</li>
+            <li class="task-item done">✅ Phase 7: Hotfix Release (Notification Settings Bug)</li>
+        </ul>
+    </div>
+
+    <div class="nav">
+        <a href="index.html">← Back to Overview</a>
+        <a href="system_admin_manual.html">Next: System Admin Manual →</a>
+    </div>
+</body>
+</html>

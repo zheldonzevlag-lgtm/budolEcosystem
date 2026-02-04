@@ -1,5 +1,6 @@
 import { prisma } from "@/lib/prisma";
 import { revalidatePath } from "next/cache";
+import { createAuditLog } from "@/lib/audit";
 import { 
   Settings, 
   CreditCard, 
@@ -68,13 +69,11 @@ export default async function SettingsPage({
     });
 
     // Audit log
-    await prisma.auditLog.create({
-      data: {
-        action: "UPDATE_SYSTEM_SETTING",
-        entity: "SystemSetting",
-        entityId: id,
-        newValue: { value },
-      }
+    await createAuditLog({
+      action: "UPDATE_SYSTEM_SETTING",
+      entity: "SystemSetting",
+      entityId: id,
+      newValue: { value },
     });
 
     revalidatePath("/settings");

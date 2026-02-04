@@ -4,6 +4,8 @@ import { cookies } from "next/headers";
 import { Zap, Activity, Globe, Save, MessageSquare, ShieldAlert } from "lucide-react";
 import RealtimeMethodSelector from "@/components/RealtimeMethodSelector";
 import { SubmitButton } from "@/components/SubmitButton";
+import { createAuditLog } from "@/lib/audit";
+import { clearSettingsCache, triggerRealtimeEvent } from "@/lib/realtime-server";
 
 export const dynamic = 'force-dynamic';
 
@@ -93,21 +95,53 @@ export default async function RealtimeSettingsPage() {
       });
     }
 
+    // Clear the server-side cache so the next trigger uses the new config
+    clearSettingsCache();
+
+    // Trigger a specific event for clients to re-initialize their websocket connections
+    await triggerRealtimeEvent('admin', 'REALTIME_CONFIG_CHANGED', {
+      method,
+      timestamp: new Date().toISOString()
+    });
+
+    // IMPORTANT: Clear the server-side cache in budolshap so it picks up the new config immediately
+    try {
+      const LOCAL_IP = process.env.LOCAL_IP || 'localhost';
+      const SHAP_URL = process.env.SHAP_URL || `http://${LOCAL_IP}:3000`;
+      
+      await fetch(`${SHAP_URL}/api/system/realtime`, {
+        method: 'PUT',
+        headers: { 
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${cookies().get('budolpay_token')?.value}`
+        },
+        body: JSON.stringify({ 
+          provider: method,
+          pusherAppId,
+          pusherKey,
+          pusherSecret,
+          pusherCluster,
+          socketUrl: socketioUrl,
+          swrPollingInterval: parseInt(swrInterval) || 10000
+        })
+      });
+    } catch (e: any) {
+      console.warn("[Realtime] Failed to update Shap settings:", e.message);
+    }
+
     // Audit log for the update action
-    await prisma.auditLog.create({
-      data: {
-        action: "UPDATE_REALTIME_CONFIG",
-        entity: "SystemSetting",
-        entityId: "REALTIME_CONFIG",
-        userId: currentUser?.id,
-        newValue: { method, swrInterval },
-        metadata: {
-          actor: currentUser?.email || "Unknown",
-          ssoId: currentUser?.ssoId || null,
-          compliance: {
-            pci_dss: "10.2.2",
-            bsp: "Circular 808"
-          }
+    await createAuditLog({
+      action: "UPDATE_REALTIME_CONFIG",
+      entity: "SystemSetting",
+      entityId: "REALTIME_CONFIG",
+      userId: currentUser?.id,
+      newValue: { method, swrInterval },
+      metadata: {
+        actor: currentUser?.email || "Unknown",
+        ssoId: currentUser?.ssoId || null,
+        compliance: {
+          pci_dss: "10.2.2",
+          bsp: "Circular 808"
         }
       }
     });
@@ -123,107 +157,17 @@ export default async function RealtimeSettingsPage() {
       </div>
 
       <form action={saveRealtimeSettings} className="space-y-8">
-        {/* Method Selection */}
-        <RealtimeMethodSelector initialMethod={currentMethod} />
+        {/* Method Selection & Configuration */}
+        <RealtimeMethodSelector 
+          initialMethod={currentMethod} 
+          settings={settingsMap}
+        />
 
-        {/* Dynamic Configuration Section */}
-        <div className="bg-white p-10 rounded-3xl shadow-sm border border-slate-200 space-y-10">
-          {currentMethod === 'PUSHER' && (
-            <div className="space-y-8">
-              <div className="flex items-center justify-between">
-                <h3 className="text-base font-black text-slate-900 flex items-center gap-2 uppercase tracking-widest">
-                  Pusher Configuration
-                  <span className="px-2 py-0.5 bg-blue-100 text-blue-700 text-[10px] uppercase font-black rounded-full ml-2 tracking-tighter">Required</span>
-                </h3>
-              </div>
-              
-              <div className="space-y-6">
-                <div className="space-y-2">
-                  <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">App ID</label>
-                  <input 
-                    name="pusherAppId"
-                    placeholder="Enter App ID"
-                    defaultValue={settingsMap['REALTIME_PUSHER_APP_ID']}
-                    className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 text-sm font-bold outline-none focus:ring-2 focus:ring-indigo-500 transition"
-                  />
-                </div>
-
-                <div className="grid grid-cols-2 gap-6">
-                  <div className="space-y-2">
-                    <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Key</label>
-                    <input 
-                      name="pusherKey"
-                      placeholder="Enter Key"
-                      defaultValue={settingsMap['REALTIME_PUSHER_KEY']}
-                      className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 text-sm font-bold outline-none focus:ring-2 focus:ring-indigo-500 transition"
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Cluster</label>
-                    <input 
-                      name="pusherCluster"
-                      placeholder="e.g. ap1"
-                      defaultValue={settingsMap['REALTIME_PUSHER_CLUSTER']}
-                      className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 text-sm font-bold outline-none focus:ring-2 focus:ring-indigo-500 transition"
-                    />
-                  </div>
-                </div>
-
-                <div className="space-y-2">
-                  <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Secret</label>
-                  <input 
-                    type="password"
-                    name="pusherSecret"
-                    placeholder="Enter Secret (hidden)"
-                    defaultValue={settingsMap['REALTIME_PUSHER_SECRET']}
-                    className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 text-sm font-bold outline-none focus:ring-2 focus:ring-indigo-500 transition"
-                  />
-                </div>
-              </div>
-            </div>
-          )}
-
-          {currentMethod === 'SOCKETIO' && (
-            <div className="space-y-8">
-              <h3 className="text-base font-black text-slate-900 flex items-center gap-2 uppercase tracking-widest">
-                Socket.io Configuration
-              </h3>
-              <div className="space-y-2">
-                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Server URL</label>
-                <input 
-                  name="socketioUrl"
-                  placeholder="https://your-socket-server.com"
-                  defaultValue={settingsMap['REALTIME_SOCKETIO_URL']}
-                  className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 text-sm font-bold outline-none focus:ring-2 focus:ring-indigo-500 transition"
-                />
-              </div>
-            </div>
-          )}
-
-          {currentMethod === 'SWR' && (
-            <div className="space-y-8">
-              <h3 className="text-base font-black text-slate-900 flex items-center gap-2 uppercase tracking-widest">
-                Polling Configuration
-              </h3>
-              <div className="space-y-2">
-                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Refresh Interval (ms)</label>
-                <input 
-                  type="number"
-                  name="swrInterval"
-                  placeholder="3000"
-                  defaultValue={settingsMap['REALTIME_SWR_REFRESH_INTERVAL']}
-                  className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 text-sm font-bold outline-none focus:ring-2 focus:ring-indigo-500 transition"
-                />
-              </div>
-            </div>
-          )}
-
-          <div className="pt-6 border-t border-slate-100 flex flex-col gap-6">
-            <SubmitButton className="w-full py-4 rounded-xl bg-slate-900 text-sm font-black uppercase tracking-[0.1em] shadow-lg shadow-slate-200">
-              Save Configuration
-            </SubmitButton>
-            <p className="text-[11px] text-slate-400 font-bold text-center">Changes apply immediately to new connections.</p>
-          </div>
+        <div className="pt-6 flex flex-col gap-6">
+          <SubmitButton className="w-full py-4 rounded-xl bg-slate-900 text-white text-sm font-black uppercase tracking-[0.1em] shadow-lg shadow-slate-200">
+            Save Configuration
+          </SubmitButton>
+          <p className="text-[11px] text-slate-400 font-bold text-center">Changes apply immediately to new connections.</p>
         </div>
       </form>
     </div>
