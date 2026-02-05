@@ -3,6 +3,7 @@ const bodyParser = require('body-parser');
 const axios = require('axios');
 const crypto = require('crypto');
 const { prisma } = require('@budolpay/database');
+const { createAuditLog: createCentralizedAuditLog } = require('@budolpay/audit');
 const path = require('path');
 
 /**
@@ -117,36 +118,24 @@ router.post('/create-intent', async (req, res) => {
     });
 
     // 1.1 Create Compliance Audit Log (BSP Circular 808)
-    const auditLog = await prisma.auditLog.create({
-      data: {
-        action: 'PAYMENT_INTENT_CREATED',
-        entity: 'Financial',
-        entityId: transaction.id,
+    const auditLog = await createCentralizedAuditLog({
+      action: 'PAYMENT_INTENT_CREATED',
+      entity: 'Financial',
+      entityId: transaction.id,
+      userId: transaction.senderId || transaction.receiverId,
+      metadata: {
         newValue: { 
           amount: transaction.amount, 
           referenceId: transaction.referenceId,
           provider 
         },
-        metadata: {
-          compliance: 'BSP Circular No. 808',
-          standard: 'Financial Transaction Audit',
-          timestamp: getLegacyManilaISO()
-        }
+        compliance: 'BSP Circular No. 808',
+        standard: 'Financial Transaction Audit',
+        ipAddress: req.headers['x-forwarded-for'] || req.socket.remoteAddress,
+        userAgent: req.headers['user-agent']
       },
-      include: {
-        user: {
-          select: {
-            id: true,
-            firstName: true,
-            lastName: true,
-            email: true
-          }
-        }
-      }
+      ipAddress: req.headers['x-forwarded-for'] || req.socket.remoteAddress
     });
-
-    // 1.2 Notify Admin in Real-time (AUDIT_LOG_CREATED)
-    notifyAdmin('AUDIT_LOG_CREATED', auditLog);
 
     // 2. If provider is external, call the respective provider API
     let providerResponse = null;
@@ -582,38 +571,27 @@ router.post('/webhooks/:provider', async (req, res) => {
       });
 
       // 3.1 Create Compliance Audit Log (BSP Circular 808)
-      const auditLog = await prisma.auditLog.create({
-        data: {
-          userId: transaction.senderId || transaction.receiverId,
-          action: 'GATEWAY_PAYMENT_COMPLETED',
-          entity: 'Financial',
-          entityId: transaction.id,
+      const auditLog = await createCentralizedAuditLog({
+        action: 'GATEWAY_PAYMENT_COMPLETED',
+        entity: 'Financial',
+        entityId: transaction.id,
+        userId: transaction.senderId || transaction.receiverId,
+        metadata: {
           newValue: {
             amount: transaction.amount,
             referenceId: transaction.referenceId,
             type: transaction.type,
             provider: provider
           },
-          metadata: {
-            compliance: 'BSP Circular No. 808',
-            standard: 'Financial Transaction Audit',
-            timestamp: getLegacyManilaISO()
-          }
+          compliance: 'BSP Circular No. 808',
+          standard: 'Financial Transaction Audit',
+          ipAddress: req.headers['x-forwarded-for'] || req.socket.remoteAddress,
+          userAgent: req.headers['user-agent']
         },
-        include: {
-          user: {
-            select: {
-              id: true,
-              firstName: true,
-              lastName: true,
-              email: true
-            }
-          }
-        }
+        ipAddress: req.headers['x-forwarded-for'] || req.socket.remoteAddress
       });
 
-      // 3.2 Notify Admin in Real-time (AUDIT_LOG_CREATED and new_transaction)
-      notifyAdmin('AUDIT_LOG_CREATED', auditLog);
+      // 3.2 Notify Admin in Real-time (new_transaction)
       notifyAdmin('new_transaction', transaction); // Critical for Admin Dashboard Sync
 
       // 3.3 Notify User in Real-time (transaction_update) for Mobile App Sync
@@ -691,12 +669,12 @@ router.post('/webhooks/:provider', async (req, res) => {
         data: { status: status.toUpperCase() }
       });
 
-      const auditLog = await prisma.auditLog.create({
-        data: {
-          userId: transaction.senderId || transaction.receiverId,
-          action: `GATEWAY_PAYMENT_${status.toUpperCase()}`,
-          entity: 'Financial',
-          entityId: transaction.id,
+      const auditLog = await createCentralizedAuditLog({
+        action: `GATEWAY_PAYMENT_${status.toUpperCase()}`,
+        entity: 'Financial',
+        entityId: transaction.id,
+        userId: transaction.senderId || transaction.receiverId,
+        metadata: {
           newValue: {
             amount: transaction.amount,
             referenceId: transaction.referenceId,
@@ -704,26 +682,13 @@ router.post('/webhooks/:provider', async (req, res) => {
             provider: provider,
             reason: payload.failure_reason || payload.reason || 'Unknown'
           },
-          metadata: {
-            compliance: 'BSP Circular No. 808',
-            standard: 'Financial Transaction Audit',
-            timestamp: getLegacyManilaISO()
-          }
+          compliance: 'BSP Circular No. 808',
+          standard: 'Financial Transaction Audit',
+          ipAddress: req.headers['x-forwarded-for'] || req.socket.remoteAddress,
+          userAgent: req.headers['user-agent']
         },
-        include: {
-          user: {
-            select: {
-              id: true,
-              firstName: true,
-              lastName: true,
-              email: true
-            }
-          }
-        }
+        ipAddress: req.headers['x-forwarded-for'] || req.socket.remoteAddress
       });
-
-      // Notify Admin in Real-time (AUDIT_LOG_CREATED)
-      notifyAdmin('AUDIT_LOG_CREATED', auditLog);
 
       // 3.3 Notify User in Real-time (transaction_update) for Mobile App Sync
       if (transaction.senderId) {

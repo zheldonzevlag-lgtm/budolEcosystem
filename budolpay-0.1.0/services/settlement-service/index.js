@@ -1,5 +1,6 @@
 const express = require('express');
 const { prisma } = require('@budolpay/database');
+const { createAuditLog: createCentralizedAuditLog } = require('@budolpay/audit');
 const { Decimal } = require('decimal.js');
 const path = require('path');
 
@@ -40,47 +41,41 @@ const notifyAdmin = async (event, data) => {
     }
 };
 
-// Helper to create forensic audit logs (PCI DSS 10.2.2 & BSP Circular 808 Aligned)
+// Helper to create forensic audit logs using centralized audit helper
 const createAuditLog = async (req, userId, action, metadata = {}, entity = 'Financial', entityId = null) => {
     try {
         const ipAddress = req ? (req.headers['x-forwarded-for'] || req.socket.remoteAddress) : 'SYSTEM';
         const userAgent = req ? req.headers['user-agent'] : 'SYSTEM_PROCESS';
         
-        const log = await prisma.auditLog.create({
-            data: {
-                userId,
-                action,
-                entity,
-                entityId: entityId || userId,
+        // Use centralized audit helper with proper metadata structure
+        const auditLog = await createCentralizedAuditLog({
+            action,
+            entity,
+            entityId: entityId || userId,
+            userId,
+            metadata: {
+                ...metadata,
                 ipAddress,
                 userAgent,
                 device: req?.body?.deviceId || 'SYSTEM',
-                metadata: {
-                    ...metadata,
-                    compliance: {
-                        pci_dss: '10.2.2',
-                        bsp: 'Circular 808'
-                    },
-                    timestamp: getLegacyManilaISO()
+                compliance: {
+                    pci_dss: '10.2.2',
+                    bsp: 'Circular 808'
                 }
             },
-            include: {
-                user: {
-                    select: {
-                        id: true,
-                        firstName: true,
-                        lastName: true,
-                        email: true
-                    }
-                }
-            }
+            ipAddress
         });
-        console.log(`[Audit] Logged action: ${action} for user: ${userId} (Entity: ${entity})`);
+
+        if (auditLog) {
+            console.log(`[Audit] Logged action: ${action} for user: ${userId} (Entity: ${entity})`);
+        } else {
+            console.error(`[Audit] Failed to create audit log for action: ${action}`);
+        }
         
-        // Notify Admin in Real-time
-        notifyAdmin('AUDIT_LOG_CREATED', log);
+        return auditLog;
     } catch (err) {
         console.error(`[Audit] Failed to create audit log: ${err.message}`);
+        return null;
     }
 };
 
