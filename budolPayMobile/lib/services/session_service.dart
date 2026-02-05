@@ -3,6 +3,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flag_secure/flag_secure.dart';
 import 'package:local_auth/local_auth.dart';
+import 'package:local_auth_android/local_auth_android.dart';
+import 'package:local_auth_darwin/local_auth_darwin.dart';
 import '../utils/timezone_utils.dart';
 import 'api_service.dart';
 
@@ -138,12 +140,19 @@ class SessionService extends ChangeNotifier with WidgetsBindingObserver {
         return false;
       }
 
+      final List<AuthMessages> authMessages = [
+        const AndroidAuthMessages(
+          signInTitle: 'Session authentication',
+          cancelButton: 'Cancel',
+        ),
+        const IOSAuthMessages(
+          cancelButton: 'Cancel',
+        ),
+      ];
+
       final bool didAuthenticate = await _auth.authenticate(
         localizedReason: 'Please authenticate to resume your session',
-        options: const AuthenticationOptions(
-          stickyAuth: true,
-          biometricOnly: false, // Allows PIN/Pattern fallback like real banking apps
-        ),
+        authMessages: authMessages,
       );
 
       if (didAuthenticate) {

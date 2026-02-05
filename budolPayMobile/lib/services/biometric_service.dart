@@ -14,7 +14,6 @@ class BiometricService {
   BiometricService({FlutterSecureStorage? storage}) 
     : _storage = storage ?? const FlutterSecureStorage(
         aOptions: AndroidOptions(
-          encryptedSharedPreferences: true,
           resetOnError: true,
         ),
         webOptions: WebOptions(
@@ -151,23 +150,18 @@ class BiometricService {
 
   Future<bool> authenticate() async {
     try {
+      final List<AuthMessages> authMessages = [
+        const AndroidAuthMessages(
+          signInTitle: 'Biometric login for budol₱ay',
+          cancelButton: 'No thanks',
+        ),
+        const IOSAuthMessages(
+          cancelButton: 'No thanks',
+        ),
+      ];
       return await _auth.authenticate(
         localizedReason: 'Please authenticate to log in to budol₱ay',
-        authMessages: const [
-          AndroidAuthMessages(
-            signInTitle: 'Biometric login for budol₱ay',
-            biometricHint: 'Verify your identity',
-            cancelButton: 'No thanks',
-          ),
-          IOSAuthMessages(
-            cancelButton: 'No thanks',
-          ),
-        ],
-        options: const AuthenticationOptions(
-          stickyAuth: true,
-          biometricOnly: true,
-          useErrorDialogs: true,
-        ),
+        authMessages: authMessages,
       );
     } on PlatformException catch (e) {
       _addLog('OS Error: ${e.code} - ${e.message}');

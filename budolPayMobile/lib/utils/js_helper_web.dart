@@ -10,14 +10,14 @@ bool isWebCryptoSupported() {
   try {
     // Check if isSecureContext exists and is true
     final JSAny? isSecureContext = _window.getProperty('isSecureContext'.toJS);
-    final bool isSecure = isSecureContext != null && 
-        (isSecureContext as JSBoolean).toDart;
+    final bool isSecure = isSecureContext != null;
     
     // Check if crypto.subtle exists
     final JSAny? crypto = _window.getProperty('crypto'.toJS);
     bool hasSubtle = false;
-    if (crypto != null && crypto is JSObject) {
-      final JSAny? subtle = crypto.getProperty('subtle'.toJS);
+    if (crypto != null) {
+      final JSObject cryptoObj = crypto as JSObject;
+      final JSAny? subtle = cryptoObj.getProperty('subtle'.toJS);
       hasSubtle = subtle != null;
     }
     
@@ -46,7 +46,6 @@ void callJsMethod(String method, [List<dynamic>? args]) {
           if (arg is String) return arg.toJS;
           if (arg is num) return arg.toJS;
           if (arg is bool) return arg.toJS;
-          if (arg is JSAny) return arg;
           return null;
         }).toList();
         
@@ -60,7 +59,7 @@ void callJsMethod(String method, [List<dynamic>? args]) {
     }
   } catch (e) {
     if (kDebugMode) {
-      print('JS Helper: Error calling $method: $e');
+      print('JS Helper: Error calling method $method: $e');
     }
   }
 }

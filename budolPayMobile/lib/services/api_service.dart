@@ -160,7 +160,7 @@ class ApiService extends ChangeNotifier {
   ApiService({this.token, this.user}) {
     // Initialize Secure Storage with Web Compatibility
     _secureStorage = const FlutterSecureStorage(
-      aOptions: AndroidOptions(encryptedSharedPreferences: true),
+      aOptions: AndroidOptions(),
       webOptions: WebOptions(
         dbName: 'budolpay_secure_db',
         publicKey: 'budolpay_pub',
