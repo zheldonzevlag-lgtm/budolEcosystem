@@ -119,7 +119,7 @@ export async function POST(request: Request) {
       await prisma.user.update({
         where: { id: userId },
         data: { 
-          password: tempPassword,
+          passwordHash: tempPassword,
         }
       });
 
@@ -187,7 +187,7 @@ export async function POST(request: Request) {
           lastName,
           role: role as any,
           phoneNumber,
-          password: "PROVISIONED_ACCOUNT" // This would normally be handled by SSO invite flow
+          passwordHash: "PROVISIONED_ACCOUNT" // This would normally be handled by SSO invite flow
         }
       });
 

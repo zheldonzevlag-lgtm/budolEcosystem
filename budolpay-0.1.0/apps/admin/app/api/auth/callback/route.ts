@@ -82,9 +82,10 @@ export async function GET(request: Request) {
             action: 'USER_LOGIN',
             userId: localUser.id,
             entity: 'Security',
+            entityId: localUser.id,
             ipAddress: ip,
-            userAgent: request.headers.get('user-agent'),
             metadata: {
+                userAgent: request.headers.get('user-agent'),
                 authMethod: 'SSO_CALLBACK',
                 compliance: {
                     pci_dss: '10.2.1',

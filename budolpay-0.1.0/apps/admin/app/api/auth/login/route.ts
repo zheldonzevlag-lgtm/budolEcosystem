@@ -103,6 +103,7 @@ export async function POST(request: Request) {
             action: 'USER_LOGIN',
             userId: localUser.id,
             entity: 'Security',
+            entityId: localUser.id,
             ipAddress: ip,
             metadata: {
                 userAgent: request.headers.get('user-agent'),
