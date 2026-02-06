@@ -4,8 +4,8 @@ import 'package:budol_pay_mobile/services/api_service.dart';
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
 
-  test('ApiService version should be 1.3.42', () {
+  test('ApiService version should be 1.3.65', () {
     final apiService = ApiService();
-    expect(apiService.appVersion, '1.3.42');
+    expect(apiService.appVersion, '1.3.65');
   });
 }

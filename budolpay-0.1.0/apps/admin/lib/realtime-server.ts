@@ -94,7 +94,13 @@ export async function triggerRealtimeEvent(channel: string, event: string, data:
     }
 
     if (provider === 'SOCKETIO') {
-      const socketUrl = settings['REALTIME_SOCKETIO_URL'] || 'http://localhost:4000';
+      let socketUrl = settings['REALTIME_SOCKETIO_URL'] || 'http://localhost:4000';
+      const localIp = process.env.LOCAL_IP;
+
+      if (socketUrl.includes('localhost') && localIp) {
+        socketUrl = socketUrl.replace('localhost', localIp);
+      }
+
       const triggerUrl = `${socketUrl}/trigger`;
 
       await fetch(triggerUrl, {

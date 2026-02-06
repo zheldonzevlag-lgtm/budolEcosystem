@@ -16,11 +16,20 @@ export async function GET() {
       return acc;
     }, {} as Record<string, string>);
 
+    // Make Socket.io URL network aware if it's localhost
+    let socketUrl = settingsMap['REALTIME_SOCKETIO_URL'];
+    const localIp = process.env.LOCAL_IP;
+
+    if (socketUrl && socketUrl.includes('localhost') && localIp) {
+      socketUrl = socketUrl.replace('localhost', localIp);
+      console.log(`[Realtime API] Adjusted localhost to ${localIp} for network awareness`);
+    }
+
     return NextResponse.json({
       provider: settingsMap['REALTIME_METHOD'] || 'SWR',
       pusherKey: settingsMap['REALTIME_PUSHER_KEY'],
       pusherCluster: settingsMap['REALTIME_PUSHER_CLUSTER'] || 'ap1',
-      socketUrl: settingsMap['REALTIME_SOCKETIO_URL'],
+      socketUrl: socketUrl,
       swrPollingInterval: parseInt(settingsMap['REALTIME_SWR_REFRESH_INTERVAL']) || 10000
     });
   } catch (error: any) {

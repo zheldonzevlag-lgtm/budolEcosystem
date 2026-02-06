@@ -133,7 +133,12 @@ class RealtimeService {
   }
 
   private connectSocketIO() {
-    const url = this.config?.socketioUrl || "http://localhost:4000";
+    let url = this.config?.socketioUrl || "http://localhost:4000";
+    
+    // In production or mobile access, localhost won't work.
+    // However, since this runs in the browser, it should ideally use the URL provided by the API
+    // which we already made network-aware in the API route.
+    
     console.log(`[Realtime] Connecting to Socket.io at ${url}`);
     
     this.socket = io(url, {
