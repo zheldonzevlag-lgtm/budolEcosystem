@@ -1,0 +1,72 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Release Notes - v1.2.2</title>
+    <style>
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; line-height: 1.6; color: #333; max-width: 1200px; margin: 0 auto; padding: 20px; background-color: #f4f7f6; }
+        header { background-color: #2c3e50; color: white; padding: 20px; text-align: center; border-radius: 8px; }
+        .container { background-color: white; padding: 30px; border-radius: 8px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); margin-top: 20px; }
+        .success-tag { background-color: #2ecc71; color: white; padding: 4px 8px; border-radius: 4px; font-size: 0.8em; font-weight: bold; }
+        code { background-color: #f8f9fa; padding: 2px 4px; border-radius: 4px; font-family: monospace; }
+        pre { background-color: #2d3436; color: #dfe6e9; padding: 15px; border-radius: 8px; overflow-x: auto; }
+    </style>
+</head>
+<body>
+    <header>
+        <h1>Release v1.2.2</h1>
+        <p>UX Enhancement: Visual Feedback for Selfie Capture</p>
+    </header>
+    <div class="container">
+        <h2>Overview</h2>
+        <p>This release introduces visual feedback during the selfie capture process. Previously, users were not informed that the system was processing the image upload after clicking the capture button, leading to potential confusion or double-clicks.</p>
+
+        <h2>Changes Applied</h2>
+        <ul>
+            <li><strong>Capture Button Spinner:</strong> The capture button now transforms into a loading spinner (<code>RefreshCw</code>) when the upload is in progress.</li>
+            <li><strong>Asynchronous Flow Optimization:</strong> Modified <code>captureSelfie</code> to maintain the camera view and capture button visibility until the upload is successfully completed.</li>
+            <li><strong>Button State Management:</strong> The capture button is now disabled during the upload process to prevent duplicate requests.</li>
+            <li><strong>Improved User Guidance:</strong> Updated button titles to provide context-aware tooltips (e.g., "Processing..." during upload).</li>
+        </ul>
+
+        <h2>Task List</h2>
+        <div style="background: #f1f2f6; padding: 15px; border-radius: 8px; border-left: 5px solid #2ecc71;">
+            <ul style="list-style: none; padding-left: 0;">
+                <li>✅ Add loading spinner to capture button during selfie upload</li>
+                <li>✅ Ensure camera view stays active until upload finishes</li>
+                <li>✅ Disable capture button during processing</li>
+                <li>✅ Update documentation to v1.2.2</li>
+            </ul>
+        </div>
+
+        <h2>Technical Implementation</h2>
+        <p>Modified the <code>captureSelfie</code> function in <a href="file:///d:/IT Projects/budolEcosystem/budolshap-0.1.0/components/auth/AuthForm.jsx">AuthForm.jsx</a> to delay <code>stopCamera()</code> and <code>setSelfieCaptured(true)</code> until the <code>fetch</code> request to <code>/api/upload</code> returns successfully.</p>
+        <pre><code>
+// Simplified logic
+const captureSelfie = async () => {
+    // ... capture image ...
+    setIsUploading(true);
+    try {
+        const response = await fetch('/api/upload', { ... });
+        if (response.ok) {
+            setSelfieCaptured(true);
+            stopCamera();
+        }
+    } finally {
+        setIsUploading(false);
+    }
+}
+        </code></pre>
+
+        <h2>Compliance</h2>
+        <p>This enhancement aligns with <strong>UX Best Practices</strong> and <strong>Accessibility Standards</strong> by providing clear, real-time feedback for long-running operations.</p>
+        
+        <h2>Interlinks</h2>
+        <p>
+            <a href="../knowledgebase.html">Back to Knowledgebase</a> | 
+            <a href="../budolecosystem_docs_2026-02-07_v1.2.1/index.html">Previous Version (v1.2.1)</a>
+        </p>
+    </div>
+</body>
+</html>

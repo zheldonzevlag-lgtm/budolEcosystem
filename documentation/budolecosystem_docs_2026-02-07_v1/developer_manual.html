@@ -1,0 +1,80 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Developer Manual - Budol Ecosystem 2026-02-07 v1</title>
+    <style>
+        :root { --sidebar-width: 260px; --primary-color: #0052CC; --text-color: #172B4D; --bg-color: #FFFFFF; --sidebar-bg: #F4F5F7; --border-color: #DFE1E6; }
+        body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; margin: 0; display: flex; color: var(--text-color); }
+        .sidebar { width: var(--sidebar-width); background: var(--sidebar-bg); height: 100vh; position: fixed; border-right: 1px solid var(--border-color); padding: 20px; }
+        .main-content { margin-left: var(--sidebar-width); padding: 40px 60px; width: 100%; max-width: 900px; }
+        .sidebar ul { list-style: none; padding: 0; }
+        .sidebar li { margin-bottom: 10px; }
+        .sidebar a { text-decoration: none; color: #42526E; font-size: 14px; }
+        .code-block { background: #091E42; color: #EBECF0; padding: 15px; border-radius: 5px; overflow-x: auto; font-family: 'Courier New', Courier, monospace; margin: 20px 0; }
+        .code-link { color: var(--primary-color); text-decoration: underline; cursor: pointer; }
+    </style>
+</head>
+<body>
+    <div class="sidebar">
+        <h2>Documentation</h2>
+        <ul>
+            <li><a href="index.html">Overview</a></li>
+            <li><a href="developer_manual.html" style="font-weight:bold;color:var(--primary-color)">Developer Manual</a></li>
+            <li><a href="system_admin_manual.html">System Admin Manual</a></li>
+            <li><a href="user_manual.html">User Manual</a></li>
+            <li><a href="risk_register.html">Risk Register</a></li>
+            <li><a href="test_results.html">Test Results</a></li>
+        </ul>
+    </div>
+    <div class="main-content">
+        <h1>Developer Manual</h1>
+        
+        <section>
+            <h2>Technical Explanation: Phone Standardization</h2>
+            <p>The system now uses a unified <code>normalizePhone</code> utility across the ecosystem to ensure all mobile numbers are stored in E.164 format (<code>+639XXXXXXXXX</code>).</p>
+            
+            <h3>Frontend Implementation</h3>
+            <p>File: <a class="code-link" href="file:///d:/IT Projects/budolEcosystem/budolshap-0.1.0/components/auth/AuthForm.jsx">AuthForm.jsx</a></p>
+            <div class="code-block">
+const normalizePhone = (phone) => {
+    if (!phone) return ''
+    const raw = phone.trim().replace(/[^0-9]/g, '')
+    if (raw.startsWith('0')) return '+63' + raw.substring(1)
+    if (raw.startsWith('63') && raw.length === 12) return '+' + raw
+    if (raw.startsWith('9') && raw.length === 10) return '+63' + raw
+    return '+63' + raw.replace(/^63/, '')
+}
+            </div>
+
+            <h3>Backend Logic (budolID)</h3>
+            <p>File: <a class="code-link" href="file:///d:/IT Projects/budolEcosystem/budolID-0.1.0/index.js">index.js</a></p>
+            <p>The backend now performs a multi-schema search (budolid and public) to find users even if they were registered in different services.</p>
+            
+            <h3>Database Migration</h3>
+            <p>File: <a class="code-link" href="file:///d:/IT Projects/budolEcosystem/budolID-0.1.0/scripts/standardize-phones.js">standardize-phones.js</a></p>
+            <p>A script was developed to iterate through all users and update their phone numbers to the standardized format using raw SQL queries to bypass model constraints.</p>
+        </section>
+
+        <section>
+            <h2>Phase 8: Dependencies & Software Choices</h2>
+            <p>The following software and libraries were chosen for this implementation:</p>
+            <ul>
+                <li><strong>Tailwind CSS:</strong> Used for AuthForm animations. Chosen for its utility-first approach which allows rapid UI development with minimal custom CSS.</li>
+                <li><strong>Prisma Client:</strong> Used for database operations. Chosen for its type-safety and multi-schema support which was critical for standardizing data across <code>budolid</code> and <code>public</code> schemas.</li>
+                <li><strong>Jest & React Testing Library:</strong> Used for verifying AuthForm logic. Chosen for their robustness and ability to mock complex user interactions like switching login methods.</li>
+                <li><strong>E.164 Standard:</strong> Chosen as the phone number format to ensure global compatibility and uniqueness in the database.</li>
+            </ul>
+        </section>
+
+        <section>
+            <h2>Compliance</h2>
+            <ul>
+                <li><strong>PCI DSS:</strong> No sensitive payment data is stored in the phone normalization flow.</li>
+                <li><strong>NPC (Data Privacy Act):</strong> Personal identifiable information (phone numbers) is handled securely and only used for authentication.</li>
+                <li><strong>Cybersecurity:</strong> Rate limiting is applied to phone check and OTP endpoints to prevent enumeration attacks.</li>
+            </ul>
+        </section>
+    </div>
+</body>
+</html>

@@ -108,6 +108,13 @@ class SessionService extends ChangeNotifier with WidgetsBindingObserver {
   }
 
   void _handleResumed() {
+    // If the screen is already locked, we keep it locked and just reset the timer for background check
+    if (_isLocked) {
+      if (kDebugMode) print('SessionService: App resumed but session is already locked. Maintaining lock.');
+      _lastBackgroundTime = null;
+      return;
+    }
+
     if (_lastBackgroundTime == null) return;
 
     final now = TimezoneUtils.getManilaNow();

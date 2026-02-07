@@ -1,0 +1,56 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Developer Manual - v4 (OTP Login)</title>
+    <style>
+        body { font-family: sans-serif; line-height: 1.6; padding: 40px; color: #333; max-width: 1000px; margin: auto; }
+        pre { background: #1e1e1e; color: #d4d4d4; padding: 15px; border-radius: 5px; overflow-x: auto; }
+        code { font-family: 'Consolas', monospace; }
+        .file-link { color: #0052cc; text-decoration: none; font-weight: bold; }
+        .file-link:hover { text-decoration: underline; }
+        h2 { border-bottom: 2px solid #0052cc; padding-bottom: 10px; }
+    </style>
+</head>
+<body>
+    <h1>Developer Manual: OTP Login System</h1>
+    
+    <h2>1. Architecture Overview</h2>
+    <p>The OTP login system uses a <code>VerificationCode</code> model in Prisma to store temporary codes. The frontend handles the toggle between email/password and mobile/OTP.</p>
+
+    <h2>2. Code References</h2>
+    <ul>
+        <li>
+            <strong>Frontend Form:</strong> <a class="file-link" href="file:///d:/IT Projects/budolEcosystem/budolshap-0.1.0/components/auth/AuthForm.jsx">AuthForm.jsx</a>
+            <p>Handles the login method state and conditional rendering of the OTP button/input.</p>
+        </li>
+        <li>
+            <strong>OTP API:</strong> <a class="file-link" href="file:///d:/IT Projects/budolEcosystem/budolshap-0.1.0/app/api/auth/otp/route.js">otp/route.js</a>
+            <p>Generates codes, applies rate limiting, and triggers delivery via SMS/Email.</p>
+        </li>
+        <li>
+            <strong>Login API:</strong> <a class="file-link" href="file:///d:/IT Projects/budolEcosystem/budolshap-0.1.0/app/api/auth/login/route.js">login/route.js</a>
+            <p>Updated to verify 6-digit codes against the <code>VerificationCode</code> table.</p>
+        </li>
+        <li>
+            <strong>Database Schema:</strong> <a class="file-link" href="file:///d:/IT Projects/budolEcosystem/budolshap-0.1.0/prisma/schema.prisma">schema.prisma</a>
+            <p>Added <code>VerificationCode</code> model for OTP storage.</p>
+        </li>
+    </ul>
+
+    <h2>3. OTP Flow Logic</h2>
+    <pre><code>
+// 1. User enters mobile number
+// 2. Client calls /api/auth/otp { identifier: '+63...', action: 'send' }
+// 3. Server generates 6-digit code, saves to DB with 10min expiry
+// 4. Server sends SMS via Zerix/iTextMo
+// 5. User enters code in AuthForm
+// 6. Client calls /api/auth/login { email: '+63...', password: 'code' }
+// 7. Server detects 6-digit 'password', verifies against DB
+    </code></pre>
+
+    <h2>4. Testing</h2>
+    <p>Run unit tests: <code>npm test -- AuthForm.test.jsx</code></p>
+    <p>Run integration script: <code>node scripts/test_scripts/budolShap/v4/verify-otp-login.mjs</code></p>
+</body>
+</html>

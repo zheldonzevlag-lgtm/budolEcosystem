@@ -571,26 +571,78 @@ app.get('/auth/check-email', async (req, res) => {
 // Check if phone number exists
 app.get('/auth/check-phone', async (req, res) => {
     const { phone } = req.query;
+    console.log(`\n📞 [budolID] Check Phone Request: "${phone}"`);
+    
     if (!phone) return res.status(400).json({ error: 'Phone number is required' });
     
     try {
         // Normalize phone number before checking
         const normalizedPhone = normalizePhilippinePhone(phone);
+        console.log(`🔍 [budolID] Normalized to: "${normalizedPhone}"`);
+        
         if (!normalizedPhone) {
+            console.log(`❌ [budolID] Normalization failed for: "${phone}"`);
             return res.status(400).json({ error: 'Invalid phone number format' });
         }
         
-        const user = await prisma.user.findFirst({
-            where: { phoneNumber: normalizedPhone },
-            select: { id: true, phoneNumber: true }
-        });
+        // Search across both schemas: budolid and public
+        const schemas = ['budolid', 'public'];
+        let user = null;
+        let foundSchema = null;
+
+        for (const schema of schemas) {
+            console.log(`📡 [budolID] Checking schema "${schema}" for "${normalizedPhone}"`);
+            // Try normalized first
+            const results = await prisma.$queryRawUnsafe(
+                `SELECT id, "phoneNumber", name, email FROM "${schema}"."User" WHERE "phoneNumber" = $1 LIMIT 1`,
+                normalizedPhone
+            );
+            
+            if (results && results.length > 0) {
+                user = results[0];
+                foundSchema = schema;
+                console.log(`✅ [budolID] Found in "${schema}":`, user);
+                break;
+            }
+
+            // Try raw variations if normalized didn't work
+            const rawDigits = phone.replace(/[^0-9]/g, '');
+            const variations = [];
+            if (rawDigits.startsWith('63') && rawDigits.length === 12) {
+                variations.push('0' + rawDigits.substring(2));
+            } else if (rawDigits.startsWith('0')) {
+                variations.push(rawDigits);
+            }
+
+            for (const variation of variations) {
+                console.log(`📡 [budolID] Checking variation "${variation}" in "${schema}"`);
+                const varResults = await prisma.$queryRawUnsafe(
+                    `SELECT id, "phoneNumber", name, email FROM "${schema}"."User" WHERE "phoneNumber" = $1 LIMIT 1`,
+                    variation
+                );
+                if (varResults && varResults.length > 0) {
+                    user = varResults[0];
+                    foundSchema = schema;
+                    console.log(`✅ [budolID] Found variation in "${schema}":`, user);
+                    break;
+                }
+            }
+            if (user) break;
+        }
         
+        if (!user) {
+            console.log(`⚠️ [budolID] Phone "${phone}" NOT FOUND in any schema`);
+        }
+
         res.json({ 
             exists: !!user,
             normalizedPhone: normalizedPhone,
-            message: user ? 'Phone number already registered in the ecosystem' : 'Phone number is available'
+            foundAs: user ? user.phoneNumber : null,
+            schema: foundSchema,
+            message: user ? `Phone number registered in ${foundSchema}` : 'Phone number is available'
         });
     } catch (error) {
+        console.error(`❌ [budolID] Error checking phone:`, error);
         res.status(500).json({ error: error.message });
     }
 });

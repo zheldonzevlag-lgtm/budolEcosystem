@@ -1,0 +1,129 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Developer Manual - Budol Ecosystem 2026-02-06 v3</title>
+    <style>
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; line-height: 1.6; color: #333; max-width: 1000px; margin: 0 auto; padding: 20px; background-color: #f4f7f6; }
+        .content-box { background: white; padding: 30px; border-radius: 8px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); margin-bottom: 20px; }
+        h1, h2, h3 { color: #0f172a; }
+        code { background-color: #1e293b; color: #e2e8f0; padding: 2px 4px; border-radius: 4px; font-family: 'Courier New', Courier, monospace; }
+        pre { background-color: #1e293b; color: #e2e8f0; padding: 15px; border-radius: 8px; overflow-x: auto; line-height: 1.4; border-left: 4px solid #10b981; }
+        .file-link { color: #10b981; text-decoration: none; font-weight: bold; border-bottom: 1px dashed #10b981; }
+        .file-link:hover { color: #059669; border-bottom-style: solid; }
+        .task-list { list-style: none; padding: 0; }
+        .task-item { display: flex; align-items: center; margin-bottom: 10px; }
+        .task-item input { margin-right: 10px; accent-color: #10b981; }
+        .completed { text-decoration: line-through; color: #888; }
+        .sidebar { position: fixed; left: 20px; top: 100px; width: 200px; background: white; padding: 15px; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
+        .sidebar a { display: block; margin-bottom: 10px; color: #0f172a; text-decoration: none; font-size: 0.9rem; }
+        .sidebar a:hover { color: #10b981; }
+        @media (max-width: 1200px) { .sidebar { display: none; } }
+    </style>
+</head>
+<body>
+    <div class="sidebar">
+        <h3>Contents</h3>
+        <a href="#purpose">Purpose</a>
+        <a href="#rationale">Rationale</a>
+        <a href="#tasks">Task List</a>
+        <a href="#implementation">Implementation Details</a>
+        <a href="#code-references">Code References</a>
+        <a href="#compliance">Compliance</a>
+        <a href="index.html">← Back to Index</a>
+    </div>
+
+    <main>
+        <div class="content-box">
+            <h1>Developer Manual</h1>
+            <p><strong>Version:</strong> Login Toggle & Animation | <strong>Release Date:</strong> 2026-02-06</p>
+            
+            <section id="purpose">
+                <h2>Purpose</h2>
+                <p>To implement a togglable login interface that supports both Email and Mobile Number authentication. This enhancement improves user onboarding by providing flexible login options and a polished, animated UI that aligns with modern application standards.</p>
+            </section>
+
+            <section id="rationale">
+                <h2>Rationale</h2>
+                <p>Users in the Philippine market frequently alternate between using email and mobile numbers for digital services. By providing a clear toggle and animated transition, we reduce cognitive load and clearly signal which identifier is being used. This approach also simplifies the backend logic by consolidating authentication through a single flexible endpoint.</p>
+            </section>
+
+            <section id="tasks">
+                <h2>Phase-Based Task List</h2>
+                <ul class="task-list">
+                    <li class="task-item"><input type="checkbox" checked disabled> <span class="completed">Phase 0 – Baseline & Risk Analysis for Login Toggle Implementation</span></li>
+                    <li class="task-item"><input type="checkbox" checked disabled> <span class="completed">Phase 1 – Architecture & Data Contracts (Define Toggle State and Animation Strategy)</span></li>
+                    <li class="task-item"><input type="checkbox" checked disabled> <span class="completed">Phase 2 – Backend & API Implementation (Support Phone Login)</span></li>
+                    <li class="task-item"><input type="checkbox" checked disabled> <span class="completed">Phase 3 – Frontend / App Implementation (Toggle UI, Animation, and State Management)</span></li>
+                    <li class="task-item"><input type="checkbox" checked disabled> <span class="completed">Phase 4 – Integration & Security Verification (Compliance Check)</span></li>
+                    <li class="task-item"><input type="checkbox" checked disabled> <span class="completed">Phase 5 – End-to-End Testing (Manual & Automated Verification of Toggle)</span></li>
+                    <li class="task-item"><input type="checkbox" checked disabled> <span class="completed">Phase 6 – Documentation & Audit (Create v3 Docs & Update Manuals)</span></li>
+                    <li class="task-item"><input type="checkbox" checked disabled> <span class="completed">Phase 7 – Release & Monitoring (Final Release)</span></li>
+                    <li class="task-item"><input type="checkbox" checked disabled> <span class="completed">Phase 8 - Discuss the Dependencies and Software use and why it is chosen</span></li>
+                    <li class="task-item"><input type="checkbox" checked disabled> <span class="completed">Phase 9 - Ensure documentation is in version history and archive (knowledgebase.html)</span></li>
+                    <li class="task-item"><input type="checkbox" checked disabled> <span class="completed">Phase 10 - Test the code using Jest for testing</span></li>
+                </ul>
+            </section>
+
+            <section id="implementation">
+                <h2>Technical Implementation</h2>
+                <h3>State Management</h3>
+                <p>A new state <code>loginMethod</code> was added to <code>AuthForm.jsx</code> to track whether the user is logging in via 'email' or 'phone'.</p>
+                
+                <pre><code>const [loginMethod, setLoginMethod] = useState('email') // 'email' or 'phone'</code></pre>
+
+                <h3>Animated Transitions</h3>
+                <p>Animations were implemented using Tailwind CSS <code>transition-all</code> and <code>transform</code> classes. A sliding background pill was used for the toggle switch, and horizontal sliding transitions were applied to the input containers.</p>
+                
+                <pre><code>&lt;div className={`transition-all duration-300 transform ${loginMethod === 'email' ? 'translate-x-0 opacity-100 relative' : '-translate-x-full opacity-0 absolute'}`}&gt;
+    {/* Email Input */}
+&lt;/div&gt;</code></pre>
+
+                <h3>Backend Multi-Identifier Support</h3>
+                <p>The login route was updated to use Prisma's <code>findFirst</code> with an <code>OR</code> condition, allowing authentication by either <code>email</code> or <code>phoneNumber</code>.</p>
+                
+                <pre><code>const user = await prisma.user.findFirst({
+    where: {
+        OR: [
+            { email: identifier.toLowerCase() },
+            { phoneNumber: identifier }
+        ]
+    }
+})</code></pre>
+            </section>
+
+            <section id="code-references">
+                <h2>Code References</h2>
+                <ul>
+                    <li><a href="file:///d:/IT Projects/budolEcosystem/budolshap-0.1.0/components/auth/AuthForm.jsx" class="file-link">AuthForm.jsx</a> - Frontend toggle logic and animations.</li>
+                    <li><a href="file:///d:/IT Projects/budolEcosystem/budolshap-0.1.0/app/api/auth/login/route.js" class="file-link">route.js (Login API)</a> - Multi-identifier authentication support.</li>
+                    <li><a href="file:///d:/IT Projects/budolEcosystem/scripts/test_scripts/budolShap/v3/verify-login-toggle.mjs" class="file-link">verify-login-toggle.mjs</a> - Automated verification script.</li>
+                </ul>
+            </section>
+
+            <section id="compliance">
+                <h2>Compliance Verification</h2>
+                <ul>
+                    <li><strong>PCI DSS:</strong> Compliant. No changes were made to password handling or transmission.</li>
+                    <li><strong>NPC (Data Privacy):</strong> Compliant. Both email and phone are treated as PII and handled securely.</li>
+                    <li><strong>Cybersecurity Law:</strong> Compliant. Authentication logic remains robust with rate-limiting preserved.</li>
+                </ul>
+            </section>
+
+            <section id="dependencies">
+                <h2>8. Dependencies & Software Choices</h2>
+                <p><strong>Tailwind CSS:</strong> Chosen for rapid UI development and utility-first styling. Its transition utilities (<code>transition-all</code>, <code>duration-300</code>) were instrumental in implementing the smooth login toggle animations.</p>
+                <p><strong>Prisma ORM:</strong> Used for database interactions. The <code>OR</code> condition in <code>findFirst</code> allowed for seamless multi-identifier (email/phone) lookups without complex SQL queries.</p>
+                <p><strong>Lucide React:</strong> Provides the iconography used in the mobile number prefix and toggle indicators, ensuring a consistent visual language.</p>
+                <p><strong>Next.js (App Router):</strong> The framework's API routes allowed for a clean separation of backend logic, while client components enabled the rich interactivity required for the animated form.</p>
+            </section>
+
+            <section id="testing">
+                <h2>9. Testing & Verification</h2>
+                <p>Automated verification was performed using a custom Node.js script located at <code>/scripts/test_scripts/budolShap/v3/verify-login-toggle.mjs</code>. This script verifies both backend API support and frontend state/UI implementation.</p>
+            </section>
+        </div>
+    </main>
+</body>
+</html>
