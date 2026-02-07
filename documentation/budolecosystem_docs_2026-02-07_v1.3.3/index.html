@@ -1,0 +1,150 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Budol Ecosystem - v1.3.3 Documentation</title>
+    <style>
+        :root {
+            --primary: #091E42;
+            --secondary: #0052CC;
+            --accent: #4C9AFF;
+            --bg: #F4F5F7;
+            --text: #172B4D;
+            --success: #36B37E;
+            --warning: #FFAB00;
+            --error: #FF5630;
+        }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            background: var(--bg);
+            color: var(--text);
+            line-height: 1.6;
+            margin: 0;
+            display: flex;
+        }
+        .sidebar {
+            width: 280px;
+            background: var(--primary);
+            color: white;
+            height: 100vh;
+            position: fixed;
+            padding: 20px;
+            box-sizing: border-box;
+        }
+        .main-content {
+            margin-left: 280px;
+            padding: 40px;
+            max-width: 900px;
+            width: 100%;
+        }
+        .card {
+            background: white;
+            padding: 30px;
+            border-radius: 8px;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.12);
+            margin-bottom: 30px;
+        }
+        h1, h2, h3 { color: var(--primary); margin-top: 0; }
+        .sidebar h2 { color: white; font-size: 1.2rem; border-bottom: 1px solid rgba(255,255,255,0.1); padding-bottom: 10px; }
+        .nav-link { color: rgba(255,255,255,0.7); text-decoration: none; display: block; padding: 10px 0; transition: 0.2s; }
+        .nav-link:hover { color: white; }
+        .code-block {
+            background: #272822;
+            color: #f8f8f2;
+            padding: 15px;
+            border-radius: 5px;
+            overflow-x: auto;
+            font-family: 'Courier New', Courier, monospace;
+            font-size: 0.9rem;
+            margin: 15px 0;
+        }
+        .status-badge {
+            display: inline-block;
+            padding: 4px 12px;
+            border-radius: 20px;
+            font-size: 0.8rem;
+            font-weight: bold;
+            text-transform: uppercase;
+        }
+        .status-success { background: #E3FCEF; color: #006644; }
+        .status-error { background: #FFEBE6; color: #BF2600; }
+        .task-list { list-style: none; padding: 0; }
+        .task-item { display: flex; align-items: center; gap: 10px; margin-bottom: 8px; }
+        .task-done { text-decoration: line-through; color: #8993A4; }
+    </style>
+</head>
+<body>
+    <div class="sidebar">
+        <h2>Budol Ecosystem</h2>
+        <nav>
+            <a href="../knowledgebase.html" class="nav-link">← Knowledge Base</a>
+            <a href="#overview" class="nav-link">Overview</a>
+            <a href="#issue" class="nav-link">Issue Analysis</a>
+            <a href="#fix" class="nav-link">Technical Fix</a>
+            <a href="#compliance" class="nav-link">Compliance</a>
+            <a href="#tasks" class="nav-link">Task Status</a>
+        </nav>
+    </div>
+
+    <div class="main-content">
+        <div id="overview" class="card">
+            <h1>Release v1.3.3: OTP Prefill Fix & State Synchronization</h1>
+            <p><strong>Date:</strong> 2026-02-07</p>
+            <span class="status-badge status-success">Released</span>
+            <p>This version fixes a critical UX bug where the Verification Code (OTP) field was being prefilled with old values (passwords or previous OTPs) after clicking the "Send Code" button.</p>
+        </div>
+
+        <div id="issue" class="card">
+            <h2>The Issue: Persistent State in Shared Input</h2>
+            <p>The <code>password</code> field in the authentication state was shared between the standard password input and the OTP input. When switching methods or requesting a new code, the old value remained in memory, causing the field to appear pre-filled.</p>
+            <h3>Rationale:</h3>
+            <ul>
+                <li><strong>State Reuse:</strong> <code>formData.password</code> was used for both password and OTP for simplicity, but lacked proper cleanup logic.</li>
+                <li><strong>Browser Autofill:</strong> Browsers sometimes attempt to fill fields that look like passwords or verification codes, exacerbating the issue if the state isn't explicitly cleared.</li>
+            </ul>
+        </div>
+
+        <div id="fix" class="card">
+            <h2>Technical Solution</h2>
+            <h3>1. Post-Send Cleanup</h3>
+            <p>Modified <code>handleSendOtp</code> in <a href="file:///d:/IT Projects/budolEcosystem/budolshap-0.1.0/components/auth/AuthForm.jsx">AuthForm.jsx</a> to explicitly clear the password state upon successful OTP request.</p>
+            <div class="code-block">
+setIsOtpSent(true);
+// Clear the password field so it's ready for the new OTP
+setFormData(prev => ({ ...prev, password: '' }));
+            </div>
+
+            <h3>2. Method/Mode Switch Reset</h3>
+            <p>Added a <code>useEffect</code> hook to monitor <code>loginMethod</code> and <code>mode</code>. This ensures that any time the user switches between Email/Mobile or Login/Register, all sensitive or temporary fields are wiped clean.</p>
+            <div class="code-block">
+useEffect(() => {
+    setFormData(prev => ({ ...prev, password: '' }));
+    if (isLogin) {
+        setIsOtpSent(false); // Reset OTP flow state
+    }
+}, [loginMethod, mode, isLogin]);
+            </div>
+        </div>
+
+        <div id="compliance" class="card">
+            <h2>Compliance Verification</h2>
+            <ul>
+                <li><strong>Cybersecurity Law:</strong> Prevents sensitive data (passwords) from being visible in plain text OTP fields during method switching.</li>
+                <li><strong>BSP Circular 1170:</strong> Ensures OTP flow integrity by forcing fresh input for every authentication attempt.</li>
+                <li><strong>UX Standard:</strong> Eliminates user confusion caused by pre-filled stale data.</li>
+            </ul>
+        </div>
+
+        <div id="tasks" class="card">
+            <h2>Task List Status</h2>
+            <ul class="task-list">
+                <li class="task-item"><input type="checkbox" checked disabled> <span class="task-done">Analyze OTP prefill issue in AuthForm.jsx</span></li>
+                <li class="task-item"><input type="checkbox" checked disabled> <span class="task-done">Clear password/OTP field when sending a new code</span></li>
+                <li class="task-item"><input type="checkbox" checked disabled> <span class="task-done">Clear password/OTP field when switching login methods or modes</span></li>
+                <li class="task-item"><input type="checkbox" checked disabled> <span class="task-done">Update documentation to v1.3.3</span></li>
+            </ul>
+        </div>
+    </div>
+</body>
+</html>

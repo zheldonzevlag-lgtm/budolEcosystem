@@ -726,8 +726,8 @@ app.post('/auth/register/quick', async (req, res) => {
         const user = await prisma.user.create({
             data: {
                 phoneNumber: normalizedPhone,
-                firstName: firstName || 'Budol',
-                lastName: 'User',
+                firstName: firstName || normalizedPhone,
+                lastName: firstName ? (req.body.lastName || '') : '',
                 password: hashedPassword,
                 email: `${normalizedPhone}@quick.budolpay.com`, // Temporary email
             }
