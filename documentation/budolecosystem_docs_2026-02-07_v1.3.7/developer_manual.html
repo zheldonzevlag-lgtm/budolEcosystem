@@ -1,0 +1,211 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Developer Manual - v1.3.7</title>
+    <style>
+        :root {
+            --primary: #0052CC;
+            --secondary: #172B4D;
+            --bg: #F4F5F7;
+            --text: #172B4D;
+            --sidebar-width: 280px;
+            --code-bg: #282c34;
+            --code-text: #abb2bf;
+        }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            margin: 0;
+            display: flex;
+            background-color: var(--bg);
+            color: var(--text);
+        }
+        .sidebar {
+            width: var(--sidebar-width);
+            height: 100vh;
+            background: #0747A6;
+            color: white;
+            position: fixed;
+            padding: 20px;
+            box-sizing: border-box;
+            overflow-y: auto;
+        }
+        .sidebar h2 { font-size: 1.2rem; margin-bottom: 20px; border-bottom: 1px solid rgba(255,255,255,0.2); padding-bottom: 10px; }
+        .sidebar ul { list-style: none; padding: 0; }
+        .sidebar li { margin: 10px 0; }
+        .sidebar a { color: #DEEBFF; text-decoration: none; font-size: 0.95rem; display: block; padding: 8px; border-radius: 4px; transition: 0.2s; }
+        .sidebar a:hover { background: rgba(255,255,255,0.1); color: white; }
+        .sidebar .active { background: rgba(255,255,255,0.2); color: white; font-weight: bold; }
+        
+        .main-content {
+            margin-left: var(--sidebar-width);
+            flex: 1;
+            padding: 40px;
+            max-width: 1000px;
+        }
+        .card {
+            background: white;
+            padding: 30px;
+            border-radius: 8px;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.12);
+            margin-bottom: 20px;
+        }
+        h1, h2, h3 { color: var(--secondary); }
+        .code-block {
+            background-color: var(--code-bg);
+            color: var(--code-text);
+            padding: 20px;
+            border-radius: 8px;
+            overflow-x: auto;
+            font-family: 'Courier New', Courier, monospace;
+            margin: 15px 0;
+            white-space: pre;
+            line-height: 1.5;
+        }
+        .file-link {
+            color: var(--primary);
+            text-decoration: none;
+            font-weight: bold;
+            display: inline-block;
+            margin-bottom: 10px;
+        }
+        .file-link:hover { text-decoration: underline; }
+    </style>
+</head>
+<body>
+    <div class="sidebar">
+        <h2>Budol Ecosystem</h2>
+        <ul>
+            <li><a href="index.html">Overview</a></li>
+            <li><a href="comparative_analysis.html">Comparative Analysis</a></li>
+            <li><a href="developer_manual.html" class="active">Developer Manual</a></li>
+            <li><a href="system_admin_manual.html">System Admin Manual</a></li>
+            <li><a href="user_manual.html">User Manual</a></li>
+            <li><a href="risk_register.html">Risk Register</a></li>
+            <li><a href="Mitigation.html">Mitigation Plan</a></li>
+            <li><a href="issues.html">Known Issues</a></li>
+            <li><a href="fixes.html">Resolved Fixes</a></li>
+            <li><a href="test_results.html">Test Results</a></li>
+            <li><a href="future_recommendations.html">Future Recommendations</a></li>
+        </ul>
+    </div>
+
+    <div class="main-content">
+        <div class="card">
+            <h1>Developer Manual: KYC Standards Alignment</h1>
+            <p>This document details the technical implementation of changes in v1.3.7, focusing on aligning the BudolShap KYC process with industry standards (Shopee model).</p>
+
+            <h2>1. Database Schema Updates (Seller Tiers)</h2>
+            <p>To align with the Shopee model, the <code>Store</code> model in <code>budolshap-0.1.0/prisma/schema.prisma</code> has been updated to support differentiated seller types (Individual vs. Business).</p>
+            
+            <div class="code-block">
+// Added SellerType Enum
+enum SellerType {
+  INDIVIDUAL
+  BUSINESS
+}
+
+// Updated Store Model
+model Store {
+  // ... existing fields
+  sellerType         SellerType         @default(INDIVIDUAL)
+  registeredName     String?            // Legal name for business
+  tin                String?            // Tax Identification Number
+  businessRegNumber  String?            // DTI/SEC/BIR registration
+  // ...
+}</div>
+
+            <h2>2. KYC Data Contract</h2>
+            <p>The <code>kycDocuments</code> JSON field in the <code>Store</code> model is now expected to follow a structured format based on the <code>sellerType</code>:</p>
+            
+            <h3>Individual Seller</h3>
+            <div class="code-block">
+{
+  "id_type": "Passport",
+  "id_number": "P1234567A",
+  "id_front_url": "...",
+  "selfie_url": "..."
+}</div>
+
+            <h3>Business Seller</h3>
+            <div class="code-block">
+{
+  "business_type": "Corporation",
+  "dti_sec_url": "...",
+  "bir_2303_url": "...",
+  "representative_id_url": "...",
+  "representative_selfie_url": "..."
+}</div>
+
+            <h2>3. Registration Flow Persistence (OTP Visibility)</h2>
+            <p>To fix the issue where the OTP input was hidden immediately after phone registration (v1.3.6), we introduced <code>justRegisteredRef</code> in the <code>AuthForm</code> component. This ref prevents the auth state from being reset to "login" when the modal closes or re-renders during the registration-to-OTP transition.</p>
+            
+            <div class="code-block">
+// AuthForm.jsx snippet
+const justRegisteredRef = useRef(false);
+
+const handleRegisterSuccess = () => {
+  justRegisteredRef.current = true;
+  setMode('otp'); // Force transition to OTP
+};</div>
+
+            <h2>4. UI Optimization: Navbar Identifier Filtering</h2>
+            <p>To improve user clarity, internal system identifiers (<code>@quick.budolpay.com</code>) are now filtered out of the Navbar dropdown, showing only user-friendly names or phone numbers.</p>
+
+            <h2>5. Universal Shipping Status Mapping</h2>
+            <p>To ensure courier-agnostic shipping status tracking, we updated the <code>statusMapper.js</code> logic to handle both forward and return logistics with universal labels (e.g., "To Pick Up" for returns in PROCESSING state). Corresponding integration tests in <code>integration.test.js</code> were updated to validate these mappings.</p>
+
+            <div class="code-block">
+// statusMapper.js - Universal Label Logic
+export function getStatusLabel(status, isReturn = false) {
+    const labels = {
+        // ...
+        [UNIVERSAL_STATUS.TO_PICKUP]: isReturn ? 'To Pick Up' : 'To Ship',
+        // ...
+    };
+    return labels[status] || status;
+}</div>
+
+            <h2>6. Real-Time OCR Integration (KYC)</h2>
+            <p>To automate data extraction and reduce manual entry errors during the KYC process, we integrated <code>google_mlkit_text_recognition</code>. This allows the system to scan ID cards and business documents in real-time, extracting key fields like ID number, registration date, and legal name for automatic validation against user-provided data.</p>
+
+            <div class="code-block">
+// Conceptual OCR implementation
+import { TextRecognition } from 'google_mlkit_text_recognition';
+
+async function processKYCDocument(imageUri) {
+  const result = await TextRecognition.recognize(imageUri);
+  const extractedData = parseExtractedText(result.text);
+  return extractedData;
+}</div>
+
+            <h2>7. Compliance-First UI: Profile Menu KYC</h2>
+            <p>To ensure maximum visibility and proactive compliance, the Account Verification (KYC) status and submission link have been integrated directly into the <code>Navbar</code> user dropdown. This follows industry standards (Shopee model) where verification status is a core part of the user's primary identity menu.</p>
+
+            <div class="code-block">
+// Navbar.jsx Integration
+{user && (
+  <Link href="/profile/verify" className="flex items-center gap-3 px-4 py-2 hover:bg-slate-50">
+    <ShieldCheck size={18} className={user.isVerified ? "text-green-500" : "text-slate-400"} />
+    <span>{user.isVerified ? "Account Verified" : "Verify Account"}</span>
+  </Link>
+)}</div>
+
+            <h2>8. Code References</h2>
+            <ul>
+                <li><a class="file-link" href="file:///d:/IT Projects/budolEcosystem/budolshap-0.1.0/prisma/schema.prisma">schema.prisma</a>: Updated data model for tiered seller KYC.</li>
+                <li><a class="file-link" href="file:///d:/IT Projects/budolEcosystem/budolshap-0.1.0/components/auth/AuthForm.jsx">AuthForm.jsx</a>: Implementation of <code>justRegisteredRef</code> for OTP continuity.</li>
+                <li><a class="file-link" href="file:///d:/IT Projects/budolEcosystem/budolshap-0.1.0/components/Navbar.jsx">Navbar.jsx</a>: Logic for filtering internal system identifiers in the UI.</li>
+                <li><a class="file-link" href="file:///d:/IT Projects/budolEcosystem/budolshap-0.1.0/lib/shipping/statusMapper.js">statusMapper.js</a>: Universal shipping status mapping logic.</li>
+                <li><a class="file-link" href="file:///d:/IT Projects/budolEcosystem/budolshap-0.1.0/lib/shipping/integration.test.js">integration.test.js</a>: Automated tests for status mapping validation.</li>
+            </ul>
+
+            <div class="nav-links" style="margin-top: 40px; border-top: 1px solid #DFE1E6; padding-top: 20px; display: flex; justify-content: space-between;">
+                <a href="../budolecosystem_docs_2026-02-07_v1.3.6/developer_manual.html">← Previous (v1.3.6)</a>
+                <span>Next (v1.3.8) →</span>
+            </div>
+        </div>
+    </div>
+</body>
+</html>
