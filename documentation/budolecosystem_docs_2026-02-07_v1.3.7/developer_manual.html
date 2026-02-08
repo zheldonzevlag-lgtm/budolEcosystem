@@ -180,31 +180,95 @@ async function processKYCDocument(imageUri) {
   return extractedData;
 }</div>
 
-            <h2>7. Compliance-First UI: Profile Menu KYC</h2>
-            <p>To ensure maximum visibility and proactive compliance, the Account Verification (KYC) status and submission link have been integrated directly into the <code>Navbar</code> user dropdown. This follows industry standards (Shopee model) where verification status is a core part of the user's primary identity menu.</p>
+            <h2>7. Compliance-First UI: Profile & Dashboard Integration</h2>
+            <p>To ensure maximum visibility and proactive compliance, the Account Verification (KYC) status and submission link have been integrated into two key areas: the <code>Navbar</code> user dropdown and the <code>Profile</code> dashboard. This ensures users are constantly aware of their compliance status without having to search through nested settings.</p>
 
+            <h3>Navbar Integration</h3>
+            <p>The <code>Navbar.jsx</code> component now features a dynamic verification status indicator that changes color and icon based on the user's current <code>kycStatus</code>.</p>
             <div class="code-block">
-// Navbar.jsx Integration
+// Navbar.jsx Integration snippet
 {user && (
-  <Link href="/profile/verify" className="flex items-center gap-3 px-4 py-2 hover:bg-slate-50">
-    <ShieldCheck size={18} className={user.isVerified ? "text-green-500" : "text-slate-400"} />
-    <span>{user.isVerified ? "Account Verified" : "Verify Account"}</span>
+  <Link href="/profile/verify" className="flex items-center gap-3 px-4 py-2 hover:bg-slate-50 transition">
+    {user.kycStatus === 'VERIFIED' ? (
+      <ShieldCheck size={18} className="text-green-500" />
+    ) : (
+      <ShieldAlert size={18} className={user.kycStatus === 'PENDING' ? "text-yellow-500" : "text-slate-400"} />
+    )}
+    <span>{user.kycStatus === 'VERIFIED' ? "Account Verified" : "Verify Account"}</span>
   </Link>
 )}</div>
+
+            <h3>Profile Dashboard Enhancement</h3>
+            <p>The Profile UI has been updated to include a "Compliance Shield" component that displays detailed verification progress and pending requirements.</p>
+            <div class="code-block">
+// ProfileDashboard.jsx (Conceptual Integration)
+<div className="bg-white p-6 rounded-lg border border-slate-100 shadow-sm">
+  <div className="flex items-center justify-between">
+    <div className="flex items-center gap-4">
+      <ShieldCheck className={user.kycStatus === 'VERIFIED' ? "text-green-500" : "text-slate-300"} size={32} />
+      <div>
+        <h3 className="font-bold text-slate-800">Identity Verification</h3>
+        <p className="text-sm text-slate-500">
+          {user.kycStatus === 'VERIFIED' ? 'Your account is fully compliant.' : 'Verify your identity to unlock all features.'}
+        </p>
+      </div>
+    </div>
+    <Link href="/profile/verify" className="px-4 py-2 bg-primary text-white rounded-md text-sm font-medium">
+      {user.kycStatus === 'VERIFIED' ? 'View Details' : 'Verify Now'}
+    </Link>
+  </div>
+</div></div>
 
             <h2>8. Code References</h2>
             <ul>
                 <li><a class="file-link" href="file:///d:/IT Projects/budolEcosystem/budolshap-0.1.0/prisma/schema.prisma">schema.prisma</a>: Updated data model for tiered seller KYC.</li>
-                <li><a class="file-link" href="file:///d:/IT Projects/budolEcosystem/budolshap-0.1.0/components/auth/AuthForm.jsx">AuthForm.jsx</a>: Implementation of <code>justRegisteredRef</code> for OTP continuity.</li>
-                <li><a class="file-link" href="file:///d:/IT Projects/budolEcosystem/budolshap-0.1.0/components/Navbar.jsx">Navbar.jsx</a>: Logic for filtering internal system identifiers in the UI.</li>
+                <li><a class="file-link" href="file:///d:/IT Projects/budolEcosystem/budolshap-0.1.0/components/KYCWizard.jsx">KYCWizard.jsx</a>: Multi-step wizard with simulated OCR for document verification.</li>
+                <li><a class="file-link" href="file:///d:/IT Projects/budolEcosystem/budolshap-0.1.0/app/(public)/profile/verify/page.jsx">verify/page.jsx</a>: Verification page hosting the KYC wizard.</li>
+                <li><a class="file-link" href="file:///d:/IT Projects/budolEcosystem/budolshap-0.1.0/app/(public)/profile/page.jsx">profile/page.jsx</a>: Profile dashboard with integrated compliance indicators.</li>
+                <li><a class="file-link" href="file:///d:/IT Projects/budolEcosystem/budolshap-0.1.0/app/api/user/kyc/route.js">api/user/kyc/route.js</a>: Backend API for KYC submission and status retrieval.</li>
+                <li><a class="file-link" href="file:///d:/IT Projects/budolEcosystem/budolshap-0.1.0/components/Navbar.jsx">Navbar.jsx</a>: Integration of KYC status indicators in the user dropdown.</li>
                 <li><a class="file-link" href="file:///d:/IT Projects/budolEcosystem/budolshap-0.1.0/lib/shipping/statusMapper.js">statusMapper.js</a>: Universal shipping status mapping logic.</li>
                 <li><a class="file-link" href="file:///d:/IT Projects/budolEcosystem/budolshap-0.1.0/lib/shipping/integration.test.js">integration.test.js</a>: Automated tests for status mapping validation.</li>
             </ul>
+
+            <div class="code-block">
+const handleComplete = async (tier, details) => {
+  // Logic for submitting KYC data to the backend
+  const response = await fetch('/api/user/kyc', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ tier, details })
+  });
+};
+            </div>
 
             <div class="nav-links" style="margin-top: 40px; border-top: 1px solid #DFE1E6; padding-top: 20px; display: flex; justify-content: space-between;">
                 <a href="../budolecosystem_docs_2026-02-07_v1.3.6/developer_manual.html">← Previous (v1.3.6)</a>
                 <span>Next (v1.3.8) →</span>
             </div>
+        </div>
+
+        <div class="card">
+            <h2>3. Dependencies & Software Rationale (Phase 8)</h2>
+            <p>The following software stack was chosen for the Budol Ecosystem to ensure scalability, security, and rapid development.</p>
+            
+            <h3>Frontend: Next.js 16 (Web) & Flutter (Mobile)</h3>
+            <ul>
+                <li><strong>Next.js:</strong> Chosen for its server-side rendering (SSR) capabilities, which improve SEO and initial load times for the marketplace. The App Router provides a clean, file-based routing system.</li>
+                <li><strong>Flutter:</strong> Enables a single codebase for both iOS and Android, reducing development overhead while maintaining native performance.</li>
+            </ul>
+
+            <h3>Backend & ORM: Node.js & Prisma</h3>
+            <ul>
+                <li><strong>Node.js:</strong> Provides a non-blocking, event-driven architecture suitable for high-concurrency marketplace operations.</li>
+                <li><strong>Prisma:</strong> Selected as the ORM for its type-safe database access and automated migrations, reducing the risk of schema-related runtime errors.</li>
+            </ul>
+
+            <h3>Security & Compliance: NPC/BSP/BIR Alignment</h3>
+            <ul>
+                <li><strong>google_mlkit_text_recognition:</strong> Integrated for real-time OCR to automate document verification, reducing human error and meeting NPC data accuracy requirements.</li>
+                <li><strong>Audit Logging:</strong> Every KYC state change is logged to an immutable audit trail to comply with BSP/BIR regulatory requirements.</li>
+            </ul>
         </div>
     </div>
 </body>
