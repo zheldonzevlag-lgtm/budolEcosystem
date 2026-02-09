@@ -31,6 +31,18 @@ export default async function DashboardPage() {
     include: { sender: true, receiver: true }
   });
 
+  // Get recent transactions for compliance check
+  const unsyncedTransactions = await prisma.transaction.count({
+    where: {
+      status: 'COMPLETED',
+      createdAt: { gte: new Date(Date.now() - 10 * 60 * 1000) } // Last 10 minutes
+    }
+  });
+
+  const birStatus = unsyncedTransactions > 0 ? "SYNCING" : "ACTIVE";
+  const birColor = unsyncedTransactions > 0 ? "text-amber-400" : "text-green-400";
+  const birDot = unsyncedTransactions > 0 ? "bg-amber-400" : "bg-green-400";
+
   const stats = [
     { name: "Total Users", value: userCount, icon: Users, color: "text-blue-500", bg: "bg-blue-50" },
     { name: "Transaction Volume", value: `PHP ${totalBalance.toLocaleString()}`, icon: Wallet, color: "text-[#f43f5e]", bg: "bg-rose-50" },
@@ -141,7 +153,7 @@ export default async function DashboardPage() {
             {[
               { label: "PCI DSS v4.0 Encryption", status: "VERIFIED", color: "text-green-400", sub: "Data-at-rest & in-transit", dot: "bg-green-400" },
               { label: "BSP Transaction Logs", status: "ACTIVE", color: "text-green-400", sub: "Circular No. 808 compliance", dot: "bg-green-400" },
-              { label: "BIR Tax Integration", status: "SYNCING", color: "text-amber-400", sub: "E-invoicing middleware", dot: "bg-amber-400" },
+              { label: "BIR Tax Integration", status: birStatus, color: birColor, sub: "E-invoicing middleware", dot: birDot },
               { label: "NPC Data Privacy", status: "SECURED", color: "text-green-400", sub: "DPA 2012 standards", dot: "bg-green-400" },
             ].map((item) => (
               <div key={item.label} className="p-3 bg-white/[0.03] rounded-xl border border-white/10 hover:border-[#f43f5e]/40 hover:bg-white/[0.05] transition-all group/item">

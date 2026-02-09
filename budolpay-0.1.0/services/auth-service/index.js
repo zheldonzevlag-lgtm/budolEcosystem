@@ -207,10 +207,79 @@ app.get('/debug/db-columns', async (req, res) => {
     }
 });
 
+/**
+ * AI Security Engine - Spam Prevention Module
+ * Analyzes registration patterns to identify high-risk accounts
+ */
+const aiAntiSpamEngine = {
+    score: async (data) => {
+        let riskScore = 0;
+        const { email, firstName, lastName, phoneNumber } = data;
+
+        // Pattern 1: Email Randomness (Spam indicator)
+        const emailLocal = email ? email.split('@')[0] : '';
+        console.log(`[AI Spam Debug] Analyzing: ${emailLocal}`);
+        
+        if (emailLocal && /[0-9]{4,}/.test(emailLocal)) {
+            console.log('[AI Spam Debug] Pattern 1 Match: 4+ consecutive digits (+30)');
+            riskScore += 30; 
+        }
+        
+        const letterCount = (emailLocal.match(/[a-z]/g) || []).length;
+        if (emailLocal && letterCount < 3) {
+            console.log(`[AI Spam Debug] Pattern 1 Match: Low letter count (${letterCount}) (+20)`);
+            riskScore += 20;
+        }
+
+        // Pattern 2: Name Consistency
+        if (firstName && lastName && firstName.toLowerCase() === lastName.toLowerCase()) {
+            console.log('[AI Spam Debug] Pattern 2 Match: Name consistency (+25)');
+            riskScore += 25;
+        }
+        if (firstName && firstName.length < 2) {
+            console.log('[AI Spam Debug] Pattern 2 Match: Short first name (+15)');
+            riskScore += 15;
+        }
+        if (lastName && lastName.length < 2) {
+            console.log('[AI Spam Debug] Pattern 2 Match: Short last name (+15)');
+            riskScore += 15;
+        }
+
+        // Pattern 3: Common Spam Domains (Temporary/Disposable)
+        const disposableDomains = ['tempmail.com', '10minutemail.com', 'guerrillamail.com'];
+        if (email && disposableDomains.some(d => email.endsWith(d))) {
+            console.log('[AI Spam Debug] Pattern 3 Match: Disposable domain (+50)');
+            riskScore += 50;
+        }
+
+        console.log(`[AI Spam Debug] Total Risk Score: ${riskScore}`);
+  
+        return {
+            riskScore,
+            isHighRisk: riskScore >= 70,
+            analysis: riskScore >= 70 ? 'AI detected high-probability spam pattern.' : 'Low risk pattern detected.'
+        };
+    }
+};
+
 // Register (Global User - GoTyme Aligned)
 app.post('/register', async (req, res) => {
     const { email, password, phoneNumber, firstName, lastName, pin, deviceId } = req.body;
     
+    // AI Anti-Spam Check
+    const spamAnalysis = await aiAntiSpamEngine.score({ email, firstName, lastName, phoneNumber });
+    if (spamAnalysis.isHighRisk) {
+        await createAuditLog(req, null, 'SECURITY_SPAM_REGISTRATION_BLOCKED', {
+            email,
+            riskScore: spamAnalysis.riskScore,
+            reason: spamAnalysis.analysis
+        }, 'Security');
+        return res.status(403).json({ 
+            error: 'Registration blocked by security policy.',
+            reason: 'High-risk account pattern detected. Please use a valid personal email.' 
+        });
+    }
+
     // Validation
     if (!phoneNumber) return res.status(400).json({ error: 'Mobile number is required' });
     if (pin && (pin.length !== 6 || isNaN(pin))) {
