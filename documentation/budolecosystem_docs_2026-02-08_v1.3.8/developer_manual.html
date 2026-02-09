@@ -1,0 +1,121 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Developer Manual - v1.3.8</title>
+    <style>
+        :root {
+            --primary: #0052CC;
+            --secondary: #172B4D;
+            --bg: #F4F5F7;
+            --text: #172B4D;
+            --sidebar-width: 280px;
+            --code-bg: #1e1e1e;
+            --code-text: #d4d4d4;
+        }
+        body { font-family: -apple-system, sans-serif; margin: 0; display: flex; background: var(--bg); color: var(--text); }
+        .sidebar { width: var(--sidebar-width); height: 100vh; background: #0747A6; color: white; position: fixed; padding: 20px; box-sizing: border-box; overflow-y: auto; }
+        .sidebar h2 { font-size: 1.2rem; margin-bottom: 20px; border-bottom: 1px solid rgba(255,255,255,0.2); padding-bottom: 10px; }
+        .sidebar ul { list-style: none; padding: 0; }
+        .sidebar li { margin: 10px 0; }
+        .sidebar a { color: #DEEBFF; text-decoration: none; font-size: 0.95rem; display: block; padding: 8px; border-radius: 4px; transition: 0.2s; }
+        .sidebar a:hover { background: rgba(255,255,255,0.1); color: white; }
+        .sidebar .active { background: rgba(255,255,255,0.2); color: white; font-weight: bold; }
+        .main-content { margin-left: var(--sidebar-width); flex: 1; padding: 40px; max-width: 1000px; }
+        .card { background: white; padding: 30px; border-radius: 8px; box-shadow: 0 1px 3px rgba(0,0,0,0.12); margin-bottom: 20px; }
+        pre { background: var(--code-bg); color: var(--code-text); padding: 20px; border-radius: 8px; overflow-x: auto; font-size: 0.9rem; border: 1px solid #333; }
+        code { font-family: "Cascadia Code", "Courier New", monospace; }
+        .code-ref { color: var(--primary); font-weight: bold; text-decoration: none; border-bottom: 1px dashed var(--primary); }
+        .code-ref:hover { background: #E6EFFC; }
+    </style>
+</head>
+<body>
+    <div class="sidebar">
+        <h2>Budol Ecosystem</h2>
+        <ul>
+            <li><a href="index.html">Overview</a></li>
+            <li><a href="developer_manual.html" class="active">Developer Manual</a></li>
+            <li><a href="system_admin_manual.html">System Admin Manual</a></li>
+            <li><a href="user_manual.html">User Manual</a></li>
+            <li><a href="risk_register.html">Risk Register</a></li>
+            <li><a href="Mitigation.html">Mitigation Plan</a></li>
+            <li><a href="issues.html">Known Issues</a></li>
+            <li><a href="fixes.html">Resolved Fixes</a></li>
+            <li><a href="test_results.html">Test Results</a></li>
+            <li><a href="future_recommendations.html">Future Recommendations</a></li>
+        </ul>
+    </div>
+
+    <div class="main-content">
+        <div class="card">
+            <h1>Developer Manual: KYC Wizard Refactor (3-Step Flow)</h1>
+            <p>This manual covers the technical implementation of the 3-step KYC flow and the OCR transparency panel in <a href="file:///d:/IT Projects/budolEcosystem/budolshap-0.1.0/components/KYCWizard.jsx" class="code-ref">KYCWizard.jsx</a>.</p>
+
+            <h2>1. Architecture Overview</h2>
+            <p>The KYC flow has been structured into 3 distinct steps. The internal state <code>step</code> now ranges from 1 to 3.</p>
+            <ul>
+                <li><strong>Step 1</strong>: Tier Selection (Individual, Business, Buyer).</li>
+                <li><strong>Step 2</strong>: Document Upload, Biometric Liveness, and AI Extraction Preview.</li>
+                <li><strong>Step 3</strong>: Final Review and Submission.</li>
+            </ul>
+
+            <h2>2. Step 3: Review & Submit Implementation</h2>
+            <p>Step 3 provides a summary of all data collected in Step 2. It is implemented in the <code>renderStep3</code> function, which displays the selected tier, extracted data, and document previews before final submission.</p>
+
+            <h2>2. OCR Data Contract</h2>
+            <p>The <code>onComplete</code> callback now returns an object containing raw OCR lines for administrative reference.</p>
+            <pre><code>
+{
+  tier: 'INDIVIDUAL',
+  details: {
+    fullName: 'JUAN DELA CRUZ',
+    idNumber: 'N01-23-456789',
+    livenessVerified: true
+  },
+  documents: {
+    idCard: 'data:image/jpeg;base64,...'
+  },
+  capturedPhoto: 'data:image/jpeg;base64,...',
+  ocrLines: [
+    'REPUBLIC OF THE PHILIPPINES',
+    'DRIVER LICENSE',
+    'LICENSE NO. N01-23-456789',
+    'NAME: DELA CRUZ, JUAN'
+  ]
+}
+            </code></pre>
+
+            <h2>3. UI Implementation</h2>
+            <p>The OCR transparency panel is implemented using a conditional render in the <code>renderStep2</code> function. It shows the extraction progress and the raw lines extracted by Tesseract.js.</p>
+            <pre><code>
+// KYCWizard.jsx:L395-L434
+{(isProcessing || details.fullName || details.idNumber || ocrLines.length > 0) && (
+  &lt;div className="p-4 bg-slate-50 rounded-2xl border border-slate-100 space-y-3"&gt;
+    &lt;div className="flex items-center justify-between mb-2"&gt;
+      &lt;div className="flex items-center gap-2"&gt;
+        &lt;ShieldCheck className={isProcessing ? "text-indigo-400 animate-pulse" : "text-indigo-600"} size={18} /&gt;
+        &lt;h4 className="text-sm font-bold text-slate-800 uppercase tracking-wider"&gt;
+          {isProcessing ? 'AI Extraction in Progress...' : 'AI Extraction Results'}
+        &lt;/h4&gt;
+      &lt;/div&gt;
+      {/* ... animation ... */}
+    &lt;/div&gt;
+    {/* ... extracted fields and raw lines ... */}
+  &lt;/div&gt;
+)}
+            </code></pre>
+
+            <h2>4. UI/UX Enhancements</h2>
+            <p>To improve user confidence and data accuracy, several UI enhancements were implemented:</p>
+            <ul>
+                <li><strong>Larger Document Previews</strong>: The preview container in Step 2 was increased from 140px to 280px in height, with the image preview using <code>h-64</code> (256px). This allows users to verify that their ID is clear and readable before processing.</li>
+                <li><strong>Enhanced Review Step</strong>: In Step 3, document icons were increased from <code>w-12</code> to <code>w-20</code> for better visibility during final review.</li>
+            </ul>
+
+            <h2>5. Testing</h2>
+            <p>Unit tests are located in <a href="file:///d:/IT Projects/budolEcosystem/budolshap-0.1.0/components/KYCWizard.test.jsx" class="code-ref">KYCWizard.test.jsx</a>. Use <code>npm test components/KYCWizard.test.jsx</code> to run the tests.</p>
+        </div>
+    </div>
+</body>
+</html>

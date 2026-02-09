@@ -96,25 +96,54 @@
             <h1>Developer Manual: KYC Standards Alignment</h1>
             <p>This document details the technical implementation of changes in v1.3.7, focusing on aligning the BudolShap KYC process with industry standards (Shopee model).</p>
 
-            <h2>1. Database Schema Updates (Seller Tiers)</h2>
-            <p>To align with the Shopee model, the <code>Store</code> model in <code>budolshap-0.1.0/prisma/schema.prisma</code> has been updated to support differentiated seller types (Individual vs. Business).</p>
+            <h2>1. Database Schema Updates (Tiered KYC)</h2>
+            <p>To align with the Shopee model, the <code>User</code> and <code>Store</code> models have been updated to support differentiated verification types (Buyer vs. Individual Seller vs. Business Seller).</p>
             
             <div class="code-block">
-// Added SellerType Enum
-enum SellerType {
+// Added KYCTier Enum
+enum KYCTier {
+  BUYER
   INDIVIDUAL
   BUSINESS
 }
 
-// Updated Store Model
-model Store {
-  // ... existing fields
-  sellerType         SellerType         @default(INDIVIDUAL)
-  registeredName     String?            // Legal name for business
-  tin                String?            // Tax Identification Number
-  businessRegNumber  String?            // DTI/SEC/BIR registration
+// Updated User Model for Buyer KYC
+model User {
   // ...
+  kycStatus     KYCStatus @default(UNVERIFIED)
+  kycTier       KYCTier?
+  kycDetails    Json?     // Audit info: { ip, userAgent, livenessScore }
 }</div>
+
+            <h2>2. Shopee-Style Buyer KYC Flow</h2>
+            <p>Following the ShopeePay model, the <code>KYCWizard</code> now supports a "Standard Buyer" verification flow. This focuses on unlocking financial capabilities within the Budol Ecosystem.</p>
+            <ul>
+                <li><strong>Standard Buyer:</strong> Unlocks ₱100k budolPay limit, bank withdrawals, and P2P transfers. Requires Valid ID + Liveness Check.</li>
+                <li><strong>Biometric Verification:</strong> Integrated a real-time biometric liveness check using the <code>navigator.mediaDevices.getUserMedia</code> API.</li>
+                 <li><strong>Security Requirement:</strong> Access to the camera requires a <strong>Secure Context (HTTPS)</strong>. The application will block biometric capture on insecure connections to protect user data.</li>
+                  <li><strong>Photo Preview:</strong> Upon successful liveness verification, the captured selfie is displayed to the user within a circular preview, overlaid with a verification badge to confirm the session's authenticity.</li>
+                   <li><strong>Real OCR Engine:</strong> Integrated <code>Tesseract.js</code> for client-side Optical Character Recognition.</li>
+                   <li><strong>OCR Accuracy Hardening (Phase 2):</strong>
+                       <ul>
+                           <li><strong>Line-by-Line Interactive Mapping:</strong> Added a UI section in the verification step that displays all raw OCR-extracted lines, allowing users to manually map specific lines to Name, ID, or Business fields via interactive buttons.</li>
+                           <li><strong>Sequence-Based Extraction:</strong> Implemented layout-aware extraction that follows the visual sequence of data on common PH IDs (e.g., Header -> ID Number -> Name for Voter IDs).</li>
+                           <li><strong>Image Pre-processing:</strong> Automated grayscale conversion, ultra-high contrast boosting (2.2x), and 1200px resolution normalization.</li>
+                           <li><strong>Deep Name Refinement:</strong> Implemented heuristic cleanup for trailing OCR artifacts (1-2 character noise) and common PH name misread corrections (e.g., 0/1 to O/I mapping).</li>
+                           <li><strong>PH ID Optimization:</strong> Advanced regex patterns for Voter ID (<code>XXXX-XXXXX-XXXXXXXXX</code>), Driver's Licenses, UMID, and Passport.</li>
+                           <li><strong>Fuzzy Label Matching:</strong> Implemented label detection for "VOTER ID", "LICENSE NO", and "PASSPORT" to find ID numbers even when layout varies.</li>
+                           <li><strong>Noise Filtering:</strong> Expanded blacklist including government departments (DOTr, LTO, BIR) to prevent false-positive name extraction.</li>
+                       </ul>
+                   </li>
+                   <li><strong>Document Storage & Compliance:</strong>
+                       <ul>
+                           <li><strong>Persistence:</strong> Uploaded documents and biometric captures are now saved as base64 in the <code>kycDetails</code> field for audit and manual review.</li>
+                           <li><strong>AMLA/BSP Compliance:</strong> Retention policy set to 5 years (calculated via <code>retentionExpiry</code> in the backend).</li>
+                           <li><strong>NPC Compliance:</strong> Documents are stored solely for verification purposes with encrypted transmission (HTTPS).</li>
+                       </ul>
+                   </li>
+                   <li><strong>Dynamic Input Binding:</strong> Extracted data is automatically bound to the verification form, allowing users to review and correct any misread characters before submission.</li>
+                   <li><strong>Secure Capture:</strong> Frames are processed locally via a hidden canvas before being certified by the AI liveness engine.</li>
+            </ul>
 
             <h2>2. KYC Data Contract</h2>
             <p>The <code>kycDocuments</code> JSON field in the <code>Store</code> model is now expected to follow a structured format based on the <code>sellerType</code>:</p>
@@ -249,25 +278,15 @@ const handleComplete = async (tier, details) => {
         </div>
 
         <div class="card">
-            <h2>3. Dependencies & Software Rationale (Phase 8)</h2>
-            <p>The following software stack was chosen for the Budol Ecosystem to ensure scalability, security, and rapid development.</p>
-            
-            <h3>Frontend: Next.js 16 (Web) & Flutter (Mobile)</h3>
+            <h2>8. Dependencies and Software Rationale</h2>
+            <p>The following software and libraries were chosen for the KYC implementation to ensure compliance, performance, and developer productivity:</p>
             <ul>
-                <li><strong>Next.js:</strong> Chosen for its server-side rendering (SSR) capabilities, which improve SEO and initial load times for the marketplace. The App Router provides a clean, file-based routing system.</li>
-                <li><strong>Flutter:</strong> Enables a single codebase for both iOS and Android, reducing development overhead while maintaining native performance.</li>
-            </ul>
-
-            <h3>Backend & ORM: Node.js & Prisma</h3>
-            <ul>
-                <li><strong>Node.js:</strong> Provides a non-blocking, event-driven architecture suitable for high-concurrency marketplace operations.</li>
-                <li><strong>Prisma:</strong> Selected as the ORM for its type-safe database access and automated migrations, reducing the risk of schema-related runtime errors.</li>
-            </ul>
-
-            <h3>Security & Compliance: NPC/BSP/BIR Alignment</h3>
-            <ul>
-                <li><strong>google_mlkit_text_recognition:</strong> Integrated for real-time OCR to automate document verification, reducing human error and meeting NPC data accuracy requirements.</li>
-                <li><strong>Audit Logging:</strong> Every KYC state change is logged to an immutable audit trail to comply with BSP/BIR regulatory requirements.</li>
+                <li><strong>Next.js (App Router):</strong> Chosen for its server-side rendering (SSR) capabilities which are essential for SEO and initial load performance, as well as its robust API routing for backend logic.</li>
+                <li><strong>Prisma ORM:</strong> Provides type-safe database access, ensuring that KYC data contracts are strictly enforced at the database level.</li>
+                <li><strong>Tailwind CSS:</strong> Allows for rapid UI development with a consistent design system, ensuring that compliance shields and status indicators are visually clear across all devices.</li>
+                <li><strong>Lucide React:</strong> Used for lightweight, consistent iconography (e.g., Shield, CheckCircle, AlertTriangle) to enhance UX during the verification flow.</li>
+                <li><strong>Jest:</strong> Selected as the primary testing framework to validate complex state transitions and audit logging logic, ensuring system reliability before deployment.</li>
+                <li><strong>Google ML Kit (OCR):</strong> Chosen for its on-device processing capabilities, ensuring that sensitive ID information is extracted locally whenever possible to enhance user privacy and reduce server load.</li>
             </ul>
         </div>
     </div>
