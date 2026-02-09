@@ -9,6 +9,7 @@ import {
   AlertCircle,
   Shield
 } from "lucide-react";
+import { getNextAuditDate } from "@/lib/utils";
 
 export default async function DashboardPage() {
   const userCount = await prisma.user.count();
@@ -175,7 +176,7 @@ export default async function DashboardPage() {
                 <div className="w-7 h-7 rounded-full bg-white/5 flex items-center justify-center">
                   <Activity className="w-3.5 h-3.5 text-[#f43f5e]" />
                 </div>
-                <span>Next Audit: Jan 15, 2026</span>
+                <span>Next Audit: {getNextAuditDate()}</span>
               </div>
               <div className="text-[9px] font-black text-green-500 bg-green-500/10 px-2.5 py-1 rounded-full">
                 V3.4.2-SECURE

@@ -86,3 +86,35 @@ export function getManilaDateString(): string {
         day: 'numeric'
     }).format(new Date());
 }
+
+/**
+ * Calculates the next compliance audit date based on semi-annual cycle (Jan 15 / July 15)
+ * Basis: BSP Circular 808 & PCI DSS Quarterly/Annual review standards
+ */
+export function getNextAuditDate(): string {
+    const now = new Date();
+    // Use Asia/Manila for current date calculation
+    const manilaTime = new Date(now.toLocaleString('en-US', { timeZone: 'Asia/Manila' }));
+    const currentYear = manilaTime.getFullYear();
+    
+    // Audit Cycle 1: Jan 15
+    const janAudit = new Date(currentYear, 0, 15);
+    // Audit Cycle 2: July 15
+    const julyAudit = new Date(currentYear, 6, 15);
+    
+    let nextAudit: Date;
+    if (manilaTime < janAudit) {
+        nextAudit = janAudit;
+    } else if (manilaTime < julyAudit) {
+        nextAudit = julyAudit;
+    } else {
+        // Next year's Jan 15
+        nextAudit = new Date(currentYear + 1, 0, 15);
+    }
+    
+    return nextAudit.toLocaleDateString('en-US', {
+        month: 'short',
+        day: 'numeric',
+        year: 'numeric'
+    });
+}
