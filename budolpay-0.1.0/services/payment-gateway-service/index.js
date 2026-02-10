@@ -104,10 +104,61 @@ router.post('/create-intent', async (req, res) => {
       provider = activeProviderSetting ? activeProviderSetting.value : 'internal';
     }
 
+    // 0. Validate amount
+    const parsedAmount = parseFloat(amount);
+    if (isNaN(parsedAmount) || parsedAmount <= 0) {
+      console.error('[PaymentGW] Invalid amount received:', amount);
+      return res.status(400).json({ success: false, message: 'Invalid amount. Must be a positive number.' });
+    }
+
+    // 0.1 Check for existing pending transaction for this order to prevent duplicates
+    if (metadata && metadata.orderId) {
+      // Use a more robust search pattern that accounts for potential spacing in JSON string
+      const orderIdSearch = `"orderId":"${metadata.orderId}"`;
+      const altOrderIdSearch = `"orderId": "${metadata.orderId}"`;
+      
+      const existingPending = await prisma.transaction.findFirst({
+        where: {
+          status: 'PENDING',
+          type: 'MERCHANT_PAYMENT',
+          OR: [
+            { metadata: { contains: orderIdSearch } },
+            { metadata: { contains: altOrderIdSearch } }
+          ]
+        }
+      });
+
+      if (existingPending) {
+        console.log(`[PaymentGW] Found existing pending transaction for order ${metadata.orderId}. Returning existing reference.`);
+        
+        // Return existing transaction details
+        const baseUrl = process.env.BASE_URL || `http://${LOCAL_IP}:${PORT}`;
+        const checkoutUrl = `${baseUrl}/checkout/${existingPending.referenceId}`;
+        
+        return res.status(200).json({
+          success: true,
+          id: existingPending.id,
+          paymentIntentId: existingPending.id,
+          transactionId: existingPending.id,
+          referenceId: existingPending.referenceId,
+          checkoutUrl: checkoutUrl,
+          qrCode: JSON.stringify({
+            type: 'budolpay_payment',
+            orderId: metadata.orderId,
+            amount: existingPending.amount,
+            storeName: metadata.storeName || metadata.app || 'budolShap Store',
+            paymentIntentId: existingPending.id,
+            referenceId: existingPending.referenceId
+          }),
+          activeProvider: provider || 'internal'
+        });
+      }
+    }
+
     // 1. Log the payment intent in our system
     const transaction = await prisma.transaction.create({
       data: {
-        amount: parseFloat(amount),
+        amount: parsedAmount,
         type: 'MERCHANT_PAYMENT',
         status: 'PENDING',
         description: description || `Payment Intent via ${provider}`,
@@ -513,8 +564,19 @@ router.post('/webhooks/:provider', async (req, res) => {
 
     // 1. Identify the transaction and amount
     const referenceId = payload.referenceId || payload.data?.attributes?.reference_number || payload.external_id;
-    const amount = payload.amount || payload.data?.attributes?.amount;
+    let amount = payload.amount || payload.data?.attributes?.amount;
     const status = payload.status || payload.data?.attributes?.status;
+
+    // Validate amount if present
+    if (amount !== undefined) {
+      const parsedAmount = parseFloat(amount);
+      if (isNaN(parsedAmount)) {
+        console.warn(`[Gateway] Received NaN amount in webhook for ${referenceId}. Using 0 as fallback or will use existing transaction amount.`);
+        amount = 0;
+      } else {
+        amount = parsedAmount;
+      }
+    }
 
     if (!referenceId) {
       console.error('[Gateway] Webhook error: Missing referenceId in payload');
