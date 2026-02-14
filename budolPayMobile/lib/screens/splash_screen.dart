@@ -82,8 +82,6 @@ class _SplashScreenState extends State<SplashScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final appVersion = context.watch<ApiService>().appVersion;
-
     return Scaffold(
       backgroundColor: const Color(0xFF0F172A),
       body: Stack(
@@ -118,10 +116,6 @@ class _SplashScreenState extends State<SplashScreen> {
             right: 0,
             child: Column(
               children: [
-                Text(
-                  'v$appVersion',
-                  style: const TextStyle(color: Colors.white10, fontSize: 10),
-                ),
                 if (kDebugMode) ...[
                   const SizedBox(height: 10),
                   Row(

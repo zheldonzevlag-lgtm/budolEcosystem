@@ -626,7 +626,7 @@ class _LoginScreenState extends State<LoginScreen> with WidgetsBindingObserver {
                 ),
               const SizedBox(height: 12),
               Text(
-                '${context.watch<ApiService>().appVersion} - API: ${context.watch<ApiService>().host}',
+                'API: ${context.watch<ApiService>().host}',
                 style: const TextStyle(color: Colors.white24, fontSize: 10),
               ),
             ],
@@ -656,6 +656,11 @@ class _LoginScreenState extends State<LoginScreen> with WidgetsBindingObserver {
           UIUtils.formatBudolPayText(
             'budol₱ay',
             baseStyle: const TextStyle(fontSize: 32, fontWeight: FontWeight.bold),
+          ),
+          const SizedBox(height: 0),
+          Text(
+            context.watch<ApiService>().appVersion,
+            style: const TextStyle(color: Colors.white38, fontSize: 14),
           ),
         ],
       ),

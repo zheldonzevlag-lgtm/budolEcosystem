@@ -554,7 +554,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                 _buildSettingsGroup('About', [
                   _buildSettingsTile(Icons.info, 'Terms & Conditions', '', () {}),
                   _buildSettingsTile(Icons.privacy_tip, 'Privacy Policy', '', () {}),
-                  _buildSettingsTile(Icons.update, 'App Version', apiService.appVersion, null),
+
                 ]),
 
                 // Logout Button

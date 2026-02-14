@@ -139,6 +139,20 @@ class ApiService extends ChangeNotifier {
     return computeBaseUrlFromHost(host);
   }
   
+  dynamic _safeDecode(http.Response response, {String? context}) {
+    final body = response.body.trim();
+    if (body.startsWith('<!DOCTYPE html>') || body.startsWith('<html>')) {
+      if (kDebugMode) print('ApiService: Expected JSON but received HTML at ${response.request?.url} ($context)');
+      throw Exception('Server returned an error page (HTML). Please check if the service is running.');
+    }
+    try {
+      return json.decode(body);
+    } catch (e) {
+      if (kDebugMode) print('ApiService: JSON Decode Error at ${response.request?.url} ($context): $e');
+      throw Exception('Failed to parse server response - Invalid JSON format.');
+    }
+  }
+  
   String get authUrl {
     const overrideAuthUrl = String.fromEnvironment('AUTH_URL', defaultValue: '');
     if (overrideAuthUrl.isNotEmpty) return overrideAuthUrl;
@@ -371,7 +385,7 @@ class ApiService extends ChangeNotifier {
       ).timeout(const Duration(seconds: 5));
 
       if (response.statusCode == 200) {
-        final data = json.decode(response.body);
+        final data = _safeDecode(response, context: 'fetchUserProfile');
         if (data['valid'] == true && data['user'] != null) {
           final newUser = Map<String, dynamic>.from(data['user']);
           
@@ -433,7 +447,7 @@ class ApiService extends ChangeNotifier {
       ));
 
       if (response.statusCode == 200 || response.statusCode == 404) {
-        final decoded = json.decode(response.body);
+        final decoded = _safeDecode(response, context: 'identifyMobile');
         final Map<String, dynamic> data = decoded is Map ? Map<String, dynamic>.from(decoded) : {};
         if (data['user'] != null && data['user'] is Map) {
           user = Map<String, dynamic>.from(data['user'] as Map);
@@ -471,7 +485,7 @@ class ApiService extends ChangeNotifier {
       }),
     ).timeout(const Duration(seconds: 30));
 
-    final decoded = json.decode(response.body);
+    final decoded = _safeDecode(response, context: 'verifyOtp');
     final Map<String, dynamic> data = decoded is Map ? Map<String, dynamic>.from(decoded) : {};
     if (response.statusCode == 200) {
       if (data['user'] != null && data['user'] is Map) {
@@ -521,7 +535,7 @@ class ApiService extends ChangeNotifier {
         responseBody: response.body,
       ));
 
-      final decoded = json.decode(response.body);
+      final decoded = _safeDecode(response, context: 'verifyPin');
       final Map<String, dynamic> data = decoded is Map ? Map<String, dynamic>.from(decoded) : {};
       if (response.statusCode == 200) {
         token = data['token'];
@@ -575,7 +589,7 @@ class ApiService extends ChangeNotifier {
         responseBody: response.body,
       ));
 
-      final decoded = json.decode(response.body);
+      final decoded = _safeDecode(response, context: 'setupPin');
       final Map<String, dynamic> data = decoded is Map ? Map<String, dynamic>.from(decoded) : {};
       if (response.statusCode == 200) {
         token = data['token'];
@@ -638,7 +652,7 @@ class ApiService extends ChangeNotifier {
         responseBody: response.body,
       ));
 
-      final decoded = json.decode(response.body);
+      final decoded = _safeDecode(response, context: 'register');
       final Map<String, dynamic> data = decoded is Map ? Map<String, dynamic>.from(decoded) : {};
       if (response.statusCode == 201) {
         return data;
@@ -689,7 +703,7 @@ class ApiService extends ChangeNotifier {
         responseBody: response.body,
       ));
 
-      final decoded = json.decode(response.body);
+      final decoded = _safeDecode(response, context: 'quickRegister');
       final Map<String, dynamic> data = decoded is Map ? Map<String, dynamic>.from(decoded) : {};
       if (response.statusCode == 201) {
         return data;
@@ -747,7 +761,7 @@ class ApiService extends ChangeNotifier {
         responseBody: response.body,
       ));
 
-      final decoded = json.decode(response.body);
+      final decoded = _safeDecode(response, context: 'updateProfile');
       final Map<String, dynamic> data = decoded is Map ? Map<String, dynamic>.from(decoded) : {};
 
       if (response.statusCode == 200) {
@@ -795,7 +809,7 @@ class ApiService extends ChangeNotifier {
       }),
     ).timeout(const Duration(seconds: 10));
 
-    final decoded = json.decode(response.body);
+    final decoded = _safeDecode(response, context: 'updateMpin');
     final Map<String, dynamic> data = decoded is Map ? Map<String, dynamic>.from(decoded) : {};
 
     if (response.statusCode == 200) {
@@ -813,7 +827,7 @@ class ApiService extends ChangeNotifier {
         Uri.parse(url),
         headers: {'Content-Type': 'application/json'},
       ).timeout(const Duration(seconds: 5));
-      final decoded = json.decode(response.body);
+      final decoded = _safeDecode(response, context: 'checkEmail');
       return decoded is Map ? Map<String, dynamic>.from(decoded) : {};
     } catch (e) {
       if (kDebugMode) print('ApiService: Error checking email: $e');
@@ -829,7 +843,7 @@ class ApiService extends ChangeNotifier {
         Uri.parse(url),
         headers: {'Content-Type': 'application/json'},
       ).timeout(const Duration(seconds: 5));
-      final decoded = json.decode(response.body);
+      final decoded = _safeDecode(response, context: 'checkPhone');
       return decoded is Map ? Map<String, dynamic>.from(decoded) : {};
     } catch (e) {
       if (kDebugMode) print('ApiService: Error checking phone: $e');
@@ -854,7 +868,7 @@ class ApiService extends ChangeNotifier {
       ).timeout(const Duration(seconds: 10));
 
       if (response.statusCode == 200) {
-        return json.decode(response.body) as List<dynamic>;
+        return _safeDecode(response, context: 'getFavorites') as List<dynamic>;
       } else {
         throw Exception('Failed to fetch favorites');
       }
@@ -881,7 +895,7 @@ class ApiService extends ChangeNotifier {
       }),
     ).timeout(const Duration(seconds: 10));
 
-    final decoded = json.decode(response.body);
+    final decoded = _safeDecode(response, context: 'addFavorite');
     if (response.statusCode == 200) {
       return Map<String, dynamic>.from(decoded);
     } else {
@@ -903,7 +917,7 @@ class ApiService extends ChangeNotifier {
     ).timeout(const Duration(seconds: 10));
 
     if (response.statusCode != 200) {
-      final decoded = json.decode(response.body);
+      final decoded = _safeDecode(response, context: 'removeFavorite');
       throw Exception(decoded['error'] ?? 'Failed to remove favorite');
     }
   }
@@ -922,7 +936,7 @@ class ApiService extends ChangeNotifier {
     try {
       final response = await http.get(Uri.parse(url)).timeout(const Duration(seconds: 5));
       if (response.statusCode == 200) {
-        _systemSettings = json.decode(response.body);
+        _systemSettings = _safeDecode(response, context: 'fetchSystemSettings');
         notifyListeners();
       }
     } catch (e) {
@@ -941,7 +955,7 @@ class ApiService extends ChangeNotifier {
     ).timeout(const Duration(seconds: 10));
 
     if (response.statusCode == 200) {
-      final data = json.decode(response.body);
+      final data = _safeDecode(response, context: 'getBalance');
       if (data is Map && data.containsKey('balance')) {
         return (data['balance'] ?? 0.0).toDouble();
       }
@@ -962,7 +976,7 @@ class ApiService extends ChangeNotifier {
     ).timeout(const Duration(seconds: 10));
 
     if (response.statusCode == 200) {
-      return json.decode(response.body);
+      return _safeDecode(response, context: 'getTransactions');
     } else {
       throw Exception('Failed to fetch transactions');
     }
@@ -989,7 +1003,7 @@ class ApiService extends ChangeNotifier {
       }),
     ).timeout(const Duration(seconds: 10));
 
-    final result = json.decode(response.body);
+    final result = _safeDecode(response, context: 'cashIn');
     if (response.statusCode == 200) {
       return result;
     } else {
@@ -1020,7 +1034,7 @@ class ApiService extends ChangeNotifier {
       }),
     ).timeout(const Duration(seconds: 10));
 
-    final result = json.decode(response.body);
+    final result = _safeDecode(response, context: 'transfer');
     if (response.statusCode == 200) {
       return result;
     } else {
@@ -1045,7 +1059,7 @@ class ApiService extends ChangeNotifier {
       }),
     ).timeout(const Duration(seconds: 10));
 
-    final data = json.decode(response.body);
+    final data = _safeDecode(response, context: 'processPayment');
     if (response.statusCode == 200) {
       return data;
     } else {
