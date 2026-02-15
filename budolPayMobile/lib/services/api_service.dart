@@ -58,7 +58,7 @@ class ApiService extends ChangeNotifier {
   Map<String, dynamic>? _systemSettings;
   String? _deviceId;
   bool _hasSeenAds = false;
-  String _appVersion = '1.3.65'; // v1.3.65 - Session Locked UI Fix
+  String _appVersion = '3.1.68'; // v3.1.68 - Stable Release
 
   String get appVersion => _appVersion;
   Future<void>? _initFuture;
@@ -558,6 +558,57 @@ class ApiService extends ChangeNotifier {
       return data;
     } else {
       throw Exception(data['error']?.toString() ?? 'OTP verification failed');
+    }
+  }
+
+  Future<Map<String, dynamic>> resendOtp({
+    required String userId,
+    required String type,
+  }) async {
+    final url = '$authUrl/resend-otp';
+    final body = json.encode({
+      'userId': userId,
+      'type': type,
+    });
+
+    _addLog(ApiLog(
+      type: LogType.request,
+      method: 'POST',
+      url: url,
+      requestBody: body,
+    ));
+
+    try {
+      final response = await http.post(
+        Uri.parse(url),
+        headers: {'Content-Type': 'application/json'},
+        body: body,
+      ).timeout(const Duration(seconds: 30));
+
+      _addLog(ApiLog(
+        type: LogType.response,
+        method: 'POST',
+        url: url,
+        statusCode: response.statusCode,
+        responseBody: response.body,
+      ));
+
+      final decoded = _safeDecode(response, context: 'resendOtp');
+      final Map<String, dynamic> data = decoded is Map ? Map<String, dynamic>.from(decoded) : {};
+      
+      if (response.statusCode == 200) {
+        return data;
+      } else {
+        throw Exception(data['error'] ?? 'Failed to resend OTP');
+      }
+    } catch (e) {
+      _addLog(ApiLog(
+        type: LogType.error,
+        method: 'POST',
+        url: url,
+        error: e.toString(),
+      ));
+      rethrow;
     }
   }
 

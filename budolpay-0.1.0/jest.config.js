@@ -6,6 +6,7 @@ module.exports = {
   },
   testMatch: [
     '<rootDir>/scripts/test_scripts/**/*.test.{ts,js}',
-    '<rootDir>/../scripts/test_scripts/**/*.test.{ts,js}'
+    '<rootDir>/../scripts/test_scripts/**/*.test.{ts,js}',
+    '<rootDir>/services/**/*.test.{ts,js}'
   ],
 };

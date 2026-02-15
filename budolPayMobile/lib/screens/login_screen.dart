@@ -49,6 +49,8 @@ class _LoginScreenState extends State<LoginScreen> with WidgetsBindingObserver {
   bool _checkingIdentifier = false;
   Timer? _debounceTimer;
   bool _obscurePassword = true;
+  Timer? _resendTimer;
+  int _resendCountdown = 0;
 
   // Face Recognition state
   final ImagePicker _picker = ImagePicker();
@@ -81,6 +83,7 @@ class _LoginScreenState extends State<LoginScreen> with WidgetsBindingObserver {
         }
         if (args['initialStep'] == 'OTP') {
           setState(() => _currentStep = LoginStep.otp);
+          _startResendTimer();
         }
       }
     });
@@ -107,7 +110,47 @@ class _LoginScreenState extends State<LoginScreen> with WidgetsBindingObserver {
     _passwordController.dispose();
     _otpController.dispose();
     _pinController.dispose();
+    _resendTimer?.cancel();
     super.dispose();
+  }
+
+  void _startResendTimer() {
+    _resendTimer?.cancel();
+    setState(() => _resendCountdown = 60);
+    _resendTimer = Timer.periodic(const Duration(seconds: 1), (timer) {
+      if (_resendCountdown == 0) {
+        timer.cancel();
+      } else {
+        setState(() => _resendCountdown--);
+      }
+    });
+  }
+
+  Future<void> _handleResendOtp() async {
+    if (_resendCountdown > 0 || _isLoading) return;
+    if (_userId == null) return;
+
+    setState(() => _isLoading = true);
+    try {
+      final args = ModalRoute.of(context)?.settings.arguments as Map?;
+      final String otpType = args?['type'] ?? 'TRUST_DEVICE';
+      
+      await context.read<ApiService>().resendOtp(
+        userId: _userId!,
+        type: otpType,
+      );
+      
+      _startResendTimer();
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('OTP has been resent!'), backgroundColor: Colors.green),
+        );
+      }
+    } catch (e) {
+      _showError(e.toString());
+    } finally {
+      if (mounted) setState(() => _isLoading = false);
+    }
   }
 
   @override
@@ -279,6 +322,7 @@ class _LoginScreenState extends State<LoginScreen> with WidgetsBindingObserver {
           _userId = userId;
           _currentStep = LoginStep.otp;
         });
+        _startResendTimer();
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
             const SnackBar(content: Text('New device detected. Please verify OTP.')),
@@ -910,6 +954,24 @@ class _LoginScreenState extends State<LoginScreen> with WidgetsBindingObserver {
               _handleVerifyOtp();
             }
           },
+        ),
+        const SizedBox(height: 12),
+        Row(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            const Text('Didn\'t receive the code?', style: TextStyle(color: Colors.white54, fontSize: 14)),
+            TextButton(
+              onPressed: _resendCountdown > 0 ? null : _handleResendOtp,
+              child: Text(
+                _resendCountdown > 0 ? 'Resend in ${_resendCountdown}s' : 'Resend Now',
+                style: TextStyle(
+                  color: _resendCountdown > 0 ? Colors.white24 : const Color(0xFFF43F5E),
+                  fontWeight: FontWeight.bold,
+                  fontSize: 14,
+                ),
+              ),
+            ),
+          ],
         ),
         const SizedBox(height: 24),
         _buildButton('Verify OTP', _handleVerifyOtp),

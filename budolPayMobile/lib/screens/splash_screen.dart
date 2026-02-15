@@ -116,6 +116,14 @@ class _SplashScreenState extends State<SplashScreen> {
             right: 0,
             child: Column(
               children: [
+                Text(
+                  'budolPay v${context.read<ApiService>().appVersion}',
+                  style: const TextStyle(
+                    color: Colors.white24,
+                    fontSize: 10,
+                    letterSpacing: 1.0,
+                  ),
+                ),
                 if (kDebugMode) ...[
                   const SizedBox(height: 10),
                   Row(

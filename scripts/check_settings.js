@@ -1,14 +1,22 @@
-const { prisma } = require('../budolpay-0.1.0/packages/database');
+const { PrismaClient } = require('@prisma/client');
+const prisma = new PrismaClient();
 
-async function checkSettings() {
-  try {
-    const settings = await prisma.systemSetting.findMany();
-    console.log('System Settings:', JSON.stringify(settings, null, 2));
-  } catch (err) {
-    console.error('Error fetching settings:', err);
-  } finally {
-    await prisma.$disconnect();
-  }
+async function main() {
+    try {
+        const settings = await prisma.systemSettings.findUnique({
+            where: { id: 'default' }
+        });
+        console.log('--- SYSTEM SETTINGS ---');
+        console.log(JSON.stringify(settings, null, 2));
+        
+        const users = await prisma.user.count();
+        console.log('--- USER COUNT ---');
+        console.log(users);
+    } catch (e) {
+        console.error('Error fetching settings:', e);
+    } finally {
+        await prisma.$disconnect();
+    }
 }
 
-checkSettings();
+main();

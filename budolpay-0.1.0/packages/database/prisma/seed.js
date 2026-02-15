@@ -62,6 +62,26 @@ async function main() {
       value: 'example_id',
       group: 'PAYMENT',
     },
+    {
+      key: 'emailProvider',
+      value: 'GOOGLE',
+      group: 'NOTIFICATION',
+    },
+    {
+      key: 'smsProvider',
+      value: 'CONSOLE',
+      group: 'NOTIFICATION',
+    },
+    {
+      key: 'smtpHost',
+      value: 'smtp.gmail.com',
+      group: 'NOTIFICATION',
+    },
+    {
+      key: 'smtpPort',
+      value: '587',
+      group: 'NOTIFICATION',
+    },
   ];
 
   for (const setting of initialSettings) {
