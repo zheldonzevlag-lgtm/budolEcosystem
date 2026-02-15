@@ -1,0 +1,140 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Developer Manual - Forensic Audit Trails Implementation</title>
+    <style>
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; line-height: 1.6; color: #333; max-width: 1200px; margin: 0 auto; padding: 20px; }
+        h1, h2, h3 { color: #0056b3; }
+        .section { margin-bottom: 30px; border: 1px solid #ddd; padding: 20px; border-radius: 8px; background-color: #f9f9f9; }
+        code { background-color: #eef; padding: 2px 5px; border-radius: 4px; font-family: Consolas, monospace; }
+        pre { background-color: #2d2d2d; color: #f8f8f2; padding: 15px; border-radius: 8px; overflow-x: auto; }
+        .code-link { color: #0056b3; text-decoration: none; border-bottom: 1px dashed #0056b3; }
+        .code-link:hover { text-decoration: underline; }
+        .risk-high { color: #d9534f; font-weight: bold; }
+        .risk-medium { color: #f0ad4e; font-weight: bold; }
+        table { width: 100%; border-collapse: collapse; margin: 20px 0; }
+        th, td { border: 1px solid #ddd; padding: 10px; text-align: left; }
+        th { background-color: #0056b3; color: white; }
+    </style>
+</head>
+<body>
+    <h1>Budol Ecosystem - Forensic Audit Trails Implementation Plan (v1.0)</h1>
+    <p><strong>Date:</strong> 2026-02-15</p>
+    <p><strong>Author:</strong> Budol Ecosystem Master Orchestrator AI</p>
+
+    <div class="section">
+        <h2>1. Purpose & Rationale</h2>
+        <p>
+            To comply with PCI DSS, BSP, and Cybersecurity laws, and to proactively defend against threats such as DDoS, Spam, Malware, and Unauthorized Access, 
+            a comprehensive <strong>Forensic Audit Trail System</strong> has been implemented. This system logs all critical events, not just login/logout, 
+            enabling detailed forensic analysis and real-time threat monitoring.
+        </p>
+    </div>
+
+    <div class="section">
+        <h2>2. Technical Implementation</h2>
+        
+        <h3>2.1 Database Schema Changes</h3>
+        <p>The <code>AuditLog</code> model in Prisma was enhanced to support detailed forensic data.</p>
+        <pre><code>model AuditLog {
+  id        String   @id @default(cuid())
+  userId    String?  // Made optional for anonymous events (e.g. failed login)
+  action    String
+  entity    String?  // Target entity (Order, Product, System)
+  entityId  String?  // ID of the target entity
+  details   String?  // Human readable description
+  status    String   @default("SUCCESS") // SUCCESS, FAILURE, WARNING
+  ipAddress String?
+  // ... geolocation fields ...
+  metadata  Json?
+  createdAt DateTime @default(now())
+  user      User?    @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([createdAt])
+  @@index([action])
+  @@index([entity])
+  @@index([ipAddress])
+}</code></pre>
+        <p>Code Reference: <a href="file:///d:/IT Projects/budolEcosystem/budolshap-0.1.0/prisma/schema.prisma" class="code-link">prisma/schema.prisma</a></p>
+
+        <h3>2.2 API Enhancements</h3>
+        <p>The Admin Audit Log API was upgraded to support advanced filtering (Action, Entity, Status, Date Range, Search).</p>
+        <p>Code Reference: <a href="file:///d:/IT Projects/budolEcosystem/budolshap-0.1.0/app/api/admin/audit-logs/route.js" class="code-link">app/api/admin/audit-logs/route.js</a></p>
+
+        <h3>2.3 User Interface</h3>
+        <p>A new "Forensic Audit Trails" page was added to the Admin Settings. It provides real-time monitoring and deep search capabilities.</p>
+        <p>Code Reference: <a href="file:///d:/IT Projects/budolEcosystem/budolshap-0.1.0/app/admin/settings/forensic-audit-trails/page.jsx" class="code-link">app/admin/settings/forensic-audit-trails/page.jsx</a></p>
+
+        <h3>2.4 Security Compliance Dashboard</h3>
+        <p>A real-time security dashboard has been integrated above the audit trails. It displays:</p>
+        <ul>
+            <li><strong>Compliance Hardening:</strong> Status of AI Spam Guard, Encryption, RBAC, SSL, and IDS.</li>
+            <li><strong>Threat Mitigation Trend:</strong> 7-day visualization of blocked threats vs. actual threats.</li>
+            <li><strong>Vulnerability Scan:</strong> Latest system integrity status.</li>
+            <li><strong>AI Analyst Findings:</strong> Generative insights based on recent log activity.</li>
+        </ul>
+        <p>Code Reference: <a href="file:///d:/IT Projects/budolEcosystem/budolshap-0.1.0/components/admin/SecurityComplianceDashboard.jsx" class="code-link">components/admin/SecurityComplianceDashboard.jsx</a></p>
+        <p>API Reference: <a href="file:///d:/IT Projects/budolEcosystem/budolshap-0.1.0/app/api/admin/security-dashboard/route.js" class="code-link">app/api/admin/security-dashboard/route.js</a></p>
+    </div>
+
+    <div class="section">
+        <h2>3. Security Controls & Threat Mitigation</h2>
+        <table>
+            <tr>
+                <th>Threat</th>
+                <th>Detection Mechanism</th>
+                <th>Mitigation</th>
+            </tr>
+            <tr>
+                <td><strong>DDoS / Brute Force</strong></td>
+                <td>Monitoring high velocity of logs with same IP/Action (e.g. <code>LOGIN_FAILED</code>).</td>
+                <td>Rate limiting triggers (already implemented), IP blocking (future).</td>
+            </tr>
+            <tr>
+                <td><strong>Spam Account Creation</strong></td>
+                <td>Honeypot field hits logged as <code>SPAM_ATTEMPT</code>.</td>
+                <td>Immediate rejection (400 Bad Request) and logging for analysis.</td>
+            </tr>
+            <tr>
+                <td><strong>Unauthorized Access</strong></td>
+                <td>Logs with <code>status: FAILURE</code> on sensitive actions.</td>
+                <td>Alerts to admins via Realtime dashboard.</td>
+            </tr>
+            <tr>
+                <td><strong>Malware / File Uploads</strong></td>
+                <td>File upload events logged with file metadata.</td>
+                <td>Audit trail links to file scan results (future integration).</td>
+            </tr>
+        </table>
+    </div>
+
+    <div class="section">
+        <h2>4. Future Enhancements</h2>
+        <ul>
+            <li><strong>AI Anomaly Detection:</strong> Automatically flag unusual patterns in the audit logs.</li>
+            <li><strong>Automated Blocking:</strong> Integrate with firewall/WAF to block IPs with high failure rates.</li>
+            <li><strong>Export to SIEM:</strong> Forward logs to external SIEM tools for enterprise compliance.</li>
+        </ul>
+    </div>
+
+    <div class="section">
+        <h2>5. Compliance Verification</h2>
+        <p>This implementation satisfies:</p>
+        <ul>
+            <li><strong>PCI DSS Requirement 10:</strong> Track and monitor all access to network resources and cardholder data.</li>
+            <li><strong>Data Privacy Act (DPA):</strong> Accountability and security of personal data processing.</li>
+        </ul>
+    </div>
+
+    <div class="section">
+        <h2>6. Links</h2>
+        <ul>
+            <li><a href="index.html">Documentation Index</a></li>
+            <li><a href="risk_register.html">Risk Register</a></li>
+        </ul>
+    </div>
+</body>
+</html>
