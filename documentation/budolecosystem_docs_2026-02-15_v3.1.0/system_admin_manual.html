@@ -1,0 +1,65 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Budol Ecosystem v3.1.0 - System Admin Manual</title>
+    <style>
+        body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; line-height: 1.6; color: #172b4d; margin: 0; display: flex; }
+        .sidebar { width: 260px; height: 100vh; background: #f4f5f7; border-right: 1px solid #dfe1e6; position: fixed; padding: 20px; box-sizing: border-box; }
+        .main-content { margin-left: 260px; padding: 40px; max-width: 900px; }
+        header { margin-bottom: 32px; border-bottom: 1px solid #dfe1e6; padding-bottom: 24px; }
+        .admin-section { margin-bottom: 32px; padding: 20px; border: 1px solid #dfe1e6; border-radius: 8px; background: #fff; }
+        .admin-section h3 { margin-top: 0; color: #0052cc; }
+        pre { background: #091E42; color: #FFFFFF; padding: 16px; border-radius: 4px; overflow-x: auto; }
+        .nav-links { margin-top: 20px; }
+        .nav-links a { display: block; padding: 8px 12px; color: #42526e; text-decoration: none; border-radius: 4px; }
+        .nav-links a:hover { background: #ebecf0; }
+        .nav-links a.active { background: #deebff; color: #0052cc; font-weight: 600; }
+    </style>
+</head>
+<body>
+    <div class="sidebar">
+        <h2>v3.1.0 Admin Manual</h2>
+        <nav class="nav-links">
+            <a href="index.html">Dashboard</a>
+            <a href="system_admin_manual.html" class="active">Admin Manual</a>
+            <a href="developer_manual.html">Developer Manual</a>
+            <hr>
+            <a href="../knowledgebase.html">Back to Knowledgebase</a>
+        </nav>
+    </div>
+    <div class="main-content">
+        <header>
+            <h1>System Administrator Manual</h1>
+            <p>Operational guide for managing the login systems and backend integration for v3.1.0.</p>
+        </header>
+
+        <div class="admin-section">
+            <h3>1. Backend Configuration</h3>
+            <p>Ensure the auth service is updated to support the <code>/login</code> endpoint for email/password authentication. The mobile app now directs email login requests to this unified endpoint.</p>
+            <p><strong>Environment Variables:</strong></p>
+            <ul>
+                <li><code>AUTH_SERVICE_URL</code>: Must point to the production authentication microservice.</li>
+                <li><code>DB_CONNECTION</code>: Ensure the users table has indices on both <code>email</code> and <code>phone_number</code> for performant identifier lookups.</li>
+            </ul>
+        </div>
+
+        <div class="admin-section">
+            <h3>2. Monitoring Login Failures</h3>
+            <p>Monitor logs for high rates of 401 (Unauthorized) or 404 (Not Found) responses on the <code>/auth/login</code> route. This may indicate a brute-force attempt or a sync issue between the mobile and web databases.</p>
+            <pre><code># Example log query (Kibana/CloudWatch)
+status: 401 AND path: "/auth/login"</code></pre>
+        </div>
+
+        <div class="admin-section">
+            <h3>3. Security Auditing</h3>
+            <p>In accordance with <strong>PCI DSS</strong> and <strong>BSP</strong> requirements, all password transmissions must be logged without the actual credential values. Verify that the <code>api_service.dart</code> logging implementation masks sensitive data or only logs request metadata.</p>
+        </div>
+
+        <div class="admin-section">
+            <h3>4. Troubleshooting Session Issues</h3>
+            <p>If users report being logged out unexpectedly when switching login methods, verify the <code>FlutterSecureStorage</code> implementation. The session token should be stored consistently regardless of the login method used.</p>
+        </div>
+    </div>
+</body>
+</html>

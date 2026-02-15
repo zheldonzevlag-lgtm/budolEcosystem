@@ -14,6 +14,7 @@ import '../constants/routes.dart';
 import '../utils/ui_utils.dart';
 
 enum LoginStep { phone, otp, pin, pinSetup }
+enum LoginMethod { mobile, email }
 
 class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key});
@@ -24,10 +25,13 @@ class LoginScreen extends StatefulWidget {
 
 class _LoginScreenState extends State<LoginScreen> with WidgetsBindingObserver {
   final _phoneController = TextEditingController();
+  final _emailController = TextEditingController();
+  final _passwordController = TextEditingController();
   final _otpController = TextEditingController();
   final _pinController = TextEditingController();
   
   LoginStep _currentStep = LoginStep.phone;
+  LoginMethod _loginMethod = LoginMethod.mobile;
   bool _isLoading = false;
   String? _userId;
   bool _isBiometricAvailable = false;
@@ -35,11 +39,16 @@ class _LoginScreenState extends State<LoginScreen> with WidgetsBindingObserver {
   bool _hasFaceTemplate = false;
   List<BiometricType> _availableBiometricTypes = [];
   bool _isPhoneValid = false;
+  bool _isEmailValid = false;
+  bool _isPasswordValid = false;
   String? _phoneError;
+  String? _emailError;
+  String? _passwordError;
   bool _hasAutoPrompted = false;
   bool _identifierExists = true; // Default to true for login
   bool _checkingIdentifier = false;
   Timer? _debounceTimer;
+  bool _obscurePassword = true;
 
   // Face Recognition state
   final ImagePicker _picker = ImagePicker();
@@ -51,6 +60,13 @@ class _LoginScreenState extends State<LoginScreen> with WidgetsBindingObserver {
     _checkBiometrics();
     
     _phoneController.addListener(_onIdentifierChanged);
+    _emailController.addListener(_onIdentifierChanged);
+    _passwordController.addListener(() {
+      setState(() {
+        _isPasswordValid = _passwordController.text.length >= 6;
+        _passwordError = null;
+      });
+    });
 
     // Handle initial state from arguments (e.g., coming from Registration)
     WidgetsBinding.instance.addPostFrameCallback((_) {
@@ -85,7 +101,10 @@ class _LoginScreenState extends State<LoginScreen> with WidgetsBindingObserver {
   void dispose() {
     WidgetsBinding.instance.removeObserver(this);
     _phoneController.removeListener(_onIdentifierChanged);
+    _emailController.removeListener(_onIdentifierChanged);
     _phoneController.dispose();
+    _emailController.dispose();
+    _passwordController.dispose();
     _otpController.dispose();
     _pinController.dispose();
     super.dispose();
@@ -217,13 +236,28 @@ class _LoginScreenState extends State<LoginScreen> with WidgetsBindingObserver {
   }
 
   Future<void> _handleIdentify() async {
-    final phone = _phoneController.text.trim();
-    if (phone.isEmpty) return;
+    final identifier = _loginMethod == LoginMethod.email 
+        ? _emailController.text.trim() 
+        : _phoneController.text.trim();
+    final password = _passwordController.text;
+
+    if (identifier.isEmpty) return;
+    if (_loginMethod == LoginMethod.email && password.isEmpty) {
+      setState(() => _passwordError = 'Password is required');
+      return;
+    }
 
     setState(() => _isLoading = true);
     try {
       final apiService = context.read<ApiService>();
-      final result = await apiService.identifyMobile(phone);
+      Map<String, dynamic> result;
+      
+      if (_loginMethod == LoginMethod.email) {
+        result = await apiService.identifyEmail(identifier, password);
+      } else {
+        result = await apiService.identifyMobile(identifier);
+      }
+
       if (!mounted) return;
       
       final String? error = result['error']?.toString();
@@ -236,7 +270,9 @@ class _LoginScreenState extends State<LoginScreen> with WidgetsBindingObserver {
 
       if (error != null && error.contains('not found')) {
         if (mounted) {
-          Navigator.pushNamed(context, Routes.registration, arguments: {'phoneNumber': phone});
+          Navigator.pushNamed(context, Routes.registration, arguments: {
+            _loginMethod == LoginMethod.email ? 'email' : 'phoneNumber': identifier
+          });
         }
       } else if (status == 'OTP_REQUIRED') {
         setState(() {
@@ -248,7 +284,12 @@ class _LoginScreenState extends State<LoginScreen> with WidgetsBindingObserver {
             const SnackBar(content: Text('New device detected. Please verify OTP.')),
           );
         }
-      } else if (status == 'AUTH_REQUIRED') {
+      } else if (status == 'AUTH_REQUIRED' || status == 'SUCCESS') {
+        // For email login, if status is SUCCESS, it means token is already received
+        if (_loginMethod == LoginMethod.email && apiService.token != null) {
+          Navigator.pushReplacementNamed(context, Routes.home);
+          return;
+        }
         setState(() {
           _userId = userId;
           _currentStep = LoginStep.pin;
@@ -261,7 +302,7 @@ class _LoginScreenState extends State<LoginScreen> with WidgetsBindingObserver {
         });
         _checkBiometrics();
       } else {
-        throw Exception('Unable to start login. Missing user identifier from server response.');
+        throw Exception(error ?? 'Unable to start login. Missing user identifier from server response.');
       }
     } catch (e) {
       _showError(e.toString());
@@ -394,7 +435,10 @@ class _LoginScreenState extends State<LoginScreen> with WidgetsBindingObserver {
   void _onIdentifierChanged() {
     if (_debounceTimer?.isActive ?? false) _debounceTimer!.cancel();
     _debounceTimer = Timer(const Duration(milliseconds: 800), () {
-      _checkIdentifier(_phoneController.text);
+      final identifier = _loginMethod == LoginMethod.email 
+          ? _emailController.text 
+          : _phoneController.text;
+      _checkIdentifier(identifier);
     });
   }
 
@@ -404,7 +448,11 @@ class _LoginScreenState extends State<LoginScreen> with WidgetsBindingObserver {
       setState(() {
         _identifierExists = true;
         _checkingIdentifier = false;
-        _phoneError = null;
+        if (_loginMethod == LoginMethod.email) {
+          _emailError = null;
+        } else {
+          _phoneError = null;
+        }
       });
       return;
     }
@@ -414,7 +462,7 @@ class _LoginScreenState extends State<LoginScreen> with WidgetsBindingObserver {
       final apiService = context.read<ApiService>();
       bool exists = false;
       
-      if (trimmed.contains('@')) {
+      if (_loginMethod == LoginMethod.email) {
         final result = await apiService.checkEmail(trimmed);
         exists = result['exists'] ?? false;
       } else {
@@ -427,11 +475,20 @@ class _LoginScreenState extends State<LoginScreen> with WidgetsBindingObserver {
           _identifierExists = exists;
           _checkingIdentifier = false;
           if (!exists) {
-            _phoneError = 'Account not found in ecosystem';
-            _isPhoneValid = false;
+            if (_loginMethod == LoginMethod.email) {
+              _emailError = 'Account not found';
+              _isEmailValid = false;
+            } else {
+              _phoneError = 'Account not found';
+              _isPhoneValid = false;
+            }
           } else {
-            _phoneError = null;
-            // Re-validate format to set _isPhoneValid
+            if (_loginMethod == LoginMethod.email) {
+              _emailError = null;
+            } else {
+              _phoneError = null;
+            }
+            // Re-validate format to set _isPhoneValid / _isEmailValid
             _validateIdentifier(trimmed);
           }
         });
@@ -445,13 +502,18 @@ class _LoginScreenState extends State<LoginScreen> with WidgetsBindingObserver {
     final trimmed = value.trim();
     setState(() {
       if (trimmed.isEmpty) {
-        _isPhoneValid = false;
-        _phoneError = null;
-      } else if (trimmed.contains('@')) {
+        if (_loginMethod == LoginMethod.email) {
+          _isEmailValid = false;
+          _emailError = null;
+        } else {
+          _isPhoneValid = false;
+          _phoneError = null;
+        }
+      } else if (_loginMethod == LoginMethod.email) {
         // Simple email validation
         final emailRegex = RegExp(r'^[\w-\.]+@([\w-]+\.)+[\w-]{2,4}$');
-        _isPhoneValid = emailRegex.hasMatch(trimmed);
-        _phoneError = _isPhoneValid ? null : 'Invalid email format';
+        _isEmailValid = emailRegex.hasMatch(trimmed);
+        _emailError = _isEmailValid ? null : 'Invalid email format';
       } else {
         // Phone validation
         final digits = trimmed.replaceAll(RegExp(r'\D'), '');
@@ -668,31 +730,165 @@ class _LoginScreenState extends State<LoginScreen> with WidgetsBindingObserver {
   }
 
   Widget _buildPhoneStep() {
+    final bool isEmail = _loginMethod == LoginMethod.email;
+    final bool isContinueEnabled = isEmail 
+        ? (_isEmailValid && _isPasswordValid && _identifierExists)
+        : (_isPhoneValid && _identifierExists);
+
     return Column(
       children: [
         const Text('Login to continue', 
           style: TextStyle(color: Colors.white70)),
         const SizedBox(height: 24),
-        TextField(
-          controller: _phoneController,
-          keyboardType: TextInputType.emailAddress,
-          style: const TextStyle(color: Colors.white),
-          onChanged: _validateIdentifier,
-          decoration: _inputDecoration(
-            'Mobile or Email', 
-            Icons.phone_android, 
-            iconColor: Colors.indigoAccent,
-            suffixIcon: _checkingIdentifier 
-              ? const SizedBox(width: 20, height: 20, child: Padding(padding: EdgeInsets.all(12), child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white70)))
-              : !_identifierExists 
-                ? const Icon(Icons.error_outline, color: Colors.redAccent)
-                : _isPhoneValid ? const Icon(Icons.check_circle_outline, color: Colors.greenAccent) : null,
-            errorText: _phoneError,
-          ),
-        ),
+        _buildMethodToggle(),
         const SizedBox(height: 24),
-        _buildButton('Continue', _handleIdentify, isEnabled: _isPhoneValid),
+        if (!isEmail)
+          TextField(
+            controller: _phoneController,
+            keyboardType: TextInputType.phone,
+            style: const TextStyle(color: Colors.white),
+            decoration: _inputDecoration(
+              'Mobile Number', 
+              Icons.phone_android, 
+              iconColor: const Color(0xFFF43F5E),
+              suffixIcon: _checkingIdentifier 
+                ? const SizedBox(width: 20, height: 20, child: Padding(padding: EdgeInsets.all(12), child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white70)))
+                : !_identifierExists 
+                  ? const Icon(Icons.error_outline, color: Colors.redAccent)
+                  : _isPhoneValid ? const Icon(Icons.check_circle_outline, color: Colors.greenAccent) : null,
+              errorText: _phoneError,
+            ),
+          ),
+        if (isEmail) ...[
+          TextField(
+            controller: _emailController,
+            keyboardType: TextInputType.emailAddress,
+            style: const TextStyle(color: Colors.white),
+            decoration: _inputDecoration(
+              'Email Address', 
+              Icons.email_outlined, 
+              iconColor: const Color(0xFFF43F5E),
+              suffixIcon: _checkingIdentifier 
+                ? const SizedBox(width: 20, height: 20, child: Padding(padding: EdgeInsets.all(12), child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white70)))
+                : !_identifierExists 
+                  ? const Icon(Icons.error_outline, color: Colors.redAccent)
+                  : _isEmailValid ? const Icon(Icons.check_circle_outline, color: Colors.greenAccent) : null,
+              errorText: _emailError,
+            ),
+          ),
+          const SizedBox(height: 16),
+          TextField(
+            controller: _passwordController,
+            obscureText: _obscurePassword,
+            style: const TextStyle(color: Colors.white),
+            decoration: _inputDecoration(
+              'Password', 
+              Icons.lock_outline,
+              iconColor: const Color(0xFFF43F5E),
+              suffixIcon: IconButton(
+                icon: Icon(
+                  _obscurePassword ? Icons.visibility_off : Icons.visibility,
+                  color: Colors.white38,
+                ),
+                onPressed: () => setState(() => _obscurePassword = !_obscurePassword),
+              ),
+              errorText: _passwordError,
+            ),
+          ),
+        ],
+        const SizedBox(height: 24),
+        _buildButton(isEmail ? 'Login' : 'Continue', _handleIdentify, isEnabled: isContinueEnabled),
       ],
+    );
+  }
+
+  Widget _buildMethodToggle() {
+    return Container(
+      padding: const EdgeInsets.all(4),
+      decoration: BoxDecoration(
+        color: Colors.white.withValues(alpha: 0.05),
+        borderRadius: BorderRadius.circular(12),
+      ),
+      child: Row(
+        children: [
+          Expanded(
+            child: GestureDetector(
+              onTap: () {
+                if (_loginMethod != LoginMethod.mobile) {
+                  setState(() {
+                    _loginMethod = LoginMethod.mobile;
+                    _phoneController.clear();
+                    _emailController.clear();
+                    _passwordController.clear();
+                    _phoneError = null;
+                    _emailError = null;
+                    _passwordError = null;
+                    _isPhoneValid = false;
+                    _isEmailValid = false;
+                    _isPasswordValid = false;
+                  });
+                }
+              },
+              child: Container(
+                padding: const EdgeInsets.symmetric(vertical: 12),
+                decoration: BoxDecoration(
+                  color: _loginMethod == LoginMethod.mobile 
+                    ? const Color(0xFFF43F5E) 
+                    : Colors.transparent,
+                  borderRadius: BorderRadius.circular(10),
+                ),
+                child: Center(
+                  child: Text(
+                    'Mobile',
+                    style: TextStyle(
+                      color: _loginMethod == LoginMethod.mobile ? Colors.white : Colors.white70,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                ),
+              ),
+            ),
+          ),
+          Expanded(
+            child: GestureDetector(
+              onTap: () {
+                if (_loginMethod != LoginMethod.email) {
+                  setState(() {
+                    _loginMethod = LoginMethod.email;
+                    _phoneController.clear();
+                    _emailController.clear();
+                    _passwordController.clear();
+                    _phoneError = null;
+                    _emailError = null;
+                    _passwordError = null;
+                    _isPhoneValid = false;
+                    _isEmailValid = false;
+                    _isPasswordValid = false;
+                  });
+                }
+              },
+              child: Container(
+                padding: const EdgeInsets.symmetric(vertical: 12),
+                decoration: BoxDecoration(
+                  color: _loginMethod == LoginMethod.email 
+                    ? const Color(0xFFF43F5E) 
+                    : Colors.transparent,
+                  borderRadius: BorderRadius.circular(10),
+                ),
+                child: Center(
+                  child: Text(
+                    'Email',
+                    style: TextStyle(
+                      color: _loginMethod == LoginMethod.email ? Colors.white : Colors.white70,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                ),
+              ),
+            ),
+          ),
+        ],
+      ),
     );
   }
 

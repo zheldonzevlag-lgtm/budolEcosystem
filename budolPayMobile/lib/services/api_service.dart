@@ -468,6 +468,65 @@ class ApiService extends ChangeNotifier {
     }
   }
 
+  Future<Map<String, dynamic>> identifyEmail(String email, String password) async {
+    final url = '$authUrl/login';
+    final body = json.encode({
+      'email': email,
+      'password': password,
+      'deviceId': deviceId,
+    });
+    
+    _addLog(ApiLog(
+      type: LogType.request,
+      method: 'POST',
+      url: url,
+      requestBody: body,
+    ));
+
+    try {
+      final response = await http.post(
+        Uri.parse(url),
+        headers: {'Content-Type': 'application/json'},
+        body: body,
+      ).timeout(const Duration(seconds: 30));
+
+      _addLog(ApiLog(
+        type: LogType.response,
+        method: 'POST',
+        url: url,
+        statusCode: response.statusCode,
+        responseBody: response.body,
+      ));
+
+      final decoded = _safeDecode(response, context: 'identifyEmail');
+      final Map<String, dynamic> data = decoded is Map ? Map<String, dynamic>.from(decoded) : {};
+      
+      if (response.statusCode == 200) {
+        if (data['user'] != null && data['user'] is Map) {
+          user = Map<String, dynamic>.from(data['user'] as Map);
+        }
+        if (data['token'] != null) {
+          token = data['token']?.toString();
+          await _saveSession();
+        }
+        notifyListeners();
+        return {...data, 'status': 'SUCCESS'};
+      } else if (response.statusCode == 401 || response.statusCode == 404) {
+        return {'error': data['error'] ?? 'Invalid credentials', 'status': 'FAILED'};
+      } else {
+        throw Exception(data['error'] ?? 'Email login failed: ${response.statusCode}');
+      }
+    } catch (e) {
+      _addLog(ApiLog(
+        type: LogType.error,
+        method: 'POST',
+        url: url,
+        error: e.toString(),
+      ));
+      rethrow;
+    }
+  }
+
   Future<Map<String, dynamic>> verifyOtp({
     required String userId,
     required String otp,
