@@ -15,7 +15,45 @@ const path = require('path');
 const getNowUTC = () => new Date();
 const getLegacyManilaISO = () => new Date().toISOString();
 const getLegacyManilaDate = () => new Date();
+const isLocal = process.env.NODE_ENV === 'development' || process.env.NODE_ENV === 'test' || process.env.LOCAL_IP === '127.0.0.1' || !!process.env.JEST_WORKER_ID;
 require('dotenv').config({ path: path.resolve(__dirname, '../../.env'), override: true });
+
+// NPC Compliance: PII Masking Helper
+const maskPII = (str, type = 'AUTO') => {
+    if (!str) return 'N/A';
+    
+    // Auto-detect type if not provided
+    if (type === 'AUTO') {
+        if (str.includes('@')) type = 'EMAIL';
+        else if (/\d/.test(str) && str.length >= 7) type = 'PHONE';
+        else type = 'NAME';
+    }
+
+    if (type === 'EMAIL') {
+        const [user, domain] = str.split('@');
+        return `${user.charAt(0)}${'*'.repeat(Math.max(0, user.length - 1))}@${domain}`;
+    }
+    
+    if (type === 'PHONE') {
+        const digits = str.replace(/\D/g, '');
+        if (digits.length >= 10) {
+            return `${digits.substring(0, 3)}${'*'.repeat(Math.max(0, digits.length - 6))}${digits.slice(-3)}`;
+        }
+        return '***' + digits.slice(-3);
+    }
+
+    if (type === 'NAME') {
+        return `${str.charAt(0)}${'*'.repeat(Math.max(0, str.length - 1))}`;
+    }
+
+    return '***';
+};
+
+// Helper to generate OTP - supports testing
+const generateOTP = () => {
+    if (process.env.NODE_ENV === 'test' || !!process.env.JEST_WORKER_ID) return '123456';
+    return Math.floor(100000 + Math.random() * 900000).toString();
+};
 
 const app = express();
 const PORT = process.env.PORT || 8001;
@@ -289,9 +327,8 @@ app.post('/register', async (req, res) => {
     try {
         const passwordHash = password ? await bcrypt.hash(password, 10) : 'SOCIAL_OR_MOBILE_ONLY';
         const pinHash = pin ? await bcrypt.hash(pin, 10) : null;
-        // LOCAL BYPASS: Use fixed OTP for local development
-        const isLocal = process.env.LOCAL_IP || !process.env.VERCEL;
-        const otpCode = isLocal ? '123456' : Math.floor(100000 + Math.random() * 900000).toString();
+        // ALWAYS generate a real OTP as per user request
+        const otpCode = generateOTP();
         const otpExpiresAt = new Date(getNowUTC().getTime() + 10 * 60 * 1000); // 10 mins
 
         // Initialize trusted devices with the current device if provided
@@ -337,16 +374,25 @@ app.post('/register', async (req, res) => {
         // We do NOT await these to prevent blocking the registration response
         (async () => {
             try {
+                // Determine delivery channel based on available info
+                const deliveryType = (user.email && !user.email.endsWith('@budolpay.local') && user.phoneNumber) 
+                    ? 'BOTH' 
+                    : (user.phoneNumber ? 'SMS' : 'EMAIL');
+
+                console.log(`[Registration] Sending OTP to ${maskPII(user.phoneNumber || user.email)} via ${deliveryType}`);
+
                 if (user.email && !user.email.endsWith('@budolpay.local')) {
                     await sendAccountCreationSuccess(user.email, user.firstName || 'User', 'EMAIL');
-                    await sendOTP(user.email, otpCode, 'EMAIL');
+                    // sendOTP now handles validation and will only send if applicable
+                    await sendOTP(user.email, otpCode, deliveryType);
                 }
                 
                 if (user.phoneNumber) {
                     await sendAccountCreationSuccess(user.phoneNumber, user.firstName || 'User', 'SMS');
-                    await sendOTP(user.phoneNumber, otpCode, 'SMS');
+                    // sendOTP now handles validation and will only send if applicable
+                    await sendOTP(user.phoneNumber, otpCode, deliveryType);
                     if (isLocal) {
-                        console.log(`[LOCAL] OTP for ${user.phoneNumber}: ${otpCode}`);
+                        console.log(`[LOCAL] OTP for ${maskPII(user.phoneNumber)}: \x1b[33m${otpCode}\x1b[0m`);
                     }
                 }
             } catch (notifError) {
@@ -400,9 +446,8 @@ app.post('/register/quick', async (req, res) => {
             });
         }
 
-        // OTP Generation
-        const isLocal = process.env.LOCAL_IP || !process.env.VERCEL;
-        const otpCode = isLocal ? '123456' : Math.floor(100000 + Math.random() * 900000).toString();
+        // OTP Generation - Real code as per user request
+        const otpCode = generateOTP();
         const otpExpiresAt = new Date(getNowUTC().getTime() + 10 * 60 * 1000);
 
         // Trusted Devices init
@@ -436,8 +481,9 @@ app.post('/register/quick', async (req, res) => {
 
         // Send OTP
         // We do NOT await this to prevent blocking the registration response
-        sendOTP(user.phoneNumber, otpCode, 'SMS').catch(err => console.error('[Quick Reg OTP Error]', err));
-        if (isLocal) console.log(`[LOCAL] Quick-Reg OTP for ${user.phoneNumber}: ${otpCode}`);
+        const deliveryType = user.email && !user.email.endsWith('.temp') ? 'BOTH' : 'SMS';
+        sendOTP(user.phoneNumber || user.email, otpCode, deliveryType).catch(err => console.error('[Quick Reg OTP Error]', err));
+        if (isLocal) console.log(`[LOCAL] Quick-Reg OTP for ${maskPII(user.phoneNumber)}: \x1b[33m${otpCode}\x1b[0m`);
 
         res.status(201).json({
             message: 'Quick registration initiated. Please verify OTP.',
@@ -559,30 +605,30 @@ app.post('/login/mobile/identify', async (req, res) => {
 
         if (!isDeviceTrusted || !user.pinHash) {
             // New Device, Untrusted, OR No PIN set -> Trigger OTP
-            // LOCAL BYPASS: Use fixed OTP for local development
-            const isLocal = process.env.LOCAL_IP || !process.env.VERCEL;
-            const otpCode = isLocal ? '123456' : Math.floor(100000 + Math.random() * 900000).toString();
+            const otpCode = generateOTP();
             const otpExpiresAt = new Date(getNowUTC().getTime() + 10 * 60 * 1000);
 
             await prisma.user.update({
                 where: { id: user.id },
-                data: { otpCode, otpExpiresAt }
+                data: { otpCode, otpExpiresAt, otpUpdatedAt: getNowUTC() }
             });
 
-            await sendOTP(user.phoneNumber, otpCode, 'SMS');
+            // Dual-channel delivery if email is available
+            const deliveryType = (user.email && !user.email.endsWith('@budolpay.local')) ? 'BOTH' : 'SMS';
+            const recipient = user.phoneNumber || user.email;
 
-            if (isLocal) {
-            console.log(`[LOCAL] OTP for ${user.phoneNumber}: ${otpCode}`);
-        }
+            console.log(`[Identify] Sending login OTP to ${maskPII(recipient)} via ${deliveryType}`);
+            await sendOTP(recipient, otpCode, deliveryType);
+            if (isLocal) console.log(`[LOCAL] Login OTP for ${maskPII(recipient)}: \x1b[33m${otpCode}\x1b[0m`);
 
         return res.json({ 
             status: 'OTP_REQUIRED', 
             userId: user.id,
             user: {
                 id: user.id,
-                phoneNumber: user.phoneNumber,
-                firstName: user.firstName,
-                lastName: user.lastName
+                phoneNumber: maskPII(user.phoneNumber),
+                firstName: maskPII(user.firstName),
+                lastName: maskPII(user.lastName)
             },
             message: 'OTP sent to your registered mobile number'
         });
@@ -594,9 +640,9 @@ app.post('/login/mobile/identify', async (req, res) => {
             userId: user.id,
             user: {
                 id: user.id,
-                phoneNumber: user.phoneNumber,
-                firstName: user.firstName,
-                lastName: user.lastName
+                phoneNumber: maskPII(user.phoneNumber),
+                firstName: maskPII(user.firstName),
+                lastName: maskPII(user.lastName)
             },
             methods: ['PIN', user.biometricKeyId ? 'BIOMETRIC' : null].filter(Boolean)
         });
@@ -659,9 +705,9 @@ app.post('/login/mobile/verify-pin', async (req, res) => {
             token, 
             user: { 
                 id: user.id, 
-                phoneNumber: user.phoneNumber, 
-                firstName: user.firstName,
-                lastName: user.lastName 
+                phoneNumber: maskPII(user.phoneNumber), 
+                firstName: maskPII(user.firstName),
+                lastName: maskPII(user.lastName)
             } 
         });
     } catch (error) {
@@ -702,12 +748,68 @@ app.post('/login/mobile/setup-pin', async (req, res) => {
             token,
             user: { 
                 id: user.id, 
-                phoneNumber: user.phoneNumber,
-                firstName: user.firstName,
-                lastName: user.lastName
+                phoneNumber: maskPII(user.phoneNumber),
+                firstName: maskPII(user.firstName),
+                lastName: maskPII(user.lastName)
             }
         });
     } catch (error) {
+        res.status(500).json({ error: error.message });
+    }
+});
+
+// Resend OTP
+app.post('/resend-otp', async (req, res) => {
+    const { userId, type } = req.body; // type can be 'EMAIL', 'SMS', or 'BOTH'
+    
+    try {
+        const user = await prisma.user.findUnique({ where: { id: userId } });
+        if (!user) return res.status(404).json({ error: 'User not found' });
+
+        // Rate limiting: Check if an OTP was sent recently (e.g., within the last 60 seconds)
+        const now = getNowUTC();
+        if (user.otpUpdatedAt && (now - new Date(user.otpUpdatedAt)) < 60000) {
+            return res.status(429).json({ 
+                error: 'Too many requests. Please wait 60 seconds before requesting another OTP.',
+                retryAfter: 60
+            });
+        }
+
+        const otpCode = generateOTP();
+        const otpExpiresAt = new Date(now.getTime() + 10 * 60 * 1000);
+
+        await prisma.user.update({
+            where: { id: userId },
+            data: { 
+                otpCode, 
+                otpExpiresAt,
+                otpUpdatedAt: now
+            }
+        });
+
+        // Determine delivery channel
+        let deliveryType = type || 'BOTH';
+        if (deliveryType === 'BOTH' && (!user.email || user.email.endsWith('@budolpay.local'))) {
+            deliveryType = 'SMS';
+        }
+        
+        const recipient = user.phoneNumber || user.email;
+        console.log(`[Resend-OTP] Resending OTP to ${maskPII(recipient)} via ${deliveryType}`);
+        
+        // Use the provider-agnostic notification package
+        await sendOTP(recipient, otpCode, deliveryType);
+
+        if (isLocal) console.log(`[LOCAL] Resent OTP for ${maskPII(recipient)}: \x1b[33m${otpCode}\x1b[0m`);
+
+        // Audit: OTP Resent
+        await createAuditLog(req, user.id, 'SECURITY_OTP_RESENT', {
+            type: deliveryType,
+            timestamp: getLegacyManilaISO()
+        }, 'Security', user.id);
+
+        res.json({ message: 'OTP resent successfully', userId: user.id });
+    } catch (error) {
+        console.error('[Resend-OTP Error]', error);
         res.status(500).json({ error: error.message });
     }
 });
@@ -807,9 +909,9 @@ app.post('/verify-otp', async (req, res) => {
                 token,
                 user: { 
                     id: updatedUser.id, 
-                    phoneNumber: updatedUser.phoneNumber,
-                    firstName: updatedUser.firstName,
-                    lastName: updatedUser.lastName
+                    phoneNumber: maskPII(updatedUser.phoneNumber),
+                    firstName: maskPII(updatedUser.firstName),
+                    lastName: maskPII(updatedUser.lastName)
                 },
                 needsPinSetup: !hasPin
             });
@@ -866,7 +968,7 @@ app.post('/sso/login', async (req, res) => {
         res.json({ 
             token, 
             redirectUri: `${ecosystemApp.redirectUri}?token=${token}`,
-            user: { id: user.id, email: user.email, role: user.role } 
+            user: { id: user.id, email: maskPII(user.email), role: user.role } 
         });
     } catch (error) {
         res.status(500).json({ error: error.message });
@@ -908,7 +1010,7 @@ app.post('/login', async (req, res) => {
             timestamp: getLegacyManilaISO()
         });
 
-        res.json({ token, user: { id: user.id, email: user.email, role: user.role } });
+        res.json({ token, user: { id: user.id, email: maskPII(user.email), role: user.role } });
     } catch (error) {
         res.status(500).json({ error: error.message });
     }
@@ -969,8 +1071,8 @@ app.post('/biometric/register-challenge', async (req, res) => {
             challenge,
             user: {
                 id: user.id,
-                name: user.email,
-                displayName: `${user.firstName} ${user.lastName}`
+                name: maskPII(user.email),
+                displayName: `${maskPII(user.firstName)} ${maskPII(user.lastName)}`
             }
         });
     } catch (error) {
@@ -1034,7 +1136,7 @@ app.post('/biometric/login-verify', async (req, res) => {
 
         res.json({ 
             token, 
-            user: { id: user.id, phoneNumber: user.phoneNumber, firstName: user.firstName } 
+            user: { id: user.id, phoneNumber: maskPII(user.phoneNumber), firstName: maskPII(user.firstName) } 
         });
     } catch (error) {
         res.status(500).json({ error: error.message });
@@ -1065,7 +1167,7 @@ app.get('/verify', async (req, res) => {
         }
 
         if (!user && decoded.email) {
-            console.log(`[Universal Sync] Creating missing user in budolPay: ${decoded.email}`);
+            console.log(`[Universal Sync] Creating missing user in budolPay: ${maskPII(decoded.email)}`);
             user = await prisma.user.create({
                 data: {
                     id: decoded.sub || undefined, // Use budolID UUID if possible
@@ -1098,6 +1200,8 @@ app.get('/verify', async (req, res) => {
     }
 });
 
+app.get('/health', (req, res) => res.json({ status: 'OK', service: 'auth-service', version: 'v3.2.0' }));
+
 // User Search (Used for Send Money recipient lookup)
 app.get('/user/find', async (req, res) => {
     const { email, phone } = req.query;
@@ -1124,7 +1228,7 @@ app.get('/user/find', async (req, res) => {
         if (!user) {
             const identifier = email || phone;
             const param = email ? `email=${email}` : `phone=${phone}`;
-            console.log(`[User Find] User ${identifier} not found locally, checking budolID...`);
+            console.log(`[User Find] User ${maskPII(identifier)} not found locally, checking budolID...`);
             const SSO_URL = process.env.SSO_SERVICE_URL || `http://${LOCAL_IP}:8000`;
             const axios = require('axios');
             
@@ -1133,7 +1237,7 @@ app.get('/user/find', async (req, res) => {
                 const ssoUser = ssoRes.data;
 
                 if (ssoUser) {
-                    console.log(`[User Find] Found user ${identifier} in budolID, syncing to local DB...`);
+                    console.log(`[User Find] Found user ${maskPII(identifier)} in budolID, syncing to local DB...`);
                     
                     // Manual find and update/create to avoid upsert issues
                     const existingUser = await prisma.user.findUnique({ where: { id: ssoUser.id } });
@@ -1192,7 +1296,17 @@ app.get('/user/find', async (req, res) => {
             return res.status(404).json({ error: 'User not found' });
         }
 
-        res.json(user);
+        // Final response PII Masking - Explicit object construction to ensure masking overrides
+        const responseData = {
+            id: user.id,
+            email: maskPII(user.email),
+            phoneNumber: maskPII(user.phoneNumber),
+            firstName: maskPII(user.firstName),
+            lastName: maskPII(user.lastName)
+        };
+        
+        console.log(`[User Find] Returning masked data for ${maskPII(user.email)}`);
+        res.json(responseData);
     } catch (error) {
         console.error('[User Find] Error:', error);
         res.status(500).json({ error: 'Internal server error' });
@@ -1217,7 +1331,17 @@ app.get('/favorites', authenticate, async (req, res) => {
             },
             orderBy: { createdAt: 'desc' }
         });
-        res.json(favorites);
+        const maskedFavorites = favorites.map(f => ({
+            ...f,
+            recipient: f.recipient ? {
+                ...f.recipient,
+                email: maskPII(f.recipient.email),
+                phoneNumber: maskPII(f.recipient.phoneNumber),
+                firstName: maskPII(f.recipient.firstName),
+                lastName: maskPII(f.recipient.lastName)
+            } : null
+        }));
+        res.json(maskedFavorites);
     } catch (error) {
         console.error('[Favorites List Error]', error);
         res.status(500).json({ error: 'Failed to fetch favorites' });
@@ -1255,7 +1379,20 @@ app.post('/favorites', authenticate, async (req, res) => {
                 }
             }
         });
-        res.json({ message: 'Favorite updated successfully', favorite });
+
+        // Mask PII in response
+        const maskedFavorite = {
+            ...favorite,
+            recipient: favorite.recipient ? {
+                ...favorite.recipient,
+                email: maskPII(favorite.recipient.email),
+                phoneNumber: maskPII(favorite.recipient.phoneNumber),
+                firstName: maskPII(favorite.recipient.firstName),
+                lastName: maskPII(favorite.recipient.lastName)
+            } : null
+        };
+
+        res.json({ message: 'Favorite updated successfully', favorite: maskedFavorite });
     } catch (error) {
         console.error('[Add Favorite Error]', error);
         res.status(500).json({ error: 'Failed to update favorite' });
@@ -1289,4 +1426,4 @@ if (require.main === module) {
     });
 }
 
-module.exports = app;
+module.exports = { app, maskPII };

@@ -53,6 +53,37 @@ const app = express();
 const PORT = process.env.PORT || 8000;
 const JWT_SECRET = process.env.JWT_SECRET || 'GJ7Lxn0/kdV/KuZJ5xJ7Ip0RvMerrGW5n0gf44mfHgc=';
 
+// NPC Compliance: PII Masking Helper
+const maskPII = (str, type = 'AUTO') => {
+    if (!str) return 'N/A';
+    
+    // Auto-detect type if not provided
+    if (type === 'AUTO') {
+        if (str.includes('@')) type = 'EMAIL';
+        else if (/\d/.test(str) && str.length >= 7) type = 'PHONE';
+        else type = 'NAME';
+    }
+
+    if (type === 'EMAIL') {
+        const [user, domain] = str.split('@');
+        return `${user.charAt(0)}${'*'.repeat(Math.max(0, user.length - 1))}@${domain}`;
+    }
+    
+    if (type === 'PHONE') {
+        const digits = str.replace(/\D/g, '');
+        if (digits.length >= 10) {
+            return `${digits.substring(0, 3)}${'*'.repeat(Math.max(0, digits.length - 6))}${digits.slice(-3)}`;
+        }
+        return '***' + digits.slice(-3);
+    }
+
+    if (type === 'NAME') {
+        return `${str.charAt(0)}${'*'.repeat(Math.max(0, str.length - 1))}`;
+    }
+
+    return '***';
+};
+
 app.use(cors());
 app.use(express.json());
 
@@ -463,8 +494,8 @@ app.post('/auth/forgot-password', async (req, res) => {
 
         // SIMULATED DUAL-CHANNEL DELIVERY (PCI DSS & BSP Compliant)
         console.log(`\n--- [SSPR DUAL-CHANNEL DELIVERY] ---`);
-        console.log(`[EMAIL] To: ${email} | Subject: budolID Password Reset | Body: Your OTP is ${otp}`);
-        console.log(`[SMS] To: ${user.phoneNumber || 'N/A'} | Body: budolID: Your password reset OTP is ${otp}. Valid for 5m.`);
+        console.log(`[EMAIL] To: ${maskPII(email)} | Subject: budolID Password Reset | Body: Your OTP is \x1b[33m${otp}\x1b[0m`);
+        console.log(`[SMS] To: ${maskPII(user.phoneNumber)} | Body: budolID: Your password reset OTP is \x1b[33m${otp}\x1b[0m. Valid for 5m.`);
         console.log(`------------------------------------\n`);
 
         res.json({ message: "If an account exists, an OTP has been sent via SMS and Email." });
