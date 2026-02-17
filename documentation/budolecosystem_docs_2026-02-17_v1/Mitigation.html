@@ -3,57 +3,49 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Mitigation Plan - Budol Ecosystem v3.4.1</title>
+    <title>Mitigation Strategies - Budol Ecosystem</title>
     <style>
-        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; line-height: 1.6; color: #333; max-width: 900px; margin: 0 auto; padding: 20px; }
-        h1, h2 { color: #27ae60; border-bottom: 2px solid #eee; padding-bottom: 10px; }
-        .risk-item { margin-bottom: 20px; border: 1px solid #ddd; padding: 15px; border-radius: 5px; }
-        .risk-title { font-weight: bold; color: #c0392b; margin-bottom: 5px; }
-        .strategy { margin-top: 10px; }
-        .strategy strong { color: #27ae60; }
-        a { color: #007bff; text-decoration: none; }
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; line-height: 1.6; margin: 0; padding: 0; color: #333; }
+        .container { max-width: 1200px; margin: 0 auto; padding: 20px; }
+        header { background: #27ae60; color: #fff; padding: 20px 0; text-align: center; }
+        nav { background: #34495e; padding: 10px 0; text-align: center; }
+        nav a { color: #fff; text-decoration: none; margin: 0 15px; font-weight: bold; }
+        .card { background: #f9f9f9; border: 1px solid #ddd; padding: 20px; margin-bottom: 20px; border-radius: 5px; }
+        h3 { color: #27ae60; }
     </style>
 </head>
 <body>
-    <a href="index.html">← Back to Documentation Index</a>
+    <header>
+        <div class="container">
+            <h1>Mitigation Strategies</h1>
+            <p>Version: 2026-02-17_v1</p>
+        </div>
+    </header>
+    <nav>
+        <a href="index.html">Home</a>
+        <a href="risk_register.html">Risk Register</a>
+        <a href="Mitigation.html">Mitigations</a>
+    </nav>
+    <div class="container">
+        <div class="card">
+            <h2>Strategies</h2>
+            
+            <h3>M-001: Transactional Integrity for Escrow</h3>
+            <p><strong>Addresses Risk:</strong> R-001 (Escrow Lock Failure)</p>
+            <p><strong>Strategy:</strong> All return operations (Approve, Refund, Reject) are wrapped in <code>prisma.$transaction</code>. This ensures that status updates and fund unlock/transfer happen atomically. If one fails, the entire operation rolls back.</p>
 
-    <h1>Mitigation Plan (v3.4.1)</h1>
-    <p><strong>Status:</strong> Active</p>
+            <h3>M-002: Cryptographic Hashing for Audit Logs</h3>
+            <p><strong>Addresses Risk:</strong> R-002 (Audit Log Tampering)</p>
+            <p><strong>Strategy:</strong> Implemented SHA-256 hashing of critical audit log fields (User ID, Action, Entity ID, Timestamp, Metadata). The hash is stored in the metadata. Any alteration to the log entry will result in a hash mismatch during verification.</p>
 
-    <div class="risk-item">
-        <div class="risk-title">Risk: Webhook Latency (R-2026-004)</div>
-        <div class="strategy">
-            <strong>Mitigation Strategy:</strong>
-            <ul>
-                <li>Implemented redundant cart cleanup logic. It runs on the client side (<code>return/page.jsx</code>) for immediate feedback AND on the server side (<code>ordersService.js</code>) as a fallback.</li>
-                <li>If the webhook is delayed, the client-side cleanup will likely handle it first. If the user closes the tab, the server-side logic catches it eventually.</li>
-                <li><strong>Contingency:</strong> If both fail, the user can manually remove items. This is a UX annoyance but not a critical data failure.</li>
-            </ul>
+            <h3>M-003: Robust Cart Cleanup Logic</h3>
+            <p><strong>Addresses Risk:</strong> R-003 (Cart Persistence)</p>
+            <p><strong>Strategy:</strong> Enhanced <code>ordersService.js</code> to handle products without variations explicitly by forcing <code>variationId: null</code>. Added logging to trace cleanup operations.</p>
+
+            <h3>M-004: Strict Authorization Checks</h3>
+            <p><strong>Addresses Risk:</strong> R-004 (Unauthorized Return Response)</p>
+            <p><strong>Strategy:</strong> In <code>returnsService.js</code>, every function (e.g., <code>buyerRespondToProposal</code>, <code>respondToReturn</code>) begins with a strict check verifying that the <code>userId</code> matches the Order's User (for buyers) or the Store's Owner (for sellers).</p>
         </div>
     </div>
-
-    <div class="risk-item">
-        <div class="risk-title">Risk: Backup Script Failure (R-2026-005)</div>
-        <div class="strategy">
-            <strong>Mitigation Strategy:</strong>
-            <ul>
-                <li>The script uses <code>try-catch</code> blocks for each table export to prevent one failure from stopping the entire process.</li>
-                <li>Added logging to clearly indicate which tables succeeded or failed.</li>
-                <li><strong>Contingency:</strong> Keep the previous day's backup available. Run backups during low-traffic periods.</li>
-            </ul>
-        </div>
-    </div>
-
-    <div class="risk-item">
-        <div class="risk-title">Risk: Variation Deletion Mismatch (R-2026-006)</div>
-        <div class="strategy">
-            <strong>Mitigation Strategy:</strong>
-            <ul>
-                <li>The cleanup logic explicitly handles <code>null</code> variation IDs. <code>variationId: item.variationId || null</code> ensures that products without variations are also correctly targeted.</li>
-                <li>The query uses a precise <code>AND</code> condition (cart user + specific product + specific variation) to avoid accidental deletion of other items.</li>
-            </ul>
-        </div>
-    </div>
-
 </body>
 </html>
