@@ -1,0 +1,77 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>System Admin Manual - Budol Ecosystem v3.4.1</title>
+    <style>
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; line-height: 1.6; color: #333; max-width: 900px; margin: 0 auto; padding: 20px; }
+        h1, h2, h3 { color: #d35400; border-bottom: 2px solid #eee; padding-bottom: 10px; }
+        pre { background: #282c34; color: #abb2bf; padding: 15px; border-radius: 5px; overflow-x: auto; }
+        code { font-family: 'Consolas', 'Monaco', monospace; background: #f0f0f0; padding: 2px 5px; border-radius: 3px; color: #c0392b; }
+        .alert { background-color: #f8d7da; color: #721c24; padding: 10px; border-radius: 5px; border: 1px solid #f5c6cb; margin-bottom: 20px; }
+        a { color: #007bff; text-decoration: none; }
+    </style>
+</head>
+<body>
+    <a href="index.html">← Back to Documentation Index</a>
+
+    <h1>System Admin Manual (v3.4.1)</h1>
+    <p><strong>Topic:</strong> Maintenance & Backup Procedures</p>
+
+    <div class="alert">
+        <strong>Critical Update:</strong> The database backup script has been updated to include <code>Cart</code> and <code>CartItem</code> tables. Ensure you are using the latest version of the script.
+    </div>
+
+    <h2>1. Database Backup Procedures</h2>
+    <p>Regular backups are essential for data integrity. The system uses a Node.js script to export all tables to JSON format.</p>
+
+    <h3>Running a Backup</h3>
+    <p>To perform a manual backup of the production database:</p>
+    <ol>
+        <li>Open a terminal in the project root directory (<code>d:\IT Projects\budolEcosystem\budolshap-0.1.0</code>).</li>
+        <li>Execute the following command:
+            <pre>node scripts/backup_db.js</pre>
+        </li>
+        <li>Verify the output:
+            <pre>
+Starting backup to .../backup-db/db-YYYY-MM-DD...
+✅ Backed up user
+✅ Backed up product
+✅ Backed up order
+...
+✅ Backed up cart (NEW)
+✅ Backed up cartItem (NEW)
+Backup completed.
+            </pre>
+        </li>
+    </ol>
+
+    <h3>Backup Location</h3>
+    <p>Backups are stored locally in:</p>
+    <code>d:\IT Projects\budolEcosystem\budolshap-0.1.0\backup-db\db-[DATE]\</code>
+
+    <h2>2. Cart Cleanup Maintenance</h2>
+    <p>The system now includes automated cart cleanup logic for async payments. However, manual cleanup may occasionally be required if webhooks fail catastrophically.</p>
+
+    <h3>Monitoring Orders</h3>
+    <p>Check the application logs for the following entry to confirm automatic cleanup is working:</p>
+    <code>[OrdersService] Removed X items from cart for User Y</code>
+
+    <h3>Manual Intervention</h3>
+    <p>If a user reports items sticking in the cart after payment:</p>
+    <ol>
+        <li>Verify the order status is <code>PAID</code> in the admin dashboard.</li>
+        <li>If <code>PAID</code>, you can manually trigger the status update logic by toggling the status to <code>PENDING</code> and back to <code>PAID</code> (if the UI allows), or by running a script.</li>
+    </ol>
+
+    <h2>3. Deployment Checklist</h2>
+    <p>Before deploying this version to production:</p>
+    <ul>
+        <li>[ ] <strong>Database:</strong> Ensure <code>prisma db push</code> has been run to update the schema (added <code>variationId</code> to <code>CartItem</code>).</li>
+        <li>[ ] <strong>Environment:</strong> Check <code>PAYMONGO_SECRET_KEY</code> is valid for webhook processing.</li>
+        <li>[ ] <strong>Backup:</strong> Run a full database backup using the new script.</li>
+    </ul>
+
+</body>
+</html>

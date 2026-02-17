@@ -2,18 +2,60 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <title>Mitigation Strategies - v3.0.3</title>
-    <style>body{font-family:sans-serif;max-width:800px;margin:40px auto;line-height:1.6;color:#333}h1{color:#0052CC}</style>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Mitigation Strategies - Budol Ecosystem v3.4.0</title>
+    <style>
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; line-height: 1.6; color: #333; max-width: 1000px; margin: 0 auto; padding: 20px; }
+        h1, h2 { color: #27ae60; border-bottom: 2px solid #eee; padding-bottom: 10px; }
+        .strategy-box { border: 1px solid #ddd; padding: 15px; margin-bottom: 20px; border-radius: 5px; box-shadow: 0 2px 4px rgba(0,0,0,0.05); }
+        .risk-ref { font-weight: bold; color: #c0392b; display: block; margin-bottom: 5px; }
+        .action-item { margin-left: 20px; list-style-type: square; }
+        a { color: #007bff; text-decoration: none; }
+    </style>
 </head>
 <body>
-    <a href="index.html">← Back to Index</a>
-    <h1>Mitigation Strategies - v3.0.3</h1>
-    <p>Measures implemented to address identified risks:</p>
-    <ul>
-        <li><strong>Tooltip Visibility:</strong> Tooltips are added to all sidebar items when collapsed, ensuring users can identify menu options.</li>
-        <li><strong>Toggle Button:</strong> A prominent toggle button with chevron icons (Left/Right) clearly indicates the collapsible action.</li>
-        <li><strong>Consistent Layout:</strong> The sidebar transitions smoothly, maintaining layout integrity during expansion/collapse.</li>
-        <li><strong>Accessibility:</strong> Using standard HTML elements (button, link) ensures keyboard navigability and screen reader support.</li>
-    </ul>
+    <a href="index.html">← Back to Documentation Index</a>
+
+    <h1>Mitigation Strategies (v3.4.0)</h1>
+
+    <div class="strategy-box">
+        <span class="risk-ref">Ref: R-001 (Data Loss during Schema Migration)</span>
+        <h3>Database Backup & Validation</h3>
+        <ul>
+            <li class="action-item"><strong>Action:</strong> Executed `backup_db_compliant.js` before applying any Prisma schema changes.</li>
+            <li class="action-item"><strong>Action:</strong> Verified backup integrity by checking the generated SQL dump file size and content headers.</li>
+            <li class="action-item"><strong>Outcome:</strong> Schema migration was successful; `variationId` added as nullable first to support existing data, though currently we treat it as part of the unique constraint.</li>
+        </ul>
+    </div>
+
+    <div class="strategy-box">
+        <span class="risk-ref">Ref: R-002 (Inventory Mismatch)</span>
+        <h3>Variation-Aware Order Processing</h3>
+        <ul>
+            <li class="action-item"><strong>Action:</strong> Updated `OrderSummary.jsx` to explicitly pass `variationId` to the order creation API.</li>
+            <li class="action-item"><strong>Action:</strong> Implemented backend validation in `api/orders` (future phase) to check stock levels of the specific variation, not just the parent product.</li>
+            <li class="action-item"><strong>Verification:</strong> Tested with `test_cart_variations.mjs` ensuring distinct variation IDs are preserved.</li>
+        </ul>
+    </div>
+
+    <div class="strategy-box">
+        <span class="risk-ref">Ref: R-005 (Duplicate Cart Entries)</span>
+        <h3>Composite Unique Constraints & Atomic Transactions</h3>
+        <ul>
+            <li class="action-item"><strong>Action:</strong> Added `@@unique([cartId, productId, variationId])` in `schema.prisma`. This database-level constraint prevents duplicate rows for the same variation.</li>
+            <li class="action-item"><strong>Action:</strong> Used `prisma.$transaction` in `api/cart/route.js` to ensure cart updates are atomic (delete old -> insert new) or use upsert logic where applicable.</li>
+        </ul>
+    </div>
+
+    <div class="strategy-box">
+        <span class="risk-ref">Ref: R-003 (Guest Cart Loss)</span>
+        <h3>Hybrid Persistence Strategy</h3>
+        <ul>
+            <li class="action-item"><strong>Action:</strong> Implemented LocalStorage for guest users.</li>
+            <li class="action-item"><strong>Action:</strong> Created a "Merge Cart" mechanism. When a guest logs in, their local cart items are sent to the server and merged with any existing account cart.</li>
+            <li class="action-item"><strong>User Education:</strong> Added a note in the User Manual advising users to log in to save their cart across devices.</li>
+        </ul>
+    </div>
+
 </body>
 </html>

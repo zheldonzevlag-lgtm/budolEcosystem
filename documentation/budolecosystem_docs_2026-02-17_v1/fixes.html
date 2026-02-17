@@ -1,0 +1,60 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Fixes - Budol Ecosystem Documentation</title>
+    <style>
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; line-height: 1.6; color: #333; margin: 0; padding: 0; background-color: #f4f4f9; }
+        .container { max-width: 1200px; margin: 0 auto; padding: 20px; }
+        header { background-color: #007bff; color: white; padding: 20px 0; text-align: center; }
+        h1 { margin: 0; }
+        .nav { display: flex; justify-content: center; gap: 20px; margin-top: 10px; }
+        .nav a { color: white; text-decoration: none; font-weight: bold; }
+        .card { background: white; padding: 20px; margin-bottom: 20px; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
+        h2 { border-bottom: 2px solid #007bff; padding-bottom: 10px; color: #007bff; }
+        .fix-item { margin-bottom: 20px; border-left: 4px solid #28a745; padding-left: 15px; }
+        .issue { font-weight: bold; color: #dc3545; }
+        .resolution { margin-top: 5px; }
+        code { background-color: #eee; padding: 2px 5px; border-radius: 3px; font-family: Consolas, monospace; }
+    </style>
+</head>
+<body>
+    <header>
+        <div class="container">
+            <h1>Budol Ecosystem - Fixes Log</h1>
+            <div class="nav">
+                <a href="index.html">Home</a>
+                <a href="developer_manual.html">Developer Manual</a>
+                <a href="test_results.html">Test Results</a>
+            </div>
+        </div>
+    </header>
+
+    <div class="container">
+        <div class="card">
+            <h2>Version 2026-02-17 v1 Fixes</h2>
+
+            <div class="fix-item">
+                <div class="issue">Issue: Cart items remain after successful GCash/Maya payment (Async Payments).</div>
+                <div class="resolution">
+                    <strong>Fix:</strong> Implemented server-side fallback cart cleanup logic in <code>updateOrderStatus</code>.
+                    <ul>
+                        <li><strong>Problem:</strong> Async payments (PayMongo) rely on webhooks or status checks. The initial order creation might fail to clear the cart if the payment status isn't immediately finalized, or if the client-side cleanup in <code>return/page.jsx</code> is skipped (e.g., user closes tab).</li>
+                        <li><strong>Solution:</strong> Added a check in <a href="file:///d%3A/IT%20Projects/budolEcosystem/budolshap-0.1.0/lib/services/ordersService.js#L585">ordersService.js</a>. When an order transitions to <code>PAID</code> status, the system now explicitly deletes the corresponding <code>CartItem</code> records for the user.</li>
+                        <li><strong>Detail:</strong> The deletion is precise, targeting only the <code>productId</code> and <code>variationId</code> present in the paid order, preserving other items in the cart.</li>
+                    </ul>
+                </div>
+            </div>
+
+            <div class="fix-item">
+                <div class="issue">Issue: Database Backup Script missing Cart tables.</div>
+                <div class="resolution">
+                    <strong>Fix:</strong> Updated <code>scripts/backup_db.js</code> to include <code>Cart</code>, <code>CartItem</code>, and other missing models (Store, Wallet, Transaction, etc.) in the backup process.
+                </div>
+            </div>
+
+        </div>
+    </div>
+</body>
+</html>

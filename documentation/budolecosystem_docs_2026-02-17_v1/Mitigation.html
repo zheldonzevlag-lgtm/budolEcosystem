@@ -1,0 +1,59 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Mitigation Plan - Budol Ecosystem v3.4.1</title>
+    <style>
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; line-height: 1.6; color: #333; max-width: 900px; margin: 0 auto; padding: 20px; }
+        h1, h2 { color: #27ae60; border-bottom: 2px solid #eee; padding-bottom: 10px; }
+        .risk-item { margin-bottom: 20px; border: 1px solid #ddd; padding: 15px; border-radius: 5px; }
+        .risk-title { font-weight: bold; color: #c0392b; margin-bottom: 5px; }
+        .strategy { margin-top: 10px; }
+        .strategy strong { color: #27ae60; }
+        a { color: #007bff; text-decoration: none; }
+    </style>
+</head>
+<body>
+    <a href="index.html">← Back to Documentation Index</a>
+
+    <h1>Mitigation Plan (v3.4.1)</h1>
+    <p><strong>Status:</strong> Active</p>
+
+    <div class="risk-item">
+        <div class="risk-title">Risk: Webhook Latency (R-2026-004)</div>
+        <div class="strategy">
+            <strong>Mitigation Strategy:</strong>
+            <ul>
+                <li>Implemented redundant cart cleanup logic. It runs on the client side (<code>return/page.jsx</code>) for immediate feedback AND on the server side (<code>ordersService.js</code>) as a fallback.</li>
+                <li>If the webhook is delayed, the client-side cleanup will likely handle it first. If the user closes the tab, the server-side logic catches it eventually.</li>
+                <li><strong>Contingency:</strong> If both fail, the user can manually remove items. This is a UX annoyance but not a critical data failure.</li>
+            </ul>
+        </div>
+    </div>
+
+    <div class="risk-item">
+        <div class="risk-title">Risk: Backup Script Failure (R-2026-005)</div>
+        <div class="strategy">
+            <strong>Mitigation Strategy:</strong>
+            <ul>
+                <li>The script uses <code>try-catch</code> blocks for each table export to prevent one failure from stopping the entire process.</li>
+                <li>Added logging to clearly indicate which tables succeeded or failed.</li>
+                <li><strong>Contingency:</strong> Keep the previous day's backup available. Run backups during low-traffic periods.</li>
+            </ul>
+        </div>
+    </div>
+
+    <div class="risk-item">
+        <div class="risk-title">Risk: Variation Deletion Mismatch (R-2026-006)</div>
+        <div class="strategy">
+            <strong>Mitigation Strategy:</strong>
+            <ul>
+                <li>The cleanup logic explicitly handles <code>null</code> variation IDs. <code>variationId: item.variationId || null</code> ensures that products without variations are also correctly targeted.</li>
+                <li>The query uses a precise <code>AND</code> condition (cart user + specific product + specific variation) to avoid accidental deletion of other items.</li>
+            </ul>
+        </div>
+    </div>
+
+</body>
+</html>
