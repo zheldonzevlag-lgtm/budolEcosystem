@@ -1,0 +1,71 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Developer Manual - v3.4.2</title>
+    <style>
+        body { font-family: 'Segoe UI', sans-serif; max-width: 1000px; margin: 0 auto; padding: 20px; line-height: 1.6; }
+        h1, h2 { color: #0052cc; }
+        code { background: #f4f4f4; padding: 2px 5px; border-radius: 3px; font-family: 'Consolas', monospace; }
+        pre { background: #1e1e1e; color: #d4d4d4; padding: 15px; border-radius: 5px; overflow-x: auto; }
+        .file-link { color: #0052cc; text-decoration: none; font-weight: bold; }
+        .compliance-tag { background: #e3fcef; color: #006644; padding: 2px 8px; border-radius: 12px; font-size: 0.8em; }
+    </style>
+</head>
+<body>
+    <h1>Developer Manual - v3.4.2</h1>
+    <p><strong>Date:</strong> 2026-02-18</p>
+    <p><strong>Compliance:</strong> <span class="compliance-tag">PCI DSS 10.2.1</span> <span class="compliance-tag">Cybersecurity Law</span></p>
+
+    <h2>1. Overview</h2>
+    <p>This release implements forensic audit logging for account registration events, specifically targeting the "Quick Registration" (Phone Only) flow and OTP verification. This ensures that all critical authentication steps are traceable.</p>
+
+    <h2>2. Modified Files</h2>
+    
+    <h3>2.1 User Registration API</h3>
+    <p><strong>File:</strong> <a href="file:///d:/IT Projects/budolEcosystem/budolshap-0.1.0/app/api/auth/register/route.js" class="file-link">app/api/auth/register/route.js</a></p>
+    <p><strong>Changes:</strong> Added `SECURITY_OTP_SENT` audit log for dual-channel OTP delivery.</p>
+    <pre>
+// Forensic Log: OTP Sent
+await createAuditLog(user.id, 'SECURITY_OTP_SENT', request, {
+    entity: 'Auth',
+    entityId: user.id,
+    status: 'SUCCESS',
+    details: `OTP sent to ${phoneNumber} (SMS) and ${email} (Email) for Quick Registration`,
+    metadata: {
+        phone: phoneNumber,
+        email: email,
+        type: 'DUAL_CHANNEL'
+    }
+});
+    </pre>
+
+    <h3>2.2 Email/OTP Verification API</h3>
+    <p><strong>File:</strong> <a href="file:///d:/IT Projects/budolEcosystem/budolshap-0.1.0/app/api/auth/verify-email/route.js" class="file-link">app/api/auth/verify-email/route.js</a></p>
+    <p><strong>Changes:</strong> Added `SECURITY_OTP_VERIFIED` audit log upon successful OTP verification.</p>
+    <pre>
+// Forensic Log: OTP Verified
+await createAuditLog(user.id, 'SECURITY_OTP_VERIFIED', request, {
+    details: 'Account verified successfully via OTP',
+    entity: 'User',
+    entityId: user.id,
+    status: 'SUCCESS',
+    metadata: {
+        method: 'OTP',
+        email: email
+    }
+});
+    </pre>
+
+    <h2>3. Testing</h2>
+    <p>A new test suite was created to verify these logs.</p>
+    <p><strong>Test File:</strong> <a href="file:///d:/IT Projects/budolEcosystem/budolshap-0.1.0/scripts/test_scripts/registration-audit.test.js" class="file-link">scripts/test_scripts/registration-audit.test.js</a></p>
+    
+    <h2>4. Dependencies</h2>
+    <p>Uses <code>lib/audit.js</code> for generating SHA-256 integrity-hashed logs.</p>
+
+    <hr>
+    <p><a href="index.html">Back to Index</a></p>
+</body>
+</html>
