@@ -1,5 +1,5 @@
 const request = require('supertest');
-const app = require('../index');
+const { app } = require('../index');
 
 describe('Quick Registration API', () => {
   jest.setTimeout(30000); // Increase timeout for slow audit/notification calls

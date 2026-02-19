@@ -168,24 +168,33 @@ class _MarketingAdsScreenState extends State<MarketingAdsScreen> {
         color: const Color(0xFF0F172A),
         child: LayoutBuilder(
           builder: (context, constraints) {
-            // Robust size detection for Web
+            // Robust size detection for Web and Mobile
             final double maxWidth = constraints.maxWidth;
             final double maxHeight = constraints.maxHeight;
             
             debugPrint('MarketingAdsScreen: Layout constraints: $maxWidth x $maxHeight');
             
-            if (maxWidth == 0 || maxHeight == 0) {
-               debugPrint('MarketingAdsScreen: WARNING - Zero size detected!');
-               return const SizedBox.shrink();
-            }
-
-            final double width = maxWidth.isFinite && maxWidth > 0 
-                ? maxWidth 
-                : 393;
-            final double height = maxHeight.isFinite && maxHeight > 0 
-                ? maxHeight 
-                : 780;
+            // Fallback to MediaQuery if LayoutBuilder gives zero
+            double width = maxWidth;
+            double height = maxHeight;
             
+            if (width <= 0 || height <= 0) {
+               debugPrint('MarketingAdsScreen: WARNING - Zero size detected from constraints! Using MediaQuery fallback.');
+               try {
+                 final size = MediaQuery.of(context).size;
+                 width = size.width;
+                 height = size.height;
+               } catch (e) {
+                 debugPrint('MarketingAdsScreen: MediaQuery failed: $e');
+                 width = 393; // Fallback width
+                 height = 852; // Fallback height
+               }
+            }
+            
+            // Ensure we have positive dimensions
+            if (width <= 0) width = 393;
+            if (height <= 0) height = 852;
+
             debugPrint('MarketingAdsScreen: Layout determined: ${width.toInt()}x${height.toInt()}');
             
             return Container(

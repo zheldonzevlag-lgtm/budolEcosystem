@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../services/api_service.dart';
@@ -15,26 +16,111 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
   late TextEditingController _lastNameController;
   late TextEditingController _emailController;
   bool _isLoading = false;
+  bool _obscureFirstName = true;
+  bool _obscureLastName = true;
+  bool _emailInitialized = false;
+  bool _firstNameDirty = false;
+  bool _lastNameDirty = false;
 
   @override
   void initState() {
     super.initState();
-    final user = context.read<ApiService>().user;
-    _firstNameController = TextEditingController(text: user?['firstName'] ?? '');
-    _lastNameController = TextEditingController(text: user?['lastName'] ?? '');
-    _emailController = TextEditingController(text: user?['email'] ?? '');
+    // Setup listener for real-time updates
+    final apiService = context.read<ApiService>();
+    apiService.addListener(_onUserUpdate);
+
+    // Force refresh from server to ensure we have the latest email/profile data
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      apiService.fetchUserProfile();
+    });
+
+    _initializeControllers(apiService.user);
   }
 
   @override
   void dispose() {
+    context.read<ApiService>().removeListener(_onUserUpdate);
     _firstNameController.dispose();
     _lastNameController.dispose();
     _emailController.dispose();
     super.dispose();
   }
 
+  void _initializeControllers(Map<String, dynamic>? user) {
+    if (user != null) {
+      _firstNameController = TextEditingController(text: user['firstName'] ?? '');
+      _lastNameController = TextEditingController(text: user['lastName'] ?? '');
+      
+      final email = user['email'];
+      _emailController = TextEditingController(text: email ?? '');
+      if (email != null && email.toString().isNotEmpty) {
+        _emailInitialized = true;
+      }
+    } else {
+      _firstNameController = TextEditingController();
+      _lastNameController = TextEditingController();
+      _emailController = TextEditingController();
+    }
+  }
+
+  void _onUserUpdate() {
+    final user = context.read<ApiService>().user;
+    if (user != null && mounted) {
+      setState(() {
+        // Update fields if they are empty OR if they haven't been edited by the user (not dirty)
+        // This ensures that if we loaded cached masked data (e.g. "M*****"), we replace it with fresh unmasked data
+        if (!_firstNameDirty && (user['firstName']?.isNotEmpty ?? false)) {
+           if (_firstNameController.text != user['firstName']) {
+             _firstNameController.text = user['firstName']!;
+           }
+        }
+        
+        if (!_lastNameDirty && (user['lastName']?.isNotEmpty ?? false)) {
+           if (_lastNameController.text != user['lastName']) {
+             _lastNameController.text = user['lastName']!;
+           }
+        }
+        
+        // Special handling for email to avoid overwriting user edits/clears
+        // Only fill if we haven't initialized it yet and the field is empty
+        if (!_emailInitialized && (user['email']?.isNotEmpty ?? false)) {
+          if (_emailController.text.isEmpty) {
+            _emailController.text = user['email']!;
+            _emailInitialized = true;
+          } else {
+             // User already typed something, mark as initialized to avoid future overwrites
+             _emailInitialized = true; 
+          }
+        }
+      });
+    }
+  }
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    // Logic moved to _onUserUpdate via addListener
+  }
+
   Future<void> _handleUpdate() async {
     if (!_formKey.currentState!.validate()) return;
+
+    // Safety Check: Prevent saving if data appears to be masked (contains asterisks)
+    // This prevents overwriting valid DB data with masked "M*****" values
+    if (_firstNameController.text.contains('*') || _lastNameController.text.contains('*')) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Cannot save masked data. Please wait for profile to fully load.'),
+            backgroundColor: Colors.orange,
+            duration: Duration(seconds: 4),
+          ),
+        );
+        // Try to fetch fresh data again
+        context.read<ApiService>().fetchUserProfile();
+      }
+      return;
+    }
 
     setState(() => _isLoading = true);
     try {
@@ -136,12 +222,18 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
               const SizedBox(height: 8),
               TextFormField(
                 controller: _firstNameController,
-                enabled: !isFullyVerified,
+                readOnly: isFullyVerified,
+                obscureText: _obscureFirstName,
+                onChanged: (value) => _firstNameDirty = true,
                 decoration: InputDecoration(
                   hintText: 'Enter your first name',
                   filled: true,
                   fillColor: isFullyVerified ? Colors.grey[100] : Colors.white,
                   border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide.none),
+                  suffixIcon: IconButton(
+                    icon: Icon(_obscureFirstName ? Icons.visibility : Icons.visibility_off, color: Colors.grey),
+                    onPressed: () => setState(() => _obscureFirstName = !_obscureFirstName),
+                  ),
                 ),
                 validator: (value) => value == null || value.isEmpty ? 'Please enter first name' : null,
               ),
@@ -151,12 +243,18 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
               const SizedBox(height: 8),
               TextFormField(
                 controller: _lastNameController,
-                enabled: !isFullyVerified,
+                readOnly: isFullyVerified,
+                obscureText: _obscureLastName,
+                onChanged: (value) => _lastNameDirty = true,
                 decoration: InputDecoration(
                   hintText: 'Enter your last name',
                   filled: true,
                   fillColor: isFullyVerified ? Colors.grey[100] : Colors.white,
                   border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide.none),
+                  suffixIcon: IconButton(
+                    icon: Icon(_obscureLastName ? Icons.visibility : Icons.visibility_off, color: Colors.grey),
+                    onPressed: () => setState(() => _obscureLastName = !_obscureLastName),
+                  ),
                 ),
                 validator: (value) => value == null || value.isEmpty ? 'Please enter last name' : null,
               ),

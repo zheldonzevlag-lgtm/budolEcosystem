@@ -1,3 +1,13 @@
+const path = require('path');
+// Load environment variables immediately
+const envPath = path.resolve(__dirname, '../../.env');
+require('dotenv').config({ path: envPath, override: true });
+
+// DEBUG LOGGING
+console.log('[DEBUG-AUTH] Starting Auth Service...');
+console.log('[DEBUG-AUTH] Loading .env from:', envPath);
+console.log('[DEBUG-AUTH] NODE_ENV:', process.env.NODE_ENV);
+
 const express = require('express');
 const jwt = require('jsonwebtoken');
 const bcrypt = require('bcryptjs');
@@ -6,7 +16,6 @@ const axios = require('axios');
 const { prisma } = require('@budolpay/database');
 const { sendAccountCreationSuccess, sendOTP, sendVerificationSuccess } = require('@budolpay/notifications');
 const { createAuditLog: createCentralizedAuditLog } = require('@budolpay/audit');
-const path = require('path');
 
 /**
  * Date Utilities for Asia/Manila Standard
@@ -16,7 +25,8 @@ const getNowUTC = () => new Date();
 const getLegacyManilaISO = () => new Date().toISOString();
 const getLegacyManilaDate = () => new Date();
 const isLocal = process.env.NODE_ENV === 'development' || process.env.NODE_ENV === 'test' || process.env.LOCAL_IP === '127.0.0.1' || !!process.env.JEST_WORKER_ID;
-require('dotenv').config({ path: path.resolve(__dirname, '../../.env'), override: true });
+console.log('[DEBUG-AUTH] isLocal determined as:', isLocal);
+
 
 // NPC Compliance: PII Masking Helper
 const maskPII = (str, type = 'AUTO') => {
@@ -178,13 +188,124 @@ const authenticate = async (req, res, next) => {
     }
 };
 
+// Verify Token & Get Profile (Mobile App Sync) - Universal Entry Point
+app.get('/verify', async (req, res) => {
+    const authHeader = req.headers.authorization;
+    if (!authHeader || !authHeader.startsWith('Bearer ')) {
+        return res.status(401).json({ error: 'Unauthorized' });
+    }
+    const token = authHeader.split(' ')[1];
+
+    try {
+        const decoded = jwt.verify(token, JWT_SECRET);
+        
+        // Universal User Lookup (Support SSO & Local)
+        let user = null;
+        
+        // 1. Try lookup by ID (standard)
+        if (decoded.userId || decoded.id || decoded.sub) {
+            user = await prisma.user.findUnique({
+                where: { id: decoded.userId || decoded.id || decoded.sub },
+                include: { wallet: true }
+            });
+        }
+        
+        // 2. Try lookup by Email if ID failed or not present
+        if (!user && decoded.email) {
+            user = await prisma.user.findUnique({
+                where: { email: decoded.email },
+                include: { wallet: true }
+            });
+        }
+
+        // 3. Universal Sync: Create user if missing but valid token
+        if (!user && decoded.email) {
+            console.log(`[Universal Sync] Creating missing user in budolPay: ${maskPII(decoded.email)}`);
+            user = await prisma.user.create({
+                data: {
+                    id: decoded.sub || undefined, // Use budolID UUID if possible
+                    email: decoded.email,
+                    phoneNumber: decoded.phoneNumber || '0000000000',
+                    firstName: decoded.firstName || '',
+                    lastName: decoded.lastName || '',
+                    passwordHash: 'SSO_MANAGED', // Password is managed by budolID
+                    wallet: {
+                        create: {
+                            balance: 0.0,
+                            currency: 'PHP'
+                        }
+                    }
+                },
+                include: { wallet: true }
+            });
+        }
+
+        if (!user) return res.status(404).json({ error: 'User not found' });
+
+        // Audit: Token Verification / Profile Sync
+        // We log this as it accesses sensitive PII
+        /* await createAuditLog(req, user.id, 'SECURITY_TOKEN_VERIFY', {
+            status: 'SUCCESS',
+            timestamp: getLegacyManilaISO()
+        }, 'Security', user.id); */
+
+        res.json({
+            valid: true,
+            user: {
+                id: user.id,
+                email: user.email,
+                phoneNumber: user.phoneNumber, // Unmasked for profile edit
+                firstName: user.firstName,     // Unmasked for profile edit
+                lastName: user.lastName,       // Unmasked for profile edit
+                kycTier: user.kycTier,
+                kycStatus: user.kycStatus,
+                role: user.role,
+                trustedDevices: user.trustedDevices
+            },
+            // Include extra fields for compatibility if needed
+            ecosystem: 'budol',
+            decoded
+        });
+    } catch (error) {
+        console.error('[Verify Error]', error);
+        res.status(500).json({ error: error.message });
+    }
+});
+
 // Update Profile (Compliance Aligned)
 app.patch('/profile', authenticate, async (req, res) => {
+    console.error('--- PROFILE PATCH RECEIVED ---', JSON.stringify(req.body));
     const { firstName, lastName, email } = req.body;
     const userId = req.user.id;
 
+    // Strict Validation
+    if (email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+        console.error('--- VALIDATION FAILED: Invalid Email ---', email);
+        return res.status(400).json({ error: 'Invalid email format' });
+    }
+
+    if (firstName !== undefined) {
+        console.error('--- VALIDATION CHECK FIRST NAME ---', { firstName, trim: firstName.trim() });
+        if (firstName.trim() === '') {
+            console.error('--- VALIDATION FAILED: Empty First Name ---');
+            return res.status(400).json({ error: 'First name cannot be empty' });
+        }
+    }
+
+    if (lastName !== undefined) {
+        console.error('--- VALIDATION CHECK LAST NAME ---', { lastName, trim: lastName.trim() });
+        if (lastName.trim() === '') {
+            console.error('--- VALIDATION FAILED: Empty Last Name ---');
+            return res.status(400).json({ error: 'Last name cannot be empty' });
+        }
+    }
+
     try {
         const user = await prisma.user.findUnique({ where: { id: userId } });
+
+        if (!user) {
+            return res.status(404).json({ error: 'User not found' });
+        }
 
         // Compliance: Restricted fields for verified users
         if (user.kycTier === 'FULLY_VERIFIED') {
@@ -196,6 +317,14 @@ app.patch('/profile', authenticate, async (req, res) => {
             }
         }
 
+        // Check for duplicate email if email is being changed
+        if (email && email !== user.email) {
+            const existingUser = await prisma.user.findUnique({ where: { email } });
+            if (existingUser) {
+                return res.status(400).json({ error: 'Email is already in use by another account' });
+            }
+        }
+
         const updatedUser = await prisma.user.update({
             where: { id: userId },
             data: {
@@ -204,6 +333,25 @@ app.patch('/profile', authenticate, async (req, res) => {
                 email: email || user.email,
             }
         });
+
+        // Audit Log for Profile Update
+        await createAuditLog(req, userId, 'PROFILE_UPDATE', {
+            previous: {
+                firstName: user.firstName,
+                lastName: user.lastName,
+                email: user.email
+            },
+            updated: {
+                firstName: firstName || user.firstName,
+                lastName: lastName || user.lastName,
+                email: email || user.email
+            },
+            changes: {
+                firstName: firstName && firstName !== user.firstName,
+                lastName: lastName && lastName !== user.lastName,
+                email: email && email !== user.email
+            }
+        }, 'User', userId);
 
         res.json({
             message: 'Profile updated successfully',
@@ -391,9 +539,8 @@ app.post('/register', async (req, res) => {
                     await sendAccountCreationSuccess(user.phoneNumber, user.firstName || 'User', 'SMS');
                     // sendOTP now handles validation and will only send if applicable
                     await sendOTP(user.phoneNumber, otpCode, deliveryType);
-                    if (isLocal) {
-                        console.log(`[LOCAL] OTP for ${maskPII(user.phoneNumber)}: \x1b[33m${otpCode}\x1b[0m`);
-                    }
+                    // Always log OTP for visibility during dev/test
+                    console.log(`[LOCAL] OTP for ${maskPII(user.phoneNumber)}: \x1b[33m${otpCode}\x1b[0m`);
                 }
             } catch (notifError) {
                 console.error('[Registration Notification Error]', notifError);
@@ -618,8 +765,10 @@ app.post('/login/mobile/identify', async (req, res) => {
             const recipient = user.phoneNumber || user.email;
 
             console.log(`[Identify] Sending login OTP to ${maskPII(recipient)} via ${deliveryType}`);
+            console.log(`[DEBUG-OTP] Code: ${otpCode}, isLocal: ${isLocal}`);
             await sendOTP(recipient, otpCode, deliveryType);
-            if (isLocal) console.log(`[LOCAL] Login OTP for ${maskPII(recipient)}: \x1b[33m${otpCode}\x1b[0m`);
+            // Always log OTP for visibility during dev/test
+            console.log(`[LOCAL] Login OTP for ${maskPII(recipient)}: \x1b[33m${otpCode}\x1b[0m`);
 
         return res.json({ 
             status: 'OTP_REQUIRED', 
@@ -795,11 +944,13 @@ app.post('/resend-otp', async (req, res) => {
         
         const recipient = user.phoneNumber || user.email;
         console.log(`[Resend-OTP] Resending OTP to ${maskPII(recipient)} via ${deliveryType}`);
+        console.log(`[DEBUG-OTP] Code: ${otpCode}, isLocal: ${isLocal}`);
         
         // Use the provider-agnostic notification package
         await sendOTP(recipient, otpCode, deliveryType);
 
-        if (isLocal) console.log(`[LOCAL] Resent OTP for ${maskPII(recipient)}: \x1b[33m${otpCode}\x1b[0m`);
+        // Always log OTP for visibility during dev/test
+        console.log(`[LOCAL] Resent OTP for ${maskPII(recipient)}: \x1b[33m${otpCode}\x1b[0m`);
 
         // Audit: OTP Resent
         await createAuditLog(req, user.id, 'SECURITY_OTP_RESENT', {
@@ -1143,62 +1294,10 @@ app.post('/biometric/login-verify', async (req, res) => {
     }
 });
 
-// Global Verify Token (For all apps)
-app.get('/verify', async (req, res) => {
-    const token = req.headers.authorization?.split(' ')[1];
-    if (!token) return res.status(401).json({ error: 'No token provided' });
-    
-    try {
-        const decoded = jwt.verify(token, JWT_SECRET);
-        
-        // --- UNIVERSAL PROPAGATION LOGIC ---
-        // If the token is valid from budolID but user is missing in budolPay, create them.
-        let user = null;
-        if (decoded.email) {
-            user = await prisma.user.findUnique({
-                where: { email: decoded.email },
-                include: { wallet: true }
-            });
-        } else if (decoded.userId || decoded.id || decoded.sub) {
-            user = await prisma.user.findUnique({
-                where: { id: decoded.userId || decoded.id || decoded.sub },
-                include: { wallet: true }
-            });
-        }
+// Global Verify Token (For all apps) - Consolidate with the main authenticated /verify endpoint above
+// The authenticated endpoint at line ~182 handles this securely with middleware.
+// app.get('/verify', ... removed duplicate ...);
 
-        if (!user && decoded.email) {
-            console.log(`[Universal Sync] Creating missing user in budolPay: ${maskPII(decoded.email)}`);
-            user = await prisma.user.create({
-                data: {
-                    id: decoded.sub || undefined, // Use budolID UUID if possible
-                    email: decoded.email,
-                    phoneNumber: decoded.phoneNumber || '0000000000',
-                    firstName: decoded.firstName || '',
-                    lastName: decoded.lastName || '',
-                    passwordHash: 'SSO_MANAGED', // Password is managed by budolID
-                    wallet: {
-                        create: {
-                            balance: 0.0,
-                            currency: 'PHP'
-                        }
-                    }
-                },
-                include: { wallet: true }
-            });
-        }
-        // ----------------------------------
-
-        res.json({ 
-            valid: true, 
-            user,
-            decoded,
-            ecosystem: 'budol' 
-        });
-    } catch (error) {
-        console.error('[Verify Error]', error);
-        res.status(401).json({ error: 'Invalid or expired ecosystem token' });
-    }
-});
 
 app.get('/health', (req, res) => res.json({ status: 'OK', service: 'auth-service', version: 'v3.2.0' }));
 

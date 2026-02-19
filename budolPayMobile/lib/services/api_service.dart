@@ -354,7 +354,7 @@ class ApiService extends ChangeNotifier {
     await fetchSystemSettings();
     
     if (isAuthenticated) {
-      await _fetchUserProfile();
+      await fetchUserProfile();
     }
     
     notifyListeners();
@@ -370,7 +370,7 @@ class ApiService extends ChangeNotifier {
     await _deleteSecure(_userKey);
   }
 
-  Future<void> _fetchUserProfile() async {
+  Future<void> fetchUserProfile() async {
     if (token == null) return;
     
     // The auth service has /verify at the root and also /api/auth/verify via router
@@ -380,15 +380,20 @@ class ApiService extends ChangeNotifier {
         Uri.parse(url),
         headers: {
           'Authorization': 'Bearer $token',
-          'Content-Type': 'application/json',
-        },
-      ).timeout(const Duration(seconds: 5));
+              'Content-Type': 'application/json',
+            },
+          ).timeout(const Duration(seconds: 30));
 
-      if (response.statusCode == 200) {
-        final data = _safeDecode(response, context: 'fetchUserProfile');
+          if (response.statusCode == 200) {
+            final data = _safeDecode(response, context: 'fetchUserProfile');
         if (data['valid'] == true && data['user'] != null) {
           final newUser = Map<String, dynamic>.from(data['user']);
           
+          if (kDebugMode) {
+             print('ApiService: fetchUserProfile keys: ${newUser.keys.toList()}');
+             print('ApiService: fetchUserProfile email: ${newUser['email']}');
+          }
+
           // Merge with existing user data to preserve fields not returned by /verify
           if (user != null) {
             final mergedUser = Map<String, dynamic>.from(user!);

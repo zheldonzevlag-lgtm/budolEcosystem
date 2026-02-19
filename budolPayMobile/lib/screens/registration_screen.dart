@@ -32,7 +32,33 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
   final TextEditingController _firstNameController = TextEditingController();
   final TextEditingController _lastNameController = TextEditingController();
   final TextEditingController _emailController = TextEditingController();
+  final TextEditingController _passwordController = TextEditingController();
+  final TextEditingController _confirmPasswordController = TextEditingController();
+  bool _obscurePassword = true;
+  bool _obscureConfirmPassword = true;
   
+  // Validation Helpers
+  static final RegExp _emailRegex = RegExp(r'^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$');
+
+  bool get _isEmailValid => 
+    _emailRegex.hasMatch(_emailController.text) && 
+    !_emailExists && 
+    !_checkingEmail;
+    
+  bool get _isPasswordComplex => 
+    RegExp(r'^(?=.*?[A-Z])(?=.*?[a-z])(?=.*?[0-9])(?=.*?[!@#\$&*~]).{8,}$').hasMatch(_passwordController.text);
+    
+  bool get _passwordsMatch => 
+    _passwordController.text.isNotEmpty && 
+    _passwordController.text == _confirmPasswordController.text;
+    
+  bool get _namesValid => 
+    _firstNameController.text.trim().isNotEmpty && 
+    _lastNameController.text.trim().isNotEmpty;
+    
+  bool get _isProfileFormValid => 
+    _isEmailValid && _isPasswordComplex && _passwordsMatch && _namesValid;
+
   // Step 3: PIN
   final TextEditingController _pinController = TextEditingController();
   final TextEditingController _confirmPinController = TextEditingController();
@@ -50,6 +76,12 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
 
     _phoneController.addListener(_onPhoneChanged);
     _emailController.addListener(_onEmailChanged);
+    
+    // Listen to changes for validation
+    _firstNameController.addListener(() => setState(() {}));
+    _lastNameController.addListener(() => setState(() {}));
+    _passwordController.addListener(() => setState(() {}));
+    _confirmPasswordController.addListener(() => setState(() {}));
   }
 
   void _onPhoneChanged() {
@@ -93,7 +125,7 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
   }
 
   Future<void> _checkEmail(String email) async {
-    if (email.length < 5 || !email.contains('@')) {
+    if (!_emailRegex.hasMatch(email)) {
       setState(() {
         _emailExists = false;
         _checkingEmail = false;
@@ -125,6 +157,8 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
     _firstNameController.dispose();
     _lastNameController.dispose();
     _emailController.dispose();
+    _passwordController.dispose();
+    _confirmPasswordController.dispose();
     _pinController.dispose();
     _confirmPinController.dispose();
     super.dispose();
@@ -146,7 +180,8 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
         phoneNumber: _phoneController.text.trim(),
         firstName: _firstNameController.text.trim(),
         lastName: _lastNameController.text.trim(),
-        email: _emailController.text.trim().isEmpty ? null : _emailController.text.trim(),
+        email: _emailController.text.trim(),
+        password: _passwordController.text,
         pin: _pinController.text.trim(),
       );
       
@@ -383,12 +418,14 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
         children: [
           TextField(
             controller: _firstNameController,
+            textCapitalization: TextCapitalization.words,
             style: const TextStyle(color: Colors.white),
             decoration: _inputDecoration('First Name', Icons.person),
           ),
           const SizedBox(height: 16),
           TextField(
             controller: _lastNameController,
+            textCapitalization: TextCapitalization.words,
             style: const TextStyle(color: Colors.white),
             decoration: _inputDecoration('Last Name', Icons.person_outline),
           ),
@@ -398,29 +435,57 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
             keyboardType: TextInputType.emailAddress,
             style: const TextStyle(color: Colors.white),
             decoration: _inputDecoration(
-              'Email (Optional)', 
+              'Email', 
               Icons.email,
               suffixIcon: _checkingEmail 
                 ? const SizedBox(width: 20, height: 20, child: Padding(padding: EdgeInsets.all(12), child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white70)))
                 : _emailExists 
                   ? const Icon(Icons.error_outline, color: Colors.redAccent)
-                  : _emailController.text.contains('@') && _emailController.text.length > 5 ? const Icon(Icons.check_circle_outline, color: Colors.greenAccent) : null,
-              errorText: _emailExists ? 'This email is already registered in the ecosystem' : null,
+                  : _isEmailValid ? const Icon(Icons.check_circle_outline, color: Colors.greenAccent) : null,
+              errorText: _emailExists 
+                ? 'This email is already registered' 
+                : (_emailController.text.isNotEmpty && !_isEmailValid) ? 'Invalid email format' : null,
+            ),
+          ),
+          const SizedBox(height: 16),
+          TextField(
+            controller: _passwordController,
+            obscureText: _obscurePassword,
+            style: const TextStyle(color: Colors.white),
+            decoration: _inputDecoration(
+              'Password', 
+              Icons.lock,
+              suffixIcon: IconButton(
+                icon: Icon(_obscurePassword ? Icons.visibility : Icons.visibility_off, color: Colors.white70),
+                onPressed: () => setState(() => _obscurePassword = !_obscurePassword),
+              ),
+              errorText: (_passwordController.text.isNotEmpty && !_isPasswordComplex) 
+                ? 'Min 8 chars, Upper, Lower, Digit, Special' 
+                : null,
+            ),
+          ),
+          const SizedBox(height: 16),
+          TextField(
+            controller: _confirmPasswordController,
+            obscureText: _obscureConfirmPassword,
+            style: const TextStyle(color: Colors.white),
+            decoration: _inputDecoration(
+              'Confirm Password', 
+              Icons.lock_outline,
+              suffixIcon: IconButton(
+                icon: Icon(_obscureConfirmPassword ? Icons.visibility : Icons.visibility_off, color: Colors.white70),
+                onPressed: () => setState(() => _obscureConfirmPassword = !_obscureConfirmPassword),
+              ),
+              errorText: (_confirmPasswordController.text.isNotEmpty && !_passwordsMatch)
+                ? 'Passwords do not match'
+                : null,
             ),
           ),
         ],
       ),
-      onNext: () {
-        if (_emailExists) {
-          _showError('This email is already registered in the ecosystem');
-          return;
-        }
-        if (_firstNameController.text.isNotEmpty && _lastNameController.text.isNotEmpty) {
-          _pageController.nextPage(duration: const Duration(milliseconds: 300), curve: Curves.easeInOut);
-        } else {
-          _showError('First and last name are required');
-        }
-      },
+      onNext: _isProfileFormValid ? () {
+        _pageController.nextPage(duration: const Duration(milliseconds: 300), curve: Curves.easeInOut);
+      } : null,
     );
   }
 
@@ -460,7 +525,7 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
     required String title,
     required String subtitle,
     required Widget content,
-    required VoidCallback onNext,
+    VoidCallback? onNext,
     String buttonText = 'Continue',
   }) {
     return Padding(
@@ -478,10 +543,12 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
             width: double.infinity,
             height: 56,
             child: ElevatedButton(
-              onPressed: _isLoading ? null : onNext,
+              onPressed: (_isLoading || onNext == null) ? null : onNext,
               style: ElevatedButton.styleFrom(
                 backgroundColor: const Color(0xFFF43F5E),
                 foregroundColor: Colors.white,
+                disabledBackgroundColor: const Color(0xFF334155),
+                disabledForegroundColor: Colors.white38,
                 shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
               ),
               child: _isLoading 
