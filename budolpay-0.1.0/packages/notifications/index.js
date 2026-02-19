@@ -195,6 +195,7 @@ const sendSMS = async (to, message) => {
 };
 
 const sendOTP = async (to, otp, type = 'EMAIL') => {
+    console.error(`[Notification-DEBUG] sendOTP called for ${maskPII(to)} via ${type}`);
     const subject = 'Your budolPay Verification Code';
     const message = `Your verification code is: ${otp}. This code will expire in 10 minutes.`;
     

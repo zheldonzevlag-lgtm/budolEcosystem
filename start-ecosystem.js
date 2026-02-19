@@ -243,7 +243,8 @@ async function start() {
         const cleanEnv = { ...process.env };
         
         // Remove variables that might be leaked from previous app starts or the runner itself
-        const varsToRemove = ['DATABASE_URL', 'NODE_ENV', 'VERCEL', 'PORT', 'JWT_SECRET', 'LOCAL_IP'];
+        // We do NOT remove NODE_ENV as it is critical for correct behavior
+        const varsToRemove = ['DATABASE_URL', 'VERCEL', 'PORT', 'JWT_SECRET', 'LOCAL_IP'];
         varsToRemove.forEach(v => delete cleanEnv[v]);
 
         const env = { 

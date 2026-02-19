@@ -1,0 +1,84 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Developer Manual - v3.3.25</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        :root { --primary: #0052CC; --bg-main: #FFFFFF; --bg-sidebar: #F4F5F7; --text-main: #091E42; --border: #DFE1E6; }
+        body { font-family: 'Inter', sans-serif; background: var(--bg-main); color: var(--text-main); line-height: 1.6; margin: 0; display: flex; }
+        .sidebar { width: 280px; background: var(--bg-sidebar); border-right: 1px solid var(--border); height: 100vh; position: sticky; top: 0; padding: 24px; }
+        .main-content { flex-grow: 1; padding: 40px 60px; max-width: 1200px; }
+        h1 { color: var(--primary); border-bottom: 2px solid var(--border); padding-bottom: 10px; }
+        pre { background: #f4f5f7; padding: 16px; border-radius: 8px; overflow-x: auto; }
+    </style>
+</head>
+<body>
+    <div class="sidebar">
+        <h3>Budol Ecosystem</h3>
+        <p>v3.3.25</p>
+        <hr style="border: 0; border-top: 1px solid var(--border); margin: 16px 0;">
+        <nav>
+            <div style="margin-bottom: 8px;"><a href="index.html" style="color: var(--text-main); text-decoration: none;">Release Index</a></div>
+            <div style="margin-bottom: 8px;"><a href="developer_manual.html" style="color: var(--primary); font-weight: 600; text-decoration: none;">Developer Manual</a></div>
+        </nav>
+    </div>
+
+    <div class="main-content">
+        <h1>Developer Manual</h1>
+        <h2>Forced Profile Refresh</h2>
+        <p>This update ensures that the "Edit Profile" screen always displays the latest data from the server, addressing issues with stale cache or incomplete login data.</p>
+        
+        <h3>Implementation Details</h3>
+        <ol>
+            <li><strong>Exposed `fetchUserProfile`:</strong> Made `ApiService.fetchUserProfile` public to allow manual triggering.</li>
+            <li><strong>Force Refresh on Init:</strong> In `EditProfileScreen.initState`, we now call `fetchUserProfile` via `addPostFrameCallback`.</li>
+            <li><strong>Granular Field Updates:</strong> Improved `didChangeDependencies` to update fields individually as data arrives, while respecting user input (preventing overwrites if the user has started typing).</li>
+            <li><strong>PII Masking:</strong> Implemented `obscureText` toggle for First/Last Name fields to enhance privacy in public spaces. Defaults to `true` (masked).</li>
+        </ol>
+
+        <h4>Code Changes</h4>
+        <p><strong>File:</strong> <a href="file:///d:/IT Projects/budolEcosystem/budolPayMobile/lib/screens/edit_profile_screen.dart">edit_profile_screen.dart</a></p>
+        <pre><code>
+  @override
+  void initState() {
+    super.initState();
+    // Force refresh from server
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      context.read&lt;ApiService&gt;().fetchUserProfile();
+    });
+    // ...
+  }
+        </code></pre>
+        <p><strong>File:</strong> <a href="file:///d:/IT Projects/budolEcosystem/budolPayMobile/lib/services/api_service.dart">api_service.dart</a></p>
+        <pre><code>
+  // Renamed from _fetchUserProfile to fetchUserProfile
+  Future&lt;void&gt; fetchUserProfile() async {
+    // ...
+  }
+        </code></pre>
+
+        <h3>Dirty Flag Logic for Data Overwrites</h3>
+        <p>To balance between "fresh data" and "user input", we introduced dirty flags for each editable field.</p>
+        <ul>
+            <li><strong>Initialization:</strong> Flags start as <code>false</code>.</li>
+            <li><strong>User Input:</strong> Typing in a field sets its flag to <code>true</code>.</li>
+            <li><strong>Server Update:</strong> Incoming data from `fetchUserProfile` only updates a field if its flag is <code>false</code>.</li>
+            <li><strong>Masked Data Correction:</strong> This ensures that if the initial state contained masked data (e.g. "M*****"), the fresh unmasked data from the server will correctly overwrite it, unless the user has already started editing.</li>
+        </ul>
+
+        <h2>Backend: Universal Sync & Unmasked Data</h2>
+        <p>We consolidated the `/verify` endpoint logic to ensure robust user synchronization and data visibility.</p>
+        
+        <h3>Key Features</h3>
+        <ul>
+            <li><strong>Universal User Lookup:</strong> Supports finding users by ID (standard) or Email (fallback).</li>
+            <li><strong>Auto-Creation (Sync):</strong> If a valid SSO token is presented but the user is missing in BudolPay, the system automatically creates the user record.</li>
+            <li><strong>Unmasked PII Return:</strong> The endpoint now explicitly returns unmasked First Name, Last Name, Phone, and Email to support the "Edit Profile" feature, replacing previous masked responses (e.g., "M******").</li>
+        </ul>
+
+        <h4>Code Reference</h4>
+        <p><strong>File:</strong> <a href="file:///d:/IT Projects/budolEcosystem/budolpay-0.1.0/services/auth-service/index.js">auth-service/index.js</a></p>
+    </div>
+</body>
+</html>

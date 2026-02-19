@@ -22,6 +22,7 @@ class _HomeScreenState extends State<HomeScreen> {
   String _balance = '₱0.00';
   bool _isLoading = true;
   bool _isBalanceVisible = false;
+  bool _isNameVisible = false;
   List<dynamic> _transactions = [];
   StreamSubscription<double>? _balanceSubscription;
   StreamSubscription<Map<String, dynamic>>? _transactionSubscription;
@@ -58,6 +59,19 @@ class _HomeScreenState extends State<HomeScreen> {
       decimalDigits: 2,
     );
     return formatter.format(value);
+  }
+
+  String get _greeting {
+    // Force Philippine Time (UTC+8) regardless of device timezone
+    final phTime = DateTime.now().toUtc().add(const Duration(hours: 8));
+    final hour = phTime.hour;
+    if (hour >= 5 && hour < 12) {
+      return 'Good Morning, ';
+    } else if (hour >= 12 && hour < 18) {
+      return 'Good Afternoon, ';
+    } else {
+      return 'Good Evening, ';
+    }
   }
 
   Timer? _swrTimer;
@@ -216,8 +230,7 @@ class _HomeScreenState extends State<HomeScreen> {
     String userName = 'User';
     if (user != null) {
       final firstName = user['firstName']?.toString() ?? '';
-      final lastName = user['lastName']?.toString() ?? '';
-      userName = '$firstName $lastName'.trim();
+      userName = firstName.trim();
       if (userName.isEmpty) userName = user['email']?.toString() ?? 'User';
     }
 
@@ -294,9 +307,45 @@ class _HomeScreenState extends State<HomeScreen> {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text(
-                      'Welcome back, $userName!',
-                      style: const TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.w500),
+                    Row(
+                      children: [
+                        Flexible(
+                          child: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Text(
+                                _greeting,
+                                style: const TextStyle(color: Colors.white, fontSize: 14, fontWeight: FontWeight.w500),
+                              ),
+                              Flexible(
+                                child: Text(
+                                  _isNameVisible ? userName : '•' * userName.length,
+                                  style: TextStyle(
+                                    color: Colors.white,
+                                    fontSize: _isNameVisible ? 18 : 24, // Bigger font for dots
+                                    fontWeight: FontWeight.w500,
+                                    height: _isNameVisible ? null : 0.5, // Vertically center dots
+                                  ),
+                                  overflow: TextOverflow.ellipsis,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                        const SizedBox(width: 8),
+                        GestureDetector(
+                          onTap: () {
+                            setState(() {
+                              _isNameVisible = !_isNameVisible;
+                            });
+                          },
+                          child: Icon(
+                            _isNameVisible ? Icons.visibility : Icons.visibility_off,
+                            color: Colors.white70,
+                            size: 16,
+                          ),
+                        ),
+                      ],
                     ),
                     const SizedBox(height: 16),
                     const Text(
@@ -306,7 +355,7 @@ class _HomeScreenState extends State<HomeScreen> {
                     const SizedBox(height: 8),
                     _isLoading
                         ? const SizedBox(
-                            height: 43,
+                            height: 30,
                             child: Center(child: CircularProgressIndicator(color: Colors.white)),
                           )
                         : Row(
@@ -316,7 +365,7 @@ class _HomeScreenState extends State<HomeScreen> {
                                 _isBalanceVisible ? _balance : '₱ ••••••',
                                 style: const TextStyle(
                                   color: Colors.white,
-                                  fontSize: 36,
+                                  fontSize: 22,
                                   fontWeight: FontWeight.bold,
                                 ),
                               ),

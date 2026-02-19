@@ -345,6 +345,13 @@ export default function SecurityPage() {
             </div>
           </div>
           <div className="divide-y divide-slate-100 min-h-[400px]">
+            <div className="px-4 py-3 bg-slate-50/80 grid grid-cols-12 gap-4 items-center text-[10px] font-bold text-slate-500 uppercase tracking-wider sticky top-0 backdrop-blur-sm z-10">
+              <div className="col-span-1">Actor</div>
+              <div className="col-span-3">Action</div>
+              <div className="col-span-4">Entity Details</div>
+              <div className="col-span-3 text-right">Timestamp</div>
+              <div className="col-span-1 text-right">Log</div>
+            </div>
             {loading ? (
               <div className="flex flex-col items-center justify-center py-20 space-y-4">
                 <Loader2 className="w-10 h-10 text-slate-300 animate-spin" />
@@ -363,7 +370,7 @@ export default function SecurityPage() {
                   </div>
                 </div>
                 <div className="col-span-3">
-                  <p className="text-sm font-bold text-slate-800">{log.action}</p>
+                  <p className="text-xs font-bold text-slate-800 truncate" title={log.action}>{log.action}</p>
                   <p className="text-[10px] text-slate-400 font-medium">
                     {log.user ? `${log.user.firstName || ''} ${log.user.lastName || ''}`.trim() || log.user.name || log.user.email : 'System'}
                   </p>

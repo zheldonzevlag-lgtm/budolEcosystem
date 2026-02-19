@@ -1,0 +1,123 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>System Admin Manual - Budol Ecosystem v3.3.26</title>
+    <style>
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; line-height: 1.6; color: #333; max-width: 1200px; margin: 0 auto; padding: 20px; }
+        h1, h2, h3 { color: #0056b3; }
+        .container { display: flex; }
+        .sidebar { width: 250px; background: #f4f5f7; padding: 20px; border-right: 1px solid #ddd; height: 100vh; position: sticky; top: 0; }
+        .content { flex: 1; padding-left: 30px; }
+        .code-block { background: #2d2d2d; color: #f8f8f2; padding: 15px; border-radius: 5px; overflow-x: auto; font-family: 'Consolas', 'Monaco', monospace; }
+        .warning { background: #fff3cd; color: #856404; padding: 15px; border: 1px solid #ffeeba; border-radius: 5px; margin: 20px 0; }
+        .nav-link { display: block; padding: 10px 0; text-decoration: none; color: #333; }
+        .nav-link:hover { color: #0056b3; }
+        .active { font-weight: bold; color: #0056b3; }
+        table { width: 100%; border-collapse: collapse; margin: 20px 0; }
+        th, td { border: 1px solid #ddd; padding: 12px; text-align: left; }
+        th { background-color: #f2f2f2; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="sidebar">
+            <h3>Navigation</h3>
+            <a href="index.html" class="nav-link">Home</a>
+            <a href="developer_manual.html" class="nav-link">Developer Manual</a>
+            <a href="system_admin_manual.html" class="nav-link active">System Admin Manual</a>
+            <a href="user_manual.html" class="nav-link">User Manual</a>
+            <a href="risk_register.html" class="nav-link">Risk Register</a>
+            <a href="mitigation.html" class="nav-link">Mitigation Plan</a>
+            <a href="issues & fixes.html" class="nav-link">Issues & Fixes</a>
+            <a href="test_results.html" class="nav-link">Test Results</a>
+            <a href="future_recommendations.html" class="nav-link">Future Recommendations</a>
+        </div>
+        <div class="content">
+            <h1>System Administrator Manual</h1>
+            <p><strong>Version:</strong> v3.3.26</p>
+            <p><strong>Date:</strong> 2026-02-19</p>
+
+            <h2>1. Deployment Instructions</h2>
+            <h3>Backend Services (Auth Service)</h3>
+            <p>The <code>auth-service</code> has been updated to support unmasked data retrieval for the "Edit Profile" feature via the <code>/verify</code> endpoint. It also includes logic to consolidate user data retrieval.</p>
+            
+            <h4>Steps:</h4>
+            <ol>
+                <li>Navigate to the auth-service directory:
+                    <div class="code-block">cd budolpay-0.1.0/services/auth-service</div>
+                </li>
+                <li>Stop any running instances of the auth-service (Port 8001).</li>
+                <li>Install dependencies (if not already up to date):
+                    <div class="code-block">npm install</div>
+                </li>
+                <li>Start the service:
+                    <div class="code-block">npm start</div>
+                </li>
+            </ol>
+
+            <h3>Mobile Application (BudolPay)</h3>
+            <p>The mobile application requires a rebuild to include the PII masking fixes and data integrity safety checks.</p>
+            
+            <h4>Steps:</h4>
+            <ol>
+                <li>Navigate to the mobile app directory:
+                    <div class="code-block">cd budolPayMobile</div>
+                </li>
+                <li>Clean the build:
+                    <div class="code-block">flutter clean</div>
+                </li>
+                <li>Get dependencies:
+                    <div class="code-block">flutter pub get</div>
+                </li>
+                <li>Build the APK:
+                    <div class="code-block">flutter build apk --release</div>
+                </li>
+            </ol>
+
+            <h2>2. Configuration Changes</h2>
+            <h3>Environment Variables</h3>
+            <p>No new environment variables are required for this release. Ensure the existing <code>JWT_SECRET</code> and database connection strings are correctly configured.</p>
+
+            <h3>Database Schema</h3>
+            <p>No schema changes were made in this release. The <code>User</code> table structure remains compatible.</p>
+
+            <h2>3. Monitoring & Maintenance</h2>
+            <h3>Logs</h3>
+            <p>Monitor <code>server.log</code> for the auth-service. Look for entries related to <code>/verify</code> endpoint access.</p>
+            <ul>
+                <li><strong>Success:</strong> "User verified: [email]"</li>
+                <li><strong>Error:</strong> "Token verification failed" or "User not found"</li>
+            </ul>
+
+            <h3>Troubleshooting</h3>
+            <div class="warning">
+                <strong>Critical:</strong> If users report "Masked data detected" errors in the mobile app, ensure the backend is running the latest version with the updated <code>/verify</code> endpoint.
+            </div>
+
+            <table>
+                <tr>
+                    <th>Issue</th>
+                    <th>Check</th>
+                    <th>Resolution</th>
+                </tr>
+                <tr>
+                    <td>Profile data shows asterisks (*) and cannot be saved.</td>
+                    <td>Check if the backend is returning masked data.</td>
+                    <td>Restart <code>auth-service</code>. Verify <code>/verify</code> endpoint is accessible.</td>
+                </tr>
+                <tr>
+                    <td>"Edit Profile" screen is empty.</td>
+                    <td>Check network connectivity and logs.</td>
+                    <td>Ensure the mobile device can reach the <code>auth-service</code> host.</td>
+                </tr>
+            </table>
+
+            <h2>4. Backup & Recovery</h2>
+            <p>Regular database backups should be maintained. This release does not require a specific pre-deployment backup as it involves logic changes only, but standard procedures apply.</p>
+            <p><strong>Backup Path:</strong> <code>\backup-db\db-2026-02-19</code></p>
+        </div>
+    </div>
+</body>
+</html>

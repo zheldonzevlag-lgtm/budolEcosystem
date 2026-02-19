@@ -766,7 +766,12 @@ app.post('/login/mobile/identify', async (req, res) => {
 
             console.log(`[Identify] Sending login OTP to ${maskPII(recipient)} via ${deliveryType}`);
             console.log(`[DEBUG-OTP] Code: ${otpCode}, isLocal: ${isLocal}`);
-            await sendOTP(recipient, otpCode, deliveryType);
+            try {
+                await sendOTP(recipient, otpCode, deliveryType);
+                console.log(`[Identify] sendOTP resolved successfully`);
+            } catch (err) {
+                console.error(`[Identify] sendOTP failed: ${err.message}`);
+            }
             // Always log OTP for visibility during dev/test
             console.log(`[LOCAL] Login OTP for ${maskPII(recipient)}: \x1b[33m${otpCode}\x1b[0m`);
 
@@ -784,6 +789,7 @@ app.post('/login/mobile/identify', async (req, res) => {
         }
 
         // Trusted Device -> Proceed to PIN or Biometrics
+        console.log(`[Identify] Skipping OTP (Reason: Device Trusted AND PIN Set)`);
         res.json({ 
             status: 'AUTH_REQUIRED', 
             userId: user.id,
@@ -855,8 +861,8 @@ app.post('/login/mobile/verify-pin', async (req, res) => {
             user: { 
                 id: user.id, 
                 phoneNumber: maskPII(user.phoneNumber), 
-                firstName: maskPII(user.firstName),
-                lastName: maskPII(user.lastName)
+                firstName: user.firstName,
+                lastName: user.lastName
             } 
         });
     } catch (error) {
@@ -898,8 +904,8 @@ app.post('/login/mobile/setup-pin', async (req, res) => {
             user: { 
                 id: user.id, 
                 phoneNumber: maskPII(user.phoneNumber),
-                firstName: maskPII(user.firstName),
-                lastName: maskPII(user.lastName)
+                firstName: user.firstName,
+                lastName: user.lastName
             }
         });
     } catch (error) {
@@ -910,14 +916,19 @@ app.post('/login/mobile/setup-pin', async (req, res) => {
 // Resend OTP
 app.post('/resend-otp', async (req, res) => {
     const { userId, type } = req.body; // type can be 'EMAIL', 'SMS', or 'BOTH'
+    console.log(`[Resend-OTP] Request received for userId: ${userId}, type: ${type}`);
     
     try {
         const user = await prisma.user.findUnique({ where: { id: userId } });
-        if (!user) return res.status(404).json({ error: 'User not found' });
+        if (!user) {
+            console.error(`[Resend-OTP] User not found: ${userId}`);
+            return res.status(404).json({ error: 'User not found' });
+        }
 
         // Rate limiting: Check if an OTP was sent recently (e.g., within the last 60 seconds)
         const now = getNowUTC();
         if (user.otpUpdatedAt && (now - new Date(user.otpUpdatedAt)) < 60000) {
+            console.warn(`[Resend-OTP] Rate limit hit for user ${userId}`);
             return res.status(429).json({ 
                 error: 'Too many requests. Please wait 60 seconds before requesting another OTP.',
                 retryAfter: 60
@@ -947,7 +958,12 @@ app.post('/resend-otp', async (req, res) => {
         console.log(`[DEBUG-OTP] Code: ${otpCode}, isLocal: ${isLocal}`);
         
         // Use the provider-agnostic notification package
-        await sendOTP(recipient, otpCode, deliveryType);
+        try {
+            await sendOTP(recipient, otpCode, deliveryType);
+            console.log(`[Resend-OTP] sendOTP resolved successfully`);
+        } catch (err) {
+            console.error(`[Resend-OTP] sendOTP failed: ${err.message}`);
+        }
 
         // Always log OTP for visibility during dev/test
         console.log(`[LOCAL] Resent OTP for ${maskPII(recipient)}: \x1b[33m${otpCode}\x1b[0m`);
@@ -1061,8 +1077,8 @@ app.post('/verify-otp', async (req, res) => {
                 user: { 
                     id: updatedUser.id, 
                     phoneNumber: maskPII(updatedUser.phoneNumber),
-                    firstName: maskPII(updatedUser.firstName),
-                    lastName: maskPII(updatedUser.lastName)
+                    firstName: updatedUser.firstName,
+                    lastName: updatedUser.lastName
                 },
                 needsPinSetup: !hasPin
             });
