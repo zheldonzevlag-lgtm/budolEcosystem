@@ -1,0 +1,116 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Budol Ecosystem v3.4.5 - Documentation</title>
+    <style>
+        :root {
+            --primary: #0052CC;
+            --text-main: #172B4D;
+            --text-subtle: #6B778C;
+            --bg-sidebar: #F4F5F7;
+            --border: #DFE1E6;
+        }
+        body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; color: var(--text-main); margin: 0; display: flex; }
+        .sidebar { width: 280px; background: var(--bg-sidebar); height: 100vh; padding: 24px; border-right: 1px solid var(--border); position: fixed; overflow-y: auto; }
+        .main { margin-left: 280px; padding: 40px; max-width: 900px; flex-grow: 1; }
+        .nav-item { display: block; padding: 8px 12px; color: var(--text-main); text-decoration: none; margin-bottom: 4px; border-radius: 4px; }
+        .nav-item:hover { background: #EBECF0; }
+        .nav-item.active { background: #DEEBFF; color: var(--primary); font-weight: 500; }
+        .nav-title { font-size: 0.75rem; font-weight: 700; color: var(--text-subtle); text-transform: uppercase; margin: 24px 0 8px 12px; }
+        h1 { font-size: 2rem; margin-bottom: 8px; }
+        .metadata { color: var(--text-subtle); font-size: 0.9rem; margin-bottom: 32px; display: flex; gap: 16px; }
+        .card { border: 1px solid var(--border); border-radius: 8px; padding: 24px; margin-bottom: 24px; box-shadow: 0 1px 2px rgba(0,0,0,0.05); }
+        .card h3 { margin-top: 0; }
+        .status-done { color: #006644; background: #E3FCEF; padding: 2px 8px; border-radius: 10px; font-size: 0.8rem; font-weight: 600; }
+        .status-todo { color: #0747A6; background: #DEEBFF; padding: 2px 8px; border-radius: 10px; font-size: 0.8rem; font-weight: 600; }
+        ul.tasks { list-style: none; padding: 0; }
+        ul.tasks li { padding: 8px 0; border-bottom: 1px solid var(--border); display: flex; justify-content: space-between; align-items: center; }
+        ul.tasks li:last-child { border-bottom: none; }
+    </style>
+</head>
+<body>
+
+<div class="sidebar">
+    <div style="font-weight: 700; font-size: 1.1rem; margin-bottom: 24px; padding-left: 12px;">Budol Ecosystem</div>
+    
+    <div class="nav-title">Documents</div>
+    <a href="index.html" class="nav-item active">Overview & Tasks</a>
+    <a href="developer_manual.html" class="nav-item">Developer Manual</a>
+    <a href="system_admin_manual.html" class="nav-item">System Admin Manual</a>
+    <a href="user_manual.html" class="nav-item">User Manual</a>
+    <a href="risk_register.html" class="nav-item">Risk Register</a>
+    <a href="Mitigation.html" class="nav-item">Mitigation Strategies</a>
+    <a href="issues_and_fixes.html" class="nav-item">Issues & Fixes</a>
+    <a href="test_results.html" class="nav-item">Test Results</a>
+    <a href="future_recommendations.html" class="nav-item">Future Recommendations</a>
+
+    <div class="nav-title">Navigation</div>
+    <a href="../knowledgebase.html" class="nav-item">← Back to Knowledgebase</a>
+</div>
+
+<div class="main">
+    <h1>v3.4.5: Multi-Store Payment & Order Linking</h1>
+    <div class="metadata">
+        <span>Date: 2026-02-20</span>
+        <span>Version: v3.4.5</span>
+        <span>Status: Released</span>
+    </div>
+
+    <div class="card">
+        <h3>Implementation Summary</h3>
+        <p>This release fixes the critical issue where multi-store orders paid via a single transaction resulted in only one store's order being marked as PAID. The system now correctly links a single Payment Intent to multiple Order records and updates all of them upon successful payment.</p>
+        <ul>
+            <li><strong>Frontend:</strong> Updated <code>OrderSummary.jsx</code> to capture and send ALL created Order IDs during checkout.</li>
+            <li><strong>Backend API:</strong> Updated <code>/api/payment/checkout</code> to accept <code>orderIds</code> and link them to the Payment Intent.</li>
+            <li><strong>Payment Adapters:</strong> Updated BudolPay and PayMongo adapters to include <code>orderIds</code> in transaction metadata.</li>
+            <li><strong>Webhooks:</strong> Enhanced webhook handlers to parse `orderIds` from metadata and update all corresponding orders, with a fallback to search by Payment Intent ID.</li>
+        </ul>
+    </div>
+
+    <div class="card">
+        <h3>Task List</h3>
+        <ul class="tasks">
+            <li>
+                <span>Analyze <code>OrderSummary.jsx</code> for multi-store order ID handling</span>
+                <span class="status-done">Completed</span>
+            </li>
+            <li>
+                <span>Modify <code>OrderSummary.jsx</code> to send <code>orderIds</code> array to payment API</span>
+                <span class="status-done">Completed</span>
+            </li>
+            <li>
+                <span>Update <code>checkout/route.js</code> to link multiple orders to Payment Intent</span>
+                <span class="status-done">Completed</span>
+            </li>
+            <li>
+                <span>Update <code>BudolPayAdapter</code> to include <code>orderIds</code> in metadata</span>
+                <span class="status-done">Completed</span>
+            </li>
+            <li>
+                <span>Update <code>PayMongoAdapter</code> to include <code>orderIds</code> in metadata</span>
+                <span class="status-done">Completed</span>
+            </li>
+            <li>
+                <span>Refactor <code>budolpay/route.js</code> webhook to update multiple orders</span>
+                <span class="status-done">Completed</span>
+            </li>
+            <li>
+                <span>Refactor <code>paymongo/route.js</code> webhook to update multiple orders</span>
+                <span class="status-done">Completed</span>
+            </li>
+            <li>
+                <span>Add fallback mechanism to find orders by Payment Intent ID if metadata is lost</span>
+                <span class="status-done">Completed</span>
+            </li>
+            <li>
+                <span>Verify changes via code analysis</span>
+                <span class="status-done">Completed</span>
+            </li>
+        </ul>
+    </div>
+</div>
+
+</body>
+</html>

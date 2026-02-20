@@ -1,0 +1,81 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Developer Manual - v3.4.5</title>
+    <style>
+        :root { --primary: #0052CC; --text-main: #172B4D; --bg-sidebar: #F4F5F7; --border: #DFE1E6; --code-bg: #F4F5F7; }
+        body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; color: var(--text-main); margin: 0; display: flex; }
+        .sidebar { width: 280px; background: var(--bg-sidebar); height: 100vh; padding: 24px; border-right: 1px solid var(--border); position: fixed; overflow-y: auto; }
+        .main { margin-left: 280px; padding: 40px; max-width: 900px; flex-grow: 1; }
+        .nav-item { display: block; padding: 8px 12px; color: var(--text-main); text-decoration: none; margin-bottom: 4px; border-radius: 4px; }
+        .nav-item.active { background: #DEEBFF; color: var(--primary); font-weight: 500; }
+        .nav-title { font-size: 0.75rem; font-weight: 700; color: #6B778C; text-transform: uppercase; margin: 24px 0 8px 12px; }
+        h1 { font-size: 2rem; margin-bottom: 24px; border-bottom: 1px solid var(--border); padding-bottom: 16px; }
+        h2 { font-size: 1.5rem; margin-top: 32px; margin-bottom: 16px; }
+        code { background: var(--code-bg); padding: 2px 4px; border-radius: 4px; font-family: monospace; color: #EB144C; }
+        pre { background: #091E42; color: #fff; padding: 16px; border-radius: 4px; overflow-x: auto; }
+    </style>
+</head>
+<body>
+
+<div class="sidebar">
+    <div style="font-weight: 700; font-size: 1.1rem; margin-bottom: 24px; padding-left: 12px;">Budol Ecosystem</div>
+    <div class="nav-title">Documents</div>
+    <a href="index.html" class="nav-item">Overview & Tasks</a>
+    <a href="developer_manual.html" class="nav-item active">Developer Manual</a>
+    <a href="system_admin_manual.html" class="nav-item">System Admin Manual</a>
+    <a href="user_manual.html" class="nav-item">User Manual</a>
+    <a href="risk_register.html" class="nav-item">Risk Register</a>
+    <a href="Mitigation.html" class="nav-item">Mitigation Strategies</a>
+    <a href="issues_and_fixes.html" class="nav-item">Issues & Fixes</a>
+    <a href="test_results.html" class="nav-item">Test Results</a>
+    <a href="future_recommendations.html" class="nav-item">Future Recommendations</a>
+    <div class="nav-title">Navigation</div>
+    <a href="../knowledgebase.html" class="nav-item">← Back to Knowledgebase</a>
+</div>
+
+<div class="main">
+    <h1>Developer Manual</h1>
+    <p>This document details the critical changes made in v3.4.5 to support multi-store payments.</p>
+
+    <h2>Purpose</h2>
+    <p>When a user places an order containing items from multiple stores (e.g., Store A and Store B), the system creates multiple Order records but processes a single Payment transaction. The previous implementation only linked the payment to the first order ID, leaving subsequent orders in an "UNPAID" state.</p>
+
+    <h2>Technical Implementation</h2>
+
+    <h3>1. Frontend: OrderSummary.jsx</h3>
+    <p>Modified to capture the full array of created Order IDs.</p>
+    <pre>
+// Old:
+const orderId = Array.isArray(data) ? data[0]?.id : data.id;
+
+// New:
+const orderIds = Array.isArray(data) ? data.map(o => o.id) : [data.id];
+// Sent to API:
+body: JSON.stringify({ ..., orderIds, ... })
+    </pre>
+
+    <h3>2. Backend: Payment Checkout API</h3>
+    <p>Modified <code>/api/payment/checkout</code> to iterate through <code>orderIds</code> and link each one to the generated <code>paymentIntentId</code> in the database. This ensures that even if webhooks fail, the relationship is established.</p>
+
+    <h3>3. Webhooks & Adapters</h3>
+    <p>The Payment Adapters now include <code>orderIds</code> in the metadata sent to the gateway. The Webhook handlers (PayMongo & BudolPay) have been refactored to:</p>
+    <ul>
+        <li>Parse <code>orderIds</code> from the webhook event metadata.</li>
+        <li>Iterate through each ID and update the corresponding Order status to <code>PAID</code>.</li>
+        <li><strong>Fallback:</strong> If metadata is missing, query the database for all orders with the matching <code>paymentIntentId</code> (set in step 2).</li>
+    </ul>
+
+    <h2>Code References</h2>
+    <ul>
+        <li><a href="file:///d:/IT Projects/budolEcosystem/budolshap-0.1.0/components/OrderSummary.jsx">components/OrderSummary.jsx</a></li>
+        <li><a href="file:///d:/IT Projects/budolEcosystem/budolshap-0.1.0/app/api/payment/checkout/route.js">app/api/payment/checkout/route.js</a></li>
+        <li><a href="file:///d:/IT Projects/budolEcosystem/budolshap-0.1.0/app/api/webhooks/paymongo/route.js">app/api/webhooks/paymongo/route.js</a></li>
+        <li><a href="file:///d:/IT Projects/budolEcosystem/budolshap-0.1.0/app/api/webhooks/budolpay/route.js">app/api/webhooks/budolpay/route.js</a></li>
+    </ul>
+</div>
+
+</body>
+</html>
