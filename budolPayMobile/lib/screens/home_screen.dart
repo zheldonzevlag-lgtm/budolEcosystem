@@ -67,15 +67,15 @@ class _HomeScreenState extends State<HomeScreen> {
       final phTime = DateTime.now().toUtc().add(const Duration(hours: 8));
       final hour = phTime.hour;
       if (hour >= 5 && hour < 12) {
-        return 'Good Morning, ';
+        return 'Magandang Umaga Bes! ';
       } else if (hour >= 12 && hour < 18) {
-        return 'Good Afternoon, ';
+        return 'Magandang Hapon Bes! ';
       } else {
-        return 'Good Evening, ';
+        return 'Magandang Gabi Bes! ';
       }
     } catch (e) {
       // Fallback greeting if there's any error with date/time calculation
-      return 'Hello, ';
+      return 'Kumusta Bes! ';
     }
   }
 
