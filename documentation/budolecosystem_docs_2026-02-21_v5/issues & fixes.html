@@ -57,6 +57,16 @@
               ...
             }
         </div>
+        <h2>5. Infinite Loop on Cart Page</h2>
+        <p><strong>Issue:</strong> User reported infinite loop with repeated GET requests to <code>/api/products?ids=...</code>.</p>
+        <p><strong>Cause:</strong> The <code>useEffect</code> hook in <code>Cart</code> component was repeatedly fetching missing product IDs that were never successfully resolved (e.g., deleted products), causing state updates that re-triggered the effect.</p>
+        <p><strong>Fix:</strong> Introduced <code>attemptedIdsRef</code> (useRef) to track IDs that have already been fetched (success or fail) and prevent re-fetching them within the same component lifecycle.</p>
+        <div class="code-block">
+            // app/(public)/cart/page.jsx
+            const attemptedIdsRef = useRef(new Set());
+            // ...
+            const missingIds = productIds.filter(id => !productsMap[id] && !attemptedIdsRef.current.has(id));
+        </div>
     </main>
 </body>
 </html>
