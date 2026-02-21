@@ -1,0 +1,93 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Issues & Fixes - Budol Ecosystem v2</title>
+    <style>
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; line-height: 1.6; margin: 0; padding: 20px; color: #333; }
+        h1, h2 { color: #c0392b; }
+        .container { max-width: 1200px; margin: 0 auto; }
+        .issue-card { background: #fff; padding: 20px; border-left: 5px solid #e74c3c; box-shadow: 0 2px 4px rgba(0,0,0,0.1); margin-bottom: 20px; }
+        .resolved { border-left-color: #27ae60; }
+        .status { font-weight: bold; text-transform: uppercase; font-size: 0.8em; padding: 2px 8px; border-radius: 4px; color: #fff; display: inline-block; margin-bottom: 10px; }
+        .status.fixed { background-color: #27ae60; }
+        .status.pending { background-color: #f39c12; }
+        code { background: #f4f4f4; padding: 2px 5px; border-radius: 4px; }
+        a { color: #3498db; text-decoration: none; }
+        .back-link { display: inline-block; margin-bottom: 20px; font-weight: bold; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <a href="index.html" class="back-link">← Back to Index</a>
+        <h1>Issues & Fixes Register (v2)</h1>
+
+        <div class="issue-card resolved">
+            <span class="status fixed">Fixed</span>
+            <h2>1. User Synchronization Failure (BudolID vs Local)</h2>
+            <p><strong>Issue:</strong> Users logged in via BudolID SSO (OTP/Password) were receiving "User not found" or "Account not found" errors when accessing protected routes because their record existed in BudolID but not in the local BudolShap Postgres database.</p>
+            <p><strong>Fix:</strong> Implemented Just-in-Time (JIT) provisioning in <code>/api/auth/me</code>, <code>/api/auth/login</code>, and <code>/api/auth/otp</code>. If a valid BudolID user is detected but missing locally, the system now automatically creates a local shadow account.</p>
+            <p><strong>Files Changed:</strong>
+                <a href="file:///d:/IT Projects/budolEcosystem/budolshap-0.1.0/app/api/auth/me/route.js">me/route.js</a>, 
+                <a href="file:///d:/IT Projects/budolEcosystem/budolshap-0.1.0/app/api/auth/login/route.js">login/route.js</a>
+            </p>
+        </div>
+
+        <div class="issue-card resolved">
+            <span class="status fixed">Fixed</span>
+            <h2>2. Product Image Validation Error</h2>
+            <p><strong>Issue:</strong> API routes for creating/editing products were throwing <code>ReferenceError: isValidImage is not defined</code>.</p>
+            <p><strong>Fix:</strong> Created <code>isValidImage</code> utility function in <code>lib/imageUtils.js</code> and imported it correctly in the product routes.</p>
+            <p><strong>Files Changed:</strong>
+                <a href="file:///d:/IT Projects/budolEcosystem/budolshap-0.1.0/lib/imageUtils.js">imageUtils.js</a>,
+                <a href="file:///d:/IT Projects/budolEcosystem/budolshap-0.1.0/app/api/products/route.js">products/route.js</a>
+            </p>
+        </div>
+
+        <div class="issue-card resolved">
+            <span class="status fixed">Fixed</span>
+            <h2>3. Database Backup Script Compatibility</h2>
+            <p><strong>Issue:</strong> The backup script <code>scripts/backup-db.js</code> was using <code>require</code> but the project is configured as ES Modules (<code>"type": "module"</code> in package.json), causing runtime errors.</p>
+            <p><strong>Fix:</strong> Renamed script to <code>backup_db.cjs</code> to force CommonJS treatment and updated the execution path.</p>
+        </div>
+
+        <div class="issue-card resolved">
+            <span class="status fixed">Fixed</span>
+            <h2>4. Registration Desync</h2>
+            <p><strong>Issue:</strong> Users who already had a BudolID account but tried to "Register" again on BudolShap were causing unique constraint violations or confusing states.</p>
+            <p><strong>Fix:</strong> Updated <code>/api/auth/register</code> to check for existing BudolID accounts first. If found, it returns a 409 Conflict with a message instructing the user to login instead.</p>
+        </div>
+
+        <div class="issue-card resolved">
+            <span class="status fixed">Fixed</span>
+            <h2>5. OTP Email Sending Failure for BudolID Users</h2>
+            <p><strong>Issue:</strong> Verification codes were only being sent via SMS for users who existed in BudolID but not locally, as the email sending logic depended on the local <code>user</code> object which was null.</p>
+            <p><strong>Fix:</strong> Updated <code>/api/auth/otp/route.js</code> to capture the email address from the BudolID check response and use it as a fallback for sending the OTP email when the local user record is missing. Required an update to the BudolID API (see below).</p>
+            <p><strong>Files Changed:</strong>
+                <a href="file:///d:/IT Projects/budolEcosystem/budolshap-0.1.0/app/api/auth/otp/route.js">otp/route.js</a>
+            </p>
+        </div>
+
+        <div class="issue-card resolved">
+            <span class="status fixed">Fixed</span>
+            <h2>6. BudolID API Missing Email in Phone Check</h2>
+            <p><strong>Issue:</strong> The BudolID internal API <code>/auth/check-phone</code> was returning <code>{ exists: true }</code> but not the email address, causing the BudolShap OTP flow to fail sending emails to BudolID users.</p>
+            <p><strong>Fix:</strong> Updated <code>budolID/index.js</code> to include <code>email</code> and <code>name</code> in the JSON response when a user is found.</p>
+            <p><strong>Files Changed:</strong>
+                <a href="file:///d:/IT Projects/budolEcosystem/budolID-0.1.0/index.js">budolID/index.js</a>
+            </p>
+        </div>
+
+        <div class="issue-card resolved">
+            <span class="status fixed">Fixed</span>
+            <h2>7. Login API Redeclaration Error</h2>
+            <p><strong>Issue:</strong> The <code>isOtp</code> variable was declared twice in <code>/api/auth/login/route.js</code>, causing a "Identifier 'isOtp' has already been declared" build error.</p>
+            <p><strong>Fix:</strong> Removed the duplicate declaration. The variable is now declared once at the top of the function scope.</p>
+            <p><strong>Files Changed:</strong>
+                <a href="file:///d:/IT Projects/budolEcosystem/budolshap-0.1.0/app/api/auth/login/route.js">login/route.js</a>
+            </p>
+        </div>
+    </div>
+</body>
+</html>

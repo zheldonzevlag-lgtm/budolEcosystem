@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Budol Ecosystem v3.4.5 - Documentation</title>
+    <title>Budol Ecosystem v3.4.6 - Documentation</title>
     <style>
         :root {
             --primary: #0052CC;
@@ -52,61 +52,66 @@
 </div>
 
 <div class="main">
-    <h1>v3.4.5: Multi-Store Payment & Order Linking</h1>
+    <h1>v3.4.6: Multi-Store Checkout Robustness & Inventory Hardening</h1>
     <div class="metadata">
         <span>Date: 2026-02-20</span>
-        <span>Version: v3.4.5</span>
+        <span>Version: v3.4.6</span>
         <span>Status: Released</span>
     </div>
 
     <div class="card">
         <h3>Implementation Summary</h3>
-        <p>This release fixes the critical issue where multi-store orders paid via a single transaction resulted in only one store's order being marked as PAID. The system now correctly links a single Payment Intent to multiple Order records and updates all of them upon successful payment.</p>
+        <p>This release implements critical fixes identified in the Shopee vs BudolShap Comparative Analysis (Phase 1 & Phase 2). It introduces a master <code>Checkout</code> record to group multi-store orders and enforces atomic inventory deduction to prevent overselling.</p>
         <ul>
-            <li><strong>Frontend:</strong> Updated <code>OrderSummary.jsx</code> to capture and send ALL created Order IDs during checkout.</li>
-            <li><strong>Backend API:</strong> Updated <code>/api/payment/checkout</code> to accept <code>orderIds</code> and link them to the Payment Intent.</li>
-            <li><strong>Payment Adapters:</strong> Updated BudolPay and PayMongo adapters to include <code>orderIds</code> in transaction metadata.</li>
-            <li><strong>Webhooks:</strong> Enhanced webhook handlers to parse `orderIds` from metadata and update all corresponding orders, with a fallback to search by Payment Intent ID.</li>
+            <li><strong>Inventory Hardening (Phase 1):</strong> Implemented atomic stock deduction within the order creation transaction. Added <code>stock</code> field to Product model and UI.</li>
+            <li><strong>Checkout Robustness (Phase 2):</strong> Created a <code>Checkout</code> model to group orders. Linked Payment Intents to the master Checkout ID instead of individual Order IDs.</li>
+            <li><strong>Payment Flow:</strong> Updated <code>OrderSummary.jsx</code>, payment APIs, and webhooks to process payments via the master <code>checkoutId</code>, ensuring all linked orders are updated simultaneously.</li>
         </ul>
     </div>
 
     <div class="card">
-        <h3>Task List</h3>
+        <h3>Task List (Phase 1: Inventory)</h3>
         <ul class="tasks">
             <li>
-                <span>Analyze <code>OrderSummary.jsx</code> for multi-store order ID handling</span>
+                <span>Modify <code>ordersService.js</code> to decrement stock atomically</span>
                 <span class="status-done">Completed</span>
             </li>
             <li>
-                <span>Modify <code>OrderSummary.jsx</code> to send <code>orderIds</code> array to payment API</span>
+                <span>Handle Multi-SKU stock updates (JSON matrix)</span>
                 <span class="status-done">Completed</span>
             </li>
             <li>
-                <span>Update <code>checkout/route.js</code> to link multiple orders to Payment Intent</span>
+                <span>Add <code>stock</code> field to Product model in `schema.prisma`</span>
                 <span class="status-done">Completed</span>
             </li>
             <li>
-                <span>Update <code>BudolPayAdapter</code> to include <code>orderIds</code> in metadata</span>
+                <span>Update Product Upload UI for stock input</span>
+                <span class="status-done">Completed</span>
+            </li>
+        </ul>
+    </div>
+
+    <div class="card">
+        <h3>Task List (Phase 2: Checkout Session)</h3>
+        <ul class="tasks">
+            <li>
+                <span>Create <code>Checkout</code> model in Prisma</span>
                 <span class="status-done">Completed</span>
             </li>
             <li>
-                <span>Update <code>PayMongoAdapter</code> to include <code>orderIds</code> in metadata</span>
+                <span>Update <code>ordersService.js</code> to create Checkout record and link orders</span>
                 <span class="status-done">Completed</span>
             </li>
             <li>
-                <span>Refactor <code>budolpay/route.js</code> webhook to update multiple orders</span>
+                <span>Update <code>OrderSummary.jsx</code> to handle `checkoutId` response</span>
                 <span class="status-done">Completed</span>
             </li>
             <li>
-                <span>Refactor <code>paymongo/route.js</code> webhook to update multiple orders</span>
+                <span>Update <code>/api/payment/checkout</code> to link Payment Intent to Checkout</span>
                 <span class="status-done">Completed</span>
             </li>
             <li>
-                <span>Add fallback mechanism to find orders by Payment Intent ID if metadata is lost</span>
-                <span class="status-done">Completed</span>
-            </li>
-            <li>
-                <span>Verify changes via code analysis</span>
+                <span>Update Webhooks (PayMongo/BudolPay) to process via `checkoutId`</span>
                 <span class="status-done">Completed</span>
             </li>
         </ul>

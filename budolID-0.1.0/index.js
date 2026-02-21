@@ -669,6 +669,8 @@ app.get('/auth/check-phone', async (req, res) => {
             exists: !!user,
             normalizedPhone: normalizedPhone,
             foundAs: user ? user.phoneNumber : null,
+            email: user ? user.email : null,
+            name: user ? user.name : null,
             schema: foundSchema,
             message: user ? `Phone number registered in ${foundSchema}` : 'Phone number is available'
         });

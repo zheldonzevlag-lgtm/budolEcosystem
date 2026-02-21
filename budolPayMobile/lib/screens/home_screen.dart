@@ -62,15 +62,20 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   String get _greeting {
-    // Force Philippine Time (UTC+8) regardless of device timezone
-    final phTime = DateTime.now().toUtc().add(const Duration(hours: 8));
-    final hour = phTime.hour;
-    if (hour >= 5 && hour < 12) {
-      return 'Good Morning, ';
-    } else if (hour >= 12 && hour < 18) {
-      return 'Good Afternoon, ';
-    } else {
-      return 'Good Evening, ';
+    try {
+      // Force Philippine Time (UTC+8) regardless of device timezone
+      final phTime = DateTime.now().toUtc().add(const Duration(hours: 8));
+      final hour = phTime.hour;
+      if (hour >= 5 && hour < 12) {
+        return 'Good Morning, ';
+      } else if (hour >= 12 && hour < 18) {
+        return 'Good Afternoon, ';
+      } else {
+        return 'Good Evening, ';
+      }
+    } catch (e) {
+      // Fallback greeting if there's any error with date/time calculation
+      return 'Hello, ';
     }
   }
 
@@ -315,16 +320,15 @@ class _HomeScreenState extends State<HomeScreen> {
                             children: [
                               Text(
                                 _greeting,
-                                style: const TextStyle(color: Colors.white, fontSize: 14, fontWeight: FontWeight.w500),
+                                style: const TextStyle(color: Colors.white, fontSize: 16, fontWeight: FontWeight.w500),
                               ),
                               Flexible(
                                 child: Text(
                                   _isNameVisible ? userName : '•' * userName.length,
-                                  style: TextStyle(
+                                  style: const TextStyle(
                                     color: Colors.white,
-                                    fontSize: _isNameVisible ? 18 : 24, // Bigger font for dots
+                                    fontSize: 18,
                                     fontWeight: FontWeight.w500,
-                                    height: _isNameVisible ? null : 0.5, // Vertically center dots
                                   ),
                                   overflow: TextOverflow.ellipsis,
                                 ),
