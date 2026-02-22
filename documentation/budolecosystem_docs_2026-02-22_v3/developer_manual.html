@@ -1,0 +1,107 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Developer Manual - Budol Ecosystem v3</title>
+    <style>
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; line-height: 1.6; color: #333; max-width: 1200px; margin: 0 auto; padding: 20px; background-color: #f4f7f6; }
+        .sidebar { position: fixed; left: 0; top: 0; width: 250px; height: 100%; background: #0052cc; color: white; padding: 20px; overflow-y: auto; }
+        .sidebar h2 { color: #fff; font-size: 1.2rem; margin-bottom: 20px; }
+        .sidebar a { display: block; color: #deebff; text-decoration: none; padding: 10px; border-radius: 4px; transition: background 0.3s; margin-bottom: 5px; }
+        .sidebar a:hover { background: #0747a6; color: white; }
+        .sidebar a.active { background: #0747a6; color: white; font-weight: bold; }
+        .main-content { margin-left: 270px; background: white; padding: 40px; border-radius: 8px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); }
+        h1 { color: #0052cc; border-bottom: 2px solid #0052cc; padding-bottom: 10px; }
+        pre { background: #282c34; color: #abb2bf; padding: 15px; border-radius: 5px; overflow-x: auto; }
+        code { font-family: 'Consolas', 'Monaco', 'Courier New', monospace; }
+        .code-ref { color: #d63384; font-weight: bold; text-decoration: none; }
+        .code-ref:hover { text-decoration: underline; }
+    </style>
+</head>
+<body>
+    <div class="sidebar">
+        <h2>Budol Ecosystem</h2>
+        <a href="index.html">Index</a>
+        <a href="developer_manual.html" class="active">Developer Manual</a>
+        <a href="system_admin_manual.html">System Admin Manual</a>
+        <a href="user_manual.html">User Manual</a>
+        <a href="risk_register.html">Risk Register</a>
+        <a href="Mitigation.html">Mitigation</a>
+        <a href="issues.html">Issues</a>
+        <a href="fixes.html">Fixes</a>
+        <a href="test_results.html">Test Results</a>
+        <a href="future_recommendations.html">Future Recommendations</a>
+        <hr>
+        <a href="../knowledgebase.html">Back to Knowledge Base</a>
+    </div>
+
+    <div class="main-content">
+        <h1>Developer Manual - v3 (2026-02-22)</h1>
+
+        <h2>Key Changes</h2>
+        <p>This release introduces AI-powered background removal for product variant images directly within the Variation Matrix Manager.</p>
+
+        <h3>1. VariationMatrixManager.jsx</h3>
+        <p><strong>Path:</strong> <a href="file:///d:\IT Projects\budolEcosystem\budolshap-0.1.0\components\admin\VariationMatrixManager.jsx" class="code-ref">components/admin/VariationMatrixManager.jsx</a></p>
+        <p><strong>Functionality:</strong></p>
+        <ul>
+            <li>Added <code>previewImage</code> state to manage the modal visibility and content.</li>
+            <li>Added <code>isRemovingBg</code> state to track API loading status.</li>
+            <li>Implemented <code>handleRemoveBackground</code> function that calls <code>/api/upload</code> with <code>removeBackground: true</code>.</li>
+            <li>Added a hover overlay with an eye icon on variant images.</li>
+            <li>Added a modal component for image preview and background removal action.</li>
+        </ul>
+
+        <h4>Code Snippet: Background Removal Logic</h4>
+        <pre><code>
+const handleRemoveBackground = async () => {
+    if (!previewImage || isRemovingBg) return;
+
+    try {
+        setIsRemovingBg(true);
+        toast.loading('Removing background with Cloudinary AI...', { id: 'bg-remove-variant' });
+
+        let imagePayload = previewImage.raw;
+
+        // If it's a File object, convert to base64
+        if (typeof imagePayload !== 'string') {
+            imagePayload = await fileToBase64(imagePayload);
+        }
+
+        const response = await fetch('/api/upload', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                image: imagePayload,
+                removeBackground: true
+            }),
+        });
+        
+        // ... update matrix item with new URL ...
+    } catch (error) {
+        console.error('Background removal failed:', error);
+    } finally {
+        setIsRemovingBg(false);
+    }
+};
+        </code></pre>
+
+        <h3>2. Unit Tests</h3>
+        <p><strong>Path:</strong> <a href="file:///d:\IT Projects\budolEcosystem\budolshap-0.1.0\__tests__\VariationMatrixManager.test.jsx" class="code-ref">__tests__/VariationMatrixManager.test.jsx</a></p>
+        <p>Created a new test file to verify:</p>
+        <ul>
+            <li>Component renders correctly with initial data.</li>
+            <li>Hovering and clicking the eye icon opens the modal.</li>
+            <li>Clicking "Magic Remove Background" calls the API and updates the UI.</li>
+        </ul>
+
+        <h2>Dependencies</h2>
+        <ul>
+            <li><strong>Cloudinary:</strong> Used for image hosting and background removal transformation.</li>
+            <li><strong>Lucide-react:</strong> Used for UI icons (Eye, Wand2, Loader2).</li>
+            <li><strong>React-hot-toast:</strong> Used for user feedback notifications.</li>
+        </ul>
+    </div>
+</body>
+</html>
