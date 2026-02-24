@@ -1,0 +1,61 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Mitigation Strategies - Budol Ecosystem v6</title>
+    <style>
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; line-height: 1.6; color: #333; max-width: 1200px; margin: 0 auto; padding: 20px; }
+        h1, h2, h3 { color: #2c3e50; }
+        .mitigation-table { width: 100%; border-collapse: collapse; margin-bottom: 20px; }
+        .mitigation-table th, .mitigation-table td { border: 1px solid #ddd; padding: 10px; text-align: left; }
+        .mitigation-table th { background-color: #f2f2f2; }
+        .nav { background: #333; padding: 10px; border-radius: 5px; margin-bottom: 20px; }
+        .nav a { color: white; margin-right: 15px; text-decoration: none; }
+    </style>
+</head>
+<body>
+    <div class="nav">
+        <a href="index.html">Home</a>
+        <a href="developer_manual.html">Developer Manual</a>
+        <a href="system_admin_manual.html">SysAdmin Manual</a>
+        <a href="user_manual.html">User Manual</a>
+    </div>
+
+    <h1>Mitigation Strategies</h1>
+    <p>This document details the strategies employed to address the risks identified in the Risk Register.</p>
+
+    <h2>R-001: BudolID Service Downtime</h2>
+    <p><strong>Strategy:</strong> <em>Graceful Degradation & User Notification</em></p>
+    <ul>
+        <li><strong>User Notification:</strong> If BudolID is unreachable, inform the user with a specific message: "Authentication service temporarily unavailable. Please try again later or use your local password."</li>
+        <li><strong>Timeout Handling:</strong> Set a strict timeout (e.g., 5 seconds) for BudolID calls to prevent hanging the login process.</li>
+        <li><strong>Caching (Future):</strong> Consider caching successful BudolID validation tokens locally with a short expiration to allow offline login capabilities in extreme cases.</li>
+    </ul>
+
+    <h2>R-002: Incorrect Phone Normalization</h2>
+    <p><strong>Strategy:</strong> <em>Validation & Unit Testing</em></p>
+    <ul>
+        <li><strong>Strict Regex:</strong> Use a strict regex for phone validation that only accepts Philippine mobile prefixes (09, 639, +639).</li>
+        <li><strong>Unit Tests:</strong> Implement a comprehensive suite of unit tests covering all known edge cases (e.g., spaces, dashes, parentheses, landlines).</li>
+        <li><strong>Client-Side Validation:</strong> Provide real-time feedback in the UI as the user types, ensuring they correct invalid formats before submission.</li>
+    </ul>
+
+    <h2>R-003: Data Inconsistency (Legacy Data)</h2>
+    <p><strong>Strategy:</strong> <em>Data Migration & Dual Lookup</em></p>
+    <ul>
+        <li><strong>Migration Script:</strong> Develop and execute a script to normalize all existing phone numbers in the database to E.164 format.</li>
+        <li><strong>Dual Lookup (Transitional):</strong> Update authentication queries to search for both the normalized and raw input formats until the migration is confirmed complete.</li>
+        <li><strong>Audit Log:</strong> Log every instance where a legacy format is successfully used for login to track migration progress.</li>
+    </ul>
+
+    <h2>R-004: Security - Brute Force on Fallback</h2>
+    <p><strong>Strategy:</strong> <em>Rate Limiting & Monitoring</em></p>
+    <ul>
+        <li><strong>Global Rate Limit:</strong> Apply rate limiting to the <code>/api/auth/login</code> endpoint based on IP address and user identifier, regardless of the backend authentication method.</li>
+        <li><strong>Account Lockout:</strong> Temporarily lock accounts after 5 failed attempts within 1 minute.</li>
+        <li><strong>Monitoring:</strong> Alert administrators if a sudden spike in fallback authentication attempts is detected.</li>
+    </ul>
+
+</body>
+</html>

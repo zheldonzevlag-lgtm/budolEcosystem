@@ -1,0 +1,101 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Developer Manual - Budol Ecosystem v2</title>
+    <style>
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; line-height: 1.6; color: #333; max-width: 1200px; margin: 0 auto; padding: 20px; }
+        h1, h2, h3 { color: #2c3e50; }
+        .code-container { background: #f4f4f4; border: 1px solid #ddd; border-radius: 5px; padding: 15px; margin-bottom: 20px; }
+        pre { margin: 0; white-space: pre-wrap; word-wrap: break-word; }
+        code { font-family: 'Consolas', 'Monaco', monospace; color: #d63384; }
+        .nav { background: #333; padding: 10px; border-radius: 5px; margin-bottom: 20px; }
+        .nav a { color: white; margin-right: 15px; text-decoration: none; }
+        .path { font-style: italic; color: #666; font-size: 0.9em; margin-bottom: 5px; display: block; }
+    </style>
+</head>
+<body>
+    <div class="nav">
+        <a href="index.html">Home</a>
+        <a href="developer_manual.html">Developer Manual</a>
+        <a href="system_admin_manual.html">SysAdmin Manual</a>
+        <a href="user_manual.html">User Manual</a>
+    </div>
+
+    <h1>Developer Manual</h1>
+    <p>This document details the technical implementation of phone number normalization and email login fallback.</p>
+
+    <h2>1. Phone Number Normalization (BudolPay Mobile)</h2>
+    <p><strong>Purpose:</strong> To ensure all phone numbers stored and processed by the system adhere to the E.164 standard for the Philippines (+639xxxxxxxxx).</p>
+    
+    <h3>Implementation Details</h3>
+    <p>A centralized utility class <code>PhoneUtils</code> was created to handle all phone number parsing and formatting.</p>
+    
+    <div class="code-container">
+        <span class="path"><a href="file:///d:/IT%20Projects/budolEcosystem/budolPayMobile/lib/utils/phone_utils.dart">d:\IT Projects\budolEcosystem\budolPayMobile\lib\utils\phone_utils.dart</a></span>
+        <pre><code>class PhoneUtils {
+  static String? normalizePhoneNumber(String? phone) {
+    if (phone == null || phone.isEmpty) return null;
+    String cleaned = phone.replaceAll(RegExp(r'[^0-9+]'), '');
+    if (cleaned.startsWith('+63') && cleaned.length == 13) return cleaned;
+    else if (cleaned.startsWith('63') && cleaned.length == 12) return '+$cleaned';
+    else if (cleaned.startsWith('09') && cleaned.length == 11) return '+63${cleaned.substring(1)}';
+    else if (cleaned.startsWith('9') && cleaned.length == 10) return '+63$cleaned';
+    return cleaned;
+  }
+}</code></pre>
+    </div>
+
+    <h3>Integration in API Service</h3>
+    <p>The <code>ApiService</code> was updated to use <code>PhoneUtils.normalizePhoneNumber</code> before making any requests involving phone numbers.</p>
+    <div class="code-container">
+        <span class="path"><a href="file:///d:/IT%20Projects/budolEcosystem/budolPayMobile/lib/services/api_service.dart">d:\IT Projects\budolEcosystem\budolPayMobile\lib\services\api_service.dart</a></span>
+        <pre><code>Future&lt;Map&lt;String, dynamic&gt;&gt; identifyMobile(String phoneNumber) async {
+  final normalizedPhone = PhoneUtils.normalizePhoneNumber(phoneNumber) ?? phoneNumber;
+  final url = '$authUrl/login/mobile/identify';
+  // ... sends normalizedPhone to backend
+}</code></pre>
+    </div>
+
+    <h2>2. Email Login Fallback (BudolShap Web)</h2>
+    <p><strong>Purpose:</strong> To allow users to login via email even if their local password hash is missing or outdated (e.g., if they reset their password via BudolID).</p>
+
+    <h3>Implementation Details</h3>
+    <p>The login route now attempts a fallback to BudolID authentication if the local password check fails. Upon success, it synchronizes the local password.</p>
+
+    <div class="code-container">
+        <span class="path"><a href="file:///d:/IT%20Projects/budolEcosystem/budolshap-0.1.0/app/api/auth/login/route.js">d:\IT Projects\budolEcosystem\budolshap-0.1.0\app\api\auth\login\route.js</a></span>
+        <pre><code>// Verify password
+isValidPassword = await verifyPassword(password, user.password)
+
+if (!isValidPassword) {
+    // Fallback: Try to authenticate against BudolID directly
+    try {
+        console.log(`[Login] Local password failed. Attempting fallback.`);
+        const budolLogin = await loginWithBudolId(searchIdentifier, password);
+        
+        if (budolLogin && budolLogin.user) {
+            isValidPassword = true;
+            
+            // Update local password to match BudolID
+            const hashedPassword = await hashPassword(password);
+            await prisma.user.update({
+                where: { id: user.id },
+                data: { password: hashedPassword }
+            });
+        }
+    } catch (e) {
+        console.warn(`[Login] BudolID fallback failed: ${e.message}`);
+    }
+}</code></pre>
+    </div>
+
+    <h2>Dependencies</h2>
+    <ul>
+        <li><strong>BudolPay Mobile:</strong> Dart SDK, Flutter</li>
+        <li><strong>BudolShap Web:</strong> Next.js, Prisma, BudolID Client (internal lib)</li>
+    </ul>
+
+</body>
+</html>

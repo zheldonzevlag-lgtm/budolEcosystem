@@ -5,6 +5,7 @@ import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:flutter/foundation.dart';
 import '../utils/js_helper.dart';
 import '../utils/timezone_utils.dart';
+import '../utils/phone_utils.dart';
 import 'discovery_service.dart';
 
 import 'package:package_info_plus/package_info_plus.dart';
@@ -58,7 +59,7 @@ class ApiService extends ChangeNotifier {
   Map<String, dynamic>? _systemSettings;
   String? _deviceId;
   bool _hasSeenAds = false;
-  String _appVersion = '1.3.71'; // v1.3.71 - Taglish Update
+  String _appVersion = '1.3.73'; // v1.3.73 - Phone Normalization & Email Login Fixes
 
   String get appVersion => _appVersion;
   Future<void>? _initFuture;
@@ -274,6 +275,15 @@ class ApiService extends ChangeNotifier {
 
   Future<void> _initialize() async {
     try {
+      // Get App Version
+      try {
+        final packageInfo = await PackageInfo.fromPlatform();
+        _appVersion = '${packageInfo.version}+${packageInfo.buildNumber}';
+        notifyListeners();
+      } catch (e) {
+        if (kDebugMode) print('ApiService: Error getting package info: $e');
+      }
+
       final prefs = await SharedPreferences.getInstance();
       
       // Load Host
@@ -423,9 +433,10 @@ class ApiService extends ChangeNotifier {
   // --- Auth Methods ---
 
   Future<Map<String, dynamic>> identifyMobile(String phoneNumber) async {
+    final normalizedPhone = PhoneUtils.normalizePhoneNumber(phoneNumber) ?? phoneNumber;
     final url = '$authUrl/login/mobile/identify';
     final body = json.encode({
-      'phoneNumber': phoneNumber,
+      'phoneNumber': normalizedPhone,
       'deviceId': deviceId,
     });
     
@@ -734,13 +745,14 @@ class ApiService extends ChangeNotifier {
     required String phoneNumber,
     required String pin,
   }) async {
+    final normalizedPhone = PhoneUtils.normalizePhoneNumber(phoneNumber) ?? phoneNumber;
     final url = '$authUrl/register';
     final body = json.encode({
       'email': email,
       'password': password,
       'firstName': firstName,
       'lastName': lastName,
-      'phoneNumber': phoneNumber,
+      'phoneNumber': normalizedPhone,
       'pin': pin,
       'deviceId': deviceId,
     });
@@ -789,9 +801,10 @@ class ApiService extends ChangeNotifier {
     required String phoneNumber,
     String? firstName,
   }) async {
+    final normalizedPhone = PhoneUtils.normalizePhoneNumber(phoneNumber) ?? phoneNumber;
     final url = '$authUrl/register/quick';
     final body = json.encode({
-      'phoneNumber': phoneNumber,
+      'phoneNumber': normalizedPhone,
       'firstName': firstName,
       'deviceId': deviceId,
     });
@@ -952,7 +965,8 @@ class ApiService extends ChangeNotifier {
 
   Future<Map<String, dynamic>> checkPhone(String phone) async {
     await _ensureInitialized();
-    final url = '$authUrl/check-phone?phone=${Uri.encodeComponent(phone)}';
+    final normalizedPhone = PhoneUtils.normalizePhoneNumber(phone) ?? phone;
+    final url = '$authUrl/check-phone?phone=${Uri.encodeComponent(normalizedPhone)}';
     try {
       final response = await http.get(
         Uri.parse(url),

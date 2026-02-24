@@ -1,0 +1,103 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Developer Manual - Geocoding Standardization</title>
+    <style>
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; line-height: 1.6; color: #333; max-width: 1200px; margin: 0 auto; padding: 20px; }
+        h1, h2, h3 { color: #2c3e50; }
+        code { background: #f4f4f4; padding: 2px 5px; border-radius: 4px; font-family: 'Courier New', Courier, monospace; }
+        pre { background: #282c34; color: #abb2bf; padding: 15px; border-radius: 5px; overflow-x: auto; }
+        .nav { margin-bottom: 20px; }
+        .nav a { color: #3498db; text-decoration: none; margin-right: 15px; }
+    </style>
+</head>
+<body>
+    <div class="nav">
+        <a href="index.html">← Back to Index</a>
+    </div>
+
+    <h1>Developer Manual: Geocoding Standardization</h1>
+
+    <h2>1. Overview</h2>
+    <p>This update standardizes the geocoding API response format across all supported map providers (Geoapify, Google Maps, Radar, OSM/Nominatim). The goal is to ensure consistent address data (City, Province, Barangay, Street, Zip, District) regardless of the underlying provider.</p>
+
+    <h2>2. Key Components</h2>
+
+    <h3>2.1 API Route: /api/system/geocode/route.js</h3>
+    <p>The backend API has been updated to return a standardized <code>address</code> object in both forward (search) and reverse (coordinates) geocoding responses.</p>
+    
+    <h4>Standardized Address Object Structure:</h4>
+    <pre>
+address: {
+    city: string,
+    province: string,
+    barangay: string,
+    street: string,
+    zip: string,
+    district: string
+}
+    </pre>
+
+    <p><strong>Code Reference:</strong> <a href="file:///d:/IT Projects/budolEcosystem/budolshap-0.1.0/app/api/system/geocode/route.js">app/api/system/geocode/route.js</a></p>
+    
+    <h4>Implementation Details:</h4>
+    <ul>
+        <li><strong>Geoapify:</strong> Maps directly from <code>properties</code> (city, state, suburb, etc.).</li>
+        <li><strong>Google Maps:</strong> 
+            <ul>
+                <li><strong>Reverse Geocoding:</strong> Extracts components from <code>address_components</code> arrays. Logic added to find 'barangay' from 'sublocality_level_1', 'neighborhood', or 'sublocality'.</li>
+                <li><strong>Forward Search:</strong> Uses <strong>Places Text Search API</strong> to find specific buildings/POIs. Does not return full address components; relies on client-side reverse-geocoding (via MapPicker) to fill form details upon selection.</li>
+            </ul>
+        </li>
+        <li><strong>Radar:</strong> Maps from <code>addresses</code> array. Best effort mapping for barangay (neighborhood).</li>
+        <li><strong>Nominatim:</strong> Maps from <code>address</code> object (suburb/neighbourhood -> barangay).</li>
+    </ul>
+
+    <h3>2.2 AddressFormManager.jsx</h3>
+    <p>The frontend component responsible for handling address form data. It has been updated to consume the standardized <code>address</code> object.</p>
+
+    <p><strong>Code Reference:</strong> <a href="file:///d:/IT Projects/budolEcosystem/budolshap-0.1.0/components/address/AddressFormManager.jsx">components/address/AddressFormManager.jsx</a></p>
+
+    <h4>Key Changes:</h4>
+    <ul>
+        <li><code>handleLocationChange</code>: Now checks for <code>result.address</code> first before falling back to legacy raw data mapping.</li>
+        <li><code>handleSearchSelect</code>: Updated to also use <code>result.address</code> for consistent behavior when selecting search results.</li>
+    </ul>
+
+    <pre>
+// Example of consumption in AddressFormManager.jsx
+if (result.address) {
+    const { city, province, barangay, zip, district, street } = result.address;
+    if (city) newDetails.city = city;
+    // ... maps other fields
+}
+    </pre>
+
+    <h3>2.3 Handling Search Selection vs. Reverse Geocode Overwrites</h3>
+    <p>A specific challenge arose where selecting a precise building (e.g., "One Park Drive") from search results would trigger a map movement, which in turn triggered a reverse geocode that overwrote the building name with a generic street address (e.g., "9th Avenue").</p>
+    
+    <p><strong>Solution:</strong> Implemented a <code>useRef</code> flag <code>isSearchSelection</code> in <code>AddressFormManager.jsx</code>.</p>
+    <ul>
+        <li>When a user selects a search result, <code>isSearchSelection.current</code> is set to <code>true</code>.</li>
+        <li>The form's "Detailed Address" is updated with the search result name.</li>
+        <li>When the map updates and triggers <code>handleLocationChange</code>, the system checks this flag.</li>
+        <li>If <code>true</code>, the existing "Detailed Address" is preserved instead of being overwritten by the reverse geocode result. The flag is then reset to <code>false</code>.</li>
+    </ul>
+
+    <pre>
+// Code Snippet from AddressFormManager.jsx
+if (isSearchSelection.current) {
+    if (formData.detailedAddress) {
+        newDetails.detailedAddress = formData.detailedAddress;
+    }
+    isSearchSelection.current = false;
+}
+    </pre>
+
+    <h2>3. Compliance & Security</h2>
+    <p>The implementation adheres to data privacy standards by ensuring only necessary address components are processed and stored. No sensitive personal data is exposed in the geocoding logs.</p>
+
+</body>
+</html>

@@ -1,0 +1,66 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>System Admin Manual - Budol Ecosystem v6</title>
+    <style>
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; line-height: 1.6; color: #333; max-width: 1200px; margin: 0 auto; padding: 20px; }
+        h1, h2, h3 { color: #2c3e50; }
+        .log-sample { background: #333; color: #00ff00; padding: 15px; border-radius: 5px; font-family: 'Consolas', 'Monaco', monospace; overflow-x: auto; margin-bottom: 20px; }
+        .nav { background: #333; padding: 10px; border-radius: 5px; margin-bottom: 20px; }
+        .nav a { color: white; margin-right: 15px; text-decoration: none; }
+    </style>
+</head>
+<body>
+    <div class="nav">
+        <a href="index.html">Home</a>
+        <a href="developer_manual.html">Developer Manual</a>
+        <a href="system_admin_manual.html">SysAdmin Manual</a>
+        <a href="user_manual.html">User Manual</a>
+    </div>
+
+    <h1>System Administrator Manual</h1>
+    <p>This document outlines the monitoring and troubleshooting procedures for the new authentication and normalization features.</p>
+
+    <h2>1. Monitoring Login Activity</h2>
+    <p>The system logs all login attempts, including successful fallbacks to BudolID. These logs are crucial for identifying potential sync issues or malicious activity.</p>
+
+    <h3>Identifying Fallback Logins</h3>
+    <p>When a user logs in via email and their local password fails but BudolID succeeds, the following log entry is generated:</p>
+    <div class="log-sample">
+[Login] Local password failed for user@example.com. Attempting fallback to BudolID.
+[Login] BudolID fallback successful for user@example.com
+    </div>
+    <p><strong>Action:</strong> Frequent occurrences of this log for the same user indicate that the local password sync is working correctly. However, if you see repeated failures after success, investigate potential database write issues.</p>
+
+    <h3>Identifying Failed Fallbacks</h3>
+    <p>If both local and BudolID authentication fail, or if BudolID is unreachable:</p>
+    <div class="log-sample">
+[Login] BudolID fallback failed: Connection timed out
+[Login] BudolID fallback failed: Invalid credentials
+    </div>
+    <p><strong>Action:</strong> Check BudolID service status if multiple users report login failures simultaneously.</p>
+
+    <h2>2. Phone Number Normalization Audit</h2>
+    <p>The mobile app now enforces E.164 format. Monitor API logs for rejected phone numbers which might indicate older app versions are still in use.</p>
+    
+    <h3>API Log Analysis</h3>
+    <p>Look for 400 Bad Request errors on <code>/api/auth/register</code> or <code>/api/auth/login</code> with messages related to phone format.</p>
+    <div class="log-sample">
+Error: Invalid phone number format. Expected E.164 (e.g., +639...)
+    </div>
+    <p><strong>Action:</strong> Encourage users to update their app if they encounter persistent issues.</p>
+
+    <h2>3. Database Maintenance</h2>
+    <p>Periodically, run a script to identify users with non-normalized phone numbers in the database.</p>
+    <p><strong>SQL Query to Check for Non-Normalized Numbers:</strong></p>
+    <div class="log-sample">
+SELECT id, phoneNumber FROM "User" 
+WHERE phoneNumber NOT LIKE '+639%' 
+AND phoneNumber IS NOT NULL;
+    </div>
+    <p><strong>Mitigation:</strong> Use the provided migration script (see Developer Manual) to batch update these records during a maintenance window.</p>
+
+</body>
+</html>
