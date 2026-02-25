@@ -1,0 +1,530 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>UI Comparison: Existing vs Shopee-Style Recommendation - BudolShap</title>
+    <style>
+        :root {
+            --primary: #2563eb;
+            --secondary: #64748b;
+            --success: #22c55e;
+            --warning: #f59e0b;
+            --bg: #f8fafc;
+            --text: #1e293b;
+            --shopee-orange: #ee4d2d;
+        }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+            line-height: 1.6;
+            color: var(--text);
+            background-color: var(--bg);
+            margin: 0;
+            padding: 0;
+        }
+        .container {
+            max-width: 1200px;
+            margin: 2rem auto;
+            padding: 0 1rem;
+        }
+        header {
+            background: white;
+            padding: 2rem 0;
+            border-bottom: 1px solid #e2e8f0;
+            margin-bottom: 2rem;
+            text-align: center;
+        }
+        h1 { margin: 0; color: var(--primary); }
+        .comparison-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 2rem;
+            margin-bottom: 3rem;
+        }
+        .card {
+            background: white;
+            border-radius: 0.75rem;
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+            padding: 1.5rem;
+            border: 1px solid #e2e8f0;
+        }
+        .card-header {
+            font-weight: bold;
+            font-size: 1.1rem;
+            margin-bottom: 1rem;
+            padding-bottom: 0.5rem;
+            border-bottom: 2px solid #f1f5f9;
+            display: flex;
+            justify-content: space-between;
+        }
+        .tag-existing { color: var(--secondary); background: #f1f5f9; padding: 2px 8px; border-radius: 4px; font-size: 0.8rem; }
+        .tag-recommended { color: white; background: var(--shopee-orange); padding: 2px 8px; border-radius: 4px; font-size: 0.8rem; }
+
+        /* Mock UI Elements */
+        .mock-item {
+            border: 1px solid #f1f5f9;
+            padding: 10px;
+            border-radius: 8px;
+            margin-bottom: 10px;
+        }
+        .timeline-item {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 15px;
+            position: relative;
+        }
+        .dot { width: 12px; height: 12px; border-radius: 50%; background: #cbd5e1; flex-shrink: 0; margin-top: 5px; }
+        .dot-active { background: var(--success); box-shadow: 0 0 0 4px #dcfce7; }
+        .timeline-line { position: absolute; left: 5px; top: 20px; bottom: -10px; width: 2px; background: #f1f5f9; }
+
+        .driver-card {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            background: #fff7ed;
+            padding: 12px;
+            border-radius: 8px;
+            border: 1px solid #ffedd5;
+        }
+        .avatar { width: 40px; height: 40px; border-radius: 50%; background: #fed7aa; }
+
+        .shopee-badge {
+            background: var(--shopee-orange);
+            color: white;
+            padding: 2px 6px;
+            font-size: 10px;
+            border-radius: 2px;
+            text-transform: uppercase;
+            font-weight: bold;
+        }
+
+        .action-btn {
+            background: var(--shopee-orange);
+            color: white;
+            border: none;
+            padding: 8px 16px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-weight: 500;
+        }
+
+        .nav-links { margin-bottom: 2rem; }
+        .nav-links a { color: var(--primary); text-decoration: none; }
+        .file-list {
+            background: #f1f5f9;
+            padding: 1rem;
+            border-radius: 0.5rem;
+            margin-top: 1rem;
+            font-size: 0.85rem;
+        }
+        .file-list code {
+            background: #e2e8f0;
+            display: block;
+            margin: 4px 0;
+            padding: 2px 6px;
+            border-radius: 4px;
+        }
+        .url-badge {
+            display: inline-block;
+            background: #dbeafe;
+            color: #1e40af;
+            padding: 2px 8px;
+            border-radius: 9999px;
+            font-size: 0.75rem;
+            font-weight: 600;
+            margin-bottom: 0.5rem;
+        }
+    </style>
+</head>
+<body>
+    <header>
+        <div class="container">
+            <h1>UI Transformation Comparison</h1>
+            <p>BudolShap Existing vs. Shopee-Style Recommendations</p>
+        </div>
+    </header>
+
+    <div class="container">
+        <div class="nav-links">
+            <a href="index.html">← Back to Overview</a>
+        </div>
+
+        <section>
+            <h2>1. Order Tracking & Lifecycle</h2>
+            <div class="url-badge">URL: /orders/[orderId]</div>
+            
+            <div style="background: #eff6ff; padding: 1rem; border-radius: 0.5rem; border-left: 4px solid var(--primary); margin-bottom: 1.5rem; font-size: 0.9rem;">
+                <strong>🔄 Sync Safety Analysis: Guaranteed Stability</strong><br>
+                After reviewing <code>app/api/webhooks/lalamove/route.js</code>, I have confirmed that the underlying state machine and Pusher event triggers are <strong>independent</strong> of the UI layer. 
+                <ul style="margin-top: 5px;">
+                    <li><strong>Source of Truth:</strong> The database <code>order.status</code> and <code>shipping.status</code> remain the primary drivers.</li>
+                    <li><strong>Real-time Events:</strong> The <code>order-updated</code> event will continue to broadcast standard payloads.</li>
+                    <li><strong>Interpretation Layer:</strong> My proposal adds a "Visual Mapping" in the React components that translates technical Lalamove statuses into user-friendly Shopee-style milestones without changing the data.</li>
+                </ul>
+            </div>
+
+            <div class="comparison-grid">
+                <!-- Existing -->
+                <div class="card">
+                    <div class="card-header">
+                        <span>Current Tracking</span>
+                        <span class="tag-existing">EXISTING</span>
+                    </div>
+                    <div class="mock-item">
+                        <div class="timeline-item">
+                            <div class="dot dot-active"></div>
+                            <div>
+                                <div style="font-weight: bold;">Order Placed</div>
+                                <div style="font-size: 0.85rem; color: #64748b;">Order #12345 has been placed</div>
+                            </div>
+                        </div>
+                        <div class="timeline-item">
+                            <div class="dot"></div>
+                            <div>
+                                <div style="font-weight: bold;">Processing</div>
+                                <div style="font-size: 0.85rem; color: #64748b;">Seller is preparing your order</div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="file-list">
+                        <strong>Files to Modify:</strong>
+                        <code>components/TrackingTimeline.jsx</code>
+                        <code>app/(public)/orders/[orderId]/page.jsx</code>
+                    </div>
+                </div>
+
+                <!-- Recommended -->
+                <div class="card" style="border-color: var(--shopee-orange);">
+                    <div class="card-header">
+                        <span>Full Tracking Lifecycle</span>
+                        <span class="tag-recommended">RECOMMENDED</span>
+                    </div>
+                    <div class="mock-item">
+                        <!-- Progress Bar Recommendation -->
+                        <div style="display: flex; justify-content: space-between; margin-bottom: 20px; font-size: 0.65rem; color: var(--secondary); text-align: center;">
+                            <div style="flex: 1;"><div style="width: 15px; height: 15px; background: var(--success); border-radius: 50%; margin: 0 auto 5px;"></div>Placed</div>
+                            <div style="flex: 1; position: relative;">
+                                <div style="width: 15px; height: 15px; background: var(--success); border-radius: 50%; margin: 0 auto 5px;"></div>Paid
+                                <div style="position: absolute; top: 7px; left: -50%; width: 100%; height: 2px; background: var(--success); z-index: -1;"></div>
+                            </div>
+                            <div style="flex: 1; position: relative;">
+                                <div style="width: 15px; height: 15px; background: var(--shopee-orange); border-radius: 50%; margin: 0 auto 5px;"></div>To Ship
+                                <div style="position: absolute; top: 7px; left: -50%; width: 100%; height: 2px; background: var(--success); z-index: -1;"></div>
+                            </div>
+                            <div style="flex: 1; position: relative;">
+                                <div style="width: 15px; height: 15px; background: #e2e8f0; border-radius: 50%; margin: 0 auto 5px;"></div>To Receive
+                                <div style="position: absolute; top: 7px; left: -50%; width: 100%; height: 2px; background: #e2e8f0; z-index: -1;"></div>
+                            </div>
+                            <div style="flex: 1; position: relative;">
+                                <div style="width: 15px; height: 15px; background: #e2e8f0; border-radius: 50%; margin: 0 auto 5px;"></div>Completed
+                                <div style="position: absolute; top: 7px; left: -50%; width: 100%; height: 2px; background: #e2e8f0; z-index: -1;"></div>
+                            </div>
+                        </div>
+
+                        <!-- Lifecycle Stage: Driver Assigned -->
+                        <div class="timeline-item">
+                            <div class="timeline-line"></div>
+                            <div class="dot dot-active"></div>
+                            <div>
+                                <div style="font-weight: bold; color: var(--shopee-orange);">Driver is heading to Pick Up</div>
+                                <div style="font-size: 0.85rem; color: #64748b;">Juan (Sandbox) is 2.4km away from the shop</div>
+                            </div>
+                        </div>
+                        
+                        <!-- Driver Info Integration -->
+                        <div class="driver-card" style="margin-bottom: 15px; border: 1px dashed var(--shopee-orange);">
+                            <div class="avatar"></div>
+                            <div style="flex: 1;">
+                                <div style="font-weight: bold; font-size: 0.9rem;">Juan Dela Cruz</div>
+                                <div style="font-size: 0.75rem; color: #9a3412;">Motorcycle • Plate: ABC-1234</div>
+                                <div style="font-size: 0.7rem; color: var(--success); margin-top: 2px;">★ 4.9 • 1,200+ Deliveries</div>
+                            </div>
+                            <div style="display: flex; flex-direction: column; gap: 4px;">
+                                <button style="background: white; border: 1px solid #fdba74; padding: 4px 8px; border-radius: 4px; font-size: 0.75rem;">Call</button>
+                                <button style="background: white; border: 1px solid #fdba74; padding: 4px 8px; border-radius: 4px; font-size: 0.75rem;">Chat</button>
+                            </div>
+                        </div>
+
+                        <!-- Complete Lifecycle Milestones (collapsed) -->
+                        <div style="border-top: 1px solid #f1f5f9; padding-top: 10px; font-size: 0.75rem; color: #94a3b8;">
+                            <div style="display: flex; gap: 10px; margin-bottom: 5px;">
+                                <div style="width: 8px; height: 8px; background: #e2e8f0; border-radius: 50%; margin-top: 4px;"></div>
+                                <span>Order Placed (Dec 28, 10:30)</span>
+                            </div>
+                            <div style="display: flex; gap: 10px;">
+                                <div style="width: 8px; height: 8px; background: #e2e8f0; border-radius: 50%; margin-top: 4px;"></div>
+                                <span>Payment Confirmed (Dec 28, 10:31)</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div style="margin-top: 1rem; padding: 0.75rem; background: #fff7ed; border-radius: 0.5rem; font-size: 0.8rem;">
+                        <strong>Lifecycle Logic:</strong>
+                        <ul style="margin: 0.5rem 0; padding-left: 1.2rem;">
+                            <li><strong>Booking:</strong> Triggered by Seller.</li>
+                            <li><strong>Assigning:</strong> Webhook <code>ASSIGNING_DRIVER</code>.</li>
+                            <li><strong>Transit:</strong> Webhook <code>PICKED_UP</code>.</li>
+                            <li><strong>Completion:</strong> Webhook <code>COMPLETED</code>.</li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <section style="margin-bottom: 3rem;">
+            <h2>5. Technical Recommendations</h2>
+            <div class="card">
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 2rem;">
+                    <div>
+                        <h4 style="color: var(--primary);">Data Integrity</h4>
+                        <ul style="font-size: 0.9rem; padding-left: 1.2rem;">
+                            <li><strong>Status Safety:</strong> Do not change <code>order.status</code> enum. The existing webhook handler relies on these exact strings.</li>
+                            <li><strong>Driver Info:</strong> Use the <code>shipping.driverInfo</code> object populated by the webhook for the new driver card.</li>
+                            <li><strong>Real-time:</strong> Reuse the existing <code>order-updated</code> event channel to refresh UI components.</li>
+                        </ul>
+                    </div>
+                    <div>
+                        <h4 style="color: var(--shopee-orange);">UI Integration</h4>
+                        <ul style="font-size: 0.9rem; padding-left: 1.2rem;">
+                            <li><strong>Conditional Rendering:</strong> Only show Lalamove-specific components if <code>order.shipping.provider === 'lalamove'</code>.</li>
+                            <li><strong>Timeline Hooks:</strong> Update <code>generateTimeline()</code> in <code>TrackingTimeline.jsx</code> to return more granular events when driver info is available.</li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <section>
+            <h2>2. Financial Transparency</h2>
+            <div class="url-badge">URL: /cart and /payment/return</div>
+            <div class="comparison-grid">
+                <!-- Existing -->
+                <div class="card">
+                    <div class="card-header">
+                        <span>Basic Summary</span>
+                        <span class="tag-existing">EXISTING</span>
+                    </div>
+                    <div class="mock-item" style="line-height: 2;">
+                        <div style="display: flex; justify-content: space-between;">
+                            <span>Subtotal</span>
+                            <span>₱1,000.00</span>
+                        </div>
+                        <div style="display: flex; justify-content: space-between;">
+                            <span>Shipping Fee</span>
+                            <span>₱50.00</span>
+                        </div>
+                        <div style="display: flex; justify-content: space-between; font-weight: bold; border-top: 1px solid #f1f5f9; margin-top: 10px; padding-top: 10px;">
+                            <span>Total</span>
+                            <span style="color: var(--success);">₱1,050.00</span>
+                        </div>
+                    </div>
+                    <div class="file-list">
+                        <strong>Files to Modify:</strong>
+                        <code>components/OrderSummary.jsx</code>
+                        <code>components/OrderDetailsCard.jsx</code>
+                    </div>
+                </div>
+
+                <!-- Recommended -->
+                <div class="card" style="border-color: var(--shopee-orange);">
+                    <div class="card-header">
+                        <span>Multi-Party Breakdown</span>
+                        <span class="tag-recommended">RECOMMENDED</span>
+                    </div>
+                    <div class="mock-item" style="line-height: 1.8;">
+                        <div style="display: flex; justify-content: space-between;">
+                            <span>Merchandise Subtotal</span>
+                            <span>₱1,000.00</span>
+                        </div>
+                        <div style="display: flex; justify-content: space-between;">
+                            <span>Shipping Total</span>
+                            <span>₱50.00</span>
+                        </div>
+                        <div style="display: flex; justify-content: space-between; font-size: 0.8rem; color: var(--success); padding-left: 15px;">
+                            <span>↳ Seller Subsidy</span>
+                            <span>-₱20.00</span>
+                        </div>
+                        <div style="display: flex; justify-content: space-between; font-size: 0.8rem; color: var(--primary); padding-left: 15px;">
+                            <span>↳ Shipping Voucher</span>
+                            <span>-₱30.00</span>
+                        </div>
+                        <div style="display: flex; justify-content: space-between; font-weight: bold; border-top: 1px solid #f1f5f9; margin-top: 10px; padding-top: 10px; color: var(--shopee-orange); font-size: 1.2rem;">
+                            <span>Order Total</span>
+                            <span>₱1,000.00</span>
+                        </div>
+                        <div style="font-size: 0.7rem; color: #64748b; text-align: right;">
+                            You saved ₱50.00 on shipping!
+                        </div>
+                    </div>
+                    <div class="file-list" style="background: #fff7ed;">
+                        <strong>Files to Modify:</strong>
+                        <code>lib/services/ordersService.js</code>
+                        <code>app/api/payment/checkout/route.js</code>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <section>
+            <h2>3. Seller "My Orders" Management</h2>
+            <div class="url-badge">URL: /store/orders</div>
+            <div class="comparison-grid">
+                <!-- Existing -->
+                <div class="card">
+                    <div class="card-header">
+                        <span>Simple List</span>
+                        <span class="tag-existing">EXISTING</span>
+                    </div>
+                    <div class="mock-item">
+                        <div style="display: flex; justify-content: space-between; align-items: center;">
+                            <div>
+                                <div style="font-weight: bold;">Order #12345</div>
+                                <div style="font-size: 0.8rem;">Status: PAID</div>
+                            </div>
+                            <button style="padding: 4px 12px; border: 1px solid #cbd5e1; border-radius: 4px;">View</button>
+                        </div>
+                    </div>
+                    <div class="file-list">
+                        <strong>Files to Modify:</strong>
+                        <code>app/store/orders/page.jsx</code>
+                    </div>
+                </div>
+
+                <!-- Recommended -->
+                <div class="card" style="border-color: var(--shopee-orange);">
+                    <div class="card-header">
+                        <span>Action-Oriented View</span>
+                        <span class="tag-recommended">RECOMMENDED</span>
+                    </div>
+                    <div class="mock-item">
+                        <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 10px;">
+                            <div>
+                                <div style="display: flex; gap: 5px; align-items: center;">
+                                    <span class="shopee-badge">To Ship</span>
+                                    <span style="font-weight: bold;">Order #12345</span>
+                                </div>
+                                <div style="font-size: 0.75rem; color: #ef4444; margin-top: 4px;">Ship by Dec 29 (Tomorrow)</div>
+                            </div>
+                            <button class="action-btn">Arrange Shipment</button>
+                        </div>
+                        <div style="font-size: 0.8rem; background: #f8fafc; padding: 8px; border-radius: 4px;">
+                            <span style="color: #64748b;">Buyer:</span> Juan • <span style="color: #64748b;">Provider:</span> Lalamove
+                        </div>
+                    </div>
+                    <div class="file-list" style="background: #fff7ed;">
+                        <strong>Files to Modify:</strong>
+                        <code>app/api/shipping/arrange/route.js</code>
+                        <code>lib/services/lalamoveService.js</code>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <section>
+            <h2>4. Buyer Order History Breakdown</h2>
+            <div class="url-badge">URL: /orders</div>
+            <div class="comparison-grid">
+                <!-- Existing -->
+                <div class="card">
+                    <div class="card-header">
+                        <span>Opaque Fee</span>
+                        <span class="tag-existing">EXISTING</span>
+                    </div>
+                    <div class="mock-item">
+                        <div style="padding: 10px; border: 1px solid #f1f5f9; border-radius: 8px;">
+                            <div style="display: flex; gap: 10px; align-items: center;">
+                                <div style="width: 50px; height: 50px; background: #f1f5f9; border-radius: 4px;"></div>
+                                <div style="flex: 1;">
+                                    <div style="font-weight: 500;">Product Name...</div>
+                                    <div style="font-size: 0.8rem; color: #64748b;">Shipping Fee: <span style="color: #22c55e;">₱50.00</span></div>
+                                </div>
+                            </div>
+                            <div style="margin-top: 8px; font-size: 0.7rem; color: #94a3b8; font-style: italic;">
+                                (Tooltip: This is the total shipping fee for your entire order)
+                            </div>
+                        </div>
+                    </div>
+                    <div class="file-list">
+                        <strong>Files to Modify:</strong>
+                        <code>components/OrderItem.jsx</code>
+                    </div>
+                </div>
+
+                <!-- Recommended -->
+                <div class="card" style="border-color: var(--shopee-orange);">
+                    <div class="card-header">
+                        <span>Shopee-Style Transparency</span>
+                        <span class="tag-recommended">RECOMMENDED</span>
+                    </div>
+                    <div class="mock-item">
+                        <div style="padding: 10px; border: 1px solid #f1f5f9; border-radius: 8px;">
+                            <div style="display: flex; gap: 10px; align-items: center;">
+                                <div style="width: 50px; height: 50px; background: #f1f5f9; border-radius: 4px;"></div>
+                                <div style="flex: 1;">
+                                    <div style="font-weight: 500;">Product Name...</div>
+                                    <div style="display: flex; justify-content: space-between; align-items: center;">
+                                        <div style="font-size: 0.8rem; color: #64748b;">Shipping Fee: <span style="color: #22c55e;">₱0.00</span></div>
+                                        <div style="font-size: 0.7rem; color: var(--shopee-orange); cursor: pointer; border-bottom: 1px dashed;">Details ▾</div>
+                                    </div>
+                                </div>
+                            </div>
+                            <!-- Expanded Details -->
+                            <div style="margin-top: 10px; padding: 8px; background: #f8fafc; border-radius: 4px; font-size: 0.75rem; border-left: 3px solid var(--shopee-orange);">
+                                <div style="display: flex; justify-content: space-between; margin-bottom: 4px;">
+                                    <span>Shipping Total</span>
+                                    <span>₱50.00</span>
+                                </div>
+                                <div style="display: flex; justify-content: space-between; color: var(--success); margin-bottom: 4px;">
+                                    <span>↳ Seller Subsidy</span>
+                                    <span>-₱20.00</span>
+                                </div>
+                                <div style="display: flex; justify-content: space-between; color: var(--primary);">
+                                    <span>↳ Shipping Voucher</span>
+                                    <span>-₱30.00</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="file-list" style="background: #fff7ed;">
+                        <strong>Files to Modify:</strong>
+                        <code>components/OrderItem.jsx</code>
+                        <code>app/(public)/orders/page.jsx</code>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <section style="margin-bottom: 3rem;">
+            <h2>5. Technical Implementation Guide</h2>
+            <div class="card">
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 2rem;">
+                    <div>
+                        <h4 style="color: var(--primary);">Status Logic & Sync Safety</h4>
+                        <ul style="font-size: 0.9rem; padding-left: 1.2rem;">
+                            <li><strong>Source of Truth:</strong> The <code>Lalamove Webhook</code> remains the ONLY source of truth for status updates.</li>
+                            <li><strong>Sync Mechanism:</strong> We utilize the existing <code>triggerRealtimeEvent</code> in <code>route.js</code> which broadcasts to both Seller and Buyer channels.</li>
+                            <li><strong>UI Interpretation:</strong> Components like <code>OrderProgressTracker</code> will interpret Lalamove's <code>ASSIGNING_DRIVER</code> as "Looking for Driver" and <code>ON_GOING</code> as "Driver Assigned".</li>
+                        </ul>
+                    </div>
+                    <div>
+                        <h4 style="color: var(--shopee-orange);">UI Components</h4>
+                        <ul style="font-size: 0.9rem; padding-left: 1.2rem;">
+                            <li><strong>OrderItem Refactor:</strong> Replace the desktop-only tooltip with a mobile-friendly collapsible breakdown in <code>OrderItem.jsx</code>.</li>
+                            <li><strong>Progress Tracker:</strong> Update the tracker to show the 5 Shopee milestones (Placed, Paid, To Ship, To Receive, Completed).</li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <div class="card" style="text-align: center; background: #fff7ed; border-color: #ffedd5;">
+            <h3>Ready to Proceed?</h3>
+            <p>These UI improvements will be implemented alongside the Phase 2 backend logic.</p>
+            <div style="display: flex; justify-content: center; gap: 1rem; margin-top: 1rem;">
+                <button class="action-btn" style="background: var(--primary);">Accept & Implement Phase 2</button>
+                <button class="action-btn" style="background: white; color: var(--text); border: 1px solid #cbd5e1;">Request Changes</button>
+            </div>
+        </div>
+    </div>
+</body>
+</html>

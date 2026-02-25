@@ -1,0 +1,412 @@
+import { NextResponse } from 'next/server';
+import { getShippingProvider } from '@/services/shippingFactory';
+import { prisma } from '@/lib/prisma';
+import { triggerRealtimeEvent } from '@/lib/realtime';
+import { UNIVERSAL_STATUS } from '@/lib/shipping/statusMapper';
+import { getNowUTC } from '@/lib/dateUtils';
+
+/**
+ * POST /api/shipping/lalamove/webhook
+ * Handle Lalamove webhook events
+ */
+// ... imports
+
+/**
+ * POST /api/shipping/lalamove/webhook
+ * Handle Lalamove webhook events
+ */
+export async function POST(request) {
+    console.log('[Lalamove Webhook] Received event');
+    let webhookEventId = null;
+
+    try {
+        // 1. Get Signature and Body
+        const signature = request.headers.get('Authorization') || request.headers.get('X-Lalamove-Signature');
+        const body = await request.json();
+        console.log('[Lalamove Webhook] Full payload:', JSON.stringify(body, null, 2));
+
+        const eventType = body.eventType;
+        const data = body.data;
+        const lalamoveOrderId = data?.order?.orderId || data?.orderId;
+        const metadata = data?.metadata || data?.order?.metadata || {};
+
+        // 2. Create Webhook Event Log (PENDING)
+        try {
+            const webhookLog = await prisma.webhookEvent.create({
+                data: {
+                    provider: 'lalamove',
+                    eventType: eventType || 'UNKNOWN',
+                    payload: body,
+                    status: 'PENDING',
+                }
+            });
+            webhookEventId = webhookLog.id;
+        } catch (logError) {
+            console.error('[Lalamove Webhook] Failed to create initial log:', logError);
+            // Continue processing even if logging fails
+        }
+
+        console.log(`[Lalamove Webhook] Event: ${eventType}, Order: ${lalamoveOrderId}`);
+
+        if (!lalamoveOrderId) {
+            if (webhookEventId) {
+                await prisma.webhookEvent.update({
+                    where: { id: webhookEventId },
+                    data: { status: 'IGNORED', error: 'No order ID in event', processedAt: getNowUTC() }
+                });
+            }
+            return NextResponse.json({ message: 'No order ID in event' }, { status: 200 });
+        }
+
+        // Find Order by metadata or bookingId
+        let internalOrderId = metadata.orderId || null;
+        let internalReturnId = metadata.returnId || null;
+
+        if (!internalOrderId) {
+            // Check regular order shipping
+            const orders = await prisma.order.findMany({
+                where: {
+                    shipping: {
+                        path: ['bookingId'],
+                        equals: lalamoveOrderId
+                    }
+                }
+            });
+
+            if (orders.length > 0) {
+                internalOrderId = orders[0].id;
+            } else {
+                // Check return shipping
+                const returnRequests = await prisma.return.findMany({
+                    where: {
+                        OR: [
+                            { trackingNumber: lalamoveOrderId },
+                            {
+                                returnShipping: {
+                                    path: ['bookingId'],
+                                    equals: lalamoveOrderId
+                                }
+                            }
+                        ]
+                    },
+                    select: { orderId: true }
+                });
+
+                if (returnRequests.length > 0) {
+                    internalOrderId = returnRequests[0].orderId;
+                    console.log(`[Lalamove Webhook] Found order ${internalOrderId} via return tracking number`);
+                }
+            }
+        }
+
+        // Update Webhook Log with Internal Order ID if found
+        if (internalOrderId && webhookEventId) {
+            await prisma.webhookEvent.update({
+                where: { id: webhookEventId },
+                data: { orderId: internalOrderId }
+            });
+        }
+
+        if (!internalOrderId) {
+            console.warn(`[Lalamove Webhook] Order not found for Lalamove ID: ${lalamoveOrderId}. Returning 404 to trigger retry.`);
+            if (webhookEventId) {
+                await prisma.webhookEvent.update({
+                    where: { id: webhookEventId },
+                    data: { status: 'FAILED', error: 'Order not found - Triggering Retry', processedAt: getNowUTC() }
+                });
+            }
+            return NextResponse.json({ message: 'Order not found - Retrying' }, { status: 404 });
+        }
+
+        console.log(`[Lalamove Webhook] Updating Internal Order: ${internalOrderId}${internalReturnId ? ` (Return: ${internalReturnId})` : ''}`);
+
+        const currentOrder = await prisma.order.findUnique({
+            where: { id: internalOrderId },
+            include: {
+                returns: {
+                    where: internalReturnId
+                        ? { id: internalReturnId }
+                        : { status: { in: ['APPROVED', 'BOOKED', 'PICKED_UP', 'SHIPPED', 'IN_TRANSIT', 'DELIVERED', 'RECEIVED'] } },
+                    orderBy: { createdAt: 'desc' },
+                    take: 1
+                }
+            }
+        });
+
+        if (!currentOrder) {
+            if (webhookEventId) {
+                await prisma.webhookEvent.update({
+                    where: { id: webhookEventId },
+                    data: { status: 'FAILED', error: 'Internal Order ID found but record missing', processedAt: getNowUTC() }
+                });
+            }
+            return NextResponse.json({ message: 'Order not found' }, { status: 200 });
+        }
+
+        const activeReturn = currentOrder.returns?.[0];
+
+        // Robust isReturnBooking detection: 
+        // 1. Explicitly tagged in metadata
+        // 2. OR current lalamoveOrderId matches the tracking number of an active return
+        // 3. OR internalReturnId was found in metadata
+        const isReturnBooking = (metadata.type === 'return') ||
+            (internalReturnId !== null) ||
+            (activeReturn && (
+                activeReturn.trackingNumber === lalamoveOrderId ||
+                activeReturn.returnShipping?.bookingId === lalamoveOrderId
+            ));
+
+        console.log(`[Lalamove Webhook] Detected isReturnBooking: ${isReturnBooking}. Current Order Status: ${currentOrder.status}`);
+
+        // Select the correct base shipping object based on whether this is a return
+        const currentShipping = isReturnBooking ? (activeReturn?.returnShipping || {}) : (currentOrder.shipping || {});
+
+        // Extract and preserve driver info
+        let driverInfo = currentShipping.driverInfo || currentShipping.driver || {};
+
+        // Update driver info if present in webhook data
+        const driverData = data.driver || data.order?.driver;
+        if (driverData) {
+            driverInfo = {
+                name: driverData.name || driverInfo.name || null,
+                phone: driverData.phone || driverInfo.phone || null,
+                plateNumber: driverData.plateNumber || driverInfo.plateNumber || null,
+                photo: driverData.photoUrl || driverData.photo || driverInfo.photo || null,
+                vehicleType: driverData.vehicleType || driverInfo.vehicleType || null,
+                rating: driverData.rating || driverInfo.rating || null
+            };
+            console.log(`[Lalamove Webhook] Driver info updated for ${isReturnBooking ? 'Return' : 'Order'}:`, JSON.stringify(driverInfo));
+        }
+
+        // Determine new status
+        let newStatus = currentShipping.status || 'ASSIGNING_DRIVER';
+        let incomingLalamoveOrderId = lalamoveOrderId; // Preserve the ID from the webhook
+
+        console.log(`[Lalamove Webhook] Processing event ${eventType} for ${isReturnBooking ? 'Return' : 'Order'}. Current shipping status: ${currentShipping.status}`);
+
+        switch (eventType) {
+            case 'DRIVER_ASSIGNED':
+                newStatus = 'ON_GOING';
+                console.log(`[Lalamove Webhook] Driver Assigned. ID: ${incomingLalamoveOrderId}`);
+                break;
+            case 'PICKED_UP':
+                newStatus = 'PICKED_UP';
+                console.log(`[Lalamove Webhook] Parcel Picked Up. ID: ${incomingLalamoveOrderId}`);
+                break;
+            case 'ORDER_STATUS_CHANGED':
+                newStatus = data.orderStatus || data.order?.status || newStatus;
+                console.log(`[Lalamove Webhook] Status changed to: ${newStatus} for ID: ${incomingLalamoveOrderId}`);
+                break;
+            case 'ORDER_COMPLETED':
+                newStatus = 'COMPLETED';
+                break;
+            case 'ORDER_CANCELLED':
+                newStatus = 'CANCELLED';
+                break;
+        }
+
+        // Extract location if available (check both data.location and data.driverLocation)
+        let locationInfo = currentShipping.location || null;
+        const locationData = data.location || data.driverLocation;
+        if (locationData) {
+            locationInfo = {
+                lat: locationData.lat || null,
+                lng: locationData.lng || null,
+                updatedAt: new Date().toISOString()
+            };
+            console.log(`[Lalamove Webhook] Location updated for ${isReturnBooking ? 'Return' : 'Order'}:`, locationInfo);
+        }
+
+        const updatedShipping = {
+            ...currentShipping,
+            status: newStatus,
+            driverInfo: driverInfo,
+            location: locationInfo,
+            lastWebhookPayload: body, // DEBUG: Store raw payload
+            updatedAt: getNowUTC().toISOString()
+        };
+
+        if (Object.keys(driverInfo).length > 0) {
+            // Also keep legacy 'driver' key for one migration cycle if any older code still uses it
+            updatedShipping.driver = driverInfo;
+        }
+
+        // Determine main order status updates
+        let mainOrderStatusUpdate = {};
+
+        if (eventType === 'ORDER_STATUS_CHANGED' || eventType === 'ORDER_COMPLETED' || eventType === 'ORDER_CANCELLED' || eventType === 'PICKED_UP' || eventType === 'DRIVER_ASSIGNED') {
+
+            if (eventType === 'DRIVER_ASSIGNED' || newStatus === 'ON_GOING') {
+                // When driver is assigned, order moves to TO_SHIP (courier booked, waiting for pickup)
+                if (currentOrder.status === 'SHIPPED' || currentOrder.status === 'RETURN_APPROVED' || currentOrder.status === 'PROCESSING') {
+                    mainOrderStatusUpdate.status = UNIVERSAL_STATUS.TO_SHIP;
+                }
+            } else if (newStatus === 'PICKED_UP' || eventType === 'PICKED_UP') {
+                // Package picked up - now SHIPPING
+                mainOrderStatusUpdate.status = UNIVERSAL_STATUS.SHIPPING;
+                if (!isReturnBooking && !currentOrder.shippedAt) mainOrderStatusUpdate.shippedAt = getNowUTC();
+            } else if (newStatus === 'COMPLETED' || eventType === 'ORDER_COMPLETED') {
+                // IMPORTANT: If this is a return booking, do NOT mark the main order as DELIVERED.
+                // The main order should stay as is (or in a returning state) until the SELLER clicks "Receive".
+                if (isReturnBooking) {
+                    // For returns, we don't update the main order status to DELIVERED.
+                    // Instead, we let the Return Status update below handle it.
+                    console.log('[Lalamove Webhook] Return delivery completed. Main order status preserved.');
+                } else {
+                    mainOrderStatusUpdate.status = UNIVERSAL_STATUS.DELIVERED;
+                    mainOrderStatusUpdate.deliveredAt = new Date();
+ 
+                     // Set auto-complete date (3 days from now) for buyer protection
+                     const autoCompleteDate = getNowUTC();
+                    autoCompleteDate.setDate(autoCompleteDate.getDate() + 3);
+                    mainOrderStatusUpdate.autoCompleteAt = autoCompleteDate;
+                }
+            } else if (newStatus === 'CANCELLED' || eventType === 'ORDER_CANCELLED') {
+                // If normal delivery fails, revert to PROCESSING so seller can rebook
+                if (!isReturnBooking && (currentOrder.status === UNIVERSAL_STATUS.SHIPPING || currentOrder.status === UNIVERSAL_STATUS.TO_SHIP)) {
+                    mainOrderStatusUpdate.status = 'PROCESSING';
+                }
+            }
+        }
+
+        // Update the records based on whether this is a return or main order
+        if (isReturnBooking && activeReturn) {
+            // Update Return Request
+            let returnStatusUpdate = activeReturn.status;
+
+            if (newStatus === 'PICKED_UP' || eventType === 'PICKED_UP') {
+                returnStatusUpdate = 'PICKED_UP'; // Package picked up
+            } else if (newStatus === 'ON_GOING' || eventType === 'DRIVER_ASSIGNED') {
+                // IMPORTANT: Prevent regression. If we already picked up or are shipping, 
+                // don't go back to TO_PICKUP. Lalamove sends ON_GOING again after pickup.
+                const progressedStatuses = ['PICKED_UP', 'SHIPPED', 'IN_TRANSIT', 'OUT_FOR_DELIVERY', 'DELIVERED', 'RECEIVED', 'REFUNDED'];
+                if (['PICKED_UP', 'SHIPPED', 'IN_TRANSIT', 'OUT_FOR_DELIVERY'].includes(activeReturn.status)) {
+                    // It's already picked up and moving. If we get ON_GOING, it's definitely IN_TRANSIT.
+                    returnStatusUpdate = UNIVERSAL_STATUS.SHIPPING; // Map to SHIPPED
+                } else if (!progressedStatuses.includes(activeReturn.status)) {
+                    returnStatusUpdate = 'TO_PICKUP'; // Courier booked, waiting for pickup
+                }
+            } else if (newStatus === 'OUT_FOR_DELIVERY') {
+                returnStatusUpdate = UNIVERSAL_STATUS.SHIPPING; // Still shipping
+            } else if (newStatus === 'COMPLETED' || eventType === 'ORDER_COMPLETED') {
+                returnStatusUpdate = 'DELIVERED'; // Lalamove delivered the parcel to the seller
+            } else if (newStatus === 'CANCELLED' || eventType === 'ORDER_CANCELLED') {
+                returnStatusUpdate = 'RETURN_APPROVED'; // Revert to RETURN_APPROVED so seller can re-book
+                console.log(`[Lalamove Webhook] Return booking ${activeReturn.id} cancelled. Reverting status to RETURN_APPROVED for re-booking.`);
+            }
+
+            // Capture new tracking number if Lalamove assigned one (and we found the order via metadata)
+            const trackingNumberUpdate = {};
+            if (incomingLalamoveOrderId && activeReturn.trackingNumber !== incomingLalamoveOrderId) {
+                console.log(`[Lalamove Webhook] New tracking number detected for return ${activeReturn.id}: ${incomingLalamoveOrderId} (was ${activeReturn.trackingNumber})`);
+                trackingNumberUpdate.trackingNumber = incomingLalamoveOrderId;
+
+                // Update the bookingId in updatedShipping as well
+                updatedShipping.bookingId = incomingLalamoveOrderId;
+            }
+
+            const returnDataUpdate = {
+                status: returnStatusUpdate,
+                returnShipping: updatedShipping,
+                ...trackingNumberUpdate
+            };
+
+            // Set a 2-day deadline for seller to confirm receipt once delivered
+            if (returnStatusUpdate === 'DELIVERED') {
+                const deadlineDate = getNowUTC();
+                deadlineDate.setDate(deadlineDate.getDate() + 2);
+                returnDataUpdate.deadline = deadlineDate;
+            }
+
+            await prisma.return.update({
+                where: { id: activeReturn.id },
+                data: returnDataUpdate
+            });
+            console.log(`[Lalamove Webhook] Updated Return ${activeReturn.id} status to ${returnStatusUpdate} and updated shipping info.`);
+
+            // Still update order status if needed (e.g. IN_TRANSIT)
+            if (Object.keys(mainOrderStatusUpdate).length > 0) {
+                await prisma.order.update({
+                    where: { id: internalOrderId },
+                    data: mainOrderStatusUpdate
+                });
+            }
+        } else {
+            // Update the main order shipping
+            await prisma.order.update({
+                where: { id: internalOrderId },
+                data: {
+                    shipping: updatedShipping,
+                    ...mainOrderStatusUpdate
+                }
+            });
+        }
+
+        console.log(`[Lalamove Webhook] Order ${internalOrderId} updated successfully`);
+
+        // Trigger Realtime Events
+        try {
+            const eventData = {
+                orderId: internalOrderId,
+                status: mainOrderStatusUpdate.status || currentOrder.status,
+                shippingStatus: newStatus,
+                driverInfo: driverInfo,
+                location: locationInfo,
+                isPaid: currentOrder.isPaid,
+                paymentStatus: currentOrder.paymentStatus,
+                shipping: updatedShipping
+            };
+
+            const promises = [
+                triggerRealtimeEvent(`store-${currentOrder.storeId}`, 'order-updated', eventData),
+                triggerRealtimeEvent(`user-${currentOrder.userId}`, 'order-updated', eventData)
+            ];
+
+            if (isReturnBooking && activeReturn) {
+                const returnEventData = {
+                    ...eventData,
+                    returnId: activeReturn.id,
+                    status: activeReturn.status,
+                    shipping: updatedShipping // returnShipping
+                };
+                promises.push(triggerRealtimeEvent(`store-${currentOrder.storeId}`, 'return-updated', returnEventData));
+                promises.push(triggerRealtimeEvent(`user-${currentOrder.userId}`, 'return-updated', returnEventData));
+            }
+
+            await Promise.all(promises);
+            console.log(`[Lalamove Webhook] Realtime events triggered for Order ${internalOrderId}`);
+        } catch (realtimeError) {
+            console.error('[Lalamove Webhook] Realtime trigger failed:', realtimeError);
+        }
+
+        // Update Webhook Log to SUCCESS
+        if (webhookEventId) {
+            await prisma.webhookEvent.update({
+                where: { id: webhookEventId },
+                data: { status: 'SUCCESS', processedAt: getNowUTC() }
+            });
+        }
+
+        return NextResponse.json({ success: true });
+
+    } catch (error) {
+        console.error('[Lalamove Webhook Error]', error);
+
+        // Update Webhook Log to FAILED
+        if (webhookEventId) {
+            try {
+                await prisma.webhookEvent.update({
+                    where: { id: webhookEventId },
+                    data: { status: 'FAILED', error: error.message, processedAt: getNowUTC() }
+                });
+            } catch (updateError) {
+                console.error('Failed to update webhook log status:', updateError);
+            }
+        }
+
+        return NextResponse.json(
+            { error: 'Webhook processing failed', message: error.message },
+            { status: 500 }
+        );
+    }
+}

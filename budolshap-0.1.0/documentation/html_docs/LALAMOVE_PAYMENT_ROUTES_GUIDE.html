@@ -1,0 +1,1423 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Lalamove Payment & Route Scenarios - Complete Guide</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            padding: 40px 20px;
+            line-height: 1.6;
+            color: #333;
+        }
+
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 20px;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+            overflow: hidden;
+        }
+
+        .header {
+            background: linear-gradient(135deg, #FF6B00 0%, #FF8C00 100%);
+            color: white;
+            padding: 60px 40px;
+            text-align: center;
+        }
+
+        .header h1 {
+            font-size: 3em;
+            margin-bottom: 15px;
+            text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.2);
+        }
+
+        .header p {
+            font-size: 1.3em;
+            opacity: 0.95;
+        }
+
+        .content {
+            padding: 50px;
+        }
+
+        .section {
+            margin-bottom: 50px;
+        }
+
+        .section h2 {
+            color: #FF6B00;
+            font-size: 2.2em;
+            margin-bottom: 25px;
+            padding-bottom: 15px;
+            border-bottom: 3px solid #FF6B00;
+        }
+
+        .section h3 {
+            color: #667eea;
+            font-size: 1.6em;
+            margin: 30px 0 15px 0;
+        }
+
+        .section h4 {
+            color: #764ba2;
+            font-size: 1.3em;
+            margin: 20px 0 10px 0;
+        }
+
+        .scenario-card {
+            background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
+            border-radius: 15px;
+            padding: 40px;
+            margin: 30px 0;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
+            border-left: 8px solid #FF6B00;
+        }
+
+        .scenario-header {
+            display: flex;
+            align-items: center;
+            gap: 20px;
+            margin-bottom: 30px;
+        }
+
+        .scenario-icon {
+            font-size: 4em;
+            min-width: 80px;
+            text-align: center;
+        }
+
+        .scenario-title {
+            flex: 1;
+        }
+
+        .scenario-title h3 {
+            margin: 0;
+            color: #FF6B00;
+            font-size: 2em;
+        }
+
+        .scenario-subtitle {
+            color: #666;
+            font-size: 1.1em;
+            margin-top: 5px;
+        }
+
+        .route-visual {
+            background: white;
+            border-radius: 12px;
+            padding: 30px;
+            margin: 25px 0;
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.1);
+        }
+
+        .route-path {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 20px;
+            margin: 30px 0;
+            flex-wrap: wrap;
+        }
+
+        .route-point {
+            background: linear-gradient(135deg, #FF6B00 0%, #FF8C00 100%);
+            color: white;
+            padding: 25px 35px;
+            border-radius: 15px;
+            font-weight: bold;
+            font-size: 1.2em;
+            box-shadow: 0 5px 15px rgba(255, 107, 0, 0.3);
+            text-align: center;
+            min-width: 200px;
+        }
+
+        .route-point.seller {
+            background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+            box-shadow: 0 5px 15px rgba(16, 185, 129, 0.3);
+        }
+
+        .route-point.buyer {
+            background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);
+            box-shadow: 0 5px 15px rgba(59, 130, 246, 0.3);
+        }
+
+        .route-arrow {
+            font-size: 3em;
+            color: #FF6B00;
+            font-weight: bold;
+        }
+
+        .route-label {
+            font-size: 0.85em;
+            opacity: 0.9;
+            margin-top: 5px;
+        }
+
+        .step-flow {
+            background: white;
+            border-radius: 12px;
+            padding: 25px;
+            margin: 20px 0;
+            border-left: 5px solid #667eea;
+        }
+
+        .step-number {
+            display: inline-block;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            text-align: center;
+            line-height: 40px;
+            font-weight: bold;
+            font-size: 1.2em;
+            margin-right: 15px;
+        }
+
+        .step-content {
+            display: inline-block;
+            vertical-align: top;
+            width: calc(100% - 60px);
+        }
+
+        .step-title {
+            font-weight: bold;
+            font-size: 1.2em;
+            color: #333;
+            margin-bottom: 8px;
+        }
+
+        .step-description {
+            color: #555;
+            line-height: 1.8;
+        }
+
+        .money-flow {
+            background: #fef3c7;
+            border: 2px dashed #f59e0b;
+            border-radius: 10px;
+            padding: 15px 20px;
+            margin: 10px 0;
+            font-weight: 600;
+            color: #92400e;
+        }
+
+        .money-icon {
+            font-size: 1.3em;
+            margin-right: 8px;
+        }
+
+        .comparison-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 30px 0;
+            background: white;
+            border-radius: 15px;
+            overflow: hidden;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
+        }
+
+        .comparison-table th {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 20px;
+            text-align: left;
+            font-weight: 600;
+            font-size: 1.1em;
+        }
+
+        .comparison-table td {
+            padding: 18px 20px;
+            border-bottom: 1px solid #e5e7eb;
+        }
+
+        .comparison-table tr:hover {
+            background: #f9fafb;
+        }
+
+        .comparison-table tr:last-child td {
+            border-bottom: none;
+        }
+
+        .badge {
+            display: inline-block;
+            padding: 6px 14px;
+            border-radius: 20px;
+            font-weight: bold;
+            font-size: 0.9em;
+        }
+
+        .badge-success {
+            background: #d1fae5;
+            color: #065f46;
+        }
+
+        .badge-warning {
+            background: #fef3c7;
+            color: #92400e;
+        }
+
+        .badge-danger {
+            background: #fee2e2;
+            color: #991b1b;
+        }
+
+        .badge-info {
+            background: #dbeafe;
+            color: #1e40af;
+        }
+
+        .info-box {
+            background: #eff6ff;
+            border-left: 5px solid #3b82f6;
+            padding: 20px;
+            border-radius: 8px;
+            margin: 20px 0;
+        }
+
+        .warning-box {
+            background: #fef3c7;
+            border-left: 5px solid #f59e0b;
+            padding: 20px;
+            border-radius: 8px;
+            margin: 20px 0;
+        }
+
+        .success-box {
+            background: #d1fae5;
+            border-left: 5px solid #10b981;
+            padding: 20px;
+            border-radius: 8px;
+            margin: 20px 0;
+        }
+
+        .danger-box {
+            background: #fee2e2;
+            border-left: 5px solid #ef4444;
+            padding: 20px;
+            border-radius: 8px;
+            margin: 20px 0;
+        }
+
+        .pros-cons {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 25px;
+            margin: 25px 0;
+        }
+
+        .pros,
+        .cons {
+            background: white;
+            padding: 25px;
+            border-radius: 12px;
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.1);
+        }
+
+        .pros {
+            border-top: 4px solid #10b981;
+        }
+
+        .cons {
+            border-top: 4px solid #ef4444;
+        }
+
+        .pros h4 {
+            color: #10b981;
+            margin-bottom: 15px;
+        }
+
+        .cons h4 {
+            color: #ef4444;
+            margin-bottom: 15px;
+        }
+
+        .pros ul,
+        .cons ul {
+            margin-left: 20px;
+        }
+
+        .pros li,
+        .cons li {
+            margin: 10px 0;
+            line-height: 1.6;
+        }
+
+        .code-block {
+            background: #1e293b;
+            color: #e2e8f0;
+            padding: 20px;
+            border-radius: 10px;
+            overflow-x: auto;
+            margin: 20px 0;
+            font-family: 'Courier New', monospace;
+            font-size: 0.95em;
+            line-height: 1.6;
+        }
+
+        .highlight {
+            background: #fef3c7;
+            padding: 2px 6px;
+            border-radius: 4px;
+            font-weight: 600;
+        }
+
+        .footer {
+            background: #1e293b;
+            color: white;
+            padding: 30px;
+            text-align: center;
+        }
+
+        @media (max-width: 768px) {
+            .pros-cons {
+                grid-template-columns: 1fr;
+            }
+
+            .route-path {
+                flex-direction: column;
+            }
+
+            .route-arrow {
+                transform: rotate(90deg);
+            }
+
+            .content {
+                padding: 30px 20px;
+            }
+
+            .header h1 {
+                font-size: 2em;
+            }
+        }
+
+        .cost-breakdown {
+            background: white;
+            border-radius: 12px;
+            padding: 25px;
+            margin: 20px 0;
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.1);
+        }
+
+        .cost-item {
+            display: flex;
+            justify-content: space-between;
+            padding: 12px 0;
+            border-bottom: 1px solid #e5e7eb;
+        }
+
+        .cost-item:last-child {
+            border-bottom: none;
+            font-weight: bold;
+            font-size: 1.2em;
+            color: #FF6B00;
+            padding-top: 15px;
+            margin-top: 10px;
+            border-top: 2px solid #FF6B00;
+        }
+
+        .api-config {
+            background: #f8f9fa;
+            border-radius: 10px;
+            padding: 20px;
+            margin: 20px 0;
+        }
+
+        .api-config h4 {
+            color: #667eea;
+            margin-bottom: 15px;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>💰 Lalamove Payment & Route Guide</h1>
+            <p>Understanding Online Payment vs Cash on Delivery Scenarios</p>
+            <p style="font-size: 0.9em; margin-top: 10px; opacity: 0.9;">Budolshap E-Commerce Platform</p>
+        </div>
+
+        <div class="content">
+            <!-- Overview -->
+            <div class="section">
+                <h2>📋 Overview</h2>
+                <p>This guide explains how delivery routes and payment flows work differently depending on whether the
+                    customer pays online or chooses Cash on Delivery (COD). Understanding these scenarios is crucial for
+                    implementing the correct Lalamove API configuration.</p>
+
+                <div class="info-box">
+                    <strong>🎯 Key Concept:</strong> The "Route" in Lalamove refers to the physical path the driver
+                    takes, which changes based on the payment method. Online payments have simple routes (Seller →
+                    Buyer), while COD can require round trips.
+                </div>
+            </div>
+
+            <!-- Scenario 1: Online Payment -->
+            <div class="section">
+                <div class="scenario-card">
+                    <div class="scenario-header">
+                        <div class="scenario-icon">💳</div>
+                        <div class="scenario-title">
+                            <h3>Scenario 1: Online Payment (Pre-paid)</h3>
+                            <div class="scenario-subtitle">Customer paid via PayMongo, GCash, Card, etc.</div>
+                        </div>
+                        <div>
+                            <span class="badge badge-success">✓ SIMPLEST</span>
+                            <span class="badge badge-info">RECOMMENDED</span>
+                        </div>
+                    </div>
+
+                    <h4>📍 The Route</h4>
+                    <div class="route-visual">
+                        <div class="route-path">
+                            <div class="route-point seller">
+                                <div>🏪 Point A</div>
+                                <div class="route-label">Seller's Store</div>
+                            </div>
+                            <div class="route-arrow">→</div>
+                            <div class="route-point buyer">
+                                <div>🏠 Point B</div>
+                                <div class="route-label">Buyer's Address</div>
+                            </div>
+                        </div>
+                        <div
+                            style="text-align: center; margin-top: 20px; color: #10b981; font-weight: bold; font-size: 1.1em;">
+                            ✓ One-way trip only
+                        </div>
+                    </div>
+
+                    <h4>🔄 Step-by-Step Flow</h4>
+
+                    <div class="step-flow">
+                        <span class="step-number">1</span>
+                        <div class="step-content">
+                            <div class="step-title">📦 Pickup at Seller's Store (Point A)</div>
+                            <div class="step-description">
+                                <ul style="margin-left: 20px; margin-top: 10px;">
+                                    <li>Driver arrives at the seller's location</li>
+                                    <li>Driver shows Order ID to seller</li>
+                                    <li>Seller verifies the order and hands over the package</li>
+                                    <li>Driver confirms pickup in Lalamove app</li>
+                                </ul>
+                                <div class="money-flow">
+                                    <span class="money-icon">💵</span>
+                                    <strong>Money Exchange:</strong> NONE - Payment already completed online
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="step-flow">
+                        <span class="step-number">2</span>
+                        <div class="step-content">
+                            <div class="step-title">🚗 Transit to Buyer</div>
+                            <div class="step-description">
+                                Driver navigates to the buyer's delivery address. Customer can track in real-time.
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="step-flow">
+                        <span class="step-number">3</span>
+                        <div class="step-content">
+                            <div class="step-title">🏠 Delivery to Buyer (Point B)</div>
+                            <div class="step-description">
+                                <ul style="margin-left: 20px; margin-top: 10px;">
+                                    <li>Driver arrives at buyer's location</li>
+                                    <li>Driver hands over the package to buyer</li>
+                                    <li>Driver marks order as "Completed"</li>
+                                    <li>Order is finished ✓</li>
+                                </ul>
+                                <div class="money-flow">
+                                    <span class="money-icon">💵</span>
+                                    <strong>Money Exchange:</strong> NONE - Buyer already paid online
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <h4>💰 Cost Breakdown</h4>
+                    <div class="cost-breakdown">
+                        <div class="cost-item">
+                            <span>Product Cost:</span>
+                            <span>₱500.00 (Already paid online)</span>
+                        </div>
+                        <div class="cost-item">
+                            <span>Delivery Fee:</span>
+                            <span>₱65.00 (Already paid online)</span>
+                        </div>
+                        <div class="cost-item">
+                            <span>Driver Collects:</span>
+                            <span>₱0.00</span>
+                        </div>
+                    </div>
+
+                    <div class="pros-cons">
+                        <div class="pros">
+                            <h4>✅ Advantages</h4>
+                            <ul>
+                                <li>Fastest delivery (no cash handling delays)</li>
+                                <li>Cheapest delivery fee (one-way only)</li>
+                                <li>No cash handling errors</li>
+                                <li>Driver doesn't need to carry cash</li>
+                                <li>Instant payment confirmation</li>
+                                <li>Lower risk of fraud</li>
+                            </ul>
+                        </div>
+                        <div class="cons">
+                            <h4>❌ Disadvantages</h4>
+                            <ul>
+                                <li>Requires customer to have online payment method</li>
+                                <li>Some customers prefer COD</li>
+                                <li>Payment gateway fees apply</li>
+                            </ul>
+                        </div>
+                    </div>
+
+                    <div class="api-config">
+                        <h4>🔧 Lalamove API Configuration</h4>
+                        <div class="code-block">
+                            <code>{
+  "serviceType": "MOTORCYCLE",
+  "stops": [
+    {
+      "stopId": "stop_pickup_001",
+      "location": { /* Seller's address */ },
+      "contactName": "Seller Name",
+      "contactPhone": "+639171234567"
+    },
+    {
+      "stopId": "stop_delivery_001",
+      "location": { /* Buyer's address */ },
+      "contactName": "Buyer Name",
+      "contactPhone": "+639177654321"
+    }
+  ],
+  "deliveries": [
+    {
+      "toStop": 1,
+      "toContact": { /* Buyer details */ },
+      "remarks": "Handle with care"
+    }
+  ],
+  // NO POD (Proof of Delivery) or COD settings needed
+  "isPODEnabled": false
+}</code>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Scenario 2: COD - Abono -->
+            <div class="section">
+                <div class="scenario-card" style="border-left-color: #f59e0b;">
+                    <div class="scenario-header">
+                        <div class="scenario-icon">💵</div>
+                        <div class="scenario-title">
+                            <h3>Scenario 2A: Cash on Delivery - "Abono" Method</h3>
+                            <div class="scenario-subtitle">Driver pays seller first, then collects from buyer</div>
+                        </div>
+                        <div>
+                            <span class="badge badge-warning">COD</span>
+                            <span class="badge badge-info">COMMON</span>
+                        </div>
+                    </div>
+
+                    <div class="warning-box">
+                        <strong>⚠️ Important:</strong> This method is typically used for items worth <strong>less than
+                            ₱2,000</strong>. The driver acts as a temporary bank, using their own money to pay the
+                        seller, then getting reimbursed by the buyer.
+                    </div>
+
+                    <h4>📍 The Route</h4>
+                    <div class="route-visual">
+                        <div class="route-path">
+                            <div class="route-point seller">
+                                <div>🏪 Point A</div>
+                                <div class="route-label">Seller's Store</div>
+                            </div>
+                            <div class="route-arrow">→</div>
+                            <div class="route-point buyer">
+                                <div>🏠 Point B</div>
+                                <div class="route-label">Buyer's Address</div>
+                            </div>
+                        </div>
+                        <div
+                            style="text-align: center; margin-top: 20px; color: #f59e0b; font-weight: bold; font-size: 1.1em;">
+                            ⚠️ One-way trip, but driver handles cash at both stops
+                        </div>
+                    </div>
+
+                    <h4>🔄 Step-by-Step Flow</h4>
+
+                    <div class="step-flow">
+                        <span class="step-number">1</span>
+                        <div class="step-content">
+                            <div class="step-title">📦 Pickup at Seller's Store (Point A)</div>
+                            <div class="step-description">
+                                <ul style="margin-left: 20px; margin-top: 10px;">
+                                    <li>Driver arrives at the seller's location</li>
+                                    <li>Driver shows Order ID to seller</li>
+                                    <li>Seller tells driver the item cost (e.g., ₱500)</li>
+                                    <li><strong>Driver pays the seller ₱500 from their own pocket</strong></li>
+                                    <li>Seller hands over the package</li>
+                                    <li>Driver confirms pickup in Lalamove app</li>
+                                </ul>
+                                <div class="money-flow">
+                                    <span class="money-icon">💵</span>
+                                    <strong>Money Exchange:</strong> Driver pays Seller ₱500 (item cost)
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="step-flow">
+                        <span class="step-number">2</span>
+                        <div class="step-content">
+                            <div class="step-title">🚗 Transit to Buyer</div>
+                            <div class="step-description">
+                                Driver navigates to the buyer's delivery address. Driver is now ₱500 out of pocket.
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="step-flow">
+                        <span class="step-number">3</span>
+                        <div class="step-content">
+                            <div class="step-title">🏠 Delivery to Buyer (Point B)</div>
+                            <div class="step-description">
+                                <ul style="margin-left: 20px; margin-top: 10px;">
+                                    <li>Driver arrives at buyer's location</li>
+                                    <li><strong>Buyer pays driver the TOTAL amount (₱500 item + ₱65 delivery =
+                                            ₱565)</strong></li>
+                                    <li>Driver hands over the package to buyer</li>
+                                    <li>Driver marks order as "Completed"</li>
+                                    <li>Driver keeps the ₱565 (reimbursing themselves the ₱500 + earning ₱65 delivery
+                                        fee)</li>
+                                </ul>
+                                <div class="money-flow">
+                                    <span class="money-icon">💵</span>
+                                    <strong>Money Exchange:</strong> Buyer pays Driver ₱565 (₱500 item + ₱65 delivery)
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <h4>💰 Cost Breakdown</h4>
+                    <div class="cost-breakdown">
+                        <div class="cost-item">
+                            <span>Product Cost:</span>
+                            <span>₱500.00</span>
+                        </div>
+                        <div class="cost-item">
+                            <span>Delivery Fee:</span>
+                            <span>₱65.00</span>
+                        </div>
+                        <div class="cost-item">
+                            <span>Driver Collects from Buyer:</span>
+                            <span>₱565.00</span>
+                        </div>
+                    </div>
+
+                    <h4>💸 Money Flow Diagram</h4>
+                    <div class="route-visual">
+                        <div style="background: #fef3c7; padding: 20px; border-radius: 10px; margin: 15px 0;">
+                            <div style="font-weight: bold; margin-bottom: 15px; color: #92400e;">At Pickup (Point A):
+                            </div>
+                            <div
+                                style="display: flex; align-items: center; justify-content: center; gap: 15px; margin: 10px 0;">
+                                <span
+                                    style="background: #8b5cf6; color: white; padding: 10px 20px; border-radius: 8px;">👤
+                                    Driver</span>
+                                <span style="font-size: 2em; color: #10b981;">→ ₱500 →</span>
+                                <span
+                                    style="background: #10b981; color: white; padding: 10px 20px; border-radius: 8px;">🏪
+                                    Seller</span>
+                            </div>
+                            <div style="text-align: center; margin-top: 10px; color: #92400e; font-style: italic;">
+                                Driver is now -₱500 out of pocket
+                            </div>
+                        </div>
+
+                        <div style="background: #d1fae5; padding: 20px; border-radius: 10px; margin: 15px 0;">
+                            <div style="font-weight: bold; margin-bottom: 15px; color: #065f46;">At Delivery (Point B):
+                            </div>
+                            <div
+                                style="display: flex; align-items: center; justify-content: center; gap: 15px; margin: 10px 0;">
+                                <span
+                                    style="background: #3b82f6; color: white; padding: 10px 20px; border-radius: 8px;">🏠
+                                    Buyer</span>
+                                <span style="font-size: 2em; color: #10b981;">→ ₱565 →</span>
+                                <span
+                                    style="background: #8b5cf6; color: white; padding: 10px 20px; border-radius: 8px;">👤
+                                    Driver</span>
+                            </div>
+                            <div style="text-align: center; margin-top: 10px; color: #065f46; font-style: italic;">
+                                Driver gets ₱500 back + ₱65 delivery fee = ₱565 ✓
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="pros-cons">
+                        <div class="pros">
+                            <h4>✅ Advantages</h4>
+                            <ul>
+                                <li>Still one-way trip (cheaper than round trip)</li>
+                                <li>Faster than round trip method</li>
+                                <li>Buyer can inspect item before paying</li>
+                                <li>No need for buyer to have online payment</li>
+                                <li>Seller gets paid immediately</li>
+                            </ul>
+                        </div>
+                        <div class="cons">
+                            <h4>❌ Disadvantages</h4>
+                            <ul>
+                                <li>Driver must have cash on hand</li>
+                                <li>Limited to lower-value items (usually < ₱2,000)</li>
+                                <li>Risk if buyer refuses to pay</li>
+                                <li>Driver bears temporary financial risk</li>
+                                <li>Cash handling can cause delays</li>
+                            </ul>
+                        </div>
+                    </div>
+
+                    <div class="api-config">
+                        <h4>🔧 Lalamove API Configuration</h4>
+                        <div class="code-block">
+                            <code>{
+  "serviceType": "MOTORCYCLE",
+  "stops": [
+    {
+      "stopId": "stop_pickup_001",
+      "location": { /* Seller's address */ },
+      "contactName": "Seller Name",
+      "contactPhone": "+639171234567"
+    },
+    {
+      "stopId": "stop_delivery_001",
+      "location": { /* Buyer's address */ },
+      "contactName": "Buyer Name",
+      "contactPhone": "+639177654321"
+    }
+  ],
+  "deliveries": [
+    {
+      "toStop": 1,
+      "toContact": { /* Buyer details */ },
+      "remarks": "COD - Collect ₱565 from buyer",
+      // Enable POD (Proof of Delivery) for COD
+      "podRequired": true
+    }
+  ],
+  // Enable Purchase Service (Abono)
+  "purchaseService": {
+    "enabled": true,
+    "amount": 500.00,  // Item cost that driver pays to seller
+    "currency": "PHP"
+  },
+  "isPODEnabled": true
+}</code>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Scenario 3: COD - Round Trip -->
+            <div class="section">
+                <div class="scenario-card" style="border-left-color: #ef4444;">
+                    <div class="scenario-header">
+                        <div class="scenario-icon">🔄</div>
+                        <div class="scenario-title">
+                            <h3>Scenario 2B: Cash on Delivery - Round Trip Remittance</h3>
+                            <div class="scenario-subtitle">Driver collects from buyer and returns cash to seller</div>
+                        </div>
+                        <div>
+                            <span class="badge badge-danger">EXPENSIVE</span>
+                            <span class="badge badge-warning">HIGH VALUE</span>
+                        </div>
+                    </div>
+
+                    <div class="danger-box">
+                        <strong>⚠️ Important:</strong> This method is used for <strong>high-value items (>
+                            ₱2,000)</strong> or when the seller doesn't trust the driver to pay upfront. The driver must
+                        make a round trip back to the seller to remit the cash.
+                    </div>
+
+                    <h4>📍 The Route</h4>
+                    <div class="route-visual">
+                        <div class="route-path">
+                            <div class="route-point seller">
+                                <div>🏪 Point A</div>
+                                <div class="route-label">Seller's Store</div>
+                            </div>
+                            <div class="route-arrow">→</div>
+                            <div class="route-point buyer">
+                                <div>🏠 Point B</div>
+                                <div class="route-label">Buyer's Address</div>
+                            </div>
+                            <div class="route-arrow">→</div>
+                            <div class="route-point seller">
+                                <div>🏪 Point A</div>
+                                <div class="route-label">Back to Seller</div>
+                            </div>
+                        </div>
+                        <div
+                            style="text-align: center; margin-top: 20px; color: #ef4444; font-weight: bold; font-size: 1.1em;">
+                            ⚠️ Round trip required - Delivery fee is approximately DOUBLE
+                        </div>
+                    </div>
+
+                    <h4>🔄 Step-by-Step Flow</h4>
+
+                    <div class="step-flow">
+                        <span class="step-number">1</span>
+                        <div class="step-content">
+                            <div class="step-title">📦 Pickup at Seller's Store (Point A - First Visit)</div>
+                            <div class="step-description">
+                                <ul style="margin-left: 20px; margin-top: 10px;">
+                                    <li>Driver arrives at the seller's location</li>
+                                    <li>Driver shows Order ID to seller</li>
+                                    <li>Seller hands over the package</li>
+                                    <li>Seller tells driver: "Collect ₱5,000 from buyer and bring it back to me"</li>
+                                    <li>Driver confirms pickup in Lalamove app</li>
+                                </ul>
+                                <div class="money-flow">
+                                    <span class="money-icon">💵</span>
+                                    <strong>Money Exchange:</strong> NONE - No payment at pickup
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="step-flow">
+                        <span class="step-number">2</span>
+                        <div class="step-content">
+                            <div class="step-title">🚗 Transit to Buyer</div>
+                            <div class="step-description">
+                                Driver navigates to the buyer's delivery address with the package.
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="step-flow">
+                        <span class="step-number">3</span>
+                        <div class="step-content">
+                            <div class="step-title">🏠 Delivery to Buyer (Point B)</div>
+                            <div class="step-description">
+                                <ul style="margin-left: 20px; margin-top: 10px;">
+                                    <li>Driver arrives at buyer's location</li>
+                                    <li><strong>Buyer pays driver ₱5,000 (item cost only)</strong></li>
+                                    <li>Driver hands over the package to buyer</li>
+                                    <li>Driver now has ₱5,000 cash that belongs to the seller</li>
+                                </ul>
+                                <div class="money-flow">
+                                    <span class="money-icon">💵</span>
+                                    <strong>Money Exchange:</strong> Buyer pays Driver ₱5,000 (item cost)
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="step-flow">
+                        <span class="step-number">4</span>
+                        <div class="step-content">
+                            <div class="step-title">🚗 Return Trip to Seller</div>
+                            <div class="step-description">
+                                Driver drives back to the seller's store with the cash. This is why it's called a "round
+                                trip."
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="step-flow">
+                        <span class="step-number">5</span>
+                        <div class="step-content">
+                            <div class="step-title">🏪 Cash Remittance at Seller's Store (Point A - Second Visit)</div>
+                            <div class="step-description">
+                                <ul style="margin-left: 20px; margin-top: 10px;">
+                                    <li>Driver arrives back at seller's location</li>
+                                    <li><strong>Driver hands over ₱5,000 cash to seller</strong></li>
+                                    <li>Seller verifies the amount</li>
+                                    <li>Driver marks order as "Completed"</li>
+                                    <li>Order is finished ✓</li>
+                                </ul>
+                                <div class="money-flow">
+                                    <span class="money-icon">💵</span>
+                                    <strong>Money Exchange:</strong> Driver gives Seller ₱5,000 (collected from buyer)
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <h4>💰 Cost Breakdown</h4>
+                    <div class="cost-breakdown">
+                        <div class="cost-item">
+                            <span>Product Cost:</span>
+                            <span>₱5,000.00</span>
+                        </div>
+                        <div class="cost-item">
+                            <span>Delivery Fee (Round Trip):</span>
+                            <span>₱130.00 (approximately 2x normal fee)</span>
+                        </div>
+                        <div class="cost-item">
+                            <span>Buyer Pays:</span>
+                            <span>₱5,000.00 (to driver at delivery)</span>
+                        </div>
+                        <div class="cost-item">
+                            <span>Platform Charges Seller:</span>
+                            <span>₱130.00 (delivery fee)</span>
+                        </div>
+                    </div>
+
+                    <h4>💸 Money Flow Diagram</h4>
+                    <div class="route-visual">
+                        <div style="background: #f3f4f6; padding: 20px; border-radius: 10px; margin: 15px 0;">
+                            <div style="font-weight: bold; margin-bottom: 15px; color: #374151;">At Pickup (Point A -
+                                First Visit):</div>
+                            <div style="text-align: center; padding: 20px; color: #6b7280; font-style: italic;">
+                                No money exchange - Driver just picks up package
+                            </div>
+                        </div>
+
+                        <div style="background: #dbeafe; padding: 20px; border-radius: 10px; margin: 15px 0;">
+                            <div style="font-weight: bold; margin-bottom: 15px; color: #1e40af;">At Delivery (Point B):
+                            </div>
+                            <div
+                                style="display: flex; align-items: center; justify-content: center; gap: 15px; margin: 10px 0;">
+                                <span
+                                    style="background: #3b82f6; color: white; padding: 10px 20px; border-radius: 8px;">🏠
+                                    Buyer</span>
+                                <span style="font-size: 2em; color: #10b981;">→ ₱5,000 →</span>
+                                <span
+                                    style="background: #8b5cf6; color: white; padding: 10px 20px; border-radius: 8px;">👤
+                                    Driver</span>
+                            </div>
+                            <div style="text-align: center; margin-top: 10px; color: #1e40af; font-style: italic;">
+                                Driver now holds ₱5,000 for the seller
+                            </div>
+                        </div>
+
+                        <div style="background: #d1fae5; padding: 20px; border-radius: 10px; margin: 15px 0;">
+                            <div style="font-weight: bold; margin-bottom: 15px; color: #065f46;">At Return (Point A -
+                                Second Visit):</div>
+                            <div
+                                style="display: flex; align-items: center; justify-content: center; gap: 15px; margin: 10px 0;">
+                                <span
+                                    style="background: #8b5cf6; color: white; padding: 10px 20px; border-radius: 8px;">👤
+                                    Driver</span>
+                                <span style="font-size: 2em; color: #10b981;">→ ₱5,000 →</span>
+                                <span
+                                    style="background: #10b981; color: white; padding: 10px 20px; border-radius: 8px;">🏪
+                                    Seller</span>
+                            </div>
+                            <div style="text-align: center; margin-top: 10px; color: #065f46; font-style: italic;">
+                                Seller receives payment, order complete ✓
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="pros-cons">
+                        <div class="pros">
+                            <h4>✅ Advantages</h4>
+                            <ul>
+                                <li>Suitable for high-value items</li>
+                                <li>Driver doesn't need large cash reserves</li>
+                                <li>Seller gets cash directly from driver</li>
+                                <li>Lower risk for driver (not using own money)</li>
+                                <li>Buyer can inspect item before paying</li>
+                            </ul>
+                        </div>
+                        <div class="cons">
+                            <h4>❌ Disadvantages</h4>
+                            <ul>
+                                <li><strong>Expensive:</strong> Delivery fee is approximately double</li>
+                                <li><strong>Slow:</strong> Takes much longer (round trip)</li>
+                                <li>Seller must wait for driver to return</li>
+                                <li>More fuel consumption and emissions</li>
+                                <li>Driver spends more time on single order</li>
+                                <li>Not efficient for the platform</li>
+                            </ul>
+                        </div>
+                    </div>
+
+                    <div class="api-config">
+                        <h4>🔧 Lalamove API Configuration</h4>
+                        <div class="code-block">
+                            <code>{
+  "serviceType": "MOTORCYCLE",
+  "stops": [
+    {
+      "stopId": "stop_pickup_001",
+      "location": { /* Seller's address */ },
+      "contactName": "Seller Name",
+      "contactPhone": "+639171234567"
+    },
+    {
+      "stopId": "stop_delivery_001",
+      "location": { /* Buyer's address */ },
+      "contactName": "Buyer Name",
+      "contactPhone": "+639177654321"
+    },
+    {
+      "stopId": "stop_return_001",
+      "location": { /* Seller's address - SAME as pickup */ },
+      "contactName": "Seller Name",
+      "contactPhone": "+639171234567"
+    }
+  ],
+  "deliveries": [
+    {
+      "toStop": 1,
+      "toContact": { /* Buyer details */ },
+      "remarks": "COD - Collect ₱5,000 and return to seller"
+    },
+    {
+      "toStop": 2,  // Return to seller
+      "toContact": { /* Seller details */ },
+      "remarks": "Remit ₱5,000 cash to seller"
+    }
+  ],
+  // Enable POD and COD
+  "isPODEnabled": true,
+  "codAmount": 5000.00,
+  "currency": "PHP"
+}</code>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Comparison Table -->
+            <div class="section">
+                <h2>📊 Side-by-Side Comparison</h2>
+
+                <table class="comparison-table">
+                    <thead>
+                        <tr>
+                            <th>Feature</th>
+                            <th>Online Payment</th>
+                            <th>COD - Abono</th>
+                            <th>COD - Round Trip</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td><strong>Route Shape</strong></td>
+                            <td>A → B</td>
+                            <td>A → B</td>
+                            <td>A → B → A</td>
+                        </tr>
+                        <tr>
+                            <td><strong>Driver Pays Seller?</strong></td>
+                            <td><span class="badge badge-danger">No</span></td>
+                            <td><span class="badge badge-success">Yes (at pickup)</span></td>
+                            <td><span class="badge badge-danger">No</span></td>
+                        </tr>
+                        <tr>
+                            <td><strong>Buyer Pays Driver?</strong></td>
+                            <td><span class="badge badge-danger">No</span></td>
+                            <td><span class="badge badge-success">Yes (at delivery)</span></td>
+                            <td><span class="badge badge-success">Yes (at delivery)</span></td>
+                        </tr>
+                        <tr>
+                            <td><strong>Driver Returns to Seller?</strong></td>
+                            <td><span class="badge badge-danger">No</span></td>
+                            <td><span class="badge badge-danger">No</span></td>
+                            <td><span class="badge badge-success">Yes (to remit cash)</span></td>
+                        </tr>
+                        <tr>
+                            <td><strong>Delivery Cost</strong></td>
+                            <td><span class="badge badge-success">₱65 (Cheapest)</span></td>
+                            <td><span class="badge badge-warning">₱65-80 (Standard)</span></td>
+                            <td><span class="badge badge-danger">₱130+ (Most Expensive)</span></td>
+                        </tr>
+                        <tr>
+                            <td><strong>Delivery Speed</strong></td>
+                            <td><span class="badge badge-success">Fastest</span></td>
+                            <td><span class="badge badge-warning">Medium</span></td>
+                            <td><span class="badge badge-danger">Slowest</span></td>
+                        </tr>
+                        <tr>
+                            <td><strong>Driver Cash Needed</strong></td>
+                            <td><span class="badge badge-success">₱0</span></td>
+                            <td><span class="badge badge-warning">Item cost (e.g., ₱500)</span></td>
+                            <td><span class="badge badge-success">₱0</span></td>
+                        </tr>
+                        <tr>
+                            <td><strong>Typical Use Case</strong></td>
+                            <td>All items</td>
+                            <td>Items < ₱2,000</td>
+                            <td>Items > ₱2,000</td>
+                        </tr>
+                        <tr>
+                            <td><strong>Risk Level</strong></td>
+                            <td><span class="badge badge-success">Lowest</span></td>
+                            <td><span class="badge badge-warning">Medium (driver risk)</span></td>
+                            <td><span class="badge badge-warning">Medium (cash handling)</span></td>
+                        </tr>
+                        <tr>
+                            <td><strong>Recommended?</strong></td>
+                            <td><span class="badge badge-success">✓ YES</span></td>
+                            <td><span class="badge badge-info">If COD needed</span></td>
+                            <td><span class="badge badge-danger">Avoid if possible</span></td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+
+            <!-- Implementation Recommendations -->
+            <div class="section">
+                <h2>💡 Implementation Recommendations for Budolshap</h2>
+
+                <div class="success-box">
+                    <h3>✅ Recommended Approach</h3>
+                    <ol style="margin-left: 20px; margin-top: 10px; line-height: 1.8;">
+                        <li><strong>Primary Method: Online Payment</strong>
+                            <ul style="margin-left: 20px; margin-top: 5px;">
+                                <li>Encourage customers to pay online via PayMongo/GCash</li>
+                                <li>Offer small discounts for online payment (e.g., free delivery over ₱500)</li>
+                                <li>Simplest, fastest, and cheapest option</li>
+                            </ul>
+                        </li>
+                        <li><strong>Secondary Method: COD - Abono (for items < ₱2,000)</strong>
+                                    <ul style="margin-left: 20px; margin-top: 5px;">
+                                        <li>Enable for customers who prefer cash payment</li>
+                                        <li>Set maximum item value limit (e.g., ₱1,500)</li>
+                                        <li>Clearly communicate that buyer pays driver at delivery</li>
+                                    </ul>
+                        </li>
+                        <li><strong>Avoid: COD - Round Trip</strong>
+                            <ul style="margin-left: 20px; margin-top: 5px;">
+                                <li>Only use for very high-value items if absolutely necessary</li>
+                                <li>Inform customer of higher delivery fee upfront</li>
+                                <li>Consider alternative: Require online payment for items > ₱2,000</li>
+                            </ul>
+                        </li>
+                    </ol>
+                </div>
+
+                <h3>🔧 Technical Implementation</h3>
+
+                <h4>1. Checkout Page Logic</h4>
+                <div class="code-block">
+                    <code>// In checkout page, determine payment method
+if (paymentMethod === 'ONLINE') {
+  // Use simple A → B route
+  lalamoveConfig = {
+    stops: [pickupStop, deliveryStop],
+    isPODEnabled: false,
+    purchaseService: { enabled: false }
+  };
+} else if (paymentMethod === 'COD' && itemCost < 2000) {
+  // Use Abono method (A → B with purchase service)
+  lalamoveConfig = {
+    stops: [pickupStop, deliveryStop],
+    isPODEnabled: true,
+    purchaseService: {
+      enabled: true,
+      amount: itemCost,
+      currency: 'PHP'
+    }
+  };
+} else if (paymentMethod === 'COD' && itemCost >= 2000) {
+  // Either block COD or use round trip
+  // RECOMMENDED: Block COD for high-value items
+  showError('COD not available for items over ₱2,000. Please pay online.');
+}</code>
+                </div>
+
+                <h4>2. Order Confirmation Display</h4>
+                <div class="code-block">
+                    <code>// Show clear instructions to customer based on payment method
+if (paymentMethod === 'ONLINE') {
+  message = "Your order is paid. Driver will deliver to your address.";
+} else if (paymentMethod === 'COD') {
+  totalDue = itemCost + deliveryFee;
+  message = `Please prepare ₱${totalDue} cash for the driver.`;
+  breakdown = `Item: ₱${itemCost} + Delivery: ₱${deliveryFee}`;
+}</code>
+                </div>
+
+                <h4>3. Driver Instructions</h4>
+                <div class="code-block">
+                    <code>// Include clear remarks in Lalamove order
+if (paymentMethod === 'COD') {
+  remarks = `COD Order - Collect ₱${totalDue} from customer`;
+  remarks += `\nBreakdown: Item ₱${itemCost} + Delivery ₱${deliveryFee}`;
+} else {
+  remarks = "Prepaid order - No collection needed";
+}</code>
+                </div>
+            </div>
+
+            <!-- Best Practices -->
+            <div class="section">
+                <h2>✅ Best Practices</h2>
+
+                <div class="info-box">
+                    <h4>For Online Payment Orders:</h4>
+                    <ul style="margin-left: 20px; margin-top: 10px;">
+                        <li>✓ Verify payment is confirmed before booking Lalamove</li>
+                        <li>✓ Include "PREPAID - NO COLLECTION" in delivery remarks</li>
+                        <li>✓ Send confirmation to both buyer and seller</li>
+                        <li>✓ Provide tracking link immediately after booking</li>
+                    </ul>
+                </div>
+
+                <div class="warning-box">
+                    <h4>For COD Orders:</h4>
+                    <ul style="margin-left: 20px; margin-top: 10px;">
+                        <li>⚠️ Set maximum item value limits (e.g., ₱1,500 or ₱2,000)</li>
+                        <li>⚠️ Clearly display total amount buyer must pay</li>
+                        <li>⚠️ Include exact amount in delivery remarks for driver</li>
+                        <li>⚠️ Send SMS reminder to buyer before delivery</li>
+                        <li>⚠️ Have contingency plan if buyer doesn't have exact change</li>
+                        <li>⚠️ Consider adding small COD processing fee (₱10-20)</li>
+                    </ul>
+                </div>
+
+                <div class="danger-box">
+                    <h4>Things to Avoid:</h4>
+                    <ul style="margin-left: 20px; margin-top: 10px;">
+                        <li>❌ Don't use round trip for low-value items (waste of money)</li>
+                        <li>❌ Don't allow COD for very high-value items without verification</li>
+                        <li>❌ Don't forget to include delivery fee in COD total</li>
+                        <li>❌ Don't assume drivers always have change</li>
+                        <li>❌ Don't book delivery before payment confirmation (online orders)</li>
+                    </ul>
+                </div>
+            </div>
+
+            <!-- FAQ -->
+            <div class="section">
+                <h2>❓ Frequently Asked Questions</h2>
+
+                <div class="step-flow">
+                    <div class="step-content">
+                        <div class="step-title">Q: What happens if the buyer doesn't have exact change for COD?</div>
+                        <div class="step-description">
+                            A: This is a common issue. Best practices:
+                            <ul style="margin-left: 20px; margin-top: 10px;">
+                                <li>Send SMS reminder with exact amount needed</li>
+                                <li>Drivers usually carry some change, but not guaranteed</li>
+                                <li>Consider rounding to nearest ₱10 or ₱20</li>
+                                <li>Have customer support ready to handle disputes</li>
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="step-flow">
+                    <div class="step-content">
+                        <div class="step-title">Q: Can I mix payment methods (partial online, partial COD)?</div>
+                        <div class="step-description">
+                            A: Technically possible but NOT recommended. It creates confusion for drivers and customers.
+                            Choose one method per order.
+                        </div>
+                    </div>
+                </div>
+
+                <div class="step-flow">
+                    <div class="step-content">
+                        <div class="step-title">Q: What if the driver doesn't have enough cash for Abono method?</div>
+                        <div class="step-description">
+                            A: This can happen if the item cost is high. Solutions:
+                            <ul style="margin-left: 20px; margin-top: 10px;">
+                                <li>Set item value limits for COD (e.g., max ₱1,500)</li>
+                                <li>Lalamove drivers are usually prepared for amounts up to ₱2,000</li>
+                                <li>For higher amounts, require online payment instead</li>
+                                <li>Driver may cancel if they can't pay - have backup plan</li>
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="step-flow">
+                    <div class="step-content">
+                        <div class="step-title">Q: How do I know which method Lalamove used for my COD order?</div>
+                        <div class="step-description">
+                            A: Check the number of stops in the order:
+                            <ul style="margin-left: 20px; margin-top: 10px;">
+                                <li><strong>2 stops (A → B):</strong> Abono method</li>
+                                <li><strong>3 stops (A → B → A):</strong> Round trip method</li>
+                                <li>You specify this when creating the order via API</li>
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="step-flow">
+                    <div class="step-content">
+                        <div class="step-title">Q: Should I charge customers more for COD?</div>
+                        <div class="step-description">
+                            A: Yes, it's common practice:
+                            <ul style="margin-left: 20px; margin-top: 10px;">
+                                <li>Add ₱10-20 COD processing fee</li>
+                                <li>Covers risk and complexity of cash handling</li>
+                                <li>Incentivizes online payment (which is better for you)</li>
+                                <li>Clearly display this fee during checkout</li>
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Summary -->
+            <div class="section">
+                <h2>📝 Summary</h2>
+
+                <div class="success-box">
+                    <h3>Key Takeaways</h3>
+                    <ul style="margin-left: 20px; margin-top: 10px; line-height: 1.8;">
+                        <li>✅ <strong>Online Payment is best:</strong> Fastest, cheapest, simplest for everyone</li>
+                        <li>💵 <strong>COD Abono works for small items:</strong> Good compromise for cash-preferring
+                            customers</li>
+                        <li>🔄 <strong>Round Trip is expensive:</strong> Avoid unless absolutely necessary</li>
+                        <li>💰 <strong>Set clear limits:</strong> Max ₱1,500-2,000 for COD orders</li>
+                        <li>📱 <strong>Communicate clearly:</strong> Tell customers exactly what to expect</li>
+                        <li>🔧 <strong>Configure API correctly:</strong> Different settings for each payment method</li>
+                    </ul>
+                </div>
+
+                <div class="info-box">
+                    <h3>Implementation Checklist</h3>
+                    <ol style="margin-left: 20px; margin-top: 10px; line-height: 1.8;">
+                        <li>☐ Add payment method selection in checkout</li>
+                        <li>☐ Set COD item value limits (recommend ₱1,500 max)</li>
+                        <li>☐ Configure Lalamove API for each payment scenario</li>
+                        <li>☐ Display clear total amount for COD orders</li>
+                        <li>☐ Send SMS reminders with exact amount needed</li>
+                        <li>☐ Add COD processing fee (₱10-20)</li>
+                        <li>☐ Test all three scenarios in sandbox</li>
+                        <li>☐ Train customer support on handling COD issues</li>
+                        <li>☐ Monitor COD success/failure rates</li>
+                        <li>☐ Incentivize online payment with discounts</li>
+                    </ol>
+                </div>
+            </div>
+
+        </div>
+
+        <div class="footer">
+            <p><strong>Budolshap E-Commerce Platform</strong></p>
+            <p>Lalamove Payment & Route Scenarios - Complete Guide</p>
+            <p style="margin-top: 10px; font-size: 0.9em;">Generated: November 27, 2025</p>
+            <p style="font-size: 0.85em; opacity: 0.8; margin-top: 5px;">For internal use only</p>
+        </div>
+    </div>
+</body>
+
+</html>

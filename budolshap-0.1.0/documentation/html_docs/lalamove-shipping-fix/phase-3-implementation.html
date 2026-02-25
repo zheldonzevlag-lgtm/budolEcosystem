@@ -1,0 +1,50 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Lalamove Shipping Fee Fix - Phase 3: Implementation</title>
+    <style>
+        body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; line-height: 1.6; color: #333; max-width: 800px; margin: 0 auto; padding: 20px; }
+        h1 { color: #2c3e50; border-bottom: 2px solid #eee; padding-bottom: 10px; }
+        h2 { color: #34495e; margin-top: 30px; }
+        code { background: #f4f4f4; padding: 2px 5px; border-radius: 3px; font-family: "SFMono-Regular", Consolas, "Liberation Mono", Menlo, monospace; }
+        pre { background: #f4f4f4; padding: 15px; border-radius: 5px; overflow-x: auto; border: 1px solid #ddd; }
+        .navigation { margin-top: 40px; border-top: 1px solid #eee; padding-top: 20px; display: flex; justify-content: space-between; }
+        .navigation a { color: #3498db; text-decoration: none; }
+        .navigation a:hover { text-decoration: underline; }
+    </style>
+</head>
+<body>
+    <h1>Lalamove Shipping Fee Fix - Phase 3: Implementation</h1>
+
+    <h2>Step 1: Centralizing Quote Data</h2>
+    <p>Modified <code>lib/services/shippingService.js</code> to include the <code>stops</code> array from the Lalamove response. This ensures that the <code>stopId</code> for each location is available for the subsequent order creation step.</p>
+
+    <pre><code>// Updated return in getShippingQuote
+return {
+    success: true,
+    quote: {
+        quoteId: quote.quotationId,
+        // ... price and distance ...
+        stops: quote.stops // ✅ Added this line
+    }
+};</code></pre>
+
+    <h2>Step 2: Ensuring Frontend Propagation</h2>
+    <p>Verified that <code>OrderSummary.jsx</code> correctly handles the <code>lalamoveQuote</code> object. When <code>shippingMethod === 'LALAMOVE'</code>, the entire quote object (including stops) is passed to the order creation API.</p>
+
+    <h2>Step 3: Backend Order Finalization</h2>
+    <p>In <code>lib/services/ordersService.js</code>, the <code>createOrder</code> function now correctly extracts the <code>cost</code> from the <code>shipping</code> object when the provider is 'lalamove', ensuring the <code>shippingCost</code> field in the database is accurately populated.</p>
+
+    <pre><code>// Logic in ordersService.js
+if (shipping && shipping.provider === 'lalamove') {
+    shippingCost = shipping.cost || 0;
+}</code></pre>
+
+    <div class="navigation">
+        <a href="phase-2-identification.html">&larr; Previous: Phase 2 - Root Cause Identification</a>
+        <a href="implementation-summary.html">Next: Implementation Summary &rarr;</a>
+    </div>
+</body>
+</html>

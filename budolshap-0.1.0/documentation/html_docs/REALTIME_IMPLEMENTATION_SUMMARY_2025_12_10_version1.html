@@ -1,0 +1,273 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Realtime Implementation Documentation - Dec 10, 2025</title>
+    <style>
+        :root {
+            --primary: #2563eb;
+            --success: #16a34a;
+            --danger: #dc2626;
+            --slate-800: #1e293b;
+            --slate-600: #475569;
+            --bg-gray: #f8fafc;
+        }
+
+        body {
+            font-family: 'Segoe UI', system-ui, sans-serif;
+            line-height: 1.6;
+            color: #333;
+            max-width: 1100px;
+            margin: 0 auto;
+            padding: 40px;
+            background-color: var(--bg-gray);
+        }
+
+        h1 {
+            border-bottom: 4px solid var(--primary);
+            padding-bottom: 15px;
+            color: var(--slate-800);
+            margin-bottom: 30px;
+        }
+
+        h2 {
+            margin-top: 50px;
+            border-left: 5px solid var(--primary);
+            padding-left: 15px;
+            color: var(--slate-800);
+        }
+
+        .card {
+            background: white;
+            border-radius: 10px;
+            padding: 25px;
+            margin-bottom: 25px;
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+            border: 1px solid #e2e8f0;
+        }
+
+        .badge {
+            display: inline-block;
+            padding: 4px 12px;
+            border-radius: 99px;
+            font-weight: bold;
+            font-size: 0.8em;
+            text-transform: uppercase;
+        }
+
+        .badge-polling {
+            background: #dbeafe;
+            color: #1e40af;
+        }
+
+        .badge-pusher {
+            background: #fef9c3;
+            color: #854d0e;
+        }
+
+        code {
+            background: #f1f5f9;
+            padding: 2px 6px;
+            border-radius: 4px;
+            color: var(--danger);
+            font-family: monospace;
+        }
+
+        pre {
+            background: #1e293b;
+            color: #e2e8f0;
+            padding: 20px;
+            border-radius: 8px;
+            overflow-x: auto;
+        }
+
+        .comparison-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 20px 0;
+            background: white;
+        }
+
+        .comparison-table th,
+        .comparison-table td {
+            padding: 15px;
+            border-bottom: 1px solid #e2e8f0;
+            text-align: left;
+        }
+
+        .comparison-table th {
+            background: #f8fafc;
+            font-weight: 700;
+        }
+
+        .diagram {
+            font-family: monospace;
+            white-space: pre;
+            background: white;
+            padding: 20px;
+            border: 1px solid #cbd5e1;
+            border-radius: 8px;
+            overflow-x: auto;
+            line-height: 1.2;
+        }
+    </style>
+</head>
+
+<body>
+
+    <h1>Realtime Architecture & Implementation Guide</h1>
+    <p><strong>Date:</strong> Dece  mber 10, 2025<br>
+        <strong>Context:</strong> Transitioning BudolShap Order Management to a Realtime/Hybrid System.
+    </p>
+
+    <!-- 1. ISSUES -->
+    <h2 id="issues">1. Issues & Challenges Addressed</h2>
+    <div class="card" style="border-left: 5px solid #ef4444;">
+        <h3>❌ The Friction Points</h3>
+        <p>Prior to this update, the application relied on "Fetch Once" logic. This caused several issues:</p>
+        <ul>
+            <li><strong>Stale Data:</strong> Sellers had to manually refresh the page to see if a new order arrived.
+            </li>
+            <li><strong>Lalamove Disconnect:</strong> When a driver status changed (e.g., "Picked Up"), the UI remained
+                static, causing confusion about delivery progress.</li>
+            <li><strong>Infrastructure Cost:</strong> Implementing full WebSockets (Pusher) immediately would introduce
+                monthly costs before the user base scales.</li>
+        </ul>
+    </div>
+
+    <!-- 2. FIXES -->
+    <h2 id="fixes">2. Implemented Solutions (The Hybrid Fix)</h2>
+    <div class="card" style="border-left: 5px solid #16a34a;">
+        <h3>✅ The "Hybrid" Realtime Engine</h3>
+        <p>We implemented a robust system that supports <strong>Two Modes</strong>, switchable at runtime without code
+            changes.</p>
+
+        <table class="comparison-table">
+            <thead>
+                <tr>
+                    <th>Mode</th>
+                    <th>Mechanism</th>
+                    <th>Cost</th>
+                    <th>Latency</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td><strong>POLLING (Default)</strong></td>
+                    <td>SWR Hook fetches data every 5 seconds.</td>
+                    <td><span class="badge badge-polling">FREE</span></td>
+                    <td>~3-5 Seconds</td>
+                </tr>
+                <tr>
+                    <td><strong>PUSHER (Pro)</strong></td>
+                    <td>Server pushes events via WebSockets.</td>
+                    <td><span class="badge badge-pusher">PAID / LIMITED</span></td>
+                    <td>Instant (< 1s)</td>
+                </tr>
+            </tbody>
+        </table>
+    </div>
+
+    <!-- 3. PROCESSES -->
+    <h2 id="processes">3. System Processes & Architecture</h2>
+
+    <h3>Process Flow Diagram</h3>
+    <div class="diagram">
+        +--------------------------+
+        | Admin Dashboard |
+        | (Settings > System) |
+        +------------+-------------+
+        |
+        v
+        +-------------------+
+        | Database Config |
+        | (SystemSettings) |
+        +---------+---------+
+        |
+        +-------------------------+-------------------------+
+        | |
+        [Mode: POLLING] [Mode: PUSHER]
+        | |
+        +------------v------------+ +------------v-----------+
+        | Browser (SWR) | | Browser (Sub) |
+        | - Auto-fetch interval | | - Listen: "store-1" |
+        | - Revalidate on focus | | - Event: "updated" |
+        +-------------------------+ +------------+-----------+
+        ^
+        |
+        +----------+----------+
+        | API / Webhooks |
+        | - triggerEvent() |
+        +---------------------+
+    </div>
+
+    <!-- 4. TECHNICAL DETAILS -->
+    <h2 id="technical">4. Technical Implementation Details</h2>
+
+    <h3>Modified Files</h3>
+    <ul>
+        <li><code>prisma/schema.prisma</code>: Added <strong>SystemSettings</strong> model to store mode key/secret.
+        </li>
+        <li><code>lib/realtime.js</code>: Unified helper to trigger events (checks DB mode first).</li>
+        <li><code>hooks/useRealtimeOrders.js</code>: Custom hook that encapsulates SWR+Pusher logic.</li>
+        <li><code>app/store/orders/page.jsx</code>: Refactored to use the hook instead of <code>useEffect</code>.</li>
+        <li><code>app/admin/settings/page.jsx</code>: New GUI for managing keys and modes.</li>
+    </ul>
+
+    <h3>Critical Code Snippet (Hybrid Hook)</h3>
+    <pre>
+// hooks/useRealtimeOrders.js
+export function useRealtimeOrders({ storeId }) {
+    const { data: config } = useSWR('/api/system/realtime');
+    
+    // Mode Switch
+    const isPolling = config?.provider === 'POLLING';
+    
+    // 1. Polling Logic
+    const { data, mutate } = useSWR(url, fetcher, { 
+        refreshInterval: isPolling ? 5000 : 0 
+    });
+
+    // 2. Pusher Logic
+    useEffect(() => {
+        if (config?.provider === 'PUSHER') {
+            const channel = pusher.subscribe(`store-${storeId}`);
+            channel.bind('order-updated', () => mutate());
+        }
+    }, [config]);
+
+    return { orders: data?.orders, mutate };
+}</pre>
+
+    <!-- 5. RECOMMENDATIONS -->
+    <h2 id="recommendations">5. Recommendations for "True Instant" Scale</h2>
+
+    <div class="card">
+        <h3>Recommendation 1: Optimistic UI Updates</h3>
+        <p><strong>Goal:</strong> Zero-latency feel.</p>
+        <p>Instead of waiting for the server to reply "OK" and then re-fetching the list, the UI should immediately
+            update the order status to "Processing" locally. If the server request fails, rollback the change. This
+            makes the app feel instantly responsive regardless of network speed.</p>
+    </div>
+
+    <div class="card">
+        <h3>Recommendation 2: Dedicated WebSocket Microservice</h3>
+        <p><strong>Goal:</strong> Scale beyond Pusher limits.</p>
+        <p>If the app grows to >10,000 concurrent users, Pusher bills will rise. A dedicated Node.js server running
+            <strong>Socket.io</strong> (hosted on EC2/DigitalOcean) can replace Pusher. This gives you unlimited
+            connections for a fixed server cost.</p>
+    </div>
+
+    <div class="card">
+        <h3>Recommendation 3: Granular Event Payloads</h3>
+        <p><strong>Goal:</strong> Bandwidth efficiency.</p>
+        <p>Currently, the event tells the client to "Refetch All Orders". For maximum efficiency, the event payload
+            should contain the actual data: <code>{ orderId: 101, status: 'DELIVERED', timestamp: ... }</code>. The
+            client can then update just that single row in the React state without a network call.</p>
+    </div>
+
+</body>
+
+</html>

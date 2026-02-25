@@ -1,0 +1,618 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sentry Error Tracking Setup Guide - budolShap</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+            line-height: 1.6;
+            color: #333;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            padding: 20px;
+        }
+        
+        .container {
+            max-width: 1000px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 12px;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+            overflow: hidden;
+        }
+        
+        .header {
+            background: linear-gradient(135deg, #f36265 0%, #961276 100%);
+            color: white;
+            padding: 40px;
+            text-align: center;
+        }
+        
+        .header h1 {
+            font-size: 2.5em;
+            margin-bottom: 10px;
+        }
+        
+        .header p {
+            font-size: 1.1em;
+            opacity: 0.9;
+        }
+        
+        .content {
+            padding: 40px;
+        }
+        
+        .section {
+            margin-bottom: 40px;
+        }
+        
+        .section h2 {
+            color: #f36265;
+            font-size: 1.8em;
+            margin-bottom: 20px;
+            padding-bottom: 10px;
+            border-bottom: 3px solid #f36265;
+        }
+        
+        .section h3 {
+            color: #333;
+            font-size: 1.4em;
+            margin-top: 25px;
+            margin-bottom: 15px;
+        }
+        
+        .step {
+            background: #f8f9fa;
+            border-left: 4px solid #f36265;
+            padding: 20px;
+            margin-bottom: 20px;
+            border-radius: 4px;
+        }
+        
+        .step-number {
+            display: inline-block;
+            background: #f36265;
+            color: white;
+            width: 30px;
+            height: 30px;
+            border-radius: 50%;
+            text-align: center;
+            line-height: 30px;
+            font-weight: bold;
+            margin-right: 10px;
+        }
+        
+        .step h4 {
+            display: inline-block;
+            color: #333;
+            font-size: 1.2em;
+            margin-bottom: 10px;
+        }
+        
+        .step p {
+            margin-left: 40px;
+            color: #666;
+        }
+        
+        .code-block {
+            background: #2d2d2d;
+            color: #f8f8f2;
+            padding: 15px;
+            border-radius: 6px;
+            overflow-x: auto;
+            margin: 15px 0;
+            font-family: 'Courier New', monospace;
+            font-size: 0.9em;
+        }
+        
+        .code-block code {
+            color: #f8f8f2;
+        }
+        
+        .info-box {
+            background: #e3f2fd;
+            border-left: 4px solid #2196f3;
+            padding: 15px;
+            margin: 20px 0;
+            border-radius: 4px;
+        }
+        
+        .warning-box {
+            background: #fff3cd;
+            border-left: 4px solid #ffc107;
+            padding: 15px;
+            margin: 20px 0;
+            border-radius: 4px;
+        }
+        
+        .success-box {
+            background: #d4edda;
+            border-left: 4px solid #28a745;
+            padding: 15px;
+            margin: 20px 0;
+            border-radius: 4px;
+        }
+        
+        .feature-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 20px;
+            margin: 20px 0;
+        }
+        
+        .feature-card {
+            background: #f8f9fa;
+            padding: 20px;
+            border-radius: 8px;
+            border: 2px solid #e9ecef;
+        }
+        
+        .feature-card h4 {
+            color: #f36265;
+            margin-bottom: 10px;
+        }
+        
+        ul, ol {
+            margin-left: 20px;
+            margin-top: 10px;
+        }
+        
+        li {
+            margin-bottom: 8px;
+        }
+        
+        .highlight {
+            background: #fff3cd;
+            padding: 2px 6px;
+            border-radius: 3px;
+            font-weight: 500;
+        }
+        
+        .button-link {
+            display: inline-block;
+            background: #f36265;
+            color: white;
+            padding: 12px 24px;
+            text-decoration: none;
+            border-radius: 6px;
+            font-weight: 600;
+            margin-top: 10px;
+            transition: background 0.3s;
+        }
+        
+        .button-link:hover {
+            background: #d84343;
+        }
+        
+        .screenshot-placeholder {
+            background: #f0f0f0;
+            border: 2px dashed #ccc;
+            padding: 40px;
+            text-align: center;
+            border-radius: 8px;
+            margin: 20px 0;
+            color: #666;
+        }
+        
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 20px 0;
+        }
+        
+        th, td {
+            padding: 12px;
+            text-align: left;
+            border-bottom: 1px solid #ddd;
+        }
+        
+        th {
+            background: #f36265;
+            color: white;
+        }
+        
+        tr:hover {
+            background: #f8f9fa;
+        }
+        
+        .footer {
+            background: #f8f9fa;
+            padding: 30px;
+            text-align: center;
+            color: #666;
+            border-top: 1px solid #e9ecef;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🚨 Sentry Error Tracking Setup Guide</h1>
+            <p>Complete guide to setting up Sentry for budolShap error monitoring</p>
+        </div>
+        
+        <div class="content">
+            <div class="section">
+                <h2>📋 Overview</h2>
+                <p>
+                    Sentry is a powerful error tracking and performance monitoring tool that helps you identify, 
+                    debug, and resolve issues in your application. This guide will walk you through setting up 
+                    Sentry for your budolShap application.
+                </p>
+                
+                <div class="info-box">
+                    <strong>💡 Why Sentry?</strong>
+                    <ul style="margin-top: 10px;">
+                        <li>Real-time error notifications</li>
+                        <li>Detailed stack traces and context</li>
+                        <li>Performance monitoring</li>
+                        <li>Release tracking</li>
+                        <li>User feedback collection</li>
+                        <li>Free tier available (5,000 events/month)</li>
+                    </ul>
+                </div>
+            </div>
+            
+            <div class="section">
+                <h2>🎯 Step-by-Step Setup</h2>
+                
+                <div class="step">
+                    <span class="step-number">1</span>
+                    <h4>Create a Sentry Account</h4>
+                    <p>
+                        Visit <a href="https://sentry.io/signup/" target="_blank" style="color: #f36265; font-weight: 600;">sentry.io/signup</a> 
+                        and create a free account. You can sign up using:
+                    </p>
+                    <ul style="margin-left: 40px; margin-top: 10px;">
+                        <li>Email address</li>
+                        <li>Google account</li>
+                        <li>GitHub account</li>
+                    </ul>
+                </div>
+                
+                <div class="step">
+                    <span class="step-number">2</span>
+                    <h4>Create a New Project</h4>
+                    <p>After signing up, you'll be prompted to create your first project:</p>
+                    <ol style="margin-left: 40px; margin-top: 10px;">
+                        <li>Select <strong>"Next.js"</strong> as your platform</li>
+                        <li>Enter a project name (e.g., "budolShap Production")</li>
+                        <li>Choose your organization (or create one)</li>
+                        <li>Click <strong>"Create Project"</strong></li>
+                    </ol>
+                    
+                    <div class="info-box" style="margin-top: 15px;">
+                        <strong>💡 Tip:</strong> You can create separate projects for development, staging, and production 
+                        environments to better organize your error tracking.
+                    </div>
+                </div>
+                
+                <div class="step">
+                    <span class="step-number">3</span>
+                    <h4>Get Your DSN (Data Source Name)</h4>
+                    <p>
+                        After creating the project, Sentry will show you a setup wizard. On the first page, 
+                        you'll see your <strong>DSN</strong>. It looks like this:
+                    </p>
+                    <div class="code-block">
+                        https://xxxxx@xxxxx.ingest.sentry.io/xxxxx
+                    </div>
+                    <p style="margin-top: 10px;">
+                        <strong>Copy this DSN</strong> - you'll need it in the next step. You can also find it later by:
+                    </p>
+                    <ol style="margin-left: 40px; margin-top: 10px;">
+                        <li>Going to <strong>Settings → Projects → [Your Project]</strong></li>
+                        <li>Clicking on <strong>"Client Keys (DSN)"</strong> in the left sidebar</li>
+                        <li>Copying the DSN value</li>
+                    </ol>
+                </div>
+                
+                <div class="step">
+                    <span class="step-number">4</span>
+                    <h4>Configure in Admin Panel</h4>
+                    <p>Now configure Sentry in your budolShap admin panel:</p>
+                    <ol style="margin-left: 40px; margin-top: 10px;">
+                        <li>Navigate to <strong>Admin → Settings → Error Tracking</strong></li>
+                        <li>Toggle <strong>"Enable Error Tracking"</strong> to ON</li>
+                        <li>Paste your Sentry DSN in the <strong>"Sentry DSN"</strong> field</li>
+                        <li>Select your <strong>Environment</strong> (development, staging, or production)</li>
+                        <li>Set <strong>Traces Sample Rate</strong> (default: 10% = 0.1)</li>
+                        <li>Click <strong>"Save Error Tracking Settings"</strong></li>
+                    </ol>
+                    
+                    <div class="warning-box" style="margin-top: 15px;">
+                        <strong>⚠️ Important:</strong> After saving, you need to restart your Next.js application 
+                        for the changes to take effect. The configuration is synced to your <code>.env.local</code> file.
+                    </div>
+                </div>
+                
+                <div class="step">
+                    <span class="step-number">5</span>
+                    <h4>Restart Your Application</h4>
+                    <p>
+                        After saving the configuration, restart your Next.js development server or redeploy your application:
+                    </p>
+                    <div class="code-block">
+# Development
+npm run dev
+
+# Production
+npm run build
+npm start
+                    </div>
+                    
+                    <div class="success-box" style="margin-top: 15px;">
+                        <strong>✅ Verification:</strong> Once restarted, check your browser console. You should see 
+                        <code>[Sentry] Error tracking initialized</code> if everything is configured correctly.
+                    </div>
+                </div>
+                
+                <div class="step">
+                    <span class="step-number">6</span>
+                    <h4>Test the Connection</h4>
+                    <p>
+                        In the admin panel, click the <strong>"Test Connection"</strong> button. This will:
+                    </p>
+                    <ul style="margin-left: 40px; margin-top: 10px;">
+                        <li>Verify your DSN is valid</li>
+                        <li>Send a test error to Sentry</li>
+                        <li>Confirm the connection is working</li>
+                    </ul>
+                    <p style="margin-top: 10px;">
+                        Check your Sentry dashboard - you should see a test error appear within a few seconds.
+                    </p>
+                </div>
+            </div>
+            
+            <div class="section">
+                <h2>⚙️ Configuration Options</h2>
+                
+                <h3>Environment</h3>
+                <p>Set the environment name to distinguish between different deployment stages:</p>
+                <ul>
+                    <li><strong>development</strong> - Local development</li>
+                    <li><strong>staging</strong> - Staging/pre-production</li>
+                    <li><strong>production</strong> - Live production environment</li>
+                </ul>
+                
+                <h3>Traces Sample Rate</h3>
+                <p>
+                    Controls what percentage of transactions are sent to Sentry for performance monitoring:
+                </p>
+                <ul>
+                    <li><strong>0.0</strong> - No performance monitoring (errors only)</li>
+                    <li><strong>0.1</strong> - 10% of transactions (recommended for production)</li>
+                    <li><strong>1.0</strong> - 100% of transactions (use for development/debugging)</li>
+                </ul>
+                
+                <div class="info-box">
+                    <strong>💡 Performance Impact:</strong> Lower sample rates reduce Sentry's impact on your application 
+                    performance and help stay within free tier limits.
+                </div>
+            </div>
+            
+            <div class="section">
+                <h2>💰 Sentry Free Tier Limits</h2>
+                
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Feature</th>
+                            <th>Free Tier Limit</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td>Events per month</td>
+                            <td>5,000</td>
+                        </tr>
+                        <tr>
+                            <td>Projects</td>
+                            <td>1</td>
+                        </tr>
+                        <tr>
+                            <td>Team members</td>
+                            <td>1</td>
+                        </tr>
+                        <tr>
+                            <td>Data retention</td>
+                            <td>30 days</td>
+                        </tr>
+                        <tr>
+                            <td>Performance monitoring</td>
+                            <td>✅ Included</td>
+                        </tr>
+                        <tr>
+                            <td>Session replay</td>
+                            <td>✅ Included (limited)</td>
+                        </tr>
+                        <tr>
+                            <td>Alerts</td>
+                            <td>✅ Included</td>
+                        </tr>
+                    </tbody>
+                </table>
+                
+                <div class="warning-box" style="margin-top: 20px;">
+                    <strong>⚠️ Note:</strong> If you exceed 5,000 events per month, Sentry will stop capturing new events 
+                    until the next billing cycle. Consider upgrading to a paid plan if you need more capacity.
+                </div>
+            </div>
+            
+            <div class="section">
+                <h2>🔧 Advanced Configuration</h2>
+                
+                <h3>Manual Environment Variable Setup</h3>
+                <p>
+                    If you prefer to configure Sentry via environment variables directly, add these to your 
+                    <code>.env.local</code> file:
+                </p>
+                <div class="code-block">
+# Error Tracking Configuration
+ERROR_TRACKING_ENABLED=true
+SENTRY_DSN=https://xxxxx@xxxxx.ingest.sentry.io/xxxxx
+SENTRY_ENVIRONMENT=production
+SENTRY_TRACES_SAMPLE_RATE=0.1
+
+# Client-side (NEXT_PUBLIC_ prefix required)
+NEXT_PUBLIC_ERROR_TRACKING_ENABLED=true
+NEXT_PUBLIC_SENTRY_DSN=https://xxxxx@xxxxx.ingest.sentry.io/xxxxx
+NEXT_PUBLIC_SENTRY_ENVIRONMENT=production
+NEXT_PUBLIC_SENTRY_TRACES_SAMPLE_RATE=0.1
+                </div>
+                
+                <div class="info-box" style="margin-top: 15px;">
+                    <strong>💡 Automatic Sync:</strong> When you save settings in the admin panel, the 
+                    <code>sync-sentry-config.mjs</code> script automatically updates your <code>.env.local</code> file.
+                </div>
+                
+                <h3>Custom Error Context</h3>
+                <p>
+                    You can add custom context to errors in your code using Sentry's API:
+                </p>
+                <div class="code-block">
+import * as Sentry from '@sentry/nextjs';
+
+try {
+  // Your code
+} catch (error) {
+  Sentry.setContext('order', {
+    orderId: order.id,
+    userId: user.id,
+    total: order.total
+  });
+  Sentry.captureException(error);
+}
+                </div>
+            </div>
+            
+            <div class="section">
+                <h2>📊 What Sentry Tracks</h2>
+                
+                <div class="feature-grid">
+                    <div class="feature-card">
+                        <h4>🚨 Errors & Exceptions</h4>
+                        <p>JavaScript errors, unhandled promise rejections, and API errors with full stack traces.</p>
+                    </div>
+                    
+                    <div class="feature-card">
+                        <h4>⚡ Performance</h4>
+                        <p>Page load times, API response times, and transaction performance metrics.</p>
+                    </div>
+                    
+                    <div class="feature-card">
+                        <h4>👤 User Context</h4>
+                        <p>User ID, email, IP address, and browser information for debugging.</p>
+                    </div>
+                    
+                    <div class="feature-card">
+                        <h4>📱 Session Replay</h4>
+                        <p>Video-like replay of user sessions when errors occur (on client-side).</p>
+                    </div>
+                    
+                    <div class="feature-card">
+                        <h4>🔔 Alerts</h4>
+                        <p>Email, Slack, or webhook notifications when errors exceed thresholds.</p>
+                    </div>
+                    
+                    <div class="feature-card">
+                        <h4>📈 Trends</h4>
+                        <p>Error frequency trends, affected users, and resolution tracking.</p>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="section">
+                <h2>✅ Verification Checklist</h2>
+                
+                <ol style="margin-left: 20px;">
+                    <li>✅ Sentry account created</li>
+                    <li>✅ Next.js project created in Sentry</li>
+                    <li>✅ DSN copied from Sentry dashboard</li>
+                    <li>✅ Error tracking enabled in admin panel</li>
+                    <li>✅ DSN entered in admin panel</li>
+                    <li>✅ Environment selected</li>
+                    <li>✅ Sample rate configured</li>
+                    <li>✅ Settings saved</li>
+                    <li>✅ Application restarted</li>
+                    <li>✅ Test connection successful</li>
+                    <li>✅ Test error appears in Sentry dashboard</li>
+                </ol>
+            </div>
+            
+            <div class="section">
+                <h2>🐛 Troubleshooting</h2>
+                
+                <h3>Error: "Sentry DSN is required"</h3>
+                <p><strong>Solution:</strong> Make sure you've entered a valid DSN in the admin panel and saved the settings.</p>
+                
+                <h3>Errors not appearing in Sentry</h3>
+                <p><strong>Possible causes:</strong></p>
+                <ul>
+                    <li>Application not restarted after configuration</li>
+                    <li>Error tracking disabled in admin panel</li>
+                    <li>Invalid DSN format</li>
+                    <li>Network/firewall blocking Sentry API</li>
+                </ul>
+                
+                <h3>Environment variables not syncing</h3>
+                <p>
+                    <strong>Solution:</strong> Run the sync script manually:
+                </p>
+                <div class="code-block">
+npm run sync:sentry
+                </div>
+                
+                <h3>Exceeding free tier limits</h3>
+                <p>
+                    <strong>Solution:</strong> Reduce the traces sample rate or upgrade to a paid plan. 
+                    You can monitor your usage in the Sentry dashboard under <strong>Settings → Usage</strong>.
+                </p>
+            </div>
+            
+            <div class="section">
+                <h2>📚 Additional Resources</h2>
+                
+                <ul>
+                    <li>
+                        <a href="https://docs.sentry.io/platforms/javascript/guides/nextjs/" target="_blank" style="color: #f36265;">
+                            Official Sentry Next.js Documentation
+                        </a>
+                    </li>
+                    <li>
+                        <a href="https://sentry.io/for/nextjs/" target="_blank" style="color: #f36265;">
+                            Sentry for Next.js Guide
+                        </a>
+                    </li>
+                    <li>
+                        <a href="https://docs.sentry.io/product/alerts/" target="_blank" style="color: #f36265;">
+                            Setting Up Alerts in Sentry
+                        </a>
+                    </li>
+                    <li>
+                        <a href="https://docs.sentry.io/product/session-replay/" target="_blank" style="color: #f36265;">
+                            Session Replay Documentation
+                        </a>
+                    </li>
+                </ul>
+            </div>
+        </div>
+        
+        <div class="footer">
+            <p><strong>budolShap Error Tracking Setup Guide</strong></p>
+            <p>Last updated: December 2024</p>
+            <p>For support, check the troubleshooting section or refer to Sentry's official documentation.</p>
+        </div>
+    </div>
+</body>
+</html>
+
+
+

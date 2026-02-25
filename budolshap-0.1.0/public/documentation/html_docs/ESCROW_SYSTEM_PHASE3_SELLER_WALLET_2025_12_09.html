@@ -1,0 +1,170 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Escrow System Phase 3: Seller Wallet & Payouts</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            line-height: 1.6;
+            color: #333;
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+            background-color: #f4f7f6;
+        }
+
+        .container {
+            background-color: #fff;
+            padding: 40px;
+            border-radius: 8px;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.05);
+        }
+
+        h1 {
+            color: #2c3e50;
+            border-bottom: 2px solid #27ae60;
+            padding-bottom: 15px;
+            margin-bottom: 30px;
+        }
+
+        h2 {
+            color: #34495e;
+            margin-top: 30px;
+            border-left: 4px solid #27ae60;
+            padding-left: 10px;
+        }
+
+        h3 {
+            color: #16a085;
+        }
+
+        .feature-card {
+            background: #f8f9fa;
+            border: 1px solid #e9ecef;
+            border-left: 4px solid #27ae60;
+            padding: 20px;
+            margin-bottom: 20px;
+            border-radius: 4px;
+        }
+
+        code {
+            background-color: #f1f3f5;
+            padding: 2px 5px;
+            border-radius: 3px;
+            font-family: 'Consolas', monospace;
+            color: #e83e8c;
+        }
+
+        .status-badge {
+            display: inline-block;
+            padding: 4px 8px;
+            border-radius: 4px;
+            font-size: 0.85em;
+            font-weight: bold;
+        }
+
+        .status-done {
+            background-color: #d4edda;
+            color: #155724;
+        }
+
+        .technical-details {
+            background-color: #2c3e50;
+            color: #ecf0f1;
+            padding: 20px;
+            border-radius: 6px;
+            overflow-x: auto;
+            font-family: 'Consolas', monospace;
+        }
+
+        .alert-box {
+            background-color: #fff3cd;
+            color: #856404;
+            padding: 15px;
+            border-radius: 4px;
+            border: 1px solid #ffeeba;
+            margin-top: 20px;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="container">
+        <h1>Escrow System Phase 3: Seller Wallet & Payouts</h1>
+
+        <p><strong>Date:</strong> December 9, 2025</p>
+        <p><strong>Status:</strong> <span class="status-badge status-done">DEPLOYED</span></p>
+        <p><strong>Version:</strong> Phase 3 Final</p>
+
+        <h2>1. Overview</h2>
+        <p>Phase 3 completes the Escrow System by enabling Sellers to view their earnings, differentiate between
+            "Pending" (Escrow) and "Available" funds, and request payouts. This phase also included critical backend
+            fixes to ensure seamless authentication.</p>
+
+        <h2>2. Seller Features</h2>
+
+        <div class="feature-card">
+            <h3>2.1 Seller Wallet Dashboard</h3>
+            <p>Access via <strong>Store Dashboard > Wallet</strong>. It displays:</p>
+            <ul>
+                <li><strong>Available Balance:</strong> Funds ready for withdrawal (Green).</li>
+                <li><strong>Pending Balance:</strong> Funds currently held in escrow (Orange). Shows "Held in escrow"
+                    status.</li>
+                <li><strong>Info Banner:</strong> Educates sellers about the 7-day protection period and platform fees.
+                </li>
+            </ul>
+        </div>
+
+        <div class="feature-card">
+            <h3>2.2 Payout Requests</h3>
+            <p>Sellers can request withdrawals directly from their wallet:</p>
+            <ul>
+                <li><strong>Input Validation:</strong> Prevents requesting more than available balance.</li>
+                <li><strong>Immediate Feedback:</strong> Shows success/error toasts.</li>
+                <li><strong>Transaction History:</strong> Logs the "Payout Request" as a pending debit.</li>
+            </ul>
+        </div>
+
+        <h2>3. Technical Fixes & Improvements</h2>
+
+        <div class="alert-box">
+            <strong>Critical Auth Logic Update:</strong>
+            Identified and fixed an issue where the Store API routes were checking for <code>decoded.id</code> but the
+            login token provided <code>decoded.userId</code>. This caused "Unauthorized" errors for sellers attempting
+            to access their wallet.
+        </div>
+
+        <h3>3.1 API Updates</h3>
+        <div class="technical-details">
+            <p><strong>GET /api/store/wallet</strong></p>
+            <p>Modified to use correct token payload (<code>userId</code>) and create a default wallet if none exists.
+            </p>
+
+            <p><strong>POST /api/store/payouts</strong></p>
+            <p>Standardized auth logic and ensured atomic transactions (Prisma <code>$transaction</code>) when deducting
+                balance and creating request.</p>
+        </div>
+
+        <h3>3.2 Schema Relationship</h3>
+        <p>Ensured <code>PayoutRequest</code> is correctly linked to <code>Store</code> in Prisma Schema, enabling the
+            Admin to view store details for each request.</p>
+
+        <h2>4. User Flow (End-to-End)</h2>
+        <ol>
+            <li><strong>Order Delivered:</strong> 7-day timer starts. Money is in "Pending Balance".</li>
+            <li><strong>Auto/Manual Release:</strong> Admin (or Cron) releases funds. Money moves to "Available
+                Balance".</li>
+            <li><strong>Seller Withdrawal:</strong> Seller clicks "Withdraw" on Wallet page.</li>
+            <li><strong>Admin Approval:</strong> Admin approves usage on <strong>Admin > Payouts</strong> page. Status
+                becomes "APPROVED" and money is effectively paid out (offline transfer).</li>
+        </ol>
+
+        <h2>5. Conclusion</h2>
+        <p>The Escrow System is now fully functional, end-to-end, from Order Payment to Seller Payout.</p>
+    </div>
+</body>
+
+</html>

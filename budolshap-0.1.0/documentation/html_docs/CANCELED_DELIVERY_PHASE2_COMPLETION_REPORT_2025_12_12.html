@@ -1,0 +1,287 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Phase 2 Completion Report: Canceled Delivery Workflow</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: #f8f9fa;
+            color: #333;
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+            line-height: 1.6;
+        }
+
+        h1,
+        h2,
+        h3 {
+            color: #2c3e50;
+        }
+
+        .header {
+            background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+            color: white;
+            padding: 30px;
+            border-radius: 12px;
+            margin-bottom: 30px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+        }
+
+        .header h1 {
+            color: white;
+            margin: 0;
+            font-size: 2.2em;
+        }
+
+        .header .meta {
+            margin-top: 10px;
+            opacity: 0.9;
+        }
+
+        .section {
+            background: white;
+            padding: 25px;
+            border-radius: 10px;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+            margin-bottom: 25px;
+        }
+
+        .badge {
+            display: inline-block;
+            padding: 4px 8px;
+            border-radius: 4px;
+            font-size: 0.85em;
+            font-weight: bold;
+        }
+
+        .badge-success {
+            background-color: #d1fae5;
+            color: #065f46;
+        }
+
+        .badge-warning {
+            background-color: #fef3c7;
+            color: #92400e;
+        }
+
+        .badge-info {
+            background-color: #dbeafe;
+            color: #1e40af;
+        }
+
+        .badge-danger {
+            background-color: #fee2e2;
+            color: #b91c1c;
+        }
+
+        code {
+            font-family: 'Consolas', 'Monaco', monospace;
+            background-color: #f1f5f9;
+            padding: 2px 5px;
+            border-radius: 4px;
+            color: #d63384;
+        }
+
+        pre {
+            background-color: #1e293b;
+            color: #e2e8f0;
+            padding: 15px;
+            border-radius: 8px;
+            overflow-x: auto;
+            font-size: 0.9em;
+        }
+
+        ul.checklist {
+            list-style: none;
+            padding: 0;
+        }
+
+        ul.checklist li {
+            padding: 10px;
+            border-bottom: 1px solid #eee;
+            display: flex;
+            align-items: center;
+        }
+
+        ul.checklist li:last-child {
+            border-bottom: none;
+        }
+
+        ul.checklist li::before {
+            content: "✅";
+            margin-right: 10px;
+        }
+
+        .alert {
+            padding: 15px;
+            border-left: 4px solid #3b82f6;
+            background-color: #eff6ff;
+            margin: 20px 0;
+            border-radius: 0 4px 4px 0;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 15px 0;
+        }
+
+        th,
+        td {
+            text-align: left;
+            padding: 12px;
+            border-bottom: 1px solid #ddd;
+        }
+
+        th {
+            background-color: #f8fafc;
+        }
+    </style>
+</head>
+
+<body>
+
+    <div class="header">
+        <h1>🚀 Phase 2 Completion Report</h1>
+        <div class="meta">
+            Canceled Delivery Workflow Implementation | BudolShap V3<br>
+            <strong>Date:</strong> December 12, 2025 | <strong>Status:</strong> <span
+                style="background: rgba(255,255,255,0.2); padding: 2px 6px; border-radius: 4px;">COMPLETED</span>
+        </div>
+    </div>
+
+    <!-- Executive Summary -->
+    <div class="section">
+        <h2>📊 Executive Summary</h2>
+        <p>
+            Phase 2 of the Canceled Delivery Workflow has been successfully implemented. This phase focused on "Industry
+            Standard Features" to ensure resilience and a seamless user experience when deliveries go wrong. Key
+            achievements include a robust notification system, webhook reliance mechanisms, and a flexible "Manual
+            Booking" fallback that effectively enables **Courier Switching**.
+        </p>
+        <div class="alert">
+            <strong>Key Outcome:</strong> Sellers can now recover from failed Lalamove bookings by either re-booking
+            automatically or switching to a manual provider (e.g., J&T, Grab) without losing the order's history.
+        </div>
+    </div>
+
+    <!-- Implementation Status -->
+    <div class="section">
+        <h2>✅ Features Implemented</h2>
+        <ul class="checklist">
+            <li><strong>Buyer & Seller Notifications:</strong> Automated emails triggered via generic webhook handler
+                (`lib/email.js`).</li>
+            <li><strong>Resilient Rebooking Logic:</strong> Fixed API to allow re-booking on top of failed attempts
+                while preserving history.</li>
+            <li><strong>Manual Booking / Courier Switching:</strong> New API and UI to support non-integrated couriers.
+            </li>
+            <li><strong>Webhook Logging & Polling:</strong> implemented redundant checks via Cron and database logging
+                (`WebhookEvent` table).</li>
+            <li><strong>Manual Sync Button:</strong> UI control for sellers to force-refresh order status.</li>
+        </ul>
+    </div>
+
+    <!-- Issues & Fixes -->
+    <div class="section">
+        <h2>🛠️ Critical Issues Resolved</h2>
+
+        <h3>1. History Overwrite Bug <span class="badge badge-danger">CRITICAL</span></h3>
+        <p><strong>Issue:</strong> Upon rebooking, the system was completely replacing the `shipping` JSON object in the
+            database. This caused the record of the previous failed attempt (and its reason) to be lost forever.</p>
+        <p><strong>Fix:</strong> Modified <code>app/api/shipping/lalamove/book/route.js</code> and the new manual route
+            to explicitly copy <code>order.shipping.previousAttempts</code> into the new payload.</p>
+        <pre>
+// ✅ Preserve history fix
+previousAttempts: order.shipping?.previousAttempts || []
+        </pre>
+
+        <h3>2. "Order Already Has Booking" Lockout <span class="badge badge-warning">HIGH</span></h3>
+        <p><strong>Issue:</strong> The booking API blocked <em>any</em> request if a `bookingId` already existed, even
+            if that booking was cancelled or failed.</p>
+        <p><strong>Fix:</strong> Updated validation logic to check the <em>status</em> of the existing booking.</p>
+        <pre>
+// Allow rebooking if existing booking is failed/cancelled
+const isShippingActive = order.shipping?.bookingId && 
+    !order.shipping?.failureReason && 
+    !['CANCELLED', 'EXPIRED', 'REJECTED', 'COMPLETED'].includes(order.shipping?.status);
+        </pre>
+
+        <h3>3. Lalamove-Only Lock-in</h3>
+        <p><strong>Issue:</strong> The UI only offered "Book Lalamove", leaving sellers stuck if Lalamove was
+            unavailable or too expensive.</p>
+        <p><strong>Fix:</strong> Implemented a <strong>Courier Switching Toggle</strong> in the UI that defaults to
+            Lalamove but allows "Manual / Other" input.</p>
+    </div>
+
+    <!-- Technical Details -->
+    <div class="section">
+        <h2>💻 Technical Implementation Details</h2>
+
+        <h3>Backend Architecture</h3>
+        <p>We introduced a generic "Manual Booking" endpoint that mimics the structure of the Lalamove booking but for
+            offline/manual inputs.</p>
+        <table>
+            <thead>
+                <tr>
+                    <th>Endpoint</th>
+                    <th>Method</th>
+                    <th>Purpose</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td><code>/api/shipping/lalamove/book</code></td>
+                    <td>POST</td>
+                    <td>Automated booking integration. Now history-aware.</td>
+                </tr>
+                <tr>
+                    <td><code>/api/shipping/manual/book</code></td>
+                    <td>POST</td>
+                    <td><strong>NEW:</strong> Accepting Provider Name, Tracking #, and Link. Updates order status to
+                        <code>PROCESSING</code>.
+                    </td>
+                </tr>
+            </tbody>
+        </table>
+
+        <h3>Frontend State Management</h3>
+        <p>The <code>StoreOrders</code> component (<code>app/store/orders/page.jsx</code>) now manages a local
+            dual-state for booking:</p>
+        <ul>
+            <li><code>bookingType</code>: 'lalamove' | 'manual'</li>
+            <li><code>manualDetails</code>: Object storing provider, trackingNumber, trackingUrl</li>
+        </ul>
+    </div>
+
+    <!-- Future Recommendations -->
+    <div class="section">
+        <h2>🔮 Future Enhancements (Phase 3)</h2>
+        <p>With the core workflow robust, we can focus on advanced features:</p>
+
+        <ol>
+            <li>
+                <strong>Dispute Resolution Center:</strong>
+                <p>Allow sellers to flag "Fake Cancellations" (rider picked up but marked cancelled) directly in the
+                    dashboard.</p>
+            </li>
+            <li>
+                <strong>Automated Courier Suggestions:</strong>
+                <p>If Lalamove fails >2 times, automatically switch the UI tab to "Grab Express" or "Borzo" (requires
+                    integrating their APIs).</p>
+            </li>
+            <li>
+                <strong>Deep Link Integration:</strong>
+                <p>For Manual Booking, auto-detect the provider (e.g., "J&T") and auto-generate the tracking URL format:
+                    <code>https://www.jtexpress.ph/track?billcode={TRACKING_NO}</code>.
+                </p>
+            </li>
+        </ol>
+    </div>
+
+</body>
+
+</html>

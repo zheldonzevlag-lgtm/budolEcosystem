@@ -1,0 +1,59 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Phase 2: SSR Fix - Address Map Implementation</title>
+    <style>
+        body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; line-height: 1.6; color: #333; max-width: 800px; margin: 0 auto; padding: 20px; }
+        h1, h2, h3 { color: #2c3e50; }
+        code { background: #f4f4f4; padding: 2px 5px; border-radius: 3px; font-family: monospace; }
+        pre { background: #f4f4f4; padding: 15px; border-radius: 5px; overflow-x: auto; }
+        nav { margin-bottom: 20px; border-bottom: 1px solid #eee; padding-bottom: 10px; }
+        nav a { margin-right: 15px; text-decoration: none; color: #3498db; }
+    </style>
+</head>
+<body>
+    <nav>
+        <a href="index.html">Index</a>
+        <a href="phase-1-infinite-loop-fix.html">Phase 1</a>
+        <a href="phase-2-ssr-fix.html">Phase 2</a>
+        <a href="phase-3-api-update.html">Phase 3</a>
+        <a href="implementation-summary.html">Summary</a>
+    </nav>
+
+    <h1>Phase 2: SSR Fix (AddressFormManager.jsx)</h1>
+    
+    <section>
+        <h2>Problem Description</h2>
+        <p>A <code>window is not defined</code> error occurred because Leaflet requires a browser environment, but Next.js was attempting to render the <code>MapPicker</code> component on the server.</p>
+    </section>
+
+    <section>
+        <h2>Solution: Dynamic Import</h2>
+        <p>Used Next.js <code>next/dynamic</code> with <code>ssr: false</code> to ensure the component only loads on the client side.</p>
+        
+        <h3>Key Code Changes</h3>
+        <pre><code>// In AddressFormManager.jsx
+const MapPicker = dynamic(() => import('./MapPicker'), { 
+    ssr: false,
+    loading: () => &lt;div className="h-[300px] w-full bg-gray-100 flex items-center justify-center rounded-lg"&gt;
+        &lt;p className="text-gray-500"&gt;Loading Map...&lt;/p&gt;
+    &lt;/div&gt;
+});</code></pre>
+
+        <h3>Affected Files</h3>
+        <ul>
+            <li><code>components/address/AddressFormManager.jsx</code></li>
+        </ul>
+    </section>
+
+    <section>
+        <h2>Validation</h2>
+        <ul>
+            <li>Verified that the page loads without "window is not defined" error.</li>
+            <li>Confirmed the loading state appears briefly before the map initializes.</li>
+        </ul>
+    </section>
+</body>
+</html>

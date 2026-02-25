@@ -1,0 +1,150 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Migration Plan: Cloud PostgreSQL to Local PostgreSQL</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            line-height: 1.6;
+            color: #333;
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+            background-color: #f5f5f5;
+        }
+
+        .container {
+            background-color: white;
+            padding: 40px;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+        }
+
+        h1 {
+            color: #2c3e50;
+            border-bottom: 2px solid #3498db;
+            padding-bottom: 10px;
+        }
+
+        h2 {
+            color: #34495e;
+            margin-top: 30px;
+            border-bottom: 1px solid #eee;
+            padding-bottom: 5px;
+        }
+
+        .step {
+            margin-bottom: 20px;
+            padding: 15px;
+            border: 1px solid #e9ecef;
+            border-radius: 5px;
+            background-color: #fcfcfc;
+        }
+
+        .step-heading {
+            font-weight: bold;
+            color: #495057;
+            margin-bottom: 10px;
+            display: block;
+        }
+
+        code {
+            background-color: #f8f9fa;
+            padding: 2px 4px;
+            border-radius: 4px;
+            font-family: 'Consolas', 'Monaco', monospace;
+            color: #e83e8c;
+        }
+
+        pre {
+            background-color: #282c34;
+            color: #abb2bf;
+            padding: 15px;
+            border-radius: 5px;
+            overflow-x: auto;
+            font-family: 'Consolas', 'Monaco', monospace;
+        }
+
+        .alert {
+            padding: 15px;
+            margin-bottom: 20px;
+            border-radius: 4px;
+        }
+
+        .alert-info {
+            color: #0c5460;
+            background-color: #d1ecf1;
+            border: 1px solid #bee5eb;
+        }
+
+        .alert-warning {
+            color: #856404;
+            background-color: #fff3cd;
+            border: 1px solid #ffeeba;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="container">
+        <h1>Migration Plan: Vercel Postgres to Local Postgres</h1>
+        <p><strong>Goal:</strong> Replicate the production database to a local PostgreSQL instance.</p>
+        <p><strong>Date:</strong> December 13, 2025</p>
+
+        <div class="alert alert-info">
+            <strong>Strategy:</strong> Parallel Migration. We will create a new local database named
+            <code>budolshap_local</code> and restore the backup to it, without disrupting the current application
+            connection.
+        </div>
+
+        <h2>Prerequisites</h2>
+        <ul>
+            <li><strong>Local PostgreSQL Server:</strong> Running on `localhost:5432`.</li>
+            <li><strong>Credentials:</strong> Default `postgres` / `admin` (or user-supplied).</li>
+            <li><strong>Backup Data:</strong> Existing backup at <code>backups/2025-12-13_12-19/</code>.</li>
+        </ul>
+
+        <h2>Execution Plan</h2>
+
+        <div class="step">
+            <span class="step-heading">Step 1: Provision Local Database</span>
+            <p>We do not need a special schema file because the provider is already <code>postgresql</code>. We will use
+                the standard schema but override the connection string to point to <code>localhost</code>.</p>
+            <pre>
+# Command to create database structure
+$env:DATABASE_URL="postgresql://postgres:admin@localhost:5432/budolshap_local?schema=public"
+npx prisma db push
+            </pre>
+            <p><em>This will create the database <code>budolshap_local</code> if it doesn't exist and apply the current
+                    schema.</em></p>
+        </div>
+
+        <div class="step">
+            <span class="step-heading">Step 2: Restore Data</span>
+            <p>We will use the <code>scripts/restore-database.js</code> script with the same local connection string.
+            </p>
+            <pre>
+# Command to restore data
+$env:DATABASE_URL="postgresql://postgres:admin@localhost:5432/budolshap_local?schema=public"
+node scripts/restore-database.js 2025-12-13_12-19
+            </pre>
+        </div>
+
+        <div class="step">
+            <span class="step-heading">Step 3: Verification</span>
+            <p>We will verify the data restoration using the script output logs. Since the target is also PostgreSQL, we
+                expect full compatibility, including the Order data that failed in MySQL.</p>
+        </div>
+
+        <h2>Important Notes</h2>
+        <div class="alert alert-warning">
+            <strong>Credential Check:</strong> Ensure your local PostgreSQL password is `admin`. If it is different,
+            please inform us before execution so we can adjust the connection string.
+        </div>
+    </div>
+</body>
+
+</html>

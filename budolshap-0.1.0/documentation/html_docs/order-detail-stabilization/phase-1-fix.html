@@ -1,0 +1,72 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Phase 1: ReferenceError Fix - Order Detail Stabilization</title>
+    <style>
+        :root { --primary-color: #e11d48; --secondary-color: #be123c; --bg-color: #f8fafc; --text-color: #1e293b; --border-color: #e2e8f0; --code-bg: #f1f5f9; }
+        body { font-family: system-ui, -apple-system, sans-serif; line-height: 1.6; color: var(--text-color); background-color: var(--bg-color); margin: 0; padding: 2rem; }
+        .container { max-width: 900px; margin: 0 auto; background: white; padding: 2.5rem; border-radius: 8px; box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1); }
+        h1, h2, h3 { color: var(--primary-color); border-bottom: 1px solid var(--border-color); padding-bottom: 0.5rem; }
+        .back-link { display: inline-block; margin-bottom: 1.5rem; color: var(--primary-color); text-decoration: none; font-weight: 500; }
+        .back-link:hover { text-decoration: underline; }
+        pre { background: var(--code-bg); padding: 1rem; border-radius: 6px; overflow-x: auto; border: 1px solid var(--border-color); }
+        .file-path { font-weight: bold; color: #475569; margin-bottom: 0.5rem; display: block; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <a href="index.html" class="back-link">← Back to Overview</a>
+        <header>
+            <h1>Phase 1: ReferenceError Fix</h1>
+            <p>Technical details for resolving the <code>lastRefreshed is not defined</code> runtime error.</p>
+        </header>
+
+        <section>
+            <h2>Problem Description</h2>
+            <p>The Order Detail page was crashing with a <code>ReferenceError: lastRefreshed is not defined</code>. This occurred because the UI template attempted to display the last refresh time, but the variable was never declared in the component's state.</p>
+        </section>
+
+        <section>
+            <h2>Solution Implementation</h2>
+            <div class="step">
+                <h3>1. State Declaration</h3>
+                <span class="file-path">File: app/(public)/orders/[orderId]/page.jsx</span>
+                <pre><code>const [lastRefreshed, setLastRefreshed] = useState(new Date());</code></pre>
+            </div>
+
+            <div class="step">
+                <h3>2. Automatic Timestamp Update</h3>
+                <p>An effect was added to update the timestamp whenever the order data is successfully fetched or updated via the realtime hook.</p>
+                <span class="file-path">File: app/(public)/orders/[orderId]/page.jsx</span>
+                <pre><code>useEffect(() => {
+    if (order) {
+        setLastRefreshed(new Date());
+    }
+}, [order]);</code></pre>
+            </div>
+
+            <div class="step">
+                <h3>3. Replacing setOrder with mutate</h3>
+                <p>The <code>setOrder</code> reference error was resolved by replacing all instances of <code>setOrder</code> with the <code>mutate</code> function provided by the <code>useRealtimeOrderDetail</code> hook. This correctly updates the SWR cache and triggers a re-render with the new order data.</p>
+                <span class="file-path">File: app/(public)/orders/[orderId]/page.jsx</span>
+                <pre><code>// Example change in handleExtendGuarantee
+if (response.ok) {
+    const data = await response.json();
+    mutate(data); // Replaced setOrder(data)
+    toast.success("Guarantee extended successfully!");
+}</code></pre>
+            </div>
+        </section>
+
+        <section>
+            <h2>Impact</h2>
+            <ul>
+                <li><strong>Stability:</strong> Prevents page crashes on initial load and updates.</li>
+                <li><strong>UX:</strong> Provides users with clear feedback on when the order status was last synchronized with the server.</li>
+            </ul>
+        </section>
+    </div>
+</body>
+</html>

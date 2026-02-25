@@ -1,0 +1,287 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Lalamove Integration – Documentation</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            margin: 2rem;
+            background: #f5f7fa;
+            color: #1a1a1a;
+            line-height: 1.6;
+        }
+
+        h1,
+        h2,
+        h3 {
+            color: #1a1a1a;
+        }
+
+        h1 {
+            border-bottom: 2px solid #2c3e50;
+            padding-bottom: 0.4rem;
+        }
+
+        .section {
+            margin-top: 2rem;
+            padding: 1rem;
+            background: #fff;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.08);
+        }
+
+        code {
+            background: #f0f0f0;
+            padding: 2px 4px;
+            border-radius: 4px;
+            font-family: monospace;
+            color: #1a1a1a;
+        }
+
+        pre {
+            background: #2d2d2d;
+            color: #ffffff;
+            padding: 1rem;
+            overflow: auto;
+            border-radius: 6px;
+        }
+
+        pre code {
+            background: transparent;
+            color: #ffffff;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 1rem;
+        }
+
+        th,
+        td {
+            border: 1px solid #ddd;
+            padding: 0.6rem;
+            text-align: left;
+            color: #1a1a1a;
+        }
+
+        th {
+            background: #f0f0f0;
+        }
+
+        ul {
+            margin-left: 1.2rem;
+        }
+
+        a {
+            color: #2980b9;
+            text-decoration: none;
+        }
+
+        a:hover {
+            text-decoration: underline;
+        }
+    </style>
+</head>
+
+<body>
+    <h1>Lalamove Integration – Full Documentation</h1>
+
+    <div class="section">
+        <h2>1. Overview</h2>
+        <p>This document describes the end‑to‑end process for adding <strong>Lalamove</strong> as the primary shipping
+            partner in the Budolshap application and provides a pattern for adding other Philippine carriers later.</p>
+        <p>The integration consists of four major layers:</p>
+        <ol>
+            <li>Core architecture (service layer, DB schema, provider interface)</li>
+            <li>Frontend checkout flow</li>
+            <li>Backend API endpoints & webhook handling</li>
+            <li>Testing, security, and deployment</li>
+        </ol>
+    </div>
+
+    <div class="section">
+        <h2>2. Core Architecture Setup</h2>
+        <h3>2.1 Provider‑agnostic Interface</h3>
+        <p>Create <code>services/shippingProvider.js</code> that defines the contract each carrier must implement:</p>
+        <pre><code>class ShippingProvider {
+  async getQuote(payload) {}
+  async createOrder(payload) {}
+  async trackOrder(orderId) {}
+  async cancelOrder(orderId) {}
+}
+module.exports = ShippingProvider;
+</code></pre>
+
+        <h3>2.2 Lalamove Service Wrapper</h3>
+        <p>File: <code>services/lalamove.js</code>. It extends the interface and handles:</p>
+        <ul>
+            <li>OAuth2 client‑credentials token acquisition</li>
+            <li>Quote request (<code>/v2/quotes</code>)</li>
+            <li>Order creation (<code>/v2/orders</code>)</li>
+            <li>Tracking (<code>/v2/orders/:id</code>)</li>
+            <li>Cancellation (<code>/v2/orders/:id/cancel</code>)</li>
+        </ul>
+        <p>All HTTP calls should use <code>axios</code> with a retry interceptor and respect Lalamove's rate limits.</p>
+
+        <h3>2.3 Database Extension</h3>
+        <p>Update the Prisma <code>Order</code> model (or your ORM) to store shipping details:</p>
+        <pre><code>model Order {
+  id          Int      @id @default(autoincrement())
+  // … existing fields …
+  shipping    Json?
+}
+</code></pre>
+        <p>The JSON structure will be:</p>
+        <pre><code>{
+  "provider": "lalamove",
+  "quoteId": "string",
+  "bookingId": "string",
+  "status": "pending|assigned|picked_up|delivered|canceled",
+  "trackingUrl": "https://api.lalamove.com/...",
+  "driverInfo": {"name":"","phone":""}
+}
+</code></pre>
+
+        <h3>2.4 Service Factory</h3>
+        <p>File: <code>services/shippingFactory.js</code>. Returns the correct provider implementation based on a string
+            key.</p>
+        <pre><code>const Lalamove = require('./lalamove');
+function getProvider(name) {
+  switch(name) {
+    case 'lalamove': return new Lalamove();
+    // future: case 'jnt': return new JNT();
+    default: throw new Error('Unsupported shipping provider');
+  }
+}
+module.exports = { getProvider };
+</code></pre>
+    </div>
+
+    <div class="section">
+        <h2>3. Front‑end Checkout Flow</h2>
+        <table>
+            <thead>
+                <tr>
+                    <th>Step</th>
+                    <th>UI Action</th>
+                    <th>Backend Call</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td>3.1</td>
+                    <td>Add "Lalamove" radio button to the shipping selector.</td>
+                    <td>–</td>
+                </tr>
+                <tr>
+                    <td>3.2</td>
+                    <td>Open quote modal – collect address, weight, dimensions, pickup window.</td>
+                    <td><code>GET /api/shipping/lalamove/quote</code></td>
+                </tr>
+                <tr>
+                    <td>3.3</td>
+                    <td>Show price, ETA, any surcharges.</td>
+                    <td>–</td>
+                </tr>
+                <tr>
+                    <td>3.4</td>
+                    <td>User confirms – click "Confirm Shipping".</td>
+                    <td><code>POST /api/shipping/lalamove/book</code></td>
+                </tr>
+                <tr>
+                    <td>3.5</td>
+                    <td>Store bookingId & trackingUrl in order (hidden field).</td>
+                    <td>–</td>
+                </tr>
+                <tr>
+                    <td>3.6</td>
+                    <td>Display order summary with tracking link and optional cancel button.</td>
+                    <td>–</td>
+                </tr>
+                <tr>
+                    <td>3.7</td>
+                    <td>In "My Orders" page, embed live tracking widget (poll <code>/track/:orderId</code>).</td>
+                    <td><code>GET /api/shipping/lalamove/track/:orderId</code></td>
+                </tr>
+            </tbody>
+        </table>
+    </div>
+
+    <div class="section">
+        <h2>4. Backend API Endpoints</h2>
+        <h3>4.1 Quote Endpoint</h3>
+        <pre><code>GET /api/shipping/lalamove/quote
+Query Params: address, lat, lng, weight, dimensions, pickup_time
+Response: {price, eta, currency, quoteId}
+</code></pre>
+        <h3>4.2 Booking Endpoint</h3>
+        <pre><code>POST /api/shipping/lalamove/book
+Body: {address, weight, dimensions, pickup_time, quoteId}
+Response: {bookingId, trackingUrl, status}
+</code></pre>
+        <h3>4.3 Tracking Endpoint</h3>
+        <pre><code>GET /api/shipping/lalamove/track/:orderId
+Response: {status, driver:{name,phone}, location:{lat,lng}}
+</code></pre>
+        <h3>4.4 Cancel Endpoint</h3>
+        <pre><code>POST /api/shipping/lalamove/cancel/:orderId
+Response: {canceled:true}
+</code></pre>
+        <h3>4.5 Webhook Receiver</h3>
+        <pre><code>POST /api/webhooks/lalamove
+Headers: X-Lalamove-Signature (HMAC)
+Body: {order_id, status, driver, location}
+Action: Verify signature → update Order.shipping.status & driverInfo.
+</code></pre>
+        <p>All endpoints should return proper HTTP status codes (200, 400, 401, 500) and JSON error messages.</p>
+    </div>
+
+    <div class="section">
+        <h2>5. Adding Additional Philippine Carriers (Future‑Proofing)</h2>
+        <ul>
+            <li>Create a new service file (e.g., <code>services/jnt.js</code>) that implements the same methods.</li>
+            <li>Register the provider in <code>shippingFactory.js</code>.</li>
+            <li>Extend the checkout UI to load carrier‑specific fields dynamically.</li>
+            <li>Add a new webhook route (or reuse the generic one) that distinguishes providers via a payload field.
+            </li>
+        </ul>
+    </div>
+
+    <div class="section">
+        <h2>6. Security, Rate‑Limiting & Idempotency</h2>
+        <ul>
+            <li><strong>OAuth2 token</strong>: store <code>LALAMOVE_CLIENT_ID</code> and
+                <code>LALAMOVE_CLIENT_SECRET</code> in <code>.env</code>. Refresh automatically before expiry.</li>
+            <li><strong>Rate limiting</strong>: use a job queue (Bull/Redis) or a simple in‑memory token bucket to keep
+                calls < 10 req/s.</li>
+            <li><strong>Idempotency key</strong>: generate a UUID on the client side (<code>client_reference_id</code>)
+                and pass it to Lalamove; repeat calls with the same key will not duplicate orders.</li>
+            <li><strong>Webhook verification</strong>: compute HMAC‑SHA256 of the raw request body using
+                <code>LALAMOVE_WEBHOOK_SECRET</code> and compare with the header.</li>
+        </ul>
+    </div>
+
+    <div class="section">
+        <h2>7. Testing & Deployment Checklist</h2>
+        <ol>
+            <li>Set <code>LALAMOVE_ENV=sandbox</code> in <code>.env</code> and obtain sandbox credentials.</li>
+            <li>Write unit tests for each method in <code>services/lalamove.js</code> (mock HTTP responses).</li>
+            <li>Create integration tests that simulate the full checkout flow (quote → book → webhook → track).</li>
+            <li>Run the flow locally on <code>http://localhost:3000</code> and verify DB updates.</li>
+            <li>Add the required environment variables to Vercel (client id, secret, webhook secret).</li>
+            <li>Deploy with a feature flag <code>ENABLE_LALAMOVE=true</code> and monitor logs.</li>
+            <li>After successful sandbox testing, switch <code>LALAMOVE_ENV=production</code> and repeat a limited live
+                order.</li>
+        </ol>
+    </div>
+
+    <footer style="margin-top:2rem; text-align:center; color:#5a5757;">
+        <p>Last updated: November 30, 2025 Copyright: Budolshap - Jon Galvez</p>
+    </footer>
+</body>
+
+</html>

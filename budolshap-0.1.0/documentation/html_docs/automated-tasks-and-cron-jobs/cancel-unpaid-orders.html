@@ -1,0 +1,83 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Cancel Unpaid Orders - Budolshap Cron Jobs</title>
+    <style>
+        :root {
+            --primary-color: #ee4d2d;
+            --secondary-color: #2673dd;
+            --bg-color: #f5f5f5;
+            --card-bg: #ffffff;
+            --text-color: #333;
+        }
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            line-height: 1.6;
+            color: var(--text-color);
+            background-color: var(--bg-color);
+            margin: 0;
+            padding: 20px;
+        }
+        .container {
+            max-width: 900px;
+            margin: 0 auto;
+            background: var(--card-bg);
+            padding: 40px;
+            border-radius: 8px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        .nav { margin-bottom: 20px; }
+        .nav a { text-decoration: none; color: var(--secondary-color); font-weight: bold; }
+        h1, h2, h3 { color: var(--primary-color); }
+        .config-box { background: #f8f9fa; border-left: 4px solid var(--primary-color); padding: 20px; margin: 20px 0; }
+        code { background: #eee; padding: 2px 5px; border-radius: 4px; font-family: monospace; }
+        .badge { display: inline-block; padding: 3px 10px; border-radius: 20px; font-size: 0.85em; font-weight: bold; }
+        .badge-endpoint { background: #e7f3ff; color: #007bff; }
+        .badge-warning { background: #fff3cd; color: #856404; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="nav"><a href="index.html">← Back to Jobs</a></div>
+        
+        <h1>Cancel Unpaid Orders</h1>
+        <p>This job automatically voids orders that have remained in <code>ORDER_PLACED</code> status without payment beyond the allowed threshold.</p>
+
+        <div class="config-box">
+            <h3>Configuration Details</h3>
+            <ul>
+                <li><strong>Endpoint:</strong> <span class="badge badge-endpoint">GET /api/cron/cancel-unpaid-orders</span></li>
+                <li><strong>Recommended Schedule:</strong> <span class="badge badge-warning">Every 12 Hours</span></li>
+                <li><strong>Threshold:</strong> 48 Hours (Default, configurable in Admin Settings)</li>
+                <li><strong>Source:</strong> <code>/app/api/cron/cancel-unpaid-orders/route.js</code></li>
+                <li><strong>Service:</strong> <code>/lib/services/ordersService.js</code></li>
+            </ul>
+        </div>
+
+        <section class="step">
+            <h2>Process Flow</h2>
+            <ol>
+                <li><strong>Verification:</strong> Checks if <code>orderCancellationEnabled</code> is set to true in system settings.</li>
+                <li><strong>Identification:</strong> Finds orders with status <code>ORDER_PLACED</code>, <code>isPaid: false</code>, and <code>paymentMethod: NOT 'COD'</code> created before the cutoff date.</li>
+                <li><strong>Cancellation:</strong> Updates order status to <code>CANCELLED</code> and payment status to <code>cancelled</code>.</li>
+                <li><strong>Notifications:</strong> Triggers real-time events to notify stores that an unpaid order has been voided by the system.</li>
+            </ol>
+        </section>
+
+        <section class="step">
+            <h2>Security & Safeguards</h2>
+            <ul>
+                <li><strong>CRON_SECRET:</strong> Endpoint is secured via the <code>authorization</code> header to prevent unauthorized triggers.</li>
+                <li><strong>Selective Targeting:</strong> Specifically excludes COD orders to ensure only online payment abandoned carts are cancelled.</li>
+            </ul>
+        </section>
+
+        <section class="step">
+            <h2>Admin Controls</h2>
+            <p>Admins can configure the cancellation threshold (in hours) and toggle the entire automation on/off via the Admin Settings Dashboard.</p>
+        </section>
+    </div>
+</body>
+</html>

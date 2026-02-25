@@ -1,0 +1,306 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Security Enhancement Implementation Plan - Budolshap V3</title>
+    <style>
+        :root {
+            --primary-color: #2563eb;
+            --secondary-color: #1e40af;
+            --bg-color: #f8fafc;
+            --text-color: #1e293b;
+            --border-color: #e2e8f0;
+            --card-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1);
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+            line-height: 1.6;
+            color: var(--text-color);
+            background-color: var(--bg-color);
+            max-width: 1000px;
+            margin: 0 auto;
+            padding: 40px 20px;
+        }
+
+        header {
+            margin-bottom: 40px;
+            border-bottom: 2px solid var(--border-color);
+            padding-bottom: 20px;
+        }
+
+        h1 {
+            color: var(--primary-color);
+            font-size: 2.5rem;
+            margin-bottom: 10px;
+        }
+
+        .meta {
+            color: #64748b;
+            font-size: 0.9rem;
+        }
+
+        .plan-card {
+            background: white;
+            border-radius: 12px;
+            padding: 30px;
+            margin-bottom: 30px;
+            box-shadow: var(--card-shadow);
+            border: 1px solid var(--border-color);
+        }
+
+        .phase-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+            padding-bottom: 15px;
+            border-bottom: 1px solid var(--border-color);
+        }
+
+        .phase-title {
+            font-size: 1.5rem;
+            font-weight: 700;
+            color: var(--text-color);
+        }
+
+        .phase-badge {
+            background: var(--primary-color);
+            color: white;
+            padding: 5px 12px;
+            border-radius: 20px;
+            font-size: 0.8rem;
+            font-weight: 600;
+            text-transform: uppercase;
+        }
+
+        .timeframe {
+            display: inline-flex;
+            align-items: center;
+            background: #f1f5f9;
+            padding: 8px 16px;
+            border-radius: 8px;
+            color: #475569;
+            font-weight: 600;
+            margin-right: 15px;
+        }
+
+        .status-badge {
+            display: inline-flex;
+            align-items: center;
+            padding: 8px 16px;
+            border-radius: 8px;
+            font-weight: 600;
+        }
+
+        .status-partial {
+            background-color: #fef3c7;
+            color: #92400e;
+        }
+
+        .status-planned {
+            background-color: #e2e8f0;
+            color: #475569;
+        }
+
+        .detailed-steps {
+            margin-top: 20px;
+        }
+
+        .detailed-steps h3 {
+            color: var(--secondary-color);
+            font-size: 1.1rem;
+            margin-top: 0;
+        }
+
+        ul {
+            padding-left: 20px;
+        }
+
+        li {
+            margin-bottom: 10px;
+        }
+
+        code {
+            background: #f1f5f9;
+            padding: 2px 6px;
+            border-radius: 4px;
+            font-family: "Menlo", "Monaco", "Courier New", monospace;
+            font-size: 0.9em;
+            color: #d946ef;
+        }
+
+        .summary-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 40px;
+            background: white;
+            border-radius: 12px;
+            overflow: hidden;
+            box-shadow: var(--card-shadow);
+        }
+
+        .summary-table th,
+        .summary-table td {
+            text-align: left;
+            padding: 15px 25px;
+            border-bottom: 1px solid var(--border-color);
+        }
+
+        .summary-table th {
+            background-color: #eff6ff;
+            color: var(--secondary-color);
+            font-weight: 700;
+        }
+
+        .summary-table tr:last-child td {
+            border-bottom: none;
+        }
+    </style>
+</head>
+
+<body>
+
+    <header>
+        <h1>Security Enhancement Plan</h1>
+        <div class="meta">
+            <strong>Application:</strong> Budolshap V3 |
+            <strong>Date:</strong> December 11, 2025 |
+            <strong>Author:</strong> Antigravity (Google DeepMind)
+        </div>
+    </header>
+
+    <div class="plan-card">
+        <div class="phase-header">
+            <span class="phase-title">Phase 1: Cookie Security Standardization</span>
+            <span class="phase-badge">High Priority</span>
+        </div>
+        <div style="margin-bottom: 20px;">
+            <span class="timeframe">Timeframe: 1-2 Hours</span>
+            <span class="status-badge status-partial">Status: Partially Implemented</span>
+        </div>
+        <p><strong>Objective:</strong> Ensure all authentication cookies are tamper-proof and only transmitted over
+            secure connections (HTTPS) to prevent session hijacking.</p>
+
+        <div class="detailed-steps">
+            <h3>Implementation Steps:</h3>
+            <ul>
+                <li>Audit <code>app/api/auth/login/route.js</code> (Done: Secure flag added).</li>
+                <li>Centralize cookie configuration options into a helper function in <code>lib/auth.js</code> to ensure
+                    consistency across the app.</li>
+                <li>Apply strict cookie policies:
+                    <ul>
+                        <li><code>httpOnly: true</code> - Prevents JavaScript access (mitigates XSS).</li>
+                        <li><code>secure: true</code> - Ensures transmission only over HTTPS in production.</li>
+                        <li><code>sameSite: 'lax'</code> - Protects against CSRF attacks.</li>
+                    </ul>
+                </li>
+                <li>Verify correct <code>NODE_ENV</code> configuration on Vercel Dashboard.</li>
+            </ul>
+        </div>
+    </div>
+
+    <div class="plan-card">
+        <div class="phase-header">
+            <span class="phase-title">Phase 2: Automatic Idle Logout</span>
+            <span class="phase-badge">Medium Priority</span>
+        </div>
+        <div style="margin-bottom: 20px;">
+            <span class="timeframe">Timeframe: 3-4 Hours</span>
+            <span class="status-badge status-planned">Status: Planned</span>
+        </div>
+        <p><strong>Objective:</strong> Automatically log out users with sensitive access (Admins, Sellers) after a
+            period of inactivity to prevent unauthorized access from unattended devices.</p>
+
+        <div class="detailed-steps">
+            <h3>Implementation Steps:</h3>
+            <ul>
+                <li>Develop a custom React hook <code>useIdleTimeout(timeoutMs, warningMs)</code>.</li>
+                <li>Implement event listeners for user activity: <code>mousemove</code>, <code>keydown</code>,
+                    <code>click</code>, <code>scroll</code>.</li>
+                <li>Create a <strong>"Session Expiring" Modal</strong> that warns the user 1 minute before logout.</li>
+                <li>Integrate into <code>AdminLayout</code> and <code>StoreLayout</code> components.</li>
+                <li>Ensure the Buyer/Shopper experience remains unaffected (no auto-logout for regular users).</li>
+                <li>Implement secure redirect logic to return the user to the login screen with a specific "Session
+                    Expired" message.</li>
+            </ul>
+        </div>
+    </div>
+
+    <div class="plan-card">
+        <div class="phase-header">
+            <span class="phase-title">Phase 3: Rate Limiting & Brute Force Protection</span>
+            <span class="phase-badge">Critical Priority</span>
+        </div>
+        <div style="margin-bottom: 20px;">
+            <span class="timeframe">Timeframe: 4-5 Hours</span>
+            <span class="status-badge status-planned">Status: Planned</span>
+        </div>
+        <p><strong>Objective:</strong> Protect authentication endpoints against brute-force password guessing and abuse.
+        </p>
+
+        <div class="detailed-steps">
+            <h3>Implementation Steps:</h3>
+            <ul>
+                <li>Select Rate Limiting Strategy:
+                    <ul>
+                        <li><strong>Preferred:</strong> Vercel KV (Redis) or Upstash for distributed state management.
+                        </li>
+                        <li><strong>Alternative:</strong> Database-backed token bucket (if KV is unavailable).</li>
+                    </ul>
+                </li>
+                <li>Create generic Rate Limiter utility / middleware.</li>
+                <li>Apply limits to critical endpoints:
+                    <ul>
+                        <li><code>POST /api/auth/login</code> - e.g., 5 attempts / 15 mins.</li>
+                        <li><code>POST /api/auth/register</code> - e.g., 3 attempts / hour per IP.</li>
+                    </ul>
+                </li>
+                <li>Implement graceful error handling (HTTP 429) with "Retry After" messaging for the user.</li>
+            </ul>
+        </div>
+    </div>
+
+    <h2>Summary</h2>
+    <table class="summary-table">
+        <thead>
+            <tr>
+                <th>Phase</th>
+                <th>Feature</th>
+                <th>Estimated Time</th>
+                <th>Complexity</th>
+            </tr>
+        </thead>
+        <tbody>
+            <tr>
+                <td>1</td>
+                <td>Cookie Security Enhancements</td>
+                <td>1-2 Hours</td>
+                <td>Low</td>
+            </tr>
+            <tr>
+                <td>2</td>
+                <td>Automatic Idle Logout (Admin/Seller)</td>
+                <td>3-4 Hours</td>
+                <td>Medium</td>
+            </tr>
+            <tr>
+                <td>3</td>
+                <td>Rate Limiting (Login Protection)</td>
+                <td>4-5 Hours</td>
+                <td>High</td>
+            </tr>
+            <tr>
+                <td><strong>Total</strong></td>
+                <td></td>
+                <td><strong>~8-11 Hours</strong></td>
+                <td></td>
+            </tr>
+        </tbody>
+    </table>
+
+</body>
+
+</html>

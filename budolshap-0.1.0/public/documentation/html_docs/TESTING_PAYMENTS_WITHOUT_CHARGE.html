@@ -1,0 +1,612 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Testing QR Code Payments Without Being Charged - PayMongo Webhook Simulator Guide</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+            line-height: 1.6;
+            color: #333;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 900px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 12px;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+            overflow: hidden;
+        }
+
+        .header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 40px;
+            text-align: center;
+        }
+
+        .header h1 {
+            font-size: 2.5em;
+            margin-bottom: 10px;
+            text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.2);
+        }
+
+        .header p {
+            font-size: 1.2em;
+            opacity: 0.95;
+        }
+
+        .content {
+            padding: 40px;
+        }
+
+        .section {
+            margin-bottom: 40px;
+        }
+
+        h2 {
+            color: #667eea;
+            font-size: 2em;
+            margin-bottom: 20px;
+            padding-bottom: 10px;
+            border-bottom: 3px solid #667eea;
+        }
+
+        h3 {
+            color: #764ba2;
+            font-size: 1.5em;
+            margin: 25px 0 15px 0;
+        }
+
+        h4 {
+            color: #555;
+            font-size: 1.2em;
+            margin: 20px 0 10px 0;
+        }
+
+        .prerequisites {
+            background: #f0f4ff;
+            border-left: 4px solid #667eea;
+            padding: 20px;
+            margin: 20px 0;
+            border-radius: 4px;
+        }
+
+        .prerequisites ul {
+            list-style: none;
+            padding-left: 0;
+        }
+
+        .prerequisites li {
+            padding: 8px 0;
+            padding-left: 30px;
+            position: relative;
+        }
+
+        .prerequisites li:before {
+            content: "✅";
+            position: absolute;
+            left: 0;
+        }
+
+        .step-box {
+            background: #f8f9fa;
+            border: 2px solid #e9ecef;
+            border-radius: 8px;
+            padding: 25px;
+            margin: 20px 0;
+        }
+
+        .step-number {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: bold;
+            font-size: 1.2em;
+            margin-right: 15px;
+        }
+
+        code {
+            background: #2d3748;
+            color: #68d391;
+            padding: 3px 8px;
+            border-radius: 4px;
+            font-family: 'Courier New', monospace;
+            font-size: 0.9em;
+        }
+
+        pre {
+            background: #2d3748;
+            color: #e2e8f0;
+            padding: 20px;
+            border-radius: 8px;
+            overflow-x: auto;
+            margin: 15px 0;
+            border-left: 4px solid #667eea;
+        }
+
+        pre code {
+            background: none;
+            color: inherit;
+            padding: 0;
+        }
+
+        .alert {
+            padding: 15px 20px;
+            border-radius: 8px;
+            margin: 20px 0;
+            border-left: 4px solid;
+        }
+
+        .alert-warning {
+            background: #fff3cd;
+            border-color: #ffc107;
+            color: #856404;
+        }
+
+        .alert-info {
+            background: #d1ecf1;
+            border-color: #17a2b8;
+            color: #0c5460;
+        }
+
+        .alert-success {
+            background: #d4edda;
+            border-color: #28a745;
+            color: #155724;
+        }
+
+        .alert-danger {
+            background: #f8d7da;
+            border-color: #dc3545;
+            color: #721c24;
+        }
+
+        ol,
+        ul {
+            margin-left: 30px;
+            margin-bottom: 15px;
+        }
+
+        li {
+            margin-bottom: 10px;
+        }
+
+        .highlight {
+            background: linear-gradient(120deg, #84fab0 0%, #8fd3f4 100%);
+            padding: 2px 6px;
+            border-radius: 3px;
+            font-weight: 600;
+        }
+
+        .quick-summary {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 30px;
+            border-radius: 8px;
+            margin: 30px 0;
+        }
+
+        .quick-summary h3 {
+            color: white;
+            margin-top: 0;
+        }
+
+        .quick-summary ol {
+            margin-left: 20px;
+        }
+
+        .quick-summary li {
+            margin-bottom: 8px;
+        }
+
+        .footer {
+            background: #f8f9fa;
+            padding: 30px;
+            text-align: center;
+            color: #6c757d;
+            border-top: 1px solid #dee2e6;
+        }
+
+        .troubleshooting {
+            background: #fff5f5;
+            border: 2px solid #fc8181;
+            border-radius: 8px;
+            padding: 20px;
+            margin: 20px 0;
+        }
+
+        .troubleshooting h4 {
+            color: #c53030;
+            margin-top: 0;
+        }
+
+        @media (max-width: 768px) {
+            .header h1 {
+                font-size: 1.8em;
+            }
+
+            .content {
+                padding: 20px;
+            }
+
+            h2 {
+                font-size: 1.5em;
+            }
+        }
+    </style>
+</head>
+
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🧪 Testing QR Code Payments</h1>
+            <p>WITHOUT Being Charged Real Money</p>
+            <p style="font-size: 0.9em; margin-top: 10px;">Option B: Using PayMongo Webhook Simulator</p>
+        </div>
+
+        <div class="content">
+            <div class="section">
+                <p style="font-size: 1.1em; color: #555; margin-bottom: 20px;">
+                    This guide shows you how to test the complete payment flow without actually paying money.
+                </p>
+
+                <div class="prerequisites">
+                    <h3 style="margin-top: 0; color: #667eea;">Prerequisites</h3>
+                    <ul>
+                        <li>You have a PayMongo account</li>
+                        <li>You're using test API keys (starts with <code>sk_test_</code>)</li>
+                        <li>Your webhook endpoint is accessible (for local testing, use ngrok)</li>
+                    </ul>
+                </div>
+            </div>
+
+            <!-- Step 1 -->
+            <div class="section">
+                <h2>Step 1: Set Up Webhook Endpoint (Local Testing)</h2>
+
+                <div class="step-box">
+                    <h4><span class="step-number">1.1</span> Install ngrok (if not already installed)</h4>
+                    <pre><code># Download from https://ngrok.com/download
+# Or install via chocolatey (Windows)
+choco install ngrok</code></pre>
+                </div>
+
+                <div class="step-box">
+                    <h4><span class="step-number">1.2</span> Start your Next.js dev server</h4>
+                    <pre><code>npm run dev</code></pre>
+                    <p>Your app should be running on <code>http://localhost:3000</code></p>
+                </div>
+
+                <div class="step-box">
+                    <h4><span class="step-number">1.3</span> Start ngrok tunnel</h4>
+                    <p>Open a <strong>new terminal</strong> and run:</p>
+                    <pre><code>ngrok http 3000</code></pre>
+                    <p>You'll see output like:</p>
+                    <pre><code>Forwarding    https://abc123.ngrok.io -> http://localhost:3000</code></pre>
+                    <div class="alert alert-info">
+                        <strong>📋 Copy the HTTPS URL</strong> (e.g., <code>https://abc123.ngrok.io</code>)
+                    </div>
+                </div>
+            </div>
+
+            <!-- Step 2 -->
+            <div class="section">
+                <h2>Step 2: Register Webhook in PayMongo Dashboard</h2>
+
+                <div class="step-box">
+                    <h4><span class="step-number">2.1</span> Go to PayMongo Dashboard</h4>
+                    <ol>
+                        <li>Visit <a href="https://dashboard.paymongo.com/"
+                                target="_blank">https://dashboard.paymongo.com/</a></li>
+                        <li>Login with your account</li>
+                        <li>Make sure you're in <span class="highlight">TEST MODE</span> (toggle in top-right corner)
+                        </li>
+                    </ol>
+                </div>
+
+                <div class="step-box">
+                    <h4><span class="step-number">2.2</span> Navigate to Webhooks</h4>
+                    <ol>
+                        <li>Click <strong>Developers</strong> in the left sidebar</li>
+                        <li>Click <strong>Webhooks</strong></li>
+                        <li>Click <strong>+ Create Webhook</strong></li>
+                    </ol>
+                </div>
+
+                <div class="step-box">
+                    <h4><span class="step-number">2.3</span> Configure Webhook</h4>
+                    <p>Fill in the form:</p>
+                    <ul>
+                        <li><strong>Webhook URL:</strong> <code>https://abc123.ngrok.io/api/webhooks/paymongo</code><br>
+                            <small>(Replace <code>abc123</code> with your ngrok subdomain)</small>
+                        </li>
+                        <li><strong>Events to listen to:</strong> Check these boxes:
+                            <ul>
+                                <li>✅ <code>payment.paid</code></li>
+                                <li>✅ <code>payment.failed</code></li>
+                                <li>✅ <code>source.chargeable</code></li>
+                            </ul>
+                        </li>
+                        <li><strong>Description:</strong> "Local testing webhook"</li>
+                        <li>Click <strong>Create Webhook</strong></li>
+                    </ul>
+                </div>
+
+                <div class="step-box">
+                    <h4><span class="step-number">2.4</span> Save Webhook Secret</h4>
+                    <p>After creating, you'll see a <strong>Webhook Signing Secret</strong> like:</p>
+                    <pre><code>whsec_abc123xyz...</code></pre>
+                    <div class="alert alert-warning">
+                        <strong>⚠️ Important:</strong> Copy this and add it to your <code>.env.local</code>:
+                    </div>
+                    <pre><code>PAYMONGO_WEBHOOK_SECRET=whsec_abc123xyz...</code></pre>
+                    <p><strong>Restart your dev server</strong> to load the new environment variable.</p>
+                </div>
+            </div>
+
+            <!-- Step 3 -->
+            <div class="section">
+                <h2>Step 3: Generate a Test Payment</h2>
+
+                <div class="step-box">
+                    <h4><span class="step-number">3.1</span> Create an Order</h4>
+                    <ol>
+                        <li>Go to your app: <code>http://localhost:3000</code></li>
+                        <li>Add a product to cart</li>
+                        <li>Go to checkout</li>
+                        <li>Select <strong>QRPh</strong> (or Maya/GrabPay)</li>
+                        <li>Fill in shipping details</li>
+                        <li>Click <strong>Place Order</strong></li>
+                    </ol>
+                </div>
+
+                <div class="step-box">
+                    <h4><span class="step-number">3.2</span> Get Payment Intent ID</h4>
+                    <p>When the QR modal appears, <strong>copy the Payment ID</strong> shown in the modal.</p>
+                    <p>It looks like: <code>pi_abc123xyz...</code></p>
+                    <div class="alert alert-info">
+                        <strong>📝 Note:</strong> DON'T close the modal yet - keep it open or note down the Payment
+                        Intent ID.
+                    </div>
+                </div>
+            </div>
+
+            <!-- Step 4 -->
+            <div class="section">
+                <h2>Step 4: Simulate Webhook Event (The Magic Part!)</h2>
+
+                <div class="step-box">
+                    <h4><span class="step-number">4.1</span> Go to PayMongo Dashboard</h4>
+                    <ol>
+                        <li>Still in <span class="highlight">TEST MODE</span></li>
+                        <li>Click <strong>Developers</strong> → <strong>Webhooks</strong></li>
+                        <li>Find your webhook in the list</li>
+                        <li>Click on it to open details</li>
+                    </ol>
+                </div>
+
+                <div class="step-box">
+                    <h4><span class="step-number">4.2</span> Send Test Event</h4>
+                    <ol>
+                        <li>Scroll down to <strong>"Send a test webhook"</strong> section</li>
+                        <li>Select event type: <code>payment.paid</code></li>
+                        <li>Click <strong>Send test webhook</strong></li>
+                    </ol>
+                    <div class="alert alert-success">
+                        <strong>🎉 Success!</strong> PayMongo will send a test <code>payment.paid</code> event to your
+                        webhook endpoint!
+                    </div>
+                </div>
+
+                <div class="step-box">
+                    <h4><span class="step-number">4.3</span> Alternative: Use API Explorer</h4>
+                    <p>If the above doesn't work, you can manually trigger it:</p>
+                    <ol>
+                        <li>Go to <strong>Developers</strong> → <strong>API Explorer</strong></li>
+                        <li>Select <strong>POST /payment_intents/{id}/attach</strong></li>
+                        <li>In the request body, you can simulate the payment completion</li>
+                    </ol>
+                </div>
+            </div>
+
+            <!-- Step 5 -->
+            <div class="section">
+                <h2>Step 5: Verify Order Status Updated</h2>
+
+                <div class="step-box">
+                    <h4><span class="step-number">5.1</span> Check Terminal Logs</h4>
+                    <p>In your Next.js terminal, you should see:</p>
+                    <pre><code>✅ Payment successful: pi_abc123xyz Amount: 1000
+✅ Order marked as paid and funds held in escrow: cmj5...</code></pre>
+                </div>
+
+                <div class="step-box">
+                    <h4><span class="step-number">5.2</span> Check Database</h4>
+                    <p>Run this to verify:</p>
+                    <pre><code># In your project directory
+npx prisma studio</code></pre>
+                    <ol>
+                        <li>Open <strong>Order</strong> table</li>
+                        <li>Find your order</li>
+                        <li>Check that:
+                            <ul>
+                                <li><code>isPaid</code> = <code>true</code></li>
+                                <li><code>paymentStatus</code> = <code>'paid'</code></li>
+                                <li><code>paidAt</code> has a timestamp</li>
+                            </ul>
+                        </li>
+                    </ol>
+                </div>
+
+                <div class="step-box">
+                    <h4><span class="step-number">5.3</span> Check Orders Page</h4>
+                    <ol>
+                        <li>Go to <code>http://localhost:3000/orders</code></li>
+                        <li>Find your order</li>
+                        <li>Payment status should show <strong>"Paid"</strong> ✅</li>
+                    </ol>
+                </div>
+            </div>
+
+            <!-- Step 6 -->
+            <div class="section">
+                <h2>Step 6: Testing Different Scenarios</h2>
+
+                <div class="step-box">
+                    <h4>Test Failed Payment</h4>
+                    <ol>
+                        <li>Create another order</li>
+                        <li>Get the Payment Intent ID</li>
+                        <li>In PayMongo Dashboard → Webhooks</li>
+                        <li>Send test event: <code>payment.failed</code></li>
+                        <li>Verify order shows as "Payment Failed"</li>
+                    </ol>
+                </div>
+
+                <div class="step-box">
+                    <h4>Test Webhook Signature Verification</h4>
+                    <p>Your webhook handler should verify signatures. Check logs for:</p>
+                    <pre><code>Invalid webhook signature</code></pre>
+                    <p>If you see this, your <code>PAYMONGO_WEBHOOK_SECRET</code> might be wrong.</p>
+                </div>
+            </div>
+
+            <!-- Troubleshooting -->
+            <div class="section">
+                <h2>Troubleshooting</h2>
+
+                <div class="troubleshooting">
+                    <h4>Webhook not receiving events?</h4>
+
+                    <p><strong>Check ngrok is running:</strong></p>
+                    <pre><code>curl https://abc123.ngrok.io/api/webhooks/paymongo</code></pre>
+                    <p>Should return: <code>{"error":"Invalid signature"}</code> (this is good!)</p>
+
+                    <p><strong>Check webhook URL in PayMongo:</strong></p>
+                    <ul>
+                        <li>Must be HTTPS (ngrok provides this)</li>
+                        <li>Must end with <code>/api/webhooks/paymongo</code></li>
+                        <li>Must be accessible from internet</li>
+                    </ul>
+
+                    <p><strong>Check terminal logs:</strong></p>
+                    <p>Look for incoming requests in your Next.js terminal</p>
+                </div>
+
+                <div class="troubleshooting">
+                    <h4>Order not updating?</h4>
+
+                    <p><strong>Check webhook handler logs:</strong></p>
+                    <pre><code>console.log('Received webhook event:', eventType)
+console.log('Payment successful:', paymentId)</code></pre>
+
+                    <p><strong>Check database connection:</strong></p>
+                    <p>Make sure your <code>DATABASE_URL</code> is correct in <code>.env.local</code></p>
+
+                    <p><strong>Check Payment Intent ID:</strong></p>
+                    <p>The webhook must match the Payment Intent ID from your order</p>
+                </div>
+            </div>
+
+            <!-- Quick Summary -->
+            <div class="quick-summary">
+                <h3>🚀 Quick Testing Workflow</h3>
+                <ol>
+                    <li>✅ Start dev server: <code>npm run dev</code></li>
+                    <li>✅ Start ngrok: <code>ngrok http 3000</code></li>
+                    <li>✅ Register webhook in PayMongo with ngrok URL</li>
+                    <li>✅ Create order with QRPh/Maya/GrabPay</li>
+                    <li>✅ Copy Payment Intent ID from QR modal</li>
+                    <li>✅ Go to PayMongo Dashboard → Webhooks</li>
+                    <li>✅ Click "Send test webhook" → <code>payment.paid</code></li>
+                    <li>✅ Verify order status updated to "Paid"</li>
+                </ol>
+                <p style="margin-top: 20px; font-size: 1.2em; text-align: center;">
+                    <strong>You just tested the complete payment flow without spending a cent! 🎉</strong>
+                </p>
+            </div>
+
+            <!-- Next Steps -->
+            <div class="section">
+                <h2>Next Steps</h2>
+                <p>Once you're confident the flow works:</p>
+                <ol>
+                    <li><strong>Deploy to production</strong> (Vercel)</li>
+                    <li><strong>Update webhook URL</strong> in PayMongo to your production domain</li>
+                    <li><strong>Switch to live API keys</strong> when ready for real payments</li>
+                    <li><strong>Test with small amount</strong> (₱1) before going live</li>
+                </ol>
+            </div>
+
+            <!-- Important Notes -->
+            <div class="section">
+                <h2>Important Notes</h2>
+
+                <div class="alert alert-warning">
+                    <h4 style="margin-top: 0;">⚠️ Test Mode vs Live Mode</h4>
+                    <ul>
+                        <li>Test keys: <code>sk_test_...</code> - No real money</li>
+                        <li>Live keys: <code>sk_live_...</code> - Real money!</li>
+                    </ul>
+                </div>
+
+                <div class="alert alert-danger">
+                    <h4 style="margin-top: 0;">🔒 Webhook Security</h4>
+                    <ul>
+                        <li>Always verify webhook signatures</li>
+                        <li>Never expose your webhook secret</li>
+                        <li>Use HTTPS only (ngrok provides this)</li>
+                    </ul>
+                </div>
+
+                <div class="alert alert-info">
+                    <h4 style="margin-top: 0;">💡 ngrok Free Tier</h4>
+                    <ul>
+                        <li>URL changes every time you restart ngrok</li>
+                        <li>You'll need to update webhook URL in PayMongo each time</li>
+                        <li>For permanent testing, consider ngrok paid plan or deploy to staging</li>
+                    </ul>
+                </div>
+            </div>
+
+            <!-- Questions -->
+            <div class="section">
+                <h2>Questions?</h2>
+                <p>If something doesn't work:</p>
+                <ol>
+                    <li>Check ngrok is running and accessible</li>
+                    <li>Check webhook is registered in PayMongo</li>
+                    <li>Check terminal logs for errors</li>
+                    <li>Check database for order updates</li>
+                    <li>Verify <code>PAYMONGO_WEBHOOK_SECRET</code> is correct</li>
+                </ol>
+            </div>
+        </div>
+
+        <div class="footer">
+            <p><strong>budolShap</strong> - Payment Testing Guide</p>
+            <p style="margin-top: 10px; font-size: 0.9em;">
+                Created: December 14, 2025 | PayMongo Integration
+            </p>
+        </div>
+    </div>
+</body>
+
+</html>

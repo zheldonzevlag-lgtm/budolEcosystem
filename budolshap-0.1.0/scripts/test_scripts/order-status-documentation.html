@@ -1,0 +1,351 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>BudolShap | Order Status Management Documentation</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link
+        href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;700&family=Inter:wght@400;500&display=swap"
+        rel="stylesheet">
+    <style>
+        :root {
+            --primary: #4f46e5;
+            --primary-light: #818cf8;
+            --secondary: #10b981;
+            --accent: #f59e0b;
+            --danger: #ef4444;
+            --background: #0f172a;
+            --surface: #1e293b;
+            --text-main: #f8fafc;
+            --text-muted: #94a3b8;
+            --glass: rgba(255, 255, 255, 0.03);
+            --glass-border: rgba(255, 255, 255, 0.1);
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: var(--background);
+            color: var(--text-main);
+            line-height: 1.6;
+            overflow-x: hidden;
+        }
+
+        h1,
+        h2,
+        h3 {
+            font-family: 'Outfit', sans-serif;
+            font-weight: 700;
+        }
+
+        .container {
+            max-width: 1000px;
+            margin: 0 auto;
+            padding: 4rem 2rem;
+        }
+
+        header {
+            text-align: center;
+            margin-bottom: 4rem;
+            position: relative;
+        }
+
+        header::before {
+            content: '';
+            position: absolute;
+            top: -50px;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 200px;
+            height: 200px;
+            background: radial-gradient(circle, rgba(79, 70, 229, 0.2) 0%, transparent 70%);
+            z-index: -1;
+        }
+
+        .badge {
+            display: inline-block;
+            padding: 0.25rem 1rem;
+            background: linear-gradient(135deg, var(--primary), var(--primary-light));
+            border-radius: 99px;
+            font-size: 0.75rem;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            margin-bottom: 1rem;
+            box-shadow: 0 4px 12px rgba(79, 70, 229, 0.3);
+        }
+
+        h1 {
+            font-size: 3.5rem;
+            margin-bottom: 1rem;
+            background: linear-gradient(to right, #fff, #94a3b8);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        .subtitle {
+            color: var(--text-muted);
+            font-size: 1.2rem;
+            max-width: 600px;
+            margin: 0 auto;
+        }
+
+        section {
+            background: var(--surface);
+            border: 1px solid var(--glass-border);
+            border-radius: 24px;
+            padding: 3rem;
+            margin-bottom: 3rem;
+            position: relative;
+            overflow: hidden;
+            transition: transform 0.3s ease, box-shadow 0.3s ease;
+        }
+
+        section:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.3);
+        }
+
+        .section-icon {
+            font-size: 2rem;
+            margin-bottom: 1.5rem;
+            background: var(--glass);
+            width: 60px;
+            height: 60px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 16px;
+            border: 1px solid var(--glass-border);
+        }
+
+        h2 {
+            font-size: 2rem;
+            margin-bottom: 1.5rem;
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+        }
+
+        .status-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+            gap: 2rem;
+            margin-top: 2rem;
+        }
+
+        .status-card {
+            background: var(--glass);
+            border: 1px solid var(--glass-border);
+            border-radius: 20px;
+            padding: 1.5rem;
+            transition: all 0.3s ease;
+        }
+
+        .status-card:hover {
+            background: rgba(255, 255, 255, 0.05);
+            border-color: var(--primary-light);
+        }
+
+        .status-label {
+            font-weight: 700;
+            font-size: 1.1rem;
+            margin-bottom: 0.5rem;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .status-arrow {
+            color: var(--primary-light);
+            font-weight: bold;
+        }
+
+        .logic-list {
+            list-style: none;
+        }
+
+        .logic-list li {
+            margin-bottom: 1.5rem;
+            padding-left: 2rem;
+            position: relative;
+        }
+
+        .logic-list li::before {
+            content: '→';
+            position: absolute;
+            left: 0;
+            color: var(--primary-light);
+            font-weight: bold;
+        }
+
+        .benefits-group {
+            display: flex;
+            flex-direction: column;
+            gap: 1rem;
+        }
+
+        .benefit-item {
+            display: flex;
+            align-items: flex-start;
+            gap: 1rem;
+            background: var(--glass);
+            padding: 1rem;
+            border-radius: 12px;
+        }
+
+        .benefit-check {
+            color: var(--secondary);
+            font-weight: bold;
+        }
+
+        footer {
+            text-align: center;
+            color: var(--text-muted);
+            font-size: 0.9rem;
+            margin-top: 4rem;
+        }
+
+        /* Animations */
+        @keyframes fadeIn {
+            from {
+                opacity: 0;
+                transform: translateY(20px);
+            }
+
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        section {
+            animation: fadeIn 0.8s ease-out forwards;
+        }
+
+        .delay-1 {
+            animation-delay: 0.2s;
+        }
+
+        .delay-2 {
+            animation-delay: 0.4s;
+        }
+
+        .delay-3 {
+            animation-delay: 0.6s;
+        }
+
+        @media (max-width: 768px) {
+            h1 {
+                font-size: 2.5rem;
+            }
+
+            section {
+                padding: 2rem;
+            }
+        }
+    </style>
+</head>
+
+<body>
+
+    <div class="container">
+        <header>
+            <span class="badge">Internal Technical Guide</span>
+            <h1>The Order Status Dropdown</h1>
+            <p class="subtitle">Understanding the seller-side manual control system for order fulfillment in BudolShap.
+            </p>
+        </header>
+
+        <section class="delay-1">
+            <div class="section-icon">🎯</div>
+            <h2>Purpose of the Dropdown</h2>
+            <p>The status dropdown is a <strong>manual state-transition tool</strong>. While modern couriers (like
+                Lalamove) provide automated webhooks, many critical business steps require human confirmation from the
+                seller before the system can engage the next logistics layer.</p>
+            <p style="margin-top: 1rem; color: var(--text-muted);">It acts as a safety valve, ensuring that automation
+                only happens when the physical package is actually ready.</p>
+        </section>
+
+        <section class="delay-2">
+            <div class="section-icon">⚙️</div>
+            <h2>Transition Logic (The Workflow)</h2>
+            <div class="status-grid">
+                <div class="status-card">
+                    <div class="status-label"><span class="status-arrow">→</span> Mark Processing</div>
+                    <p class="text-muted">Available when an order is <strong>PAID</strong> or
+                        <strong>ORDER_PLACED</strong>.</p>
+                    <p style="margin-top: 0.5rem; font-size: 0.9rem;">Signals to the buyer that the seller has seen the
+                        request and is currently picking/packing items.</p>
+                </div>
+                <div class="status-card">
+                    <div class="status-label"><span class="status-arrow">→</span> Mark Ready for Pickup</div>
+                    <p class="text-muted">Available when status is <strong>PROCESSING</strong>.</p>
+                    <p style="margin-top: 0.5rem; font-size: 0.9rem;">The "Fulfillment Trigger". This enables the
+                        delivery booking UI (Review & Book) where sellers can choose couriers.</p>
+                </div>
+                <div class="status-card">
+                    <div class="status-label"><span class="status-arrow">→</span> Mark Delivered</div>
+                    <p class="text-muted">Available for <strong>SHIPPING</strong> or <strong>TO_SHIP</strong>.</p>
+                    <p style="margin-top: 0.5rem; font-size: 0.9rem;">A manual override for manual riders or cases where
+                        the courier's automatic API fails to update.</p>
+                </div>
+            </div>
+        </section>
+
+        <section class="delay-3">
+            <div class="section-icon">💎</div>
+            <h2>Seller Benefits</h2>
+            <div class="benefits-group">
+                <div class="benefit-item">
+                    <span class="benefit-check">✓</span>
+                    <div>
+                        <strong>Buyer Transparency</strong>
+                        <p style="color: var(--text-muted); font-size: 0.9rem;">Reduces "When will you ship?" messages
+                            by providing real-time granular updates to the buyer UI.</p>
+                    </div>
+                </div>
+                <div class="benefit-item">
+                    <span class="benefit-check">✓</span>
+                    <div>
+                        <strong>Error Prevention</strong>
+                        <p style="color: var(--text-muted); font-size: 0.9rem;">The dropdown is context-aware. It
+                            prevents marking an order "Delivered" if it hasn't even been packed yet.</p>
+                    </div>
+                </div>
+                <div class="benefit-item">
+                    <span class="benefit-check">✓</span>
+                    <div>
+                        <strong>Logistics Readiness</strong>
+                        <p style="color: var(--text-muted); font-size: 0.9rem;">Standardizes the data flow so that
+                            external APIs (Lalamove/BudolShap Shipping) receive valid requests.</p>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <section
+            style="background: linear-gradient(135deg, rgba(79, 70, 229, 0.1), rgba(16, 185, 129, 0.1)); border-color: var(--primary-light);">
+            <div class="section-icon">🔒</div>
+            <h2>Finalized States</h2>
+            <p>Once an order reaches <strong>Delivered</strong>, <strong>Cancelled</strong>, or
+                <strong>Refunded</strong>, the dropdown is removed and replaced by a static badge. This protects the
+                integrity of the transaction data and prevents accidental "resurrecting" of closed orders.</p>
+        </section>
+
+        <footer>
+            <p>&copy; 2025 BudolShap Engineering. All rights reserved.</p>
+        </footer>
+    </div>
+
+</body>
+
+</html>

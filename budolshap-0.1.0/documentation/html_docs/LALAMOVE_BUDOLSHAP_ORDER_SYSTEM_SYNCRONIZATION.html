@@ -1,0 +1,333 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Lalamove & BudolShap Order System Synchronization</title>
+    <style>
+        :root {
+            --primary: #0f766e;
+            --secondary: #0d9488;
+            --accent: #f59e0b;
+            --background: #f8fafc;
+            --surface: #ffffff;
+            --text: #334155;
+            --code-bg: #1e293b;
+            --code-text: #e2e8f0;
+            --success: #10b981;
+            --error: #ef4444;
+            --warning: #f59e0b;
+        }
+
+        body {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+            background-color: var(--background);
+            color: var(--text);
+            line-height: 1.6;
+            margin: 0;
+            padding: 0;
+        }
+
+        .container {
+            max-width: 1000px;
+            margin: 0 auto;
+            padding: 2rem;
+        }
+
+        header {
+            background: linear-gradient(135deg, var(--primary), var(--secondary));
+            color: white;
+            padding: 3rem 2rem;
+            border-radius: 0 0 1rem 1rem;
+            margin-bottom: 2rem;
+            box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1);
+        }
+
+        h1 {
+            margin: 0;
+            font-size: 2.5rem;
+            font-weight: 800;
+            letter-spacing: -0.025em;
+        }
+
+        .subtitle {
+            opacity: 0.9;
+            font-size: 1.1rem;
+            margin-top: 0.5rem;
+        }
+
+        .section {
+            background: var(--surface);
+            border-radius: 1rem;
+            padding: 2rem;
+            margin-bottom: 2rem;
+            box-shadow: 0 1px 3px 0 rgb(0 0 0 / 0.1);
+        }
+
+        h2 {
+            border-left: 4px solid var(--primary);
+            padding-left: 1rem;
+            color: var(--primary);
+            margin-top: 0;
+        }
+
+        h3 {
+            color: var(--text);
+            margin-top: 1.5rem;
+            font-weight: 700;
+        }
+
+        .code-block {
+            background: var(--code-bg);
+            color: var(--code-text);
+            padding: 1rem;
+            border-radius: 0.5rem;
+            overflow-x: auto;
+            font-family: 'Fira Code', monospace;
+            font-size: 0.9rem;
+            margin: 1rem 0;
+        }
+
+        .issue-card {
+            border: 1px solid #e2e8f0;
+            border-radius: 0.5rem;
+            padding: 1.5rem;
+            margin-bottom: 1rem;
+            background: #f8fafc;
+        }
+
+        .badge {
+            display: inline-block;
+            padding: 0.25rem 0.75rem;
+            border-radius: 9999px;
+            font-size: 0.75rem;
+            font-weight: 600;
+            text-transform: uppercase;
+        }
+
+        .badge-bug {
+            background: #fee2e2;
+            color: #991b1b;
+        }
+
+        .badge-fix {
+            background: #dcfce7;
+            color: #166534;
+        }
+
+        .badge-feat {
+            background: #dbeafe;
+            color: #1e40af;
+        }
+
+        .timeline-item {
+            position: relative;
+            padding-left: 2rem;
+            margin-bottom: 2rem;
+            border-left: 2px solid #e2e8f0;
+        }
+
+        .timeline-item::before {
+            content: '';
+            position: absolute;
+            left: -9px;
+            top: 0;
+            width: 16px;
+            height: 16px;
+            border-radius: 50%;
+            background: var(--primary);
+            border: 4px solid var(--surface);
+        }
+    </style>
+</head>
+
+<body>
+    <header>
+        <div class="container" style="padding: 0;">
+            <span class="badge badge-feat"
+                style="background: rgba(255,255,255,0.2); color: white; margin-bottom: 1rem;">System Architecture
+                Documentation</span>
+            <h1>Synchronization Report</h1>
+            <div class="subtitle">Lalamove Integration, Order Rebooking & Microservice Architecture Prep</div>
+        </div>
+    </header>
+
+    <div class="container">
+        <!-- Executive Summary -->
+        <div class="section">
+            <h2>Executive Summary</h2>
+            <p>
+                This session focused on hardening the integration between the BudolShap Order System and the Lalamove
+                Delivery Service.
+                Crucial synchronization gaps were identified where local order states became desynchronized from the
+                actual courier status.
+                Additionally, the user interface for handling "Delivery Canceled" events and subsequent "Rebooking"
+                flows was refined to
+                provide a seamless experience for buyers.
+            </p>
+            <ul>
+                <li><strong>Status Sync:</strong> Implemented deep inspection of Lalamove stop data to detect deliveries
+                    even when the main API status lags.</li>
+                <li><strong>Rebooking Flow:</strong> Corrected database logic to ensure rebooked orders instantly exit
+                    the "Cancelled" tab and return to "To Receive".</li>
+                <li><strong>Stability:</strong> Patched client-side crashes caused by malformed coordinate data from the
+                    tracking API.</li>
+            </ul>
+        </div>
+
+        <!-- Issue & Fix Timeline -->
+        <div class="section">
+            <h2>Issue Resolution Log</h2>
+
+            <div class="timeline-item">
+                <span class="badge badge-bug">Issue #1</span>
+                <h3>Lalamove Status Lag</h3>
+                <p><strong>Problem:</strong> The internal `order.status` was updating slower than the actual Lalamove
+                    delivery, causing the UI to show "In Transit" when the package was already delivered.</p>
+                <div class="issue-card">
+                    <h4>Implementation Fixes:</h4>
+                    <ul>
+                        <li><strong>Frontend (OrderProgressTracker):</strong> Prioritized Lalamove specific statuses
+                            (COMPLETED, DELIVERED, SUCCEEDED) over internal status for the progress bar.</li>
+                        <li><strong>Deep Check (lalamove.js):</strong> Implemented logic to inspect the `stops` array in
+                            the API response. If the final stop has a POD (Proof of Delivery) or 'COMPLETED' status, we
+                            override the top-level status to 'COMPLETED'.</li>
+                    </ul>
+                </div>
+            </div>
+
+            <div class="timeline-item">
+                <span class="badge badge-bug">Issue #2</span>
+                <h3>Rebooked Orders Stuck in "Cancelled"</h3>
+                <p><strong>Problem:</strong> After a delivery failed and was successfully rebooked, the order remained
+                    in the "Cancelled" tab instead of moving back to "To Receive".</p>
+                <div class="issue-card">
+                    <h4>Implementation Fixes:</h4>
+                    <ul>
+                        <li><strong>Service Layer (shippingService.js):</strong> Updated `bookShipping` and
+                            `trackShipping` to explicitly clear `failureReason`, `failedAt`, `cancellationReason`, and
+                            `cancelledAt` when a new valid booking or status is confirmed.</li>
+                        <li><strong>Database Query (ordersService.js):</strong> The initial fix to clear flags wasn't
+                            enough because the database filter <code>not: Prisma.DbNull</code> still matched explicit
+                            <code>null</code> (JSON null) values.</li>
+                        <li><strong>Final Fix:</strong> Updated the Prisma query to explicitly exclude both `DbNull`
+                            (database null) AND `JsonNull` (JSON null).</li>
+                    </ul>
+                    <div class="code-block">
+                        // Updated Filter Logic
+                        AND: [
+                        { shipping: { path: ['failureReason'], not: Prisma.DbNull } },
+                        { shipping: { path: ['failureReason'], not: Prisma.JsonNull } }
+                        ]
+                    </div>
+                </div>
+            </div>
+
+            <div class="timeline-item">
+                <span class="badge badge-feat">Enhancement</span>
+                <h3>"Delivery Canceled" Visibility</h3>
+                <p><strong>Requirement:</strong> Users couldn't see orders with failed deliveries in the "Cancelled" tab
+                    if the payment status was still valid.</p>
+                <div class="issue-card">
+                    <h4>Implementation Fixes:</h4>
+                    <ul>
+                        <li><strong>Frontend:</strong> Updated `orders/page.jsx` to send a new flag
+                            `isCancelledTab=true` when that tab is active.</li>
+                        <li><strong>Backend:</strong> Updated `ordersService.js` to use an `OR` condition when this flag
+                            is present: (Status=CANCELLED) OR (Payment=CANCELLED) OR (Shipping=FAILED).</li>
+                    </ul>
+                </div>
+            </div>
+
+            <div class="timeline-item">
+                <span class="badge badge-bug">Critical</span>
+                <h3>Client-Side Crash (Order Details)</h3>
+                <p><strong>Problem:</strong> The Order Details page crashed with an Application Error due to a
+                    <code>TypeError</code> when formatting coordinates.</p>
+                <div class="issue-card">
+                    <h4>Implementation Fixes:</h4>
+                    <ul>
+                        <li><strong>Component (LalamoveTracking.jsx):</strong> The API sometimes returned
+                            latitude/longitude as strings. Calling <code>.toFixed()</code> on a string threw an error.
+                        </li>
+                        <li><strong>Fix:</strong> Added safety casting <code>Number(lat).toFixed(4)</code> to ensure
+                            robustness.</li>
+                    </ul>
+                </div>
+            </div>
+
+            <div class="timeline-item">
+                <span class="badge badge-bug">Issue #5</span>
+                <h3>Hook Reference Error</h3>
+                <p><strong>Problem:</strong> A `ReferenceError: filters is not defined` occurred in the
+                    `useRealtimeBuyerOrders` hook.</p>
+                <div class="issue-card">
+                    <h4>Implementation Fixes:</h4>
+                    <ul>
+                        <li><strong>Hook:</strong> Corrected the variable scope issues. Passed `isCancelledTab` as a
+                            top-level argument to the hook instead of trying to access it from an undefined object.</li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+
+        <!-- Modified Files -->
+        <div class="section">
+            <h2>Modified System Components</h2>
+            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 1rem;">
+                <div class="issue-card">
+                    <h4>Frontend Components</h4>
+                    <ul>
+                        <li><code>app/(public)/orders/page.jsx</code></li>
+                        <li><code>app/(public)/orders/[orderId]/page.jsx</code></li>
+                        <li><code>components/OrderProgressTracker.jsx</code></li>
+                        <li><code>components/LalamoveTracking.jsx</code></li>
+                    </ul>
+                </div>
+                <div class="issue-card">
+                    <h4>Backend Services</h4>
+                    <ul>
+                        <li><code>lib/services/ordersService.js</code></li>
+                        <li><code>lib/services/shippingService.js</code></li>
+                        <li><code>lib/services/lalamove.js</code></li>
+                    </ul>
+                </div>
+                <div class="issue-card">
+                    <h4>API Routes</h4>
+                    <ul>
+                        <li><code>app/api/orders/route.js</code></li>
+                        <li><code>app/api/orders/[orderId]/sync/route.js</code></li>
+                        <li><code>app/api/orders/[orderId]/sync-lalamove/route.js</code></li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+
+        <!-- Technical Recommendations -->
+        <div class="section">
+            <h2>Microservice Architecture Readiness</h2>
+            <p>
+                The changes made in this session move the system closer to a microservices-ready state by enforcing
+                stricter separation of concerns:
+            </p>
+            <ol>
+                <li><strong>Service Isolation:</strong> `shippingService` now autonomously manages the shipping state
+                    lifecycle, including error recovery (rebooking), without the main order logic needing to know the
+                    specifics.</li>
+                <li><strong>Robust Data Handling:</strong> The introduction of "Deep Checks" and JSON null safety means
+                    the system is less reliant on perfect data synchronization and can handle eventual consistency
+                    better.</li>
+                <li><strong>Flag-Based Filtering:</strong> Moving the filtering logic to specific flags
+                    (`isCancelledTab`) allows for more flexible API contracts that can be easily ported to a standalone
+                    Order Service in the future.</li>
+            </ol>
+        </div>
+
+        <div style="text-align: center; color: #64748b; margin-top: 3rem;">
+            <p>Generated by BudolShap Development Team | December 2025</p>
+        </div>
+    </div>
+</body>
+
+</html>

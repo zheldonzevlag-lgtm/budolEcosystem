@@ -1,0 +1,228 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Store Address Fix & Lalamove Integration Plan</title>
+    <style>
+        :root {
+            --primary: #f97316;
+            /* Orange-500 */
+            --primary-dark: #ea580c;
+            /* Orange-600 */
+            --bg: #f8fafc;
+            --card: #ffffff;
+            --text: #334155;
+            --border: #e2e8f0;
+        }
+
+        body {
+            font-family: 'Inter', system-ui, -apple-system, sans-serif;
+            line-height: 1.6;
+            color: var(--text);
+            background: var(--bg);
+            max-width: 900px;
+            margin: 0 auto;
+            padding: 40px 20px;
+        }
+
+        h1,
+        h2,
+        h3 {
+            color: #1e293b;
+            font-weight: 700;
+        }
+
+        h1 {
+            font-size: 2.5rem;
+            margin-bottom: 0.5rem;
+            border-bottom: 3px solid var(--primary);
+            padding-bottom: 10px;
+        }
+
+        h2 {
+            font-size: 1.75rem;
+            margin-top: 2.5rem;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .badge {
+            background: var(--primary);
+            color: white;
+            font-size: 0.8rem;
+            padding: 4px 12px;
+            border-radius: 99px;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .card {
+            background: var(--card);
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            padding: 24px;
+            margin-top: 1.5rem;
+            box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1);
+        }
+
+        .step {
+            display: flex;
+            gap: 16px;
+            margin-bottom: 20px;
+        }
+
+        .step-number {
+            background: #e0f2fe;
+            color: #0284c7;
+            width: 32px;
+            height: 32px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 50%;
+            font-weight: bold;
+            flex-shrink: 0;
+        }
+
+        .step-content h3 {
+            margin: 0 0 8px 0;
+            font-size: 1.1rem;
+        }
+
+        code {
+            background: #f1f5f9;
+            padding: 2px 6px;
+            border-radius: 4px;
+            font-family: monospace;
+            font-size: 0.9em;
+            color: #0f172a;
+        }
+
+        pre {
+            background: #1e293b;
+            color: #e2e8f0;
+            padding: 16px;
+            border-radius: 8px;
+            overflow-x: auto;
+            font-size: 0.9rem;
+        }
+
+        .timeframe {
+            display: inline-block;
+            background: #dcfce7;
+            color: #166534;
+            font-weight: 600;
+            padding: 4px 12px;
+            border-radius: 6px;
+            margin-left: auto;
+        }
+
+        .critical {
+            border-left: 4px solid #ef4444;
+            background: #fef2f2;
+            padding: 16px;
+            margin: 16px 0;
+            border-radius: 0 8px 8px 0;
+        }
+    </style>
+</head>
+
+<body>
+
+    <header>
+        <h1>Store Address Fix Implementation Plan</h1>
+        <p style="font-size: 1.1rem; color: #64748b;">Ensuring robust, courier-agnostic address handling with automated
+            geocoding.</p>
+    </header>
+
+    <div class="card">
+        <h2>🎯 Objective</h2>
+        <p>Fix the issue where new store addresses are saved as unstructured text ("legacy"), causing failed courier
+            pickups. We will implement structured address storage with geocoordinates to support Lalamove and other
+            providers.</p>
+    </div>
+
+    <div class="card">
+        <h2>🛠 Implementation Steps</h2>
+
+        <div class="step">
+            <div class="step-number">1</div>
+            <div class="step-content" style="width: 100%">
+                <div style="display: flex; justify-content: space-between; align-items: center;">
+                    <h3>Frontend: Implement Geocoding & Structured Data</h3>
+                    <span class="timeframe">Est. 30 mins</span>
+                </div>
+                <p>Modify <code>components/StoreAddressModal.jsx</code> and
+                    <code>app/(public)/create-store/page.jsx</code>.</p>
+                <ul>
+                    <li>Integrate OpenStreetMap (Nominatim) API to fetch Lat/Long automatically when saving an address.
+                    </li>
+                    <li>Pass the full structured address object (Street, City, Zip, Lat, Long) to the parent component.
+                    </li>
+                    <li>Update the store submission payload to include this structured data.</li>
+                </ul>
+                <div class="critical">
+                    <strong>Critical:</strong> Geocoding is required for Lalamove to calculate shipping quotes
+                    accurately.
+                </div>
+            </div>
+        </div>
+
+        <div class="step">
+            <div class="step-number">2</div>
+            <div class="step-content" style="width: 100%">
+                <div style="display: flex; justify-content: space-between; align-items: center;">
+                    <h3>Backend: Save StoreAddress Record</h3>
+                    <span class="timeframe">Est. 15 mins</span>
+                </div>
+                <p>Modify <code>app/api/stores/route.js</code>.</p>
+                <ul>
+                    <li>Parse the <code>structuredAddress</code> from the request body.</li>
+                    <li>Update the Prisma `create` call to create a linked <code>StoreAddress</code> record.</li>
+                    <li>Ensure <code>latitude</code> and <code>longitude</code> are saved to the database.</li>
+                </ul>
+                <pre>
+data: {
+  // ... store details
+  addresses: {
+    create: {
+      addressObj...,
+      latitude: lat,
+      longitude: lng,
+      isDefault: true
+    }
+  }
+}
+</pre>
+            </div>
+        </div>
+
+        <div class="step">
+            <div class="step-number">3</div>
+            <div class="step-content" style="width: 100%">
+                <div style="display: flex; justify-content: space-between; align-items: center;">
+                    <h3>Verification & Testing</h3>
+                    <span class="timeframe">Est. 15 mins</span>
+                </div>
+                <ul>
+                    <li>Create a new store and verify the address is geocoded (no "Legacy" tag).</li>
+                    <li>Check database for Lat/Long values.</li>
+                    <li>Verify in Admin Panel.</li>
+                </ul>
+            </div>
+        </div>
+
+    </div>
+
+    <div class="card" style="background: #f0f9ff; border-color: #bae6fd;">
+        <h2 style="margin-top: 0; color: #0284c7;">⏱️ Total Timeframe</h2>
+        <p style="font-size: 1.2rem; font-weight: bold; color: #0c4a6e;">Approximately 1 Hour</p>
+        <p>This includes coding, testing, and verifying the fix working with the courier system.</p>
+    </div>
+
+</body>
+
+</html>

@@ -1,0 +1,250 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>BudolShap V3 - Database Synchronization & Incident Report</title>
+    <!-- Styles preserved from previous version -->
+    <style>
+        :root {
+            --primary: #4f46e5;
+            --secondary: #4338ca;
+            --bg: #f3f4f6;
+            --text: #1f2937;
+            --code-bg: #111827;
+            --code-text: #e5e7eb;
+            --success: #059669;
+            --error: #dc2626;
+            --warning: #b45309;
+        }
+
+        body {
+            font-family: ui-sans-serif, system-ui, sans-serif;
+            line-height: 1.6;
+            margin: 0;
+            padding: 0;
+            background: var(--bg);
+            color: var(--text);
+        }
+
+        .container {
+            max-width: 960px;
+            margin: 40px auto;
+            background: white;
+            padding: 40px;
+            border-radius: 12px;
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+        }
+
+        header {
+            border-bottom: 2px solid #e5e7eb;
+            padding-bottom: 20px;
+            margin-bottom: 40px;
+        }
+
+        h1 {
+            color: var(--primary);
+            margin-bottom: 5px;
+        }
+
+        h2 {
+            color: var(--secondary);
+            margin-top: 40px;
+            border-left: 4px solid var(--primary);
+            padding-left: 15px;
+        }
+
+        pre {
+            background: var(--code-bg);
+            color: var(--code-text);
+            padding: 20px;
+            border-radius: 8px;
+            overflow-x: auto;
+        }
+
+        .step {
+            background: #f9fafb;
+            border: 1px solid #e5e7eb;
+            padding: 20px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+        }
+
+        .step-title {
+            font-weight: bold;
+            color: var(--primary);
+            margin-bottom: 10px;
+            display: block;
+        }
+
+        .alert {
+            padding: 15px;
+            border-radius: 6px;
+            margin: 20px 0;
+            font-weight: 500;
+        }
+
+        .alert-success {
+            background: #d1fae5;
+            color: #065f46;
+            border-left: 4px solid var(--success);
+        }
+
+        .alert-warning {
+            background: #fffbeb;
+            color: #92400e;
+            border-left: 4px solid var(--warning);
+        }
+    </style>
+</head>
+
+<body>
+
+    <div class="container">
+        <header>
+            <h1>Database Synchronization Protocol</h1>
+            <p><strong>Incident Report & Process Guide</strong> | Generated: Dec 13, 2025</p>
+        </header>
+
+        <div class="alert alert-success">
+            <strong>Status: RESOLVED</strong> - Bidirectional synchronization is now enabled.
+        </div>
+
+        <section>
+            <h2>Direction 1: Production -> Local (Downstream)</h2>
+            <p>Use this to pull the latest live data into your development environment.</p>
+            <pre><code>node scripts/sync-db.js</code></pre>
+            <ul>
+                <li><strong>Source:</strong> <code>.env.check_prod</code> (Verified "Rich" DB)</li>
+                <li><strong>Dest:</strong> <code>.env.connection.local</code> (Localhost)</li>
+                <li><strong>Safety:</strong> Wipes Local DB before copy.</li>
+            </ul>
+        </section>
+
+        <section>
+            <h2>Direction 2: Local -> Production (Upstream)</h2>
+            <div class="alert alert-warning">
+                <strong>⚠️ DANGER ZONE:</strong> This operation is destructive.
+            </div>
+            <p>Use this to overwrite the live production database with your local data. Useful for resetting production
+                to a known state.</p>
+            <pre><code>node scripts/push-to-prod.js</code></pre>
+            <ul>
+                <li><strong>Source:</strong> <code>.env.connection.local</code> (Localhost)</li>
+                <li><strong>Dest:</strong> <code>.env.check_prod</code> (Verified "Rich" DB)</li>
+                <li><strong>Safety:</strong> Requires typing <code>CONFIRM_PROD_OVERWRITE</code> to proceed.</li>
+            </ul>
+        </section>
+
+        <section>
+            <h2>Work Context Switching (Detailed Guide)</h2>
+            <p>You can instantly switch your application's active database connection without changing code. This
+                determines which database the app talks to when you run <code>npm run dev</code>.</p>
+
+            <div class="alert">
+                <strong>Run this command to switch and start the server:</strong><br>
+                <code>npm run db:local && npm run dev</code> (Development) <br>
+                OR <br>
+                <code>npm run db:prod && npm run dev</code> (Production Review)
+            </div>
+
+            <div class="step">
+                <span class="step-title">Option A: Switch to Local (Development)</span>
+                <p>Use this for day-to-day coding, testing new features, and breaking things safely.</p>
+                <pre>npm run db:local</pre>
+                <p>This copies configuration from <code>.env.connection.local</code> to <code>.env.local</code>.</p>
+                <p><strong>Default Connection:</strong>
+                    <code>postgresql://postgres:password@localhost:5432/budolshap_v3</code>
+                </p>
+            </div>
+
+            <div class="step">
+                <span class="step-title">Option B: Switch to Production (Live Data)</span>
+                <p>Use this to verify bugs against real data or check the state of the live system from your local
+                    machine.</p>
+                <pre>npm run db:prod</pre>
+                <p>This copies configuration from <code>.env.connection.prod</code> to <code>.env.local</code>.</p>
+            </div>
+
+            <div class="step">
+                <span class="step-title">Command Breakdown (What happens behind the scenes?)</span>
+                <ul>
+                    <li>
+                        <strong><code>npm run db:local</code></strong>
+                        <p>1. Runs <code>node scripts/env-manager.js local</code>.</p>
+                        <p>2. Reads <code>.env.connection.local</code> (Source).</p>
+                        <p>3. Reads your current <code>.env.local</code> (Target).</p>
+                        <p>4. <strong>Merges</strong> them: Updates <code>DATABASE_URL</code> and
+                            <code>DIRECT_URL</code> to point to <strong>Localhost</strong>, but keeps all your other API
+                            keys (Lalamove, keys, etc.) intact.</p>
+                    </li>
+                    <br>
+                    <li>
+                        <strong><code>npm run db:prod</code></strong>
+                        <p>1. Runs <code>node scripts/env-manager.js prod</code>.</p>
+                        <p>2. Reads <code>.env.connection.prod</code> (Source).</p>
+                        <p>3. Reads your current <code>.env.local</code> (Target).</p>
+                        <p>4. <strong>Merges</strong> them: Updates <code>DATABASE_URL</code> and
+                            <code>DIRECT_URL</code> to point to the <strong>Verified Production DB</strong>, keeping
+                            other keys intact.</p>
+                    </li>
+                </ul>
+            </div>
+
+            <div class="step">
+                <span class="step-title">File Breakdown (What is each file for?)</span>
+                <ul>
+                    <li>
+                        <strong><code>.env.connection.local</code></strong>
+                        <p>Holds ONLY your local database credentials (<code>postgres://localhost...</code>). This is
+                            the "blueprint" for your local connection.</p>
+                    </li>
+                    <li>
+                        <strong><code>.env.connection.prod</code></strong>
+                        <p>Holds ONLY your verified production database credentials. This is the "blueprint" for your
+                            production connection.</p>
+                    </li>
+                    <li>
+                        <strong><code>scripts/env-manager.js</code></strong>
+                        <p>The "Switcher" utility. It performs the smart merge logic. It ensures that when you switch
+                            databases, you don't accidentally wipe out your Lalamove or Cloudinary keys.</p>
+                    </li>
+                </ul>
+            </div>
+
+            <div class="step">
+                <span class="step-title">Troubleshooting Deployments</span>
+                <p>If your Vercel deployment fails with database errors, ensure you have added
+                    <strong>DIRECT_URL</strong> to your Vercel Environment Variables.
+                </p>
+                <ul>
+                    <li><strong>Key:</strong> <code>DIRECT_URL</code></li>
+                    <li><strong>Value:</strong> Same as your <code>POSTGRES_URL</code> (or
+                        <code>POSTGRES_URL_NON_POOLING</code>).
+                    </li>
+                </ul>
+            </div>
+        </section>
+
+    </div>
+
+    <section>
+        <h2>Critical Safety Notes</h2>
+        <div class="step">
+            <span class="step-title">Database Identity Verification</span>
+            <p>Both scripts rely on <code>.env.check_prod</code> rather than the standard Vercel environment variables.
+            </p>
+            <p><strong>Why?</strong> We discovered a "Phantom Database" issue where Vercel's default
+                <code>DATABASE_URL</code> pointed to an empty instance, while the live app used a different one.
+            </p>
+            <p><strong>Rule:</strong> Always ensure <code>.env.check_prod</code> contains the verified, "Rich" database
+                credentials before running these scripts. Never push to production if you are unsure.</p>
+        </div>
+    </section>
+
+    </div>
+
+</body>
+
+</html>

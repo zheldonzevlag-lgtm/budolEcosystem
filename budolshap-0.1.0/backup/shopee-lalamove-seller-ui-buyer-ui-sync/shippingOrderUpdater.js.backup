@@ -1,0 +1,202 @@
+
+import { prisma } from '@/lib/prisma';
+import { sendOrderStatusEmail, sendDeliveryFailedBuyerEmail, sendDeliveryFailedSellerEmail } from '@/lib/email';
+import { getShippingProvider } from '@/services/shippingFactory';
+
+/**
+ * Syncs an order's status with the shipping provider (Lalamove)
+ * @param {string} orderId 
+ * @returns {Promise<object>} Result of the sync operation
+ */
+export async function syncOrderStatus(orderId) {
+    const order = await prisma.order.findUnique({
+        where: { id: orderId },
+        include: {
+            user: true,
+            store: true,
+            returns: {
+                where: { status: { in: ['BOOKED', 'PICKED_UP', 'IN_TRANSIT', 'OUT_FOR_DELIVERY', 'DELIVERED', 'RECEIVED'] } },
+                orderBy: { createdAt: 'desc' },
+                take: 1
+            }
+        }
+    });
+
+    if (!order) throw new Error('Order not found');
+
+    const activeReturn = order.returns?.[0];
+    const isReturnSync = !!(activeReturn && activeReturn.returnShipping?.bookingId);
+
+    // Determine which shipping data to use as base
+    const shippingData = isReturnSync ? activeReturn.returnShipping : order.shipping;
+
+    if (!shippingData?.bookingId || shippingData.provider !== 'lalamove') {
+        throw new Error('Not a Lalamove booking or no booking ID found');
+    }
+
+    const lalamove = getShippingProvider('lalamove');
+    const trackingResult = await lalamove.trackOrder(shippingData.bookingId);
+
+    const currentStatus = shippingData.status;
+    const newStatus = trackingResult.status;
+
+    let orderStatus = order.status;
+    let updatedShipping = {
+        ...shippingData,
+        status: newStatus,
+        shareLink: trackingResult.shareLink || shippingData.shareLink || null,
+        updatedAt: new Date().toISOString()
+    };
+
+    if (trackingResult.driverInfo) {
+        updatedShipping.driverInfo = {
+            name: trackingResult.driverInfo.name || null,
+            phone: trackingResult.driverInfo.phone || null,
+            plateNumber: trackingResult.driverInfo.plateNumber || null,
+            photo: trackingResult.driverInfo.photo || null,
+            vehicleType: trackingResult.driverInfo.vehicleType || null,
+            rating: trackingResult.driverInfo.rating || null
+        };
+    }
+
+    if (trackingResult.location) {
+        updatedShipping.location = {
+            ...trackingResult.location,
+            lat: trackingResult.location.lat || null,
+            lng: trackingResult.location.lng || null,
+            updatedAt: new Date().toISOString()
+        };
+    }
+
+    let emailSent = false;
+    let statusChanged = false;
+
+    if (newStatus !== currentStatus) {
+        statusChanged = true;
+        console.log(`[SyncService] ${isReturnSync ? 'Return' : 'Order'} ${isReturnSync ? activeReturn.id : orderId}: Status changed from ${currentStatus} to ${newStatus}`);
+
+        if (newStatus === 'PICKED_UP') {
+            if (orderStatus !== 'SHIPPED' && orderStatus !== 'DELIVERED' && orderStatus !== 'COMPLETED' && orderStatus !== 'IN_TRANSIT') {
+                orderStatus = 'IN_TRANSIT';
+                if (!isReturnSync) {
+                    // Only update shippedAt for original order
+                    // We don't have a field for returnShippedAt yet
+                }
+            }
+        } else if (newStatus === 'COMPLETED') {
+            if (!isReturnSync) {
+                if (orderStatus !== 'DELIVERED' && orderStatus !== 'COMPLETED') {
+                    orderStatus = 'DELIVERED';
+                    const deliveredAt = new Date();
+                    const autoCompleteDate = new Date();
+                    autoCompleteDate.setDate(autoCompleteDate.getDate() + 3); // Standard 3 days
+
+                    await prisma.order.update({
+                        where: { id: order.id },
+                        data: {
+                            status: orderStatus,
+                            deliveredAt,
+                            autoCompleteAt: autoCompleteDate
+                        }
+                    });
+                }
+            } else {
+                // Return completed - Lalamove delivered to seller
+                // Return status will be updated below
+            }
+        } else if (['CANCELLED', 'EXPIRED', 'REJECTED'].includes(newStatus)) {
+            if (orderStatus !== 'COMPLETED' && orderStatus !== 'DELIVERED') {
+                if (!isReturnSync) {
+                    orderStatus = 'PROCESSING';
+                    updatedShipping.previousAttempts = [
+                        ...(shippingData.previousAttempts || []),
+                        {
+                            bookingId: shippingData.bookingId,
+                            failureReason: newStatus,
+                            failedAt: new Date().toISOString(),
+                            status: 'INVALID'
+                        }
+                    ];
+                    updatedShipping.failureReason = newStatus;
+                    updatedShipping.failedAt = new Date().toISOString();
+                    updatedShipping.bookingId = null; // Clear to allow rebooking
+
+                    // Notify Buyer/Seller for main order failure
+                    await sendDeliveryFailedBuyerEmail(order.user.email, order, order.user, order.store, newStatus);
+                    if (order.store.email) {
+                        await sendDeliveryFailedSellerEmail(order.store.email, order, order.store, newStatus);
+                    }
+                    emailSent = true;
+                } else {
+                    // Return failed - move return status back to APPROVED so buyer can rebook
+                    // Handled in return status update logic below
+                }
+            }
+        }
+    }
+
+    // Update the correct record
+    if (isReturnSync) {
+        let returnStatusUpdate = activeReturn.status;
+
+        if (newStatus === 'COMPLETED') {
+            // Return completed - Lalamove delivered to seller. Auto-refund.
+            const { receiveReturn } = require('@/lib/services/returnsService'); // specific import inside to avoid circular deps if any
+            await receiveReturn({
+                returnId: activeReturn.id,
+                storeId: order.storeId
+            });
+            returnStatusUpdate = 'REFUNDED';
+            // We don't need to perform the generic update below as receiveReturn handles it
+            // But we do need to return the function result
+            return {
+                success: true,
+                statusChanged: true,
+                isReturn: true,
+                oldStatus: currentStatus,
+                newStatus: newStatus,
+                action: 'AUTO_REFUNDED'
+            };
+        }
+
+        if (newStatus === 'PICKED_UP') returnStatusUpdate = 'PICKED_UP';
+        else if (['ON_GOING', 'IN_TRANSIT'].includes(newStatus)) returnStatusUpdate = 'IN_TRANSIT';
+        else if (['CANCELLED', 'EXPIRED', 'REJECTED'].includes(newStatus)) returnStatusUpdate = 'BOOKING_REQUESTED';
+
+        await prisma.return.update({
+            where: { id: activeReturn.id },
+            data: {
+                status: returnStatusUpdate,
+                returnShipping: updatedShipping
+            }
+        });
+
+        // Update main order status to IN_TRANSIT if return is picked up
+        if ((returnStatusUpdate === 'PICKED_UP' || returnStatusUpdate === 'IN_TRANSIT') && orderStatus !== 'IN_TRANSIT') {
+            await prisma.order.update({
+                where: { id: order.id },
+                data: { status: 'IN_TRANSIT' }
+            });
+        }
+    } else {
+        await prisma.order.update({
+            where: { id: order.id },
+            data: {
+                status: orderStatus,
+                shipping: updatedShipping
+            }
+        });
+    }
+
+    if (statusChanged && !emailSent && !isReturnSync && ['SHIPPED', 'DELIVERED', 'IN_TRANSIT'].includes(orderStatus)) {
+        await sendOrderStatusEmail(order.user.email, order, order.user, order.store, orderStatus);
+    }
+
+    return {
+        success: true,
+        statusChanged,
+        isReturn: isReturnSync,
+        oldStatus: currentStatus,
+        newStatus: newStatus
+    };
+}

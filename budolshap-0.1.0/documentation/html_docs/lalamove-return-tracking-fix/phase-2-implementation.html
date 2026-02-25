@@ -1,0 +1,156 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Phase 2: Implementation - Lalamove Return Tracking Fix</title>
+    <style>
+        :root {
+            --primary-color: #2563eb;
+            --secondary-color: #1e40af;
+            --text-color: #1f2937;
+            --bg-color: #f8fafc;
+            --card-bg: #ffffff;
+            --border-color: #e2e8f0;
+            --code-bg: #1e293b;
+            --code-text: #f8fafc;
+        }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+            line-height: 1.6;
+            color: var(--text-color);
+            background-color: var(--bg-color);
+            margin: 0;
+            padding: 0;
+        }
+        .container {
+            max-width: 1000px;
+            margin: 2rem auto;
+            padding: 0 1rem;
+        }
+        header {
+            background-color: var(--primary-color);
+            color: white;
+            padding: 2rem 0;
+            text-align: center;
+            margin-bottom: 2rem;
+            box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1);
+        }
+        nav {
+            background: white;
+            padding: 1rem;
+            border-radius: 8px;
+            margin-bottom: 2rem;
+            box-shadow: 0 1px 3px 0 rgb(0 0 0 / 0.1);
+        }
+        nav a {
+            color: var(--primary-color);
+            text-decoration: none;
+            margin-right: 1.5rem;
+            font-weight: 500;
+        }
+        nav a:hover {
+            text-decoration: underline;
+        }
+        .card {
+            background: var(--card-bg);
+            padding: 2rem;
+            border-radius: 8px;
+            box-shadow: 0 1px 3px 0 rgb(0 0 0 / 0.1);
+            margin-bottom: 2rem;
+        }
+        h1, h2, h3 {
+            color: var(--secondary-color);
+        }
+        pre {
+            background-color: var(--code-bg);
+            color: var(--code-text);
+            padding: 1.5rem;
+            border-radius: 8px;
+            overflow-x: auto;
+            margin: 1.5rem 0;
+        }
+        code {
+            font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+            font-size: 0.9em;
+        }
+        .file-path {
+            font-weight: bold;
+            color: var(--primary-color);
+            margin-bottom: 0.5rem;
+            display: block;
+        }
+    </style>
+</head>
+<body>
+    <header>
+        <div class="container">
+            <h1>Phase 2: Implementation Details</h1>
+            <p>Code modifications and architectural enhancements</p>
+        </div>
+    </header>
+
+    <div class="container">
+        <nav>
+            <a href="index.html">← Back to Index</a>
+            <a href="phase-1-analysis.html">Phase 1: Analysis</a>
+            <a href="phase-2-implementation.html">Phase 2: Implementation</a>
+            <a href="phase-3-testing-verification.html">Phase 3: Testing</a>
+            <a href="implementation-summary.html">Summary</a>
+        </nav>
+
+        <div class="card">
+            <h2>Core Logic: Return-Shipping Isolation</h2>
+            <p>The fundamental fix involved creating a reliable way to detect if a Lalamove update belongs to a return shipment. This was achieved using the <code>isReturnSync</code> pattern.</p>
+            
+            <span class="file-path">services/shippingOrderUpdater.js</span>
+            <pre><code>// Detecting return sync context
+const activeReturn = order.returns?.[0];
+const isReturnSync = !!(activeReturn && activeReturn.returnShipping?.bookingId);
+
+// Selecting the correct data source
+const shippingData = isReturnSync ? activeReturn.returnShipping : order.shipping;</code></pre>
+        </div>
+
+        <div class="card">
+            <h2>Webhook Enhancement</h2>
+            <p>The webhook route was modified to prioritize <code>metadata</code> and check both the <code>trackingNumber</code> and <code>booked ID</code> (bookingId).</p>
+            <span class="file-path">app/api/shipping/lalamove/webhook/route.js</span>
+            <pre><code>const isReturnBooking = (data.metadata?.type === 'return') || 
+                       (activeReturn && (
+                           activeReturn.trackingNumber === lalamoveOrderId ||
+                           activeReturn.returnShipping?.bookingId === lalamoveOrderId
+                       ));
+
+if (isReturnBooking && activeReturn) {
+    // Update Return record directly
+    await prisma.return.update({
+        where: { id: activeReturn.id },
+        data: {
+            status: mappedStatus,
+            returnShipping: updatedShipping
+        }
+    });
+    
+    // Trigger Realtime Events
+    await triggerRealtimeEvent(`store-${storeId}`, 'return-updated', eventData);
+}</code></pre>
+        </div>
+
+        <div class="card">
+            <h2>Status Mapping Strategy</h2>
+            <p>We implemented a robust mapping between Lalamove statuses and Budolshap return statuses:</p>
+            <ul>
+                <li><code>PICKED_UP</code> &rarr; <code>SHIPPED</code></li>
+                <li><code>COMPLETED</code> &rarr; <code>RECEIVED</code></li>
+                <li><code>CANCELLED/EXPIRED</code> &rarr; <code>APPROVED</code> (reset to previous valid state)</li>
+            </ul>
+        </div>
+
+        <div class="card">
+            <h2>Realtime Update Propagation</h2>
+            <p>To ensure the UI updates without refresh, we added dual-channel event triggering in both the webhook and manual sync routes, targeting both the <code>store-{id}</code> and <code>user-{id}</code> channels.</p>
+        </div>
+    </div>
+</body>
+</html>

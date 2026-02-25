@@ -1,0 +1,226 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Phase 6: Refund & Return UI Integration - Implementation Plan</title>
+    <style>
+        :root {
+            --primary: #10b981;
+            --primary-dark: #059669;
+            --secondary: #64748b;
+            --bg: #f8fafc;
+            --card-bg: #ffffff;
+            --text: #1e293b;
+            --border: #e2e8f0;
+            --orange: #f97316;
+        }
+        body {
+            font-family: 'Inter', -apple-system, sans-serif;
+            background-color: var(--bg);
+            color: var(--text);
+            line-height: 1.6;
+            margin: 0;
+            padding: 0;
+        }
+        .container {
+            max-width: 1000px;
+            margin: 40px auto;
+            padding: 0 20px;
+        }
+        header {
+            background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+            color: white;
+            padding: 60px 20px;
+            text-align: center;
+            border-radius: 0 0 40px 40px;
+            box-shadow: 0 10px 25px rgba(16, 185, 129, 0.2);
+        }
+        h1 { margin: 0; font-size: 2.5rem; }
+        .subtitle { font-size: 1.1rem; opacity: 0.9; margin-top: 10px; }
+        nav {
+            background: white;
+            padding: 15px;
+            border-radius: 12px;
+            margin-top: -30px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.05);
+            display: flex;
+            justify-content: center;
+            gap: 20px;
+            position: sticky;
+            top: 20px;
+            z-index: 100;
+        }
+        nav a {
+            text-decoration: none;
+            color: var(--secondary);
+            font-weight: 500;
+            font-size: 0.9rem;
+            transition: color 0.2s;
+        }
+        nav a:hover { color: var(--primary); }
+        .card {
+            background: var(--card-bg);
+            border-radius: 16px;
+            padding: 30px;
+            margin-bottom: 30px;
+            box-shadow: 0 4px 6px -1px rgba(0,0,0,0.1);
+            border: 1px border var(--border);
+        }
+        h2 { color: var(--primary-dark); border-bottom: 2px solid var(--bg); padding-bottom: 10px; }
+        h3 { color: var(--secondary); margin-top: 25px; }
+        .status-badge {
+            display: inline-block;
+            padding: 4px 12px;
+            border-radius: 20px;
+            font-size: 0.8rem;
+            font-weight: 600;
+            text-transform: uppercase;
+        }
+        .status-pending { background: #fee2e2; color: #991b1b; }
+        .status-in-progress { background: #fef3c7; color: #92400e; }
+        .status-completed { background: #dcfce7; color: #166534; }
+        
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 20px 0;
+        }
+        th, td {
+            padding: 12px;
+            text-align: left;
+            border-bottom: 1px solid var(--border);
+        }
+        th { background: var(--bg); font-weight: 600; }
+        
+        .code-block {
+            background: #1e293b;
+            color: #f8fafc;
+            padding: 20px;
+            border-radius: 8px;
+            font-family: 'Fira Code', monospace;
+            font-size: 0.9rem;
+            overflow-x: auto;
+            margin: 15px 0;
+        }
+        
+        .phase-step {
+            display: flex;
+            gap: 20px;
+            margin-bottom: 20px;
+        }
+        .step-number {
+            background: var(--primary);
+            color: white;
+            width: 30px;
+            height: 30px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            flex-shrink: 0;
+            font-weight: bold;
+        }
+    </style>
+</head>
+<body>
+
+<header>
+    <h1>Phase 6: Refund & Return UI Integration</h1>
+    <p class="subtitle">Technical Implementation Plan & Documentation</p>
+</header>
+
+<div class="container">
+    <nav>
+        <a href="#overview">Overview</a>
+        <a href="#specifications">Specifications</a>
+        <a href="#buyer-ui">Buyer UI</a>
+        <a href="#seller-ui">Seller UI</a>
+        <a href="#api">API Integration</a>
+        <a href="#testing">Testing</a>
+    </nav>
+
+    <section id="overview" class="card">
+        <h2>Executive Summary</h2>
+        <p>This phase focuses on bridging the gap between the complex backend escrow/return logic (Phases 1-5) and the end-user interface. We are implementing Shopee-style guarantee extensions, return requests with image uploads, and a comprehensive seller dashboard for managing returns.</p>
+        
+        <h3>Current Status: <span class="status-badge status-in-progress">In Progress</span></h3>
+        <p>Backend logic is verified. UI components for Order Details and Returns are partially implemented. API endpoints need expansion to support new UI actions.</p>
+    </section>
+
+    <section id="specifications" class="card">
+        <h2>Technical Specifications</h2>
+        <table>
+            <tr>
+                <th>Component</th>
+                <th>Requirement</th>
+                <th>Status</th>
+            </tr>
+            <tr>
+                <td>Guarantee Extension</td>
+                <td>One-time 3-day extension of escrow protection</td>
+                <td><span class="status-badge status-completed">Completed</span></td>
+            </tr>
+            <tr>
+                <td>Return Request</td>
+                <td>Reason selection + Image upload + Escrow locking</td>
+                <td><span class="status-badge status-completed">Completed</span></td>
+            </tr>
+            <tr>
+                <td>Seller Dashboard</td>
+                <td>Accept/Reject returns + View Evidence + Refund trigger</td>
+                <td><span class="status-badge status-completed">Completed</span></td>
+            </tr>
+            <tr>
+                <td>Real-time Sync</td>
+                <td>Pusher notifications for status changes</td>
+                <td><span class="status-badge status-completed">Completed</span></td>
+            </tr>
+        </table>
+    </section>
+
+    <section id="buyer-ui" class="card">
+        <h2>Buyer Dashboard Enhancements</h2>
+        <div class="phase-step">
+            <div class="step-number">1</div>
+            <div>
+                <strong>Guarantee Extension Button</strong>
+                <p>Add a button in <code>app/(public)/orders/[orderId]/page.jsx</code> visible when status is SHIPPED or DELIVERED and <code>isGuaranteeExtended</code> is false.</p>
+            </div>
+        </div>
+        <div class="phase-step">
+            <div class="step-number">2</div>
+            <div>
+                <strong>Return/Refund Modal</strong>
+                <p>Enhance <code>ReturnRequestModal.jsx</code> to support multiple image uploads and detailed reason input.</p>
+            </div>
+        </div>
+    </section>
+
+    <section id="api" class="card">
+        <h2>API Integration Updates</h2>
+        <p>The <code>/api/orders/[orderId]/status</code> endpoint will be updated to handle specific actions beyond simple status changes.</p>
+        <div class="code-block">
+// Expected payload for Guarantee Extension
+{
+  "action": "EXTEND_GUARANTEE"
+}
+        </div>
+    </section>
+
+    <section id="testing" class="card">
+        <h2>Testing Protocol</h2>
+        <ul>
+            <li><strong>Unit Test:</strong> Verify <code>isGuaranteeExtended</code> flag toggles correctly and <code>autoCompleteAt</code> shifts by 3 days.</li>
+            <li><strong>Integration Test:</strong> Ensure Pusher receives the <code>order-updated</code> event after UI action.</li>
+            <li><strong>UI Test:</strong> Confirm buttons disappear/disable after successful action.</li>
+        </ul>
+    </section>
+
+    <footer style="text-align: center; padding: 20px; color: var(--secondary); font-size: 0.8rem;">
+        &copy; 2025 BudolShap Implementation Team | Generated on 2025-12-28
+    </footer>
+</div>
+
+</body>
+</html>

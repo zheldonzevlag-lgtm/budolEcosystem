@@ -1,0 +1,56 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Mitigation Strategies - BudolEcosystem</title>
+    <style>
+        body { font-family: sans-serif; padding: 40px; max-width: 900px; margin: 0 auto; line-height: 1.6; }
+        h1, h2 { color: #0052CC; }
+        .section { margin-bottom: 30px; border: 1px solid #eee; padding: 20px; border-radius: 8px; }
+        .risk-ref { font-weight: bold; color: #D04437; }
+        .action-item { margin-bottom: 10px; }
+    </style>
+</head>
+<body>
+    <h1>Mitigation Strategies</h1>
+    <p>Detailed plans to address identified risks.</p>
+    <p><a href="index.html">&larr; Back to Index</a></p>
+
+    <div class="section">
+        <h2><span class="risk-ref">R-001</span>: Data Loss during Logout</h2>
+        <p><strong>Description:</strong> Race condition where empty cart sync overwrites server data.</p>
+        <p><strong>Mitigation Plan:</strong></p>
+        <ul>
+            <li class="action-item"><strong>Implement Logout State Check:</strong> Add `prevUserIdRef` in `PublicLayout.jsx` to detect logout transition.</li>
+            <li class="action-item"><strong>Conditional Sync:</strong> Prevent API calls if `userId` is null immediately after a state change.</li>
+            <li class="action-item"><strong>Verify with E2E Tests:</strong> Run `test_cart_persistence.mjs` to confirm fix.</li>
+        </ul>
+        <p><strong>Status:</strong> <span style="color:green; font-weight:bold;">Implemented & Verified</span></p>
+    </div>
+
+    <div class="section">
+        <h2><span class="risk-ref">R-002</span>: SQLite Database Locking</h2>
+        <p><strong>Description:</strong> Concurrent writes cause "database is locked" errors in development.</p>
+        <p><strong>Mitigation Plan:</strong></p>
+        <ul>
+            <li class="action-item"><strong>Process Management:</strong> Ensure only one Next.js dev server is running. Kill stale processes.</li>
+            <li class="action-item"><strong>Sequential Tests:</strong> Run test scripts sequentially, not in parallel with user traffic.</li>
+            <li class="action-item"><strong>Migration to PostgreSQL:</strong> Plan for production database migration.</li>
+        </ul>
+        <p><strong>Status:</strong> <span style="color:orange; font-weight:bold;">Ongoing Monitoring</span></p>
+    </div>
+
+    <div class="section">
+        <h2><span class="risk-ref">R-005</span>: Authentication Token Expiry</h2>
+        <p><strong>Description:</strong> Users may be abruptly logged out or actions may fail silently if token expires.</p>
+        <p><strong>Mitigation Plan:</strong></p>
+        <ul>
+            <li class="action-item"><strong>Refresh Token Logic:</strong> Implement silent refresh using HTTP-only cookies.</li>
+            <li class="action-item"><strong>UI Feedback:</strong> Show "Session Expiring" modal before forced logout.</li>
+            <li class="action-item"><strong>Graceful Failures:</strong> Ensure API clients handle 401 errors by attempting refresh or redirecting to login.</li>
+        </ul>
+        <p><strong>Status:</strong> <span style="color:blue; font-weight:bold;">Planned for Next Sprint</span></p>
+    </div>
+</body>
+</html>

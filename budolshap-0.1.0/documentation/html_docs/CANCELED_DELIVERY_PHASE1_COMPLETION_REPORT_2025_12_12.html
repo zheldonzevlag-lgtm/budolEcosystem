@@ -1,0 +1,255 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Canceled Delivery - Phase 1 Completion Report</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            line-height: 1.6;
+            color: #333;
+            max-width: 1000px;
+            margin: 0 auto;
+            padding: 20px;
+            background-color: #f5f7fa;
+        }
+
+        h1 {
+            color: #2c3e50;
+            border-bottom: 3px solid #3498db;
+            padding-bottom: 10px;
+            display: flex;
+            align-items: center;
+            gap: 15px;
+        }
+
+        h2 {
+            color: #2980b9;
+            margin-top: 30px;
+            border-left: 5px solid #3498db;
+            padding-left: 15px;
+            background: #e8f4fc;
+            padding-top: 10px;
+            padding-bottom: 10px;
+        }
+
+        .card {
+            background: white;
+            padding: 25px;
+            border-radius: 8px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.05);
+            margin-bottom: 25px;
+            border: 1px solid #e1e4e8;
+        }
+
+        .status-badge {
+            display: inline-block;
+            padding: 5px 12px;
+            border-radius: 20px;
+            font-weight: bold;
+            font-size: 0.9em;
+            text-transform: uppercase;
+        }
+
+        .status-done {
+            background-color: #d4edda;
+            color: #155724;
+            border: 1px solid #c3e6cb;
+        }
+
+        .code-block {
+            background-color: #2d3436;
+            color: #dfe6e9;
+            padding: 15px;
+            border-radius: 5px;
+            font-family: 'Consolas', 'Monaco', monospace;
+            overflow-x: auto;
+            margin: 15px 0;
+            font-size: 13px;
+            line-height: 1.5;
+        }
+
+        .highlight {
+            color: #fab1a0;
+            font-weight: bold;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 20px 0;
+        }
+
+        th,
+        td {
+            text-align: left;
+            padding: 12px;
+            border-bottom: 1px solid #ddd;
+        }
+
+        th {
+            background-color: #f8f9fa;
+            color: #2c3e50;
+        }
+
+        .success-box {
+            background-color: #d1e7dd;
+            border: 1px solid #badbcc;
+            color: #0f5132;
+            padding: 20px;
+            border-radius: 8px;
+            margin-top: 20px;
+        }
+
+        .feature-list li {
+            margin-bottom: 10px;
+            padding-left: 20px;
+            position: relative;
+        }
+
+        .feature-list li::before {
+            content: "✅";
+            position: absolute;
+            left: -5px;
+        }
+    </style>
+</head>
+
+<body>
+
+    <h1>
+        <span>🚀 Phase 1 Completion Report</span>
+        <span class="status-badge status-done">COMPLETED</span>
+    </h1>
+
+    <div class="card">
+        <h3>📄 Executive Summary</h3>
+        <p>
+            <strong>Objective:</strong> Enable re-booking of failed deliveries without canceling the entire order.
+        </p>
+        <p>
+            <strong>Status:</strong> All Phase 1 requirements have been implemented, tested, and deployed to production.
+            Sellers can now recover from <code>CANCELLED</code>, <code>EXPIRED</code>, or <code>REJECTED</code> delivery
+            attempts
+            by using the new "Rebook Delivery" workflow.
+        </p>
+        <p>
+            <strong>Deployment:</strong> <a href="https://budolshap-v3.vercel.app" target="_blank">Active in
+                Production</a> (Vercel)
+        </p>
+    </div>
+
+    <h2>✅ Delivered Features (Checklist)</h2>
+
+    <div class="card">
+        <ul class="feature-list">
+            <li>
+                <strong>Auto-Revert to "To Ship" (PROCESSING)</strong><br>
+                When Lalamove sends a <code>CANCELLED</code>, <code>EXPIRED</code>, or <code>REJECTED</code> webhook,
+                the order status
+                is now automatically reverted to <code>PROCESSING</code> (instead of canceling the whole order).
+            </li>
+            <li>
+                <strong>Failure Tracking & History</strong><br>
+                We now store the specific <code>failureReason</code> (e.g., "EXPIRED") and archive the failed attempt in
+                a
+                new <code>shipping.previousAttempts</code> array.
+            </li>
+            <li>
+                <strong>Visual "Failed" Indicator</strong><br>
+                Added a red "Failed" badge in the Store Orders table for immediate visibility of problem orders.
+            </li>
+            <li>
+                <strong>"Rebook Delivery" Workflow</strong><br>
+                A dedicated button allowing one-click re-booking of failed orders.
+            </li>
+            <li>
+                <strong>Manual Cancellation Recovery</strong><br>
+                If a seller manually cancels a delivery via the API/Dashboard, it also triggers the rebookable state.
+            </li>
+        </ul>
+    </div>
+
+    <h2>💻 Technical Implementation Evidence</h2>
+
+    <div class="card">
+        <h3>1. Webhook Logic Update (Backend)</h3>
+        <p><em>File: <code>app/api/webhooks/lalamove/route.js</code></em></p>
+        <div class="code-block">
+            // Combined Handler for Failure Events
+            case 'CANCELLED':
+            case 'REJECTED':
+            case 'EXPIRED':
+            console.log(`Delivery ${event} for order ${order.id}`);
+
+            // ✅ KEY CHANGE: Revert to PROCESSING instead of CANCELLED
+            if (order.status !== 'COMPLETED' && order.status !== 'DELIVERED') {
+            newStatus = 'PROCESSING';
+            updateData.status = 'PROCESSING';
+
+            // ✅ Archive the failed attempt
+            updatedShipping.previousAttempts = [
+            ...(order.shipping.previousAttempts || []),
+            {
+            bookingId: order.shipping.bookingId,
+            failureReason: event,
+            failedAt: new Date().toISOString(),
+            status: 'INVALID'
+            }
+            ];
+
+            // ✅ Flag current status as failed
+            updatedShipping.failureReason = event;
+            updatedShipping.failedAt = new Date().toISOString();
+            }
+            break;
+        </div>
+    </div>
+
+    <div class="card">
+        <h3>2. UI Status Logic (Frontend)</h3>
+        <p><em>File: <code>app/store/orders/page.jsx</code></em></p>
+        <div class="code-block">
+            // Helper to detect failed state
+            const getDeliveryStatus = (order) => {
+            // ... existing checks ...
+
+            // ✅ NEW CHECK: Is it in 'PROCESSING' but has a failure reason?
+            if ((order.status === 'PROCESSING' || order.status === 'ORDER_PLACED') && order.shipping?.failureReason) {
+            return <span class="highlight">'delivery_failed'</span>;
+            }
+
+            // ... default checks ...
+            }
+        </div>
+    </div>
+
+    <h2>🧪 User Guide: How to Rebook</h2>
+
+    <div class="card">
+        <ol>
+            <li><strong>Identify Failed Orders:</strong> Look for the <span style="color: red; font-weight: bold;">❌
+                    Failed</span> badge in your "Store Orders" list.</li>
+            <li><strong>View Details:</strong> Click the <strong>"Rebook Delivery"</strong> button (or the row).</li>
+            <li><strong>Review History:</strong> In the modal, you will see a red box explaining <em>why</em> it failed
+                (e.g., "Delivery expired"). You can also see a list of "Previous Attempts".</li>
+            <li><strong>Action:</strong> Click the <strong>"🔄 Rebook Delivery"</strong> button inside the modal to
+                instantly request a new driver.</li>
+        </ol>
+    </div>
+
+    <div class="success-box">
+        <h3>🎉 Phase 1 Complete</h3>
+        <p>The system is now robust against courier cancellations. The foundation is set for <strong>Phase 2
+                (Notifications & Polling)</strong>.</p>
+    </div>
+
+    <div style="text-align: center; margin-top: 50px; color: #888;">
+        <p>Generated on December 12, 2025</p>
+    </div>
+
+</body>
+
+</html>

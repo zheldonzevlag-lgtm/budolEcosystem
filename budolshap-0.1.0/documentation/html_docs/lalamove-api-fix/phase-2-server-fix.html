@@ -1,0 +1,59 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Phase 2: Server-side Error Serialization - Lalamove API Fix</title>
+    <style>
+        body { font-family: -apple-system, sans-serif; line-height: 1.6; color: #333; max-width: 800px; margin: 0 auto; padding: 20px; background: #f4f7f6; }
+        .card { background: white; padding: 2rem; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); margin-bottom: 2rem; }
+        h1, h2 { color: #4f46e5; }
+        pre { background: #1e293b; color: #f8fafc; padding: 1rem; border-radius: 4px; overflow-x: auto; }
+        code { font-family: monospace; background: #e2e8f0; padding: 0.2rem 0.4rem; border-radius: 4px; }
+        .nav { margin-bottom: 1rem; }
+        .nav a { color: #4f46e5; text-decoration: none; }
+    </style>
+</head>
+<body>
+    <div class="nav"><a href="index.html">&larr; Back to Index</a></div>
+    <div class="card">
+        <h1>Phase 2: Server-side Error Serialization</h1>
+        <p><strong>Status:</strong> <span style="color: #166534;">Completed</span></p>
+        
+        <h2>Objective</h2>
+        <p>Ensure that all errors occurring during the quote generation process are properly captured, serialized, and returned to the client in a meaningful format.</p>
+
+        <h2>Implementation Details</h2>
+        <p>Modified <code>app/api/shipping/lalamove/quote/route.js</code> to enhance the <code>catch</code> block:</p>
+        <pre><code>try {
+    // ... logic ...
+} catch (error) {
+    console.error('[Lalamove Quote Error]:', error);
+
+    // Capture original error from provider if available
+    const originalError = error.originalError || null;
+    
+    // Ensure error details are serializable
+    const errorDetails = originalError ? 
+        (originalError instanceof Error ? 
+            { message: originalError.message, stack: originalError.stack } : 
+            originalError) : 
+        { message: error.message };
+
+    return NextResponse.json({
+        error: error.message || 'Failed to get shipping quote',
+        details: errorDetails,
+        code: error.code || 'UNKNOWN',
+        timestamp: new Date().toISOString()
+    }, { status: 500 });
+}</code></pre>
+
+        <h2>Key Improvements</h2>
+        <ul>
+            <li><strong>Explicit Serialization:</strong> By extracting properties from the <code>Error</code> object into a plain object, we guarantee they won't be lost during <code>JSON.stringify</code>.</li>
+            <li><strong>Original Error Capture:</strong> We now preserve the detailed error response from Lalamove's actual API.</li>
+            <li><strong>Standardized Response:</strong> Every error response now follows the same schema: <code>{ error, details, code, timestamp }</code>.</li>
+        </ul>
+    </div>
+</body>
+</html>

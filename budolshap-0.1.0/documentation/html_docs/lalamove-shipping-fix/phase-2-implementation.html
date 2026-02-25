@@ -1,0 +1,90 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Phase 2: Implementation Plan - Lalamove Shipping Fee Fix</title>
+    <style>
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; line-height: 1.6; color: #333; max-width: 1000px; margin: 0 auto; padding: 20px; background-color: #f4f7f6; }
+        header { background-color: #28a745; color: white; padding: 20px; text-align: center; border-radius: 8px 8px 0 0; }
+        nav { background: #343a40; padding: 10px; border-radius: 0 0 8px 8px; margin-bottom: 20px; }
+        nav a { color: white; text-decoration: none; margin-right: 15px; font-weight: bold; }
+        section { background: white; padding: 20px; margin-bottom: 20px; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
+        h2 { color: #28a745; border-bottom: 2px solid #28a745; padding-bottom: 10px; }
+        h3 { color: #555; }
+        pre { background: #272822; color: #f8f8f2; padding: 15px; border-radius: 5px; overflow-x: auto; }
+        code { font-family: 'Courier New', Courier, monospace; }
+        .step { font-weight: bold; color: #28a745; }
+        .code-block { background: #f8f9fa; border-left: 5px solid #28a745; padding: 10px; margin: 10px 0; }
+    </style>
+</head>
+<body>
+    <header>
+        <h1>Lalamove Shipping Fee Discrepancy Fix</h1>
+        <p>Implementation Plan - Phase 2: Implementation of Fixes</p>
+    </header>
+    <nav>
+        <a href="index.html">Summary</a>
+        <a href="phase-1-investigation.html">Phase 1: Investigation</a>
+        <a href="phase-2-implementation.html">Phase 2: Implementation</a>
+    </nav>
+
+    <section>
+        <h2>Overview</h2>
+        <p>This phase details the technical changes required to ensure accurate shipping quotes and eliminate the 73 vs 102 discrepancy. The focus is on price standardization, coordinate precision, and data integrity.</p>
+    </section>
+
+    <section>
+        <h2>Technical Tasks</h2>
+        
+        <h3>1. Standardize Price Extraction</h3>
+        <p><span class="step">Task:</span> Update <code>services/lalamove.js</code> to prioritize <code>totalIncludeTax</code>.</p>
+        <div class="code-block">
+            <p><strong>File:</strong> <code>services/lalamove.js</code></p>
+            <p>Modify <code>getQuote</code> return structure to explicitly include tax and surcharges in the amount displayed to the user.</p>
+        </div>
+
+        <h3>2. Coordinate Normalization</h3>
+        <p><span class="step">Task:</span> Implement coordinate rounding to 6 decimal places across the stack.</p>
+        <p>Ensure that both the <code>LalamoveWidget.jsx</code> (frontend) and <code>shippingService.js</code> (backend) use the exact same precision for latitude and longitude.</p>
+        <pre><code>// Example helper to be used
+const normalizeCoord = (coord) => parseFloat(parseFloat(coord).toFixed(6));</code></pre>
+
+        <h3>3. Enhanced Order Shipping Data</h3>
+        <p><span class="step">Task:</span> Expand the <code>shipping</code> JSON field in the <code>Order</code> model.</p>
+        <p>Store the full <code>priceBreakdown</code> from Lalamove to provide transparency in the admin and store owner dashboards.</p>
+        <pre><code>// Enhanced shipping object structure
+{
+  "provider": "lalamove",
+  "cost": 102.00,
+  "breakdown": {
+    "base": 60.00,
+    "distance": 13.00,
+    "surcharge": 29.00
+  },
+  "coordinates": { "lat": 14.123456, "lng": 121.123456 }
+}</code></pre>
+
+        <h3>4. Quote Validation Middleware</h3>
+        <p><span class="step">Task:</span> Add a validation check in <code>lib/services/ordersService.js</code>.</p>
+        <p>Before finalizing an order, compare the requested shipping cost with a fresh backend-calculated cost. If the difference exceeds a threshold (e.g., 5%), flag the order for review or prompt the user.</p>
+    </section>
+
+    <section>
+        <h2>Dependencies</h2>
+        <ul>
+            <li>Lalamove v3 API access (Production/Sandbox)</li>
+            <li>Prisma Client (for database updates)</li>
+            <li>Nominatim API (for continued geocoding fallback)</li>
+        </ul>
+    </section>
+
+    <section>
+        <h2>Risk Mitigation</h2>
+        <ul>
+            <li><strong>Backward Compatibility:</strong> Ensure existing orders with the old shipping JSON structure still load correctly in the UI.</li>
+            <li><strong>API Limits:</strong> Be mindful of Lalamove API rate limits when implementing additional validation calls.</li>
+        </ul>
+    </section>
+</body>
+</html>

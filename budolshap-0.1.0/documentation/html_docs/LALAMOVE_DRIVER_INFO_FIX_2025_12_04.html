@@ -1,0 +1,340 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Lalamove Driver Information Fix - December 4, 2025</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            line-height: 1.6;
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+            background: #f5f5f5;
+        }
+
+        .container {
+            background: white;
+            padding: 30px;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+        }
+
+        h1 {
+            color: #2c3e50;
+            border-bottom: 3px solid #3498db;
+            padding-bottom: 10px;
+        }
+
+        h2 {
+            color: #34495e;
+            margin-top: 30px;
+            border-left: 4px solid #3498db;
+            padding-left: 15px;
+        }
+
+        h3 {
+            color: #7f8c8d;
+        }
+
+        .status {
+            display: inline-block;
+            padding: 5px 15px;
+            border-radius: 20px;
+            font-weight: bold;
+            margin: 10px 0;
+        }
+
+        .status.completed {
+            background: #2ecc71;
+            color: white;
+        }
+
+        .status.pending {
+            background: #f39c12;
+            color: white;
+        }
+
+        code {
+            background: #ecf0f1;
+            padding: 2px 6px;
+            border-radius: 3px;
+            font-family: 'Courier New', monospace;
+        }
+
+        pre {
+            background: #2c3e50;
+            color: #ecf0f1;
+            padding: 15px;
+            border-radius: 5px;
+            overflow-x: auto;
+        }
+
+        .file-change {
+            background: #e8f4f8;
+            border-left: 4px solid #3498db;
+            padding: 15px;
+            margin: 15px 0;
+        }
+
+        .issue {
+            background: #fee;
+            border-left: 4px solid #e74c3c;
+            padding: 15px;
+            margin: 15px 0;
+        }
+
+        .solution {
+            background: #efe;
+            border-left: 4px solid #2ecc71;
+            padding: 15px;
+            margin: 15px 0;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 20px 0;
+        }
+
+        th,
+        td {
+            padding: 12px;
+            text-align: left;
+            border-bottom: 1px solid #ddd;
+        }
+
+        th {
+            background: #3498db;
+            color: white;
+        }
+
+        tr:hover {
+            background: #f5f5f5;
+        }
+
+        .timestamp {
+            color: #7f8c8d;
+            font-size: 0.9em;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="container">
+        <h1>🚗 Lalamove Driver Information Fix</h1>
+        <p class="timestamp">Session Date: December 4, 2025 | Time: 14:12 - 14:50 PHT</p>
+        <p><span class="status completed">COMPLETED</span></p>
+
+        <h2>📋 Overview</h2>
+        <p>Fixed the Lalamove driver information display to show real data from Lalamove API instead of mock data. The
+            driver name and vehicle type now correctly display information received from Lalamove webhooks.</p>
+
+        <h2>🎯 Objective</h2>
+        <p>Ensure that the driver information shown in the order tracking page displays:</p>
+        <ul>
+            <li>✅ Real driver name from Lalamove</li>
+            <li>✅ Real vehicle type from Lalamove</li>
+            <li>✅ Real phone number from Lalamove</li>
+            <li>✅ Real plate number from Lalamove</li>
+        </ul>
+
+        <h2>🔍 Issues Identified</h2>
+
+        <div class="issue">
+            <h3>Issue #1: Wrong Property Name in Component</h3>
+            <p><strong>File:</strong> <code>components/LalamoveTracking.jsx</code></p>
+            <p><strong>Problem:</strong> Component was looking for <code>driverInfo</code> property but webhook stores
+                data in <code>driver</code> property</p>
+            <pre>// ❌ Wrong
+const { driverInfo, shareLink } = order.shipping || {};
+const driver = driverInfo || { /* mock data */ };</pre>
+        </div>
+
+        <div class="issue">
+            <h3>Issue #2: Missing Vehicle Type Capture</h3>
+            <p><strong>File:</strong> <code>app/api/webhooks/lalamove/route.js</code></p>
+            <p><strong>Problem:</strong> Webhook handler wasn't capturing the <code>vehicleType</code> field from
+                Lalamove driver data</p>
+            <pre>// ❌ Missing vehicleType
+updatedShipping.driver = {
+    name: driver.name,
+    phone: driver.phone,
+    plateNumber: driver.plateNumber,
+    photo: driver.photo
+    // vehicleType was missing!
+};</pre>
+        </div>
+
+        <div class="issue">
+            <h3>Issue #3: Test Script Not Sending Vehicle Type</h3>
+            <p><strong>File:</strong> <code>scripts/trigger-pickup-webhook.js</code></p>
+            <p><strong>Problem:</strong> Test webhook payload didn't include <code>vehicleType</code></p>
+        </div>
+
+        <h2>✅ Solutions Implemented</h2>
+
+        <div class="solution">
+            <h3>Solution #1: Fixed Property Name</h3>
+            <p><strong>File:</strong> <code>components/LalamoveTracking.jsx</code></p>
+            <pre>// ✅ Correct
+const { driver, shareLink } = order.shipping || {};
+const driverData = driver || {
+    name: "Juan Dela Cruz",
+    phone: "+63 917 123 4567",
+    plateNumber: "ABC 1234",
+    rating: 4.8,
+    vehicleType: "Motorcycle"
+};</pre>
+            <p>Updated all references from <code>driver</code> to <code>driverData</code> in the JSX to avoid variable
+                name conflicts.</p>
+        </div>
+
+        <div class="solution">
+            <h3>Solution #2: Added Vehicle Type Capture</h3>
+            <p><strong>File:</strong> <code>app/api/webhooks/lalamove/route.js</code></p>
+            <pre>// ✅ Now includes vehicleType
+if (driver) {
+    updatedShipping.driver = {
+        name: driver.name,
+        phone: driver.phone,
+        plateNumber: driver.plateNumber,
+        photo: driver.photo,
+        vehicleType: driver.vehicleType // ✅ Added
+    };
+}</pre>
+        </div>
+
+        <div class="solution">
+            <h3>Solution #3: Updated Test Script</h3>
+            <p><strong>File:</strong> <code>scripts/trigger-pickup-webhook.js</code></p>
+            <pre>// ✅ Now includes vehicleType
+const payload = {
+    orderId: bookingId,
+    event: 'PICKED_UP',
+    status: 'PICKED_UP',
+    driver: {
+        name: 'Juan Dela Cruz',
+        phone: '+631001234567',
+        plateNumber: 'ABC 1234',
+        vehicleType: 'Motorcycle' // ✅ Added
+    },
+    // ... rest of payload
+};</pre>
+        </div>
+
+        <h2>📁 Files Modified</h2>
+        <table>
+            <thead>
+                <tr>
+                    <th>File</th>
+                    <th>Changes</th>
+                    <th>Purpose</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td><code>components/LalamoveTracking.jsx</code></td>
+                    <td>Fixed property name from <code>driverInfo</code> to <code>driver</code></td>
+                    <td>Display real driver data from Lalamove</td>
+                </tr>
+                <tr>
+                    <td><code>app/api/webhooks/lalamove/route.js</code></td>
+                    <td>Added <code>vehicleType</code> to driver object capture</td>
+                    <td>Store vehicle type from Lalamove webhook</td>
+                </tr>
+                <tr>
+                    <td><code>scripts/trigger-pickup-webhook.js</code></td>
+                    <td>Added <code>vehicleType</code> to test payload</td>
+                    <td>Test webhook with complete driver data</td>
+                </tr>
+            </tbody>
+        </table>
+
+        <h2>🧪 Testing</h2>
+
+        <h3>Local Testing Challenges</h3>
+        <div class="issue">
+            <p>Encountered database connection issues when testing locally:</p>
+            <ul>
+                <li>Dev server uses <code>.env.local</code> with Vercel Postgres URL</li>
+                <li>Vercel Postgres URLs (<code>prisma+postgres://</code>) don't work in local development</li>
+                <li>Test script uses production database but local webhook secret</li>
+            </ul>
+            <p><strong>Resolution:</strong> Changes will be deployed to production for proper testing with real Lalamove
+                webhooks.</p>
+        </div>
+
+        <h3>Production Testing Plan</h3>
+        <ol>
+            <li>Deploy changes to Vercel production</li>
+            <li>Create a new test order with Lalamove delivery</li>
+            <li>Wait for Lalamove to assign a driver (ON_GOING event)</li>
+            <li>Verify driver information displays correctly:
+                <ul>
+                    <li>Driver name</li>
+                    <li>Vehicle type</li>
+                    <li>Plate number</li>
+                    <li>Phone number</li>
+                </ul>
+            </li>
+            <li>Simulate PICKED_UP event if needed using production webhook trigger</li>
+        </ol>
+
+        <h2>📊 Data Flow</h2>
+        <pre>
+Lalamove API
+    ↓
+Webhook Event (ON_GOING, PICKED_UP, etc.)
+    ↓
+/api/webhooks/lalamove
+    ↓
+Extract driver data:
+  - name
+  - phone
+  - plateNumber
+  - photo
+  - vehicleType ✅ NEW
+    ↓
+Store in order.shipping.driver
+    ↓
+LalamoveTracking Component
+    ↓
+Display to user
+        </pre>
+
+        <h2>🔄 Next Steps</h2>
+        <ol>
+            <li><span class="status pending">PENDING</span> Deploy to production</li>
+            <li><span class="status pending">PENDING</span> Test with real Lalamove order</li>
+            <li><span class="status pending">PENDING</span> Verify driver info displays correctly</li>
+            <li><span class="status pending">PENDING</span> Document production test results</li>
+        </ol>
+
+        <h2>💡 Key Learnings</h2>
+        <ul>
+            <li>Always verify property names match between data source and consumer</li>
+            <li>Webhook payloads should be fully captured, not just partial data</li>
+            <li>Local testing with production databases requires careful environment configuration</li>
+            <li>Mock data should match the structure of real data for easier testing</li>
+        </ul>
+
+        <h2>📝 Notes</h2>
+        <ul>
+            <li>The <code>rating</code> field is not provided by Lalamove webhooks, so it remains as fallback mock data
+                (5.0)</li>
+            <li>The <code>photo</code> field may or may not be provided by Lalamove depending on their API version</li>
+            <li>Vehicle type is critical for users to identify their delivery driver</li>
+        </ul>
+
+        <hr>
+        <p class="timestamp">
+            <strong>Session completed:</strong> December 4, 2025, 14:50 PHT<br>
+            <strong>Status:</strong> Ready for deployment and production testing
+        </p>
+    </div>
+</body>
+
+</html>

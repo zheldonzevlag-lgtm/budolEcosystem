@@ -1,0 +1,209 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Audit Trail Implementation - Phase 1 & 2</title>
+    <style>
+        :root {
+            --primary: #0f172a;
+            --secondary: #334155;
+            --accent: #059669;
+            /* Emerald Green */
+            --bg: #f8fafc;
+            --card-bg: #ffffff;
+            --border: #e2e8f0;
+            --code-bg: #1e293b;
+            --code-text: #e2e8f0;
+        }
+
+        body {
+            font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+            line-height: 1.6;
+            color: var(--secondary);
+            background: var(--bg);
+            margin: 0;
+            padding: 40px;
+        }
+
+        .container {
+            max-width: 1000px;
+            margin: 0 auto;
+        }
+
+        header {
+            margin-bottom: 40px;
+            border-bottom: 3px solid var(--accent);
+            padding-bottom: 20px;
+        }
+
+        h1 {
+            color: var(--primary);
+            font-size: 2.5rem;
+            margin: 0 0 10px 0;
+        }
+
+        .status-badge {
+            display: inline-block;
+            padding: 4px 12px;
+            border-radius: 20px;
+            font-weight: 600;
+            font-size: 0.85rem;
+            background: #d1fae5;
+            color: #065f46;
+            margin-left: 10px;
+        }
+
+        .card {
+            background: var(--card-bg);
+            border-radius: 12px;
+            box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1);
+            padding: 30px;
+            margin-bottom: 30px;
+            border: 1px solid var(--border);
+        }
+
+        h2 {
+            color: var(--primary);
+            border-left: 4px solid var(--accent);
+            padding-left: 15px;
+            margin-top: 0;
+        }
+
+        code {
+            background: #f1f5f9;
+            padding: 2px 6px;
+            border-radius: 4px;
+            font-family: 'Consolas', 'Monaco', monospace;
+            font-size: 0.9em;
+            color: #d946ef;
+        }
+
+        pre {
+            background: var(--code-bg);
+            color: var(--code-text);
+            padding: 20px;
+            border-radius: 8px;
+            overflow-x: auto;
+            font-size: 14px;
+        }
+
+        .section-tag {
+            background: #e2e8f0;
+            padding: 2px 8px;
+            border-radius: 4px;
+            font-size: 0.8rem;
+            color: #475569;
+            margin-right: 10px;
+            font-weight: bold;
+        }
+    </style>
+</head>
+
+<body>
+
+    <div class="container">
+        <header>
+            <div style="display: flex; align-items: center;">
+                <h1>Audit Trail Implementation</h1>
+                <span class="status-badge">PHASE 1 & 2 COMPLETE</span>
+            </div>
+            <p><strong>Date:</strong> 2025-12-12<br>
+                <strong>Scope:</strong> Backend Foundation, Database Schema, and Authentication Integration.
+            </p>
+        </header>
+
+        <div class="card">
+            <h2>Process Overview</h2>
+            <p>The objective was to implement a secure, database-backed logging system to track user Login and Logout
+                events. This foundational work enables future auditing capabilities for administrators.</p>
+
+            <ul>
+                <li><strong>Phase 1:</strong> Database Schema modifications to store logs.</li>
+                <li><strong>Phase 2:</strong> Backend logic to capture and persist log data automatically.</li>
+            </ul>
+        </div>
+
+        <div class="card">
+            <h2>Technical Details</h2>
+
+            <h3>1. Database Schema</h3>
+            <p><span class="section-tag">Prisma</span> Added a new <code>AuditLog</code> model with a relation to the
+                <code>User</code> table.</p>
+            <pre>
+model AuditLog {
+    id        String   @id @default(cuid())
+    userId    String
+    action    String   // "LOGIN" | "LOGOUT"
+    ipAddress String?
+    country   String?
+    device    String?
+    userAgent String?
+    createdAt DateTime @default(now())
+
+    user      User     @relation(fields: [userId], references: [id])
+}</pre>
+
+            <h3>2. Logic Implementation</h3>
+            <p><span class="section-tag">lib/audit.js</span> Created a reusable utility function
+                <code>createAuditLog</code>.</p>
+            <ul>
+                <li>Extracts IP Address from headers (supporting proxies).</li>
+                <li>Parses User-Agent string using <code>ua-parser-js</code> to identify OS and Browser.</li>
+                <li>Captures Geolocation from Vercel headers (<code>x-vercel-ip-country</code>).</li>
+            </ul>
+
+            <h3>3. Integration Points</h3>
+            <ul>
+                <li><strong>Login Route:</strong> <code>app/api/auth/login/route.js</code> - Logs success immediately
+                    after password verification.</li>
+                <li><strong>Logout Route:</strong> <code>app/api/auth/logout/route.js</code> - Decodes the JWT token to
+                    identify the user before clearing the cookie.</li>
+            </ul>
+        </div>
+
+        <div class="card">
+            <h2>Issues & Fixes</h2>
+
+            <h3>Issue 1: Build Failure (Module Import)</h3>
+            <p><strong>Problem:</strong> The initial import of <code>ua-parser-js</code> used a default import, which
+                caused a build error because the library exports named exports in its newer version.</p>
+            <p><strong>Fix:</strong> Changed import to <code>import { UAParser } from 'ua-parser-js';</code>.</p>
+
+            <h3>Issue 2: Verification Script Compatibility</h3>
+            <p><strong>Problem:</strong> The test script <code>verify-audit-logs.js</code> failed because it used ES
+                Module syntax (<code>import</code>) in a project configured mostly for CJS scripts or implicitly handled
+                by Next.js.</p>
+            <p><strong>Fix:</strong> Rewrote the script to use CommonJS <code>require()</code> syntax for standalone
+                execution.</p>
+        </div>
+
+        <div class="card">
+            <h2>Test Results</h2>
+            <p>A manual test script <code>scripts/test-audit-db.js</code> was created and executed.</p>
+            <ul>
+                <li><strong>User Identification:</strong> ✅ Successfully identified an existing test user.</li>
+                <li><strong>Data Persistence:</strong> ✅ Successfully wrote both LOGIN and LOGOUT records to the
+                    database.</li>
+                <li><strong>Field Integrity:</strong> ✅ IP, Country, and Device strings were correctly stored.</li>
+            </ul>
+        </div>
+
+        <div class="card">
+            <h2>Future Recommendations</h2>
+            <ul>
+                <li><strong>Phase 3 (Next):</strong> Implement the Admin UI at <code>/admin/settings/audit-logs</code>
+                    to visualize these records.</li>
+                <li><strong>Data Retention:</strong> Implement a cron job to archive or delete logs older than 90 days
+                    to prevent table bloat.</li>
+                <li><strong>Expanded Events:</strong> Extend logging to include "Password Change" or "Profile Update"
+                    events.</li>
+            </ul>
+        </div>
+
+    </div>
+
+</body>
+
+</html>

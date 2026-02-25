@@ -1,0 +1,158 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Lalamove Sandbox Insufficient Credit Issue Resolution</title>
+    <style>
+        body {
+            font-family: system-ui, -apple-system, sans-serif;
+            line-height: 1.6;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 2rem;
+            color: #333;
+        }
+
+        h1 {
+            color: #2563eb;
+            border-bottom: 2px solid #e5e7eb;
+            padding-bottom: 0.5rem;
+        }
+
+        h2 {
+            color: #1e40af;
+            margin-top: 2rem;
+        }
+
+        code {
+            background: #f1f5f9;
+            padding: 0.2rem 0.4rem;
+            border-radius: 4px;
+            font-family: monospace;
+            font-size: 0.9em;
+        }
+
+        pre {
+            background: #1e293b;
+            color: #f8fafc;
+            padding: 1rem;
+            border-radius: 8px;
+            overflow-x: auto;
+        }
+
+        .alert {
+            background: #fef2f2;
+            border: 1px solid #fecaca;
+            color: #991b1b;
+            padding: 1rem;
+            border-radius: 8px;
+            margin: 1rem 0;
+        }
+
+        .success {
+            background: #f0fdf4;
+            border: 1px solid #bbf7d0;
+            color: #166534;
+            padding: 1rem;
+            border-radius: 8px;
+            margin: 1rem 0;
+        }
+
+        .step {
+            margin-bottom: 1.5rem;
+        }
+
+        .step-title {
+            font-weight: bold;
+            font-size: 1.1em;
+            margin-bottom: 0.5rem;
+        }
+    </style>
+</head>
+
+<body>
+    <h1>Lalamove Sandbox Insufficient Credit Issue</h1>
+
+    <div class="alert">
+        <strong>Issue:</strong> Order creation fails with <code>ERR_INSUFFICIENT_CREDIT</code> (HTTP 402) in the
+        Lalamove Sandbox environment.
+    </div>
+
+    <h2>Diagnosis</h2>
+    <p>We have verified the following:</p>
+    <ul>
+        <li>The application correctly implements the <strong>Quotation → Order</strong> flow.</li>
+        <li>A valid <code>quotationId</code> is obtained from the <code>/v3/quotations</code> endpoint.</li>
+        <li>This <code>quotationId</code> and the corresponding <code>stopId</code>s are correctly passed to the
+            <code>/v3/orders</code> endpoint.</li>
+        <li>Despite following the standard flow which is supposed to bypass credit checks for price checking, the
+            <strong>Order Creation</strong> step in Sandbox still enforces a credit check.</li>
+    </ul>
+
+    <p>This confirms that the Lalamove Sandbox environment requires a positive wallet balance or a specific account
+        configuration to allow order creation, even for test orders.</p>
+
+    <h2>Resolution Steps</h2>
+
+    <div class="step">
+        <div class="step-title">1. Code Improvements (Completed)</div>
+        <p>We have updated the codebase to handle this error gracefully:</p>
+        <ul>
+            <li><strong>Enhanced Error Parsing:</strong> Updated <code>services/lalamove.js</code> to correctly parse
+                Lalamove V3 error formats (including the <code>errors</code> array).</li>
+            <li><strong>Friendly Error Messages:</strong> Mapped <code>ERR_INSUFFICIENT_CREDIT</code> to a user-friendly
+                message: <em>"Insufficient credit in shipping account. Please contact support."</em></li>
+            <li><strong>API Response Handling:</strong> Updated <code>app/api/shipping/lalamove/book/route.js</code> to
+                ensure this specific error message is returned to the frontend instead of a generic "Internal Server
+                Error".</li>
+        </ul>
+    </div>
+
+    <div class="step">
+        <div class="step-title">2. Action Required: Contact Lalamove Support</div>
+        <p>Since the code is correct, the issue is account-related. You must contact Lalamove Support to provision your
+            sandbox account with test credits.</p>
+
+        <p><strong>Contact Information:</strong></p>
+        <ul>
+            <li><strong>Email:</strong> <a href="mailto:partner.support@lalamove.com">partner.support@lalamove.com</a>
+            </li>
+            <li><strong>Live Chat:</strong> Available in the Lalamove Partner Portal.</li>
+        </ul>
+
+        <p><strong>Email Template:</strong></p>
+        <pre>
+Subject: Request for Sandbox Credits - Partner API Testing
+
+Dear Lalamove API Support,
+
+I am integrating the Lalamove API (Sandbox) and encountering an ERR_INSUFFICIENT_CREDIT error when attempting to place test orders via the /v3/orders endpoint.
+
+I am following the standard flow:
+1. Get Quote (POST /v3/quotations) -> Success
+2. Create Order (POST /v3/orders) using the quotationId -> Fails with ERR_INSUFFICIENT_CREDIT
+
+Could you please top up my sandbox wallet or configure my account to allow testing order creation?
+
+My API Key (Client ID): [Your Client ID]
+Region: PH_MNL
+
+Thank you.
+        </pre>
+    </div>
+
+    <div class="step">
+        <div class="step-title">3. Verification</div>
+        <p>Once Lalamove Support adds credit to your sandbox account:</p>
+        <ol>
+            <li>Run the test script: <code>node test-lalamove-order-creation.js</code></li>
+            <li>Or try placing an order through the Budolshap application checkout.</li>
+        </ol>
+        <p>The error should resolve, and you should receive a valid Order ID.</p>
+    </div>
+
+</body>
+
+</html>

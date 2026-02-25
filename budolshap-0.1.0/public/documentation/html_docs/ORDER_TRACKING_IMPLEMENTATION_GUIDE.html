@@ -1,0 +1,734 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Order Tracking Implementation Guide - Step by Step</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: #f5f7fa;
+            padding: 20px;
+            line-height: 1.6;
+            color: #1a1a1a;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+
+        .header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 40px;
+            border-radius: 15px;
+            margin-bottom: 30px;
+            text-align: center;
+        }
+
+        .header h1 {
+            font-size: 2.5em;
+            margin-bottom: 10px;
+        }
+
+        .section {
+            background: white;
+            border-radius: 15px;
+            padding: 30px;
+            margin-bottom: 30px;
+            box-shadow: 0 5px 20px rgba(0, 0, 0, 0.1);
+        }
+
+        .section h2 {
+            color: #FF6B00;
+            margin-bottom: 20px;
+            padding-bottom: 10px;
+            border-bottom: 3px solid #FF6B00;
+        }
+
+        .section h3 {
+            color: #667eea;
+            margin: 20px 0 15px 0;
+        }
+
+        .step {
+            background: #f8f9fa;
+            border-left: 5px solid #667eea;
+            padding: 20px;
+            margin: 20px 0;
+            border-radius: 8px;
+        }
+
+        .step-number {
+            background: #667eea;
+            color: white;
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: bold;
+            font-size: 1.2em;
+            margin-right: 15px;
+        }
+
+        .step-title {
+            font-size: 1.3em;
+            color: #333;
+            font-weight: 600;
+            margin-bottom: 10px;
+        }
+
+        code {
+            background: #2d2d2d;
+            color: #f8f8f2;
+            padding: 2px 6px;
+            border-radius: 4px;
+            font-family: 'Courier New', monospace;
+            font-size: 0.9em;
+        }
+
+        pre {
+            background: #2d2d2d;
+            color: #f8f8f2;
+            padding: 20px;
+            border-radius: 8px;
+            overflow-x: auto;
+            margin: 15px 0;
+        }
+
+        pre code {
+            background: transparent;
+            padding: 0;
+        }
+
+        .checklist {
+            list-style: none;
+            padding-left: 0;
+        }
+
+        .checklist li {
+            padding: 8px 0;
+            padding-left: 30px;
+            position: relative;
+        }
+
+        .checklist li:before {
+            content: "☐";
+            position: absolute;
+            left: 0;
+            font-size: 1.3em;
+            color: #667eea;
+        }
+
+        .note {
+            background: #fff3cd;
+            border-left: 4px solid #ffc107;
+            padding: 15px;
+            margin: 15px 0;
+            border-radius: 5px;
+        }
+
+        .warning {
+            background: #f8d7da;
+            border-left: 4px solid #dc3545;
+            padding: 15px;
+            margin: 15px 0;
+            border-radius: 5px;
+        }
+
+        .success {
+            background: #d4edda;
+            border-left: 4px solid #28a745;
+            padding: 15px;
+            margin: 15px 0;
+            border-radius: 5px;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 20px 0;
+        }
+
+        th,
+        td {
+            border: 1px solid #ddd;
+            padding: 12px;
+            text-align: left;
+        }
+
+        th {
+            background: #667eea;
+            color: white;
+        }
+
+        .phase-badge {
+            display: inline-block;
+            padding: 5px 15px;
+            border-radius: 20px;
+            font-weight: bold;
+            font-size: 0.9em;
+            margin: 5px;
+        }
+
+        .phase-1 {
+            background: #fee2e2;
+            color: #dc2626;
+        }
+
+        .phase-2 {
+            background: #fef3c7;
+            color: #f59e0b;
+        }
+
+        .phase-3 {
+            background: #dbeafe;
+            color: #3b82f6;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>📦 Order Tracking Implementation Guide</h1>
+            <p>Step-by-Step Plan for COD & Lalamove Tracking UI</p>
+            <p style="font-size: 0.9em; margin-top: 10px; opacity: 0.9;">Budolshap E-Commerce Platform</p>
+        </div>
+
+        <!-- Overview -->
+        <div class="section">
+            <h2>📋 Implementation Overview</h2>
+            <p>This guide provides a complete step-by-step plan to build an enhanced order tracking UI that works for
+                both <strong>COD (Standard Shipping)</strong> and <strong>Lalamove (Same-Day Delivery)</strong>.</p>
+
+            <h3>Implementation Phases:</h3>
+            <div style="margin: 20px 0;">
+                <span class="phase-badge phase-1">Phase 1: Universal Features (2-3 days)</span>
+                <span class="phase-badge phase-2">Phase 2: Lalamove Features (2-3 days)</span>
+                <span class="phase-badge phase-3">Phase 3: COD Features (1-2 days)</span>
+            </div>
+
+            <div class="success">
+                <strong>✅ Goal:</strong> Create a modern, responsive order tracking interface that provides real-time
+                updates for Lalamove deliveries and comprehensive tracking for COD orders.
+            </div>
+        </div>
+
+        <!-- Phase 1 -->
+        <div class="section">
+            <h2>🔴 Phase 1: Universal Features (Works for Both)</h2>
+            <p><strong>Duration:</strong> 2-3 days | <strong>Priority:</strong> HIGH</p>
+
+            <!-- Step 1 -->
+            <div class="step">
+                <div style="display: flex; align-items: center; margin-bottom: 15px;">
+                    <span class="step-number">1</span>
+                    <span class="step-title">Create Order Detail Page</span>
+                </div>
+
+                <p><strong>File:</strong> <code>app/(public)/orders/[orderId]/page.jsx</code></p>
+
+                <h4>Tasks:</h4>
+                <ul class="checklist">
+                    <li>Create new dynamic route for individual orders</li>
+                    <li>Fetch order data from API</li>
+                    <li>Add loading and error states</li>
+                    <li>Implement back button to orders list</li>
+                </ul>
+
+                <h4>Code Template:</h4>
+                <pre><code>'use client'
+import { useEffect, useState } from 'react';
+import { useParams, useRouter } from 'next/navigation';
+import Loading from '@/components/Loading';
+
+export default function OrderDetailPage() {
+    const params = useParams();
+    const router = useRouter();
+    const [order, setOrder] = useState(null);
+    const [loading, setLoading] = useState(true);
+
+    useEffect(() => {
+        const fetchOrder = async () => {
+            try {
+                const response = await fetch(`/api/orders/${params.orderId}`);
+                if (response.ok) {
+                    const data = await response.json();
+                    setOrder(data);
+                }
+            } catch (error) {
+                console.error('Failed to fetch order:', error);
+            } finally {
+                setLoading(false);
+            }
+        };
+        fetchOrder();
+    }, [params.orderId]);
+
+    if (loading) return &lt;Loading /&gt;;
+    if (!order) return &lt;div&gt;Order not found&lt;/div&gt;;
+
+    return (
+        &lt;div className="max-w-7xl mx-auto p-6"&gt;
+            &lt;button onClick={() => router.back()}&gt;← Back to Orders&lt;/button&gt;
+            {/* Components will go here */}
+        &lt;/div&gt;
+    );
+}</code></pre>
+
+                <div class="note">
+                    <strong>📝 Note:</strong> You'll need to create the API endpoint
+                    <code>/api/orders/[orderId]/route.js</code> to fetch individual order details.
+                </div>
+            </div>
+
+            <!-- Step 2 -->
+            <div class="step">
+                <div style="display: flex; align-items: center; margin-bottom: 15px;">
+                    <span class="step-number">2</span>
+                    <span class="step-title">Build Order Header Component</span>
+                </div>
+
+                <p><strong>File:</strong> <code>components/OrderHeader.jsx</code></p>
+
+                <h4>Features:</h4>
+                <ul class="checklist">
+                    <li>Display order number and date</li>
+                    <li>Show estimated delivery date</li>
+                    <li>Add status badge</li>
+                    <li>Responsive design</li>
+                </ul>
+
+                <h4>Code Template:</h4>
+                <pre><code>export default function OrderHeader({ order }) {
+    return (
+        &lt;div className="bg-gradient-to-r from-green-500 to-green-600 text-white p-6 rounded-xl mb-6"&gt;
+            &lt;div className="flex justify-between items-center"&gt;
+                &lt;div&gt;
+                    &lt;h1 className="text-2xl font-bold"&gt;Order #{order.id}&lt;/h1&gt;
+                    &lt;p className="opacity-90"&gt;
+                        Placed on {new Date(order.createdAt).toLocaleDateString()}
+                    &lt;/p&gt;
+                &lt;/div&gt;
+                &lt;div className="bg-white text-green-600 px-6 py-4 rounded-lg"&gt;
+                    &lt;div className="text-sm opacity-80"&gt;Estimated Delivery&lt;/div&gt;
+                    &lt;div className="text-xl font-bold"&gt;
+                        {/* Calculate EDD based on shipping method */}
+                        {order.shipping?.provider === 'lalamove' 
+                            ? 'Today' 
+                            : 'Nov 30, 2025'}
+                    &lt;/div&gt;
+                &lt;/div&gt;
+            &lt;/div&gt;
+        &lt;/div&gt;
+    );
+}</code></pre>
+            </div>
+
+            <!-- Step 3 -->
+            <div class="step">
+                <div style="display: flex; align-items: center; margin-bottom: 15px;">
+                    <span class="step-number">3</span>
+                    <span class="step-title">Create Progress Tracker Component</span>
+                </div>
+
+                <p><strong>File:</strong> <code>components/OrderProgressTracker.jsx</code></p>
+
+                <h4>Progress Stages:</h4>
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Stage</th>
+                            <th>COD Status</th>
+                            <th>Lalamove Status</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td>1</td>
+                            <td>Order Placed</td>
+                            <td>Order Placed</td>
+                        </tr>
+                        <tr>
+                            <td>2</td>
+                            <td>Payment Confirmed</td>
+                            <td>Payment Confirmed</td>
+                        </tr>
+                        <tr>
+                            <td>3</td>
+                            <td>Processing</td>
+                            <td>Driver Assigned</td>
+                        </tr>
+                        <tr>
+                            <td>4</td>
+                            <td>Shipped</td>
+                            <td>Picked Up</td>
+                        </tr>
+                        <tr>
+                            <td>5</td>
+                            <td>Out for Delivery</td>
+                            <td>In Transit</td>
+                        </tr>
+                        <tr>
+                            <td>6</td>
+                            <td>Delivered</td>
+                            <td>Delivered</td>
+                        </tr>
+                    </tbody>
+                </table>
+
+                <h4>Implementation:</h4>
+                <pre><code>export default function OrderProgressTracker({ order }) {
+    const isLalamove = order.shipping?.provider === 'lalamove';
+    
+    const stages = isLalamove ? [
+        { label: 'Order Placed', status: 'ORDER_PLACED' },
+        { label: 'Payment Confirmed', status: 'PAID' },
+        { label: 'Driver Assigned', status: 'PROCESSING' },
+        { label: 'Picked Up', status: 'SHIPPED' },
+        { label: 'In Transit', status: 'IN_TRANSIT' },
+        { label: 'Delivered', status: 'DELIVERED' }
+    ] : [
+        { label: 'Order Placed', status: 'ORDER_PLACED' },
+        { label: 'Payment Confirmed', status: 'PAID' },
+        { label: 'Processing', status: 'PROCESSING' },
+        { label: 'Shipped', status: 'SHIPPED' },
+        { label: 'Out for Delivery', status: 'OUT_FOR_DELIVERY' },
+        { label: 'Delivered', status: 'DELIVERED' }
+    ];
+
+    const currentStageIndex = stages.findIndex(s => s.status === order.status);
+
+    return (
+        &lt;div className="bg-white p-8 rounded-xl shadow-sm mb-6"&gt;
+            &lt;h3 className="text-xl font-semibold mb-6"&gt;Order Progress&lt;/h3&gt;
+            &lt;div className="flex justify-between relative"&gt;
+                {/* Progress line */}
+                &lt;div className="absolute top-6 left-0 right-0 h-1 bg-gray-200"&gt;
+                    &lt;div 
+                        className="h-full bg-gradient-to-r from-green-500 to-orange-500 transition-all"
+                        style={{ width: `${(currentStageIndex / (stages.length - 1)) * 100}%` }}
+                    /&gt;
+                &lt;/div&gt;
+
+                {/* Progress steps */}
+                {stages.map((stage, index) => (
+                    &lt;div key={index} className="flex flex-col items-center relative z-10"&gt;
+                        &lt;div className={`w-12 h-12 rounded-full flex items-center justify-center font-bold
+                            ${index &lt;= currentStageIndex 
+                                ? 'bg-green-500 text-white' 
+                                : 'bg-gray-200 text-gray-400'}`}&gt;
+                            {index &lt;= currentStageIndex ? '✓' : index + 1}
+                        &lt;/div&gt;
+                        &lt;span className="text-xs mt-2 text-center"&gt;{stage.label}&lt;/span&gt;
+                    &lt;/div&gt;
+                ))}
+            &lt;/div&gt;
+        &lt;/div&gt;
+    );
+}</code></pre>
+            </div>
+
+            <!-- Step 4 -->
+            <div class="step">
+                <div style="display: flex; align-items: center; margin-bottom: 15px;">
+                    <span class="step-number">4</span>
+                    <span class="step-title">Build Tracking Timeline Component</span>
+                </div>
+
+                <p><strong>File:</strong> <code>components/TrackingTimeline.jsx</code></p>
+
+                <h4>Code Template:</h4>
+                <pre><code>export default function TrackingTimeline({ order }) {
+    // Mock timeline data - replace with actual tracking history from API
+    const timeline = [
+        { title: 'Order Placed', description: 'Your order has been placed', time: order.createdAt },
+        { title: 'Payment Confirmed', description: 'Payment received', time: order.updatedAt },
+        // Add more based on order.status
+    ];
+
+    return (
+        &lt;div className="bg-white p-8 rounded-xl shadow-sm mb-6"&gt;
+            &lt;h3 className="text-xl font-semibold mb-6"&gt;Tracking History&lt;/h3&gt;
+            &lt;div className="relative pl-8"&gt;
+                {/* Vertical line */}
+                &lt;div className="absolute left-2 top-0 bottom-0 w-0.5 bg-gradient-to-b from-green-500 to-gray-200" /&gt;
+
+                {timeline.map((event, index) => (
+                    &lt;div key={index} className="relative mb-6 last:mb-0"&gt;
+                        {/* Dot */}
+                        &lt;div className="absolute -left-6 w-4 h-4 rounded-full bg-green-500 border-4 border-white" /&gt;
+                        
+                        {/* Content */}
+                        &lt;div className="bg-gray-50 p-4 rounded-lg"&gt;
+                            &lt;h4 className="font-semibold text-gray-800"&gt;{event.title}&lt;/h4&gt;
+                            &lt;p className="text-sm text-gray-600"&gt;{event.description}&lt;/p&gt;
+                            &lt;span className="text-xs text-gray-400"&gt;
+                                {new Date(event.time).toLocaleString()}
+                            &lt;/span&gt;
+                        &lt;/div&gt;
+                    &lt;/div&gt;
+                ))}
+            &lt;/div&gt;
+        &lt;/div&gt;
+    );
+}</code></pre>
+            </div>
+
+            <!-- Step 5 -->
+            <div class="step">
+                <div style="display: flex; align-items: center; margin-bottom: 15px;">
+                    <span class="step-number">5</span>
+                    <span class="step-title">Create Order Details Card</span>
+                </div>
+
+                <p><strong>File:</strong> <code>components/OrderDetailsCard.jsx</code></p>
+
+                <pre><code>export default function OrderDetailsCard({ order }) {
+    const currency = process.env.NEXT_PUBLIC_CURRENCY_SYMBOL || '$';
+    
+    return (
+        &lt;div className="bg-white p-8 rounded-xl shadow-sm mb-6"&gt;
+            &lt;h3 className="text-xl font-semibold mb-6"&gt;Order Details&lt;/h3&gt;
+            
+            &lt;div className="space-y-4"&gt;
+                &lt;div className="flex justify-between border-b pb-3"&gt;
+                    &lt;span className="text-gray-600"&gt;Order Number&lt;/span&gt;
+                    &lt;span className="font-semibold"&gt;#{order.id}&lt;/span&gt;
+                &lt;/div&gt;
+                
+                &lt;div className="flex justify-between border-b pb-3"&gt;
+                    &lt;span className="text-gray-600"&gt;Payment Method&lt;/span&gt;
+                    &lt;span className="font-semibold"&gt;{order.paymentMethod}&lt;/span&gt;
+                &lt;/div&gt;
+                
+                &lt;div className="flex justify-between border-b pb-3"&gt;
+                    &lt;span className="text-gray-600"&gt;Shipping Method&lt;/span&gt;
+                    &lt;span className="font-semibold"&gt;
+                        {order.shipping?.provider === 'lalamove' ? 'Same Day (Lalamove)' : 'Standard'}
+                    &lt;/span&gt;
+                &lt;/div&gt;
+                
+                &lt;div className="flex justify-between border-b pb-3"&gt;
+                    &lt;span className="text-gray-600"&gt;Total Amount&lt;/span&gt;
+                    &lt;span className="font-bold text-lg"&gt;{currency}{order.total}&lt;/span&gt;
+                &lt;/div&gt;
+            &lt;/div&gt;
+        &lt;/div&gt;
+    );
+}</code></pre>
+            </div>
+
+            <!-- Step 6 -->
+            <div class="step">
+                <div style="display: flex; align-items: center; margin-bottom: 15px;">
+                    <span class="step-number">6</span>
+                    <span class="step-title">Add Real-Time Updates</span>
+                </div>
+
+                <p>Implement auto-refresh for active orders</p>
+
+                <pre><code>// In your OrderDetailPage component
+useEffect(() => {
+    if (order?.status !== 'DELIVERED') {
+        const interval = setInterval(() => {
+            // Refresh order data
+            fetchOrder();
+        }, 30000); // Every 30 seconds
+
+        return () => clearInterval(interval);
+    }
+}, [order?.status]);</code></pre>
+            </div>
+        </div>
+
+        <!-- Phase 2 -->
+        <div class="section">
+            <h2>🟡 Phase 2: Lalamove-Specific Features</h2>
+            <p><strong>Duration:</strong> 2-3 days | <strong>Priority:</strong> MEDIUM</p>
+
+            <div class="step">
+                <div style="display: flex; align-items: center; margin-bottom: 15px;">
+                    <span class="step-number">7</span>
+                    <span class="step-title">Integrate Live GPS Map</span>
+                </div>
+
+                <p><strong>File:</strong> <code>components/LiveTrackingMap.jsx</code></p>
+
+                <h4>Requirements:</h4>
+                <ul class="checklist">
+                    <li>Install Google Maps or Mapbox library</li>
+                    <li>Fetch driver location from Lalamove API</li>
+                    <li>Show pickup, current, and delivery markers</li>
+                    <li>Draw route line</li>
+                    <li>Update location every 30 seconds</li>
+                </ul>
+
+                <div class="note">
+                    <strong>📝 Note:</strong> This requires Lalamove tracking API integration. Use the
+                    <code>/api/shipping/lalamove/track</code> endpoint you already have.
+                </div>
+            </div>
+
+            <div class="step">
+                <div style="display: flex; align-items: center; margin-bottom: 15px;">
+                    <span class="step-number">8</span>
+                    <span class="step-title">Create Driver Info Card</span>
+                </div>
+
+                <p><strong>File:</strong> <code>components/DriverInfoCard.jsx</code></p>
+
+                <pre><code>export default function DriverInfoCard({ order }) {
+    if (order.shipping?.provider !== 'lalamove') return null;
+    
+    const driver = order.shipping?.driverInfo;
+    if (!driver) return null;
+
+    return (
+        &lt;div className="bg-white p-6 rounded-xl shadow-sm mb-6"&gt;
+            &lt;h3 className="text-xl font-semibold mb-4"&gt;Driver Information&lt;/h3&gt;
+            &lt;div className="flex items-center gap-4"&gt;
+                &lt;div className="w-16 h-16 rounded-full bg-gradient-to-br from-purple-500 to-pink-500 flex items-center justify-center text-white text-2xl font-bold"&gt;
+                    {driver.name?.[0] || 'D'}
+                &lt;/div&gt;
+                &lt;div className="flex-1"&gt;
+                    &lt;h4 className="font-semibold text-lg"&gt;{driver.name || 'Driver'}&lt;/h4&gt;
+                    &lt;p className="text-sm text-gray-600"&gt;{driver.vehicle || 'Motorcycle'} • {driver.plateNumber}&lt;/p&gt;
+                    &lt;p className="text-orange-600 font-semibold mt-1"&gt;📍 {driver.eta || '15 mins away'}&lt;/p&gt;
+                &lt;/div&gt;
+                &lt;button className="bg-orange-500 text-white px-6 py-3 rounded-lg hover:bg-orange-600"&gt;
+                    📞 Contact Driver
+                &lt;/button&gt;
+            &lt;/div&gt;
+        &lt;/div&gt;
+    );
+}</code></pre>
+            </div>
+        </div>
+
+        <!-- Phase 3 -->
+        <div class="section">
+            <h2>🔵 Phase 3: COD-Specific Features</h2>
+            <p><strong>Duration:</strong> 1-2 days | <strong>Priority:</strong> LOW</p>
+
+            <div class="step">
+                <div style="display: flex; align-items: center; margin-bottom: 15px;">
+                    <span class="step-number">9</span>
+                    <span class="step-title">Add Courier Information Card</span>
+                </div>
+
+                <p>For standard shipping orders, show courier details</p>
+
+                <pre><code>export default function CourierInfoCard({ order }) {
+    if (order.shipping?.provider === 'lalamove') return null;
+    
+    return (
+        &lt;div className="bg-white p-6 rounded-xl shadow-sm mb-6"&gt;
+            &lt;h3 className="text-xl font-semibold mb-4"&gt;Courier Information&lt;/h3&gt;
+            &lt;div className="space-y-3"&gt;
+                &lt;div className="flex justify-between"&gt;
+                    &lt;span className="text-gray-600"&gt;Courier&lt;/span&gt;
+                    &lt;span className="font-semibold"&gt;{order.shipping?.courier || 'Standard Delivery'}&lt;/span&gt;
+                &lt;/div&gt;
+                &lt;div className="flex justify-between"&gt;
+                    &lt;span className="text-gray-600"&gt;Tracking Number&lt;/span&gt;
+                    &lt;span className="font-semibold"&gt;{order.shipping?.trackingNumber || 'N/A'}&lt;/span&gt;
+                &lt;/div&gt;
+                {order.shipping?.trackingUrl && (
+                    &lt;a href={order.shipping.trackingUrl} target="_blank" className="text-blue-600 hover:underline"&gt;
+                        Track on Courier Website →
+                    &lt;/a&gt;
+                )}
+            &lt;/div&gt;
+        &lt;/div&gt;
+    );
+}</code></pre>
+            </div>
+        </div>
+
+        <!-- Final Assembly -->
+        <div class="section">
+            <h2>🎯 Final Assembly</h2>
+
+            <h3>Putting It All Together</h3>
+            <p>Update your <code>app/(public)/orders/[orderId]/page.jsx</code>:</p>
+
+            <pre><code>import OrderHeader from '@/components/OrderHeader';
+import OrderProgressTracker from '@/components/OrderProgressTracker';
+import TrackingTimeline from '@/components/TrackingTimeline';
+import OrderDetailsCard from '@/components/OrderDetailsCard';
+import DriverInfoCard from '@/components/DriverInfoCard';
+import CourierInfoCard from '@/components/CourierInfoCard';
+import LiveTrackingMap from '@/components/LiveTrackingMap';
+
+export default function OrderDetailPage() {
+    // ... fetch order logic ...
+
+    const isLalamove = order?.shipping?.provider === 'lalamove';
+
+    return (
+        &lt;div className="max-w-7xl mx-auto p-6"&gt;
+            &lt;OrderHeader order={order} /&gt;
+            &lt;OrderProgressTracker order={order} /&gt;
+            
+            {isLalamove && (
+                &lt;&gt;
+                    &lt;LiveTrackingMap order={order} /&gt;
+                    &lt;DriverInfoCard order={order} /&gt;
+                &lt;/&gt;
+            )}
+            
+            {!isLalamove && &lt;CourierInfoCard order={order} /&gt;}
+            
+            &lt;TrackingTimeline order={order} /&gt;
+            &lt;OrderDetailsCard order={order} /&gt;
+        &lt;/div&gt;
+    );
+}</code></pre>
+        </div>
+
+        <!-- Testing Checklist -->
+        <div class="section">
+            <h2>✅ Testing Checklist</h2>
+
+            <h3>Before Deployment:</h3>
+            <ul class="checklist">
+                <li>Test with COD orders</li>
+                <li>Test with Lalamove orders</li>
+                <li>Test on mobile devices</li>
+                <li>Test real-time updates</li>
+                <li>Test all order statuses</li>
+                <li>Verify API endpoints work</li>
+                <li>Check loading states</li>
+                <li>Test error handling</li>
+                <li>Verify responsive design</li>
+                <li>Test browser compatibility</li>
+            </ul>
+        </div>
+
+        <div class="section"
+            style="background: linear-gradient(135deg, #d4edda 0%, #c3e6cb 100%); border-left: 5px solid #28a745;">
+            <h2 style="color: #155724;">🎉 Success!</h2>
+            <p>Following this guide will give you a complete, modern order tracking system that works for both COD and
+                Lalamove deliveries. Start with Phase 1 to get the core features working, then progressively enhance
+                with Phases 2 and 3.</p>
+        </div>
+
+        <footer style="margin-top: 2rem; text-align: center; color: #777; padding: 2rem; border-top: 1px solid #ddd;">
+            <p>Generated on 2025-11-29 by Antigravity – Budolshap Implementation Guide</p>
+        </footer>
+    </div>
+</body>
+
+</html>

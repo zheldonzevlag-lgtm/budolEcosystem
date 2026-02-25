@@ -1,0 +1,469 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Vercel Environment Variables Audit</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            line-height: 1.6;
+            color: #333;
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+            background-color: #f5f7fa;
+        }
+
+        h1 {
+            color: #2c3e50;
+            border-bottom: 3px solid #e74c3c;
+            padding-bottom: 10px;
+        }
+
+        h2 {
+            color: #2980b9;
+            margin-top: 30px;
+            border-left: 5px solid #3498db;
+            padding-left: 15px;
+        }
+
+        .card {
+            background: white;
+            padding: 25px;
+            border-radius: 8px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.05);
+            margin-bottom: 25px;
+            border: 1px solid #e1e4e8;
+        }
+
+        .critical {
+            background-color: #f8d7da;
+            border-left: 4px solid #dc3545;
+            padding: 15px;
+            margin: 15px 0;
+        }
+
+        .warning {
+            background-color: #fff3cd;
+            border-left: 4px solid #ffc107;
+            padding: 15px;
+            margin: 15px 0;
+        }
+
+        .success {
+            background-color: #d4edda;
+            border-left: 4px solid #28a745;
+            padding: 15px;
+            margin: 15px 0;
+        }
+
+        .info {
+            background-color: #d1ecf1;
+            border-left: 4px solid #17a2b8;
+            padding: 15px;
+            margin: 15px 0;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 20px 0;
+        }
+
+        th,
+        td {
+            text-align: left;
+            padding: 12px;
+            border-bottom: 1px solid #ddd;
+        }
+
+        th {
+            background-color: #f8f9fa;
+            color: #2c3e50;
+            font-weight: 600;
+        }
+
+        .status-required {
+            color: #dc3545;
+            font-weight: bold;
+        }
+
+        .status-optional {
+            color: #6c757d;
+        }
+
+        .status-auto {
+            color: #28a745;
+        }
+
+        .code-block {
+            background-color: #2d3436;
+            color: #dfe6e9;
+            padding: 15px;
+            border-radius: 5px;
+            font-family: 'Consolas', 'Monaco', monospace;
+            overflow-x: auto;
+            margin: 15px 0;
+            font-size: 13px;
+        }
+    </style>
+</head>
+
+<body>
+
+    <h1>🔍 Vercel Environment Variables Audit</h1>
+
+    <div class="critical">
+        <h3>🚨 CRITICAL ISSUE FOUND</h3>
+        <p><strong>Missing Variable:</strong> <code>JWT_SECRET</code></p>
+        <p><strong>Impact:</strong> Authentication fails, users redirected to login after successful login</p>
+        <p><strong>Action Required:</strong> Add immediately to Vercel</p>
+    </div>
+
+    <h2>📋 Complete Environment Variables Checklist</h2>
+
+    <div class="card">
+        <h3>🔐 Authentication & Security (CRITICAL)</h3>
+        <table>
+            <thead>
+                <tr>
+                    <th>Variable</th>
+                    <th>Status</th>
+                    <th>Description</th>
+                    <th>Example/Notes</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td><code>JWT_SECRET</code></td>
+                    <td class="status-required">❌ MISSING</td>
+                    <td>Secret key for JWT token signing</td>
+                    <td>Use: <code>0f8ea2f62aec76393597dc8acad695e74273adb405ae9a64122cf6d75d625af</code></td>
+                </tr>
+                <tr>
+                    <td><code>JWT_EXPIRES_IN</code></td>
+                    <td class="status-optional">⚠️ Optional</td>
+                    <td>JWT token expiration time</td>
+                    <td>Default: <code>7d</code> (7 days)</td>
+                </tr>
+                <tr>
+                    <td><code>LALAMOVE_WEBHOOK_SECRET</code></td>
+                    <td class="status-required">❓ Check</td>
+                    <td>Secret for verifying Lalamove webhooks</td>
+                    <td>Get from Lalamove dashboard</td>
+                </tr>
+                <tr>
+                    <td><code>PAYMONGO_SECRET_KEY</code></td>
+                    <td class="status-required">❓ Check</td>
+                    <td>PayMongo API secret key</td>
+                    <td>Get from PayMongo dashboard</td>
+                </tr>
+                <tr>
+                    <td><code>PAYMONGO_WEBHOOK_SECRET</code></td>
+                    <td class="status-optional">⚠️ Optional</td>
+                    <td>PayMongo webhook verification</td>
+                    <td>Get from PayMongo dashboard</td>
+                </tr>
+                <tr>
+                    <td><code>CRON_SECRET</code></td>
+                    <td class="status-optional">⚠️ Optional</td>
+                    <td>Secret for cron job authentication</td>
+                    <td>Random string (for Phase 2 polling)</td>
+                </tr>
+            </tbody>
+        </table>
+    </div>
+
+    <div class="card">
+        <h3>🗄️ Database (Should be Auto-Set by Vercel)</h3>
+        <table>
+            <thead>
+                <tr>
+                    <th>Variable</th>
+                    <th>Status</th>
+                    <th>Description</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td><code>DATABASE_URL</code></td>
+                    <td class="status-auto">✅ Auto</td>
+                    <td>Main database connection (pooled)</td>
+                </tr>
+                <tr>
+                    <td><code>DIRECT_URL</code></td>
+                    <td class="status-auto">✅ Auto</td>
+                    <td>Direct database connection (for migrations)</td>
+                </tr>
+                <tr>
+                    <td><code>POSTGRES_URL</code></td>
+                    <td class="status-auto">✅ Auto</td>
+                    <td>Postgres connection URL</td>
+                </tr>
+                <tr>
+                    <td><code>POSTGRES_PRISMA_URL</code></td>
+                    <td class="status-auto">✅ Auto</td>
+                    <td>Prisma-specific connection URL</td>
+                </tr>
+            </tbody>
+        </table>
+        <p class="info">These are automatically set when you connect Vercel Postgres. No action needed.</p>
+    </div>
+
+    <div class="card">
+        <h3>🚚 Lalamove API</h3>
+        <table>
+            <thead>
+                <tr>
+                    <th>Variable</th>
+                    <th>Status</th>
+                    <th>Description</th>
+                    <th>Example</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td><code>LALAMOVE_CLIENT_ID</code></td>
+                    <td class="status-required">❓ Check</td>
+                    <td>Lalamove API client ID</td>
+                    <td>Get from Lalamove dashboard</td>
+                </tr>
+                <tr>
+                    <td><code>LALAMOVE_CLIENT_SECRET</code></td>
+                    <td class="status-required">❓ Check</td>
+                    <td>Lalamove API secret</td>
+                    <td>Get from Lalamove dashboard</td>
+                </tr>
+                <tr>
+                    <td><code>LALAMOVE_ENV</code></td>
+                    <td class="status-required">❓ Check</td>
+                    <td>Environment (sandbox/production)</td>
+                    <td><code>sandbox</code> or <code>production</code></td>
+                </tr>
+            </tbody>
+        </table>
+    </div>
+
+    <div class="card">
+        <h3>📧 Email/SMTP (Phase 2 Notifications)</h3>
+        <table>
+            <thead>
+                <tr>
+                    <th>Variable</th>
+                    <th>Status</th>
+                    <th>Description</th>
+                    <th>Example</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td><code>SMTP_HOST</code></td>
+                    <td class="status-optional">⚠️ Optional</td>
+                    <td>SMTP server hostname</td>
+                    <td><code>smtp.gmail.com</code></td>
+                </tr>
+                <tr>
+                    <td><code>SMTP_PORT</code></td>
+                    <td class="status-optional">⚠️ Optional</td>
+                    <td>SMTP server port</td>
+                    <td><code>587</code></td>
+                </tr>
+                <tr>
+                    <td><code>SMTP_USER</code></td>
+                    <td class="status-optional">⚠️ Optional</td>
+                    <td>SMTP username/email</td>
+                    <td><code>your-email@gmail.com</code></td>
+                </tr>
+                <tr>
+                    <td><code>SMTP_PASS</code></td>
+                    <td class="status-optional">⚠️ Optional</td>
+                    <td>SMTP password/app password</td>
+                    <td>Gmail App Password</td>
+                </tr>
+                <tr>
+                    <td><code>SMTP_FROM</code></td>
+                    <td class="status-optional">⚠️ Optional</td>
+                    <td>From email address</td>
+                    <td><code>noreply@budolshap.com</code></td>
+                </tr>
+            </tbody>
+        </table>
+        <p class="warning">
+            <strong>Note:</strong> If SMTP is not configured, emails will be logged to console instead of being sent.
+            Phase 2 notifications will still work but won't reach users.
+        </p>
+    </div>
+
+    <div class="card">
+        <h3>🖼️ Cloudinary (Image Uploads)</h3>
+        <table>
+            <thead>
+                <tr>
+                    <th>Variable</th>
+                    <th>Status</th>
+                    <th>Description</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td><code>NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME</code></td>
+                    <td class="status-required">❓ Check</td>
+                    <td>Cloudinary cloud name (public)</td>
+                </tr>
+                <tr>
+                    <td><code>CLOUDINARY_API_KEY</code></td>
+                    <td class="status-required">❓ Check</td>
+                    <td>Cloudinary API key</td>
+                </tr>
+                <tr>
+                    <td><code>CLOUDINARY_API_SECRET</code></td>
+                    <td class="status-required">❓ Check</td>
+                    <td>Cloudinary API secret</td>
+                </tr>
+            </tbody>
+        </table>
+    </div>
+
+    <div class="card">
+        <h3>⚙️ App Configuration</h3>
+        <table>
+            <thead>
+                <tr>
+                    <th>Variable</th>
+                    <th>Status</th>
+                    <th>Description</th>
+                    <th>Value</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td><code>NEXT_PUBLIC_APP_URL</code></td>
+                    <td class="status-required">❓ Check</td>
+                    <td>Public app URL</td>
+                    <td><code>https://budolshap-v3-j81ea1fen-jon-galvezs-projects-f5372ed2.vercel.app</code></td>
+                </tr>
+                <tr>
+                    <td><code>NODE_ENV</code></td>
+                    <td class="status-auto">✅ Auto</td>
+                    <td>Node environment</td>
+                    <td>Vercel sets to <code>production</code></td>
+                </tr>
+                <tr>
+                    <td><code>NEXT_PUBLIC_CURRENCY_SYMBOL</code></td>
+                    <td class="status-optional">⚠️ Optional</td>
+                    <td>Currency symbol</td>
+                    <td><code>₱</code> (default)</td>
+                </tr>
+            </tbody>
+        </table>
+    </div>
+
+    <h2>🔧 Immediate Actions Required</h2>
+
+    <div class="card">
+        <h3>Step 1: Add JWT_SECRET (CRITICAL)</h3>
+        <div class="code-block">
+            # Go to Vercel Dashboard:
+            https://vercel.com/jons-projects-9722fe4a/budolshap-v3/settings/environment-variables
+
+            # Add:
+            Name: JWT_SECRET
+            Value: 0f8ea2f62aec76393597dc8acad695e74273adb405ae9a64122cf6d75d625af
+            Environments: Production, Preview, Development
+        </div>
+    </div>
+
+    <div class="card">
+        <h3>Step 2: Verify Lalamove Credentials</h3>
+        <p>Check if these are set:</p>
+        <ul>
+            <li><code>LALAMOVE_CLIENT_ID</code></li>
+            <li><code>LALAMOVE_CLIENT_SECRET</code></li>
+            <li><code>LALAMOVE_ENV</code> (should be <code>sandbox</code> for testing)</li>
+            <li><code>LALAMOVE_WEBHOOK_SECRET</code></li>
+        </ul>
+    </div>
+
+    <div class="card">
+        <h3>Step 3: Add NEXT_PUBLIC_APP_URL</h3>
+        <div class="code-block">
+            Name: NEXT_PUBLIC_APP_URL
+            Value: https://budolshap-v3-j81ea1fen-jon-galvezs-projects-f5372ed2.vercel.app
+            Environments: Production, Preview, Development
+        </div>
+        <p>This is needed for email links and webhook callbacks.</p>
+    </div>
+
+    <div class="card">
+        <h3>Step 4: Optional - Configure SMTP for Phase 2</h3>
+        <p>To enable email notifications (Phase 2 feature):</p>
+        <div class="code-block">
+            SMTP_HOST=smtp.gmail.com
+            SMTP_PORT=587
+            SMTP_USER=your-email@gmail.com
+            SMTP_PASS=your-gmail-app-password
+            SMTP_FROM=noreply@budolshap.com
+        </div>
+        <p class="info">
+            <strong>Gmail App Password:</strong> Go to Google Account → Security → 2-Step Verification → App Passwords
+        </p>
+    </div>
+
+    <h2>✅ Verification Checklist</h2>
+
+    <div class="card">
+        <table>
+            <thead>
+                <tr>
+                    <th>Check</th>
+                    <th>Status</th>
+                    <th>How to Verify</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td>JWT_SECRET added</td>
+                    <td>❌ Pending</td>
+                    <td>Login should work without redirect</td>
+                </tr>
+                <tr>
+                    <td>Database connected</td>
+                    <td>✅ Likely OK</td>
+                    <td>App loads, seed scripts worked</td>
+                </tr>
+                <tr>
+                    <td>Lalamove configured</td>
+                    <td>❓ Unknown</td>
+                    <td>Try booking delivery</td>
+                </tr>
+                <tr>
+                    <td>SMTP configured</td>
+                    <td>❌ Likely Missing</td>
+                    <td>Check server logs for email output</td>
+                </tr>
+                <tr>
+                    <td>Cloudinary configured</td>
+                    <td>❓ Unknown</td>
+                    <td>Try uploading product image</td>
+                </tr>
+            </tbody>
+        </table>
+    </div>
+
+    <div class="success">
+        <h3>📝 Summary</h3>
+        <p><strong>Total Variables Found:</strong> 36</p>
+        <p><strong>Critical Missing:</strong> JWT_SECRET</p>
+        <p><strong>Recommended Action:</strong> Add JWT_SECRET immediately, then verify Lalamove and SMTP settings</p>
+    </div>
+
+    <div style="text-align: center; margin-top: 50px; color: #888;">
+        <p>Generated: December 12, 2025</p>
+        <p>Scan Results: <code>.env.example</code> created</p>
+    </div>
+
+</body>
+
+</html>

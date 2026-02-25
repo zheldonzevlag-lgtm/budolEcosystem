@@ -1,0 +1,72 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Phase 1: Root Cause Analysis - Buyer Real-time Status Fix</title>
+    <style>
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; line-height: 1.6; color: #333; max-width: 1000px; margin: 0 auto; padding: 20px; background-color: #f4f7f6; }
+        header { background-color: #2c3e50; color: white; padding: 1.5rem; border-radius: 8px; margin-bottom: 2rem; }
+        .nav { margin-bottom: 1rem; }
+        .nav a { color: #3498db; text-decoration: none; font-weight: bold; }
+        .container { background: white; padding: 2rem; border-radius: 8px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); }
+        h2 { color: #2c3e50; border-bottom: 2px solid #3498db; padding-bottom: 0.5rem; }
+        code { background: #f8f9fa; border: 1px solid #e1e4e8; padding: 2px 4px; border-radius: 4px; font-family: 'Courier New', Courier, monospace; }
+        pre { background: #2d3436; color: #dfe6e9; padding: 1rem; border-radius: 8px; overflow-x: auto; }
+        .highlight { color: #fab1a0; }
+        .issue-card { background: #fff5f5; border-left: 5px solid #ff7675; padding: 1rem; margin: 1rem 0; }
+    </style>
+</head>
+<body>
+    <div class="nav"><a href="index.html">&larr; Back to Index</a></div>
+    <header>
+        <h1>Phase 1: Root Cause Analysis</h1>
+        <p>Identifying why "booked" status updates fail for buyers.</p>
+    </header>
+    <div class="container">
+        <h2>Executive Summary</h2>
+        <p>The investigation revealed a discrepancy in how real-time events are broadcasted and consumed between the Seller and Buyer sides of the application. While the seller's dashboard listens to store-specific channels, the buyer's order page listens to user-specific channels which are currently not receiving the 'order-updated' event.</p>
+
+        <div class="issue-card">
+            <h3>Key Findings</h3>
+            <ul>
+                <li><strong>Channel Misalignment:</strong> API endpoints trigger events to <code>store-{storeId}</code> but ignore <code>user-{userId}</code>.</li>
+                <li><strong>Missing Hook Binding:</strong> The <code>useRealtimeBuyerOrders</code> hook only listens for <code>rating-created</code> events.</li>
+                <li><strong>Polling Fallback:</strong> The buyer side relies on a 10-second polling mechanism which masks the real-time failure for most statuses but feels delayed for critical transitions like "booked".</li>
+            </ul>
+        </div>
+
+        <h2>Technical Analysis</h2>
+        <h3>1. Seller-Side Hook (Working)</h3>
+        <p>The <code>useRealtimeOrders.js</code> hook correctly binds to the <code>order-updated</code> event on the <code>store-{storeId}</code> channel.</p>
+        <pre><code>// hooks/useRealtimeOrders.js
+channel.bind('order-updated', (data) => {
+    console.log('⚡ Order Updated (Pusher):', data);
+    mutate(); // Refresh SWR data
+});</code></pre>
+
+        <h3>2. Buyer-Side Hook (Incomplete)</h3>
+        <p>The <code>useRealtimeBuyerOrders.js</code> hook is missing the binding for order updates.</p>
+        <pre><code>// hooks/useRealtimeBuyerOrders.js
+// CURRENT STATE
+channel.bind('rating-created', (data) => {
+    console.log('⚡ [Buyer] Rating Created (Pusher):', data);
+    mutate();
+});
+<span class="highlight">// MISSING: order-updated binding</span></code></pre>
+
+        <h3>3. API Trigger Logic (One-Sided)</h3>
+        <p>The Lalamove sync endpoint only targets the store channel.</p>
+        <pre><code>// app/api/orders/[orderId]/sync-lalamove/route.js
+await triggerRealtimeEvent(`store-${order.storeId}`, 'order-updated', {
+    orderId: order.id,
+    status: newOrderStatus,
+    shippingStatus: lalamoveStatus
+});
+<span class="highlight">// MISSING: triggerRealtimeEvent(`user-${order.userId}`, ...)</span></code></pre>
+
+        <h2>Conclusion</h2>
+        <p>To fix the issue, we must ensure that every order status update triggers Pusher events for both the <strong>Store</strong> (Seller) and the <strong>User</strong> (Buyer), and that the buyer-side hook is updated to listen for these events.</p>
+    </div>
+</body>
+</html>

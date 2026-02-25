@@ -1,0 +1,54 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Phase 1: Diagnosis & Preparation</title>
+    <style>
+        body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; line-height: 1.6; color: #333; max-width: 900px; margin: 0 auto; padding: 20px; background-color: #f4f7f6; }
+        h1, h2, h3 { color: #2c3e50; }
+        .section { background: white; padding: 25px; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); margin-bottom: 25px; }
+        code { background-color: #f8f9fa; padding: 2px 4px; border-radius: 4px; font-family: monospace; color: #e83e8c; }
+        pre { background-color: #2d3436; color: #dfe6e9; padding: 15px; border-radius: 6px; overflow-x: auto; }
+        .error { color: #d63031; font-weight: bold; }
+        .success { color: #27ae60; font-weight: bold; }
+        nav { margin-bottom: 20px; }
+        nav a { color: #3498db; text-decoration: none; margin-right: 15px; }
+    </style>
+</head>
+<body>
+    <nav>
+        <a href="index.html">← Back to Index</a>
+    </nav>
+    <h1>Phase 1: Diagnosis & Preparation</h1>
+    
+    <div class="section">
+        <h2>Problem Statement</h2>
+        <p class="error">Error: Hydration failed because the server rendered HTML didn't match the client.</p>
+        <p>This error occurred on the <code>/orders</code> page of the BudolShap application. The discrepancy was found between the server-rendered "My Orders" shell and the client-rendered "Loading" spinner.</p>
+    </div>
+
+    <div class="section">
+        <h2>Root Cause Analysis</h2>
+        <p>The root cause was identified in <code>app/(public)/orders/page.jsx</code> and <code>hooks/useRealtimeBuyerOrders.js</code>:</p>
+        <ul>
+            <li>The <code>OrdersContent</code> component uses the <code>useRealtimeBuyerOrders</code> hook.</li>
+            <li>This hook relies on <code>getUser()</code> from <code>lib/auth-client.js</code> to get the user ID.</li>
+            <li><code>getUser()</code> returns <code>null</code> on the server because it accesses <code>localStorage</code>, which is only available in the browser.</li>
+            <li>Consequently, <code>useRealtimeBuyerOrders</code> returns <code>isLoading: false</code> on the server (since no URL is generated for a null user).</li>
+            <li>On the client, <code>getUser()</code> finds the user, SWR starts fetching, and <code>isLoading</code> becomes <code>true</code>.</li>
+            <li>The mismatch occurs when the server renders the full page structure while the client renders the <code>&lt;Loading /&gt;</code> component.</li>
+        </ul>
+    </div>
+
+    <div class="section">
+        <h2>Technical Specifications</h2>
+        <p><strong>Affected Files:</strong></p>
+        <ul>
+            <li><code>app/(public)/orders/page.jsx</code></li>
+        </ul>
+        <p><strong>Proposed Solution:</strong></p>
+        <p>Implement a <code>mounted</code> state in the <code>OrdersContent</code> component to ensure that the initial render on the client matches the server render. By forcing a "Loading" state on the server and the first client-side pass, we align the hydration trees.</p>
+    </div>
+</body>
+</html>

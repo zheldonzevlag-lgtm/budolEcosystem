@@ -1,0 +1,335 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Detailed UI Comparison: Phase 3 Returns & Exceptions</title>
+    <style>
+        :root {
+            --shopee-orange: #ee4d2d;
+            --budol-green: #22c55e;
+            --budol-slate: #1e293b;
+            --bg-gray: #f4f4f5;
+        }
+        body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; line-height: 1.5; color: #333; background: var(--bg-gray); padding: 20px; }
+        .container { max-width: 1200px; margin: 0 auto; background: white; padding: 40px; border-radius: 16px; box-shadow: 0 4px 30px rgba(0,0,0,0.05); }
+        h1 { color: var(--shopee-orange); text-align: center; border-bottom: 2px solid #fee2e2; padding-bottom: 20px; }
+        .comparison-section { margin-top: 40px; }
+        .section-header { background: #fef2f2; padding: 10px 20px; border-left: 5px solid var(--shopee-orange); font-weight: bold; margin-bottom: 20px; color: var(--shopee-orange); }
+        
+        .ui-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 30px; }
+        .ui-card { border: 1px solid #e4e4e7; border-radius: 12px; padding: 20px; background: #fff; }
+        .ui-label { display: inline-block; padding: 4px 12px; border-radius: 20px; font-size: 12px; font-weight: bold; margin-bottom: 15px; text-transform: uppercase; }
+        .label-current { background: #f1f5f9; color: #64748b; }
+        .label-proposed { background: #fff7ed; color: #c2410c; }
+
+        /* Mockup Styles */
+        .mockup { border: 1px solid #eee; border-radius: 8px; padding: 15px; margin-top: 10px; font-size: 13px; }
+        .info-box { background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 8px; padding: 12px; margin-top: 20px; font-size: 12px; }
+        .info-box strong { color: #475569; display: block; margin-bottom: 5px; text-transform: uppercase; font-size: 10px; letter-spacing: 0.05em; }
+        .file-path { font-family: 'Fira Code', monospace; color: #0f172a; background: #f1f5f9; padding: 2px 4px; border-radius: 4px; }
+        .url-path { color: #2563eb; font-weight: 500; }
+        .status-bar { display: flex; justify-content: space-between; position: relative; margin: 20px 0; padding-top: 20px; }
+        .status-bar::before { content: ''; position: absolute; top: 35px; left: 0; right: 0; height: 4px; background: #e2e8f0; z-index: 1; border-radius: 2px; }
+        .status-bar .progress-line { position: absolute; top: 35px; left: 0; height: 4px; background: linear-gradient(to right, #22c55e, #f59e0b); z-index: 2; border-radius: 2px; transition: width 0.5s ease; }
+        .step { position: relative; z-index: 3; text-align: center; width: 60px; }
+        .dot { width: 32px; height: 32px; background: #e2e8f0; border-radius: 50%; margin: 0 auto 8px; display: flex; align-items: center; justify-content: center; font-size: 14px; color: #94a3b8; border: 2px solid white; box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
+        .dot.active { background: #22c55e; color: white; }
+        .dot.current { background: #f59e0b; color: white; animation: pulse 2s infinite; }
+        .dot.exception { background: #ef4444; color: white; }
+        .dot.warning { background: #f59e0b; color: white; }
+        
+        @keyframes pulse {
+            0% { transform: scale(1); box-shadow: 0 0 0 0 rgba(245, 158, 11, 0.4); }
+            70% { transform: scale(1.1); box-shadow: 0 0 0 10px rgba(245, 158, 11, 0); }
+            100% { transform: scale(1); box-shadow: 0 0 0 0 rgba(245, 158, 11, 0); }
+        }
+
+        .tracking-history { margin-top: 20px; border-left: 2px solid #e2e8f0; padding-left: 20px; margin-left: 10px; }
+        .history-item { margin-bottom: 15px; position: relative; }
+        .history-item::before { content: '✓'; position: absolute; left: -29px; top: 0; width: 16px; height: 16px; background: #22c55e; color: white; border-radius: 50%; font-size: 10px; display: flex; align-items: center; justify-content: center; }
+        .history-item.pending::before { content: ''; background: #e2e8f0; }
+        .history-item.failed::before { content: '✕'; background: #ef4444; }
+        .history-time { font-size: 10px; color: #94a3b8; display: block; }
+        .history-label { font-weight: 600; font-size: 12px; color: #1e293b; }
+        .history-desc { font-size: 11px; color: #64748b; }
+
+        .feature-list { list-style: none; padding: 0; margin-top: 15px; }
+        .feature-list li { margin-bottom: 8px; padding-left: 20px; position: relative; font-size: 14px; }
+        .feature-list li::before { content: '→'; position: absolute; left: 0; color: var(--shopee-orange); }
+        .nav-footer { margin-top: 50px; padding-top: 20px; border-top: 1px solid #eee; display: flex; justify-content: space-between; align-items: center; }
+        .nav-link { color: var(--shopee-orange); text-decoration: none; font-weight: bold; }
+        .nav-link:hover { text-decoration: underline; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div style="margin-bottom: 20px;">
+            <a href="index.html" style="color: var(--shopee-orange); text-decoration: none; font-weight: bold;">← Back to Phase Index</a>
+        </div>
+        <h1>UI Evolution: Phase 3 Returns & Exceptions</h1>
+        <p style="text-align: center; color: #666;">A visual comparison of how we are moving from isolated status tracking to integrated Shopee-style exception flows.</p>
+
+        <!-- Section 1: Buyer Tracking Bar -->
+        <div class="comparison-section">
+            <div class="section-header">1. Buyer Tracking Bar (Progress Morphing)</div>
+            <div class="ui-grid">
+                <!-- Current -->
+                <div class="ui-card">
+                    <span class="ui-label label-current">Current Implementation</span>
+                    <p>Standard delivery tracking showing the order progress from placement to delivery.</p>
+                    <div class="mockup">
+                        <div class="status-bar">
+                            <div class="progress-line" style="width: 100%;"></div>
+                            <div class="step"><div class="dot active">✓</div><span>Placed</span></div>
+                            <div class="step"><div class="dot active">✓</div><span>Paid</span></div>
+                            <div class="step"><div class="dot active">✓</div><span>Booked</span></div>
+                            <div class="step"><div class="dot active">✓</div><span>In Transit</span></div>
+                            <div class="step"><div class="dot active">📦</div><span>Delivered</span></div>
+                        </div>
+                        <div class="tracking-history">
+                            <div class="history-item">
+                                <span class="history-time">Dec 28, 2025, 06:17 PM</span>
+                                <span class="history-label">Delivered</span>
+                                <p class="history-desc">Your order has been successfully delivered</p>
+                            </div>
+                            <div class="history-item">
+                                <span class="history-time">Dec 28, 2025, 06:11 PM</span>
+                                <span class="history-label">Order Booked</span>
+                                <p class="history-desc">A driver has been assigned to your delivery</p>
+                            </div>
+                        </div>
+                    </div>
+                    <ul class="feature-list">
+                        <li>Tracking bar reflects real-time courier status.</li>
+                        <li>Vertical tracking history with timestamps.</li>
+                        <li>Live GPS Map integration for active deliveries.</li>
+                    </ul>
+                </div>
+                <!-- Implemented -->
+                <div class="ui-card">
+                    <span class="ui-label label-proposed" style="background: #e8f5e9; color: #2e7d32;">Phase 3 Implemented</span>
+                    <p>The bar <strong>morphs</strong> into a Return Lifecycle. Icons and colors change to indicate the current stage of the dispute.</p>
+                    <div class="mockup">
+                        <div class="status-bar">
+                            <div class="progress-line" style="width: 50%;"></div>
+                            <div class="step"><div class="dot active">📝</div><span>Placed</span></div>
+                            <div class="step"><div class="dot active">📦</div><span>Delivered</span></div>
+                            <div class="step"><div class="dot current">↩️</div><span style="color: #f59e0b; font-weight: bold;">Requested</span></div>
+                            <div class="step"><div class="dot">⏳</div><span>Review</span></div>
+                            <div class="step"><div class="dot">💰</div><span>Refunded</span></div>
+                        </div>
+                        <div class="tracking-history">
+                            <div class="history-item">
+                                <span class="history-time">Dec 28, 2025, 06:20 PM</span>
+                                <span class="history-label">Return Requested</span>
+                                <p class="history-desc">Buyer requested a return due to "Damaged Item"</p>
+                            </div>
+                            <div class="history-item">
+                                <span class="history-time">Dec 28, 2025, 06:17 PM</span>
+                                <span class="history-label">Delivered</span>
+                                <p class="history-desc">Your order has been successfully delivered</p>
+                            </div>
+                        </div>
+                    </div>
+                    <ul class="feature-list">
+                        <li>Bar visually pivots to Return Flow.</li>
+                        <li>Status-specific colors (Orange for active dispute).</li>
+                        <li>Automated status mapping in <code>OrderProgressTracker.jsx</code>.</li>
+                    </ul>
+                    <div class="info-box">
+                        <strong>Live URL</strong>
+                        <span class="url-path">/orders/[orderId]</span>
+                        <br><br>
+                        <strong>Key Components</strong>
+                        <ul style="margin: 5px 0 0 0; padding-left: 15px;">
+                            <li><span class="file-path">components/OrderProgressTracker.jsx</span></li>
+                            <li><span class="file-path">lib/services/returnsService.js</span></li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Section 2: Seller Dashboard Actions -->
+        <div class="comparison-section">
+            <div class="section-header">2. Seller Dashboard (Exception Management)</div>
+            <div class="ui-grid">
+                <!-- Current -->
+                <div class="ui-card">
+                    <span class="ui-label label-current">Current Implementation</span>
+                    <p>Sellers must go to a separate "Returns" tab. Main "Orders" tab only shows delivery statuses without actionable failure handling.</p>
+                    <div class="mockup">
+                        <div style="border: 1px solid #ddd; padding: 10px; border-radius: 6px;">
+                            <div style="display: flex; gap: 10px; border-bottom: 1px solid #eee; padding-bottom: 5px; margin-bottom: 10px;">
+                                <div style="color: var(--budol-green); border-bottom: 2px solid var(--budol-green);">Orders</div>
+                                <div style="color: #666;">Returns</div>
+                            </div>
+                            <div style="background: #f8fafc; padding: 10px; border-radius: 4px;">
+                                <strong>Order #1234</strong><br>
+                                <span style="font-size: 11px; color: #666;">Status: PROCESSING</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <!-- Implemented -->
+                <div class="ui-card">
+                    <span class="ui-label label-proposed" style="background: #e8f5e9; color: #2e7d32;">Phase 3 Implemented</span>
+                    <p>Exceptions are surfaced directly in the Orders tab with <strong>Quick Action</strong> buttons and integrated Summary Cards.</p>
+                    <div class="mockup">
+                        <!-- Summary Cards -->
+                        <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 5px; margin-bottom: 15px;">
+                            <div style="border: 1px solid #ffedd5; background: #fffaf5; padding: 5px; border-radius: 4px; text-align: center;">
+                                <div style="color: #f97316; font-size: 10px; font-weight: bold;">NEEDS BOOKING</div>
+                                <div style="font-size: 14px; font-weight: bold;">1</div>
+                            </div>
+                            <div style="border: 1px solid #fee2e2; background: #fff5f5; padding: 5px; border-radius: 4px; text-align: center;">
+                                <div style="color: #ef4444; font-size: 10px; font-weight: bold;">RETURN / REFUND</div>
+                                <div style="font-size: 14px; font-weight: bold;">1</div>
+                            </div>
+                            <div style="border: 1px solid #f3f4f6; background: #f9fafb; padding: 5px; border-radius: 4px; text-align: center;">
+                                <div style="color: #ef4444; font-size: 10px; font-weight: bold;">CANCELLED</div>
+                                <div style="font-size: 14px; font-weight: bold;">1</div>
+                            </div>
+                        </div>
+                        <!-- Order Table Row -->
+                        <div style="border: 1px solid #ddd; padding: 10px; border-radius: 6px; font-size: 11px;">
+                            <div style="display: flex; justify-content: space-between; border-bottom: 1px solid #eee; padding-bottom: 5px; margin-bottom: 5px; font-weight: bold; color: #64748b;">
+                                <span>STATUS</span>
+                                <span>DELIVERY</span>
+                            </div>
+                            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
+                                <span style="background: #fee2e2; color: #ef4444; padding: 2px 6px; border-radius: 10px; font-size: 9px; font-weight: bold;">RETURN REQUESTED</span>
+                                <span style="color: #94a3b8;">-</span>
+                            </div>
+                            <div style="display: flex; justify-content: space-between; align-items: center;">
+                                <span style="color: #64748b;">Current: Processing</span>
+                                <div style="text-align: right;">
+                                    <span style="color: #ef4444; font-weight: bold; display: block;">✕ EXPIRED</span>
+                                    <a href="#" style="color: #2563eb; text-decoration: underline; font-size: 9px;">Rebook Delivery</a>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <ul class="feature-list">
+                        <li><strong>Exception Alerts:</strong> Integrated "EXPIRED" status for failed bookings.</li>
+                        <li><strong>One-Click Recovery:</strong> "Rebook Delivery" link handles instant retries.</li>
+                        <li><strong>Consolidated Dashboard:</strong> Return/Refund counts visible on main Orders page.</li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+
+        <!-- Section 3: Evidence Hub -->
+        <div class="comparison-section">
+            <div class="section-header">3. Return & Refund Management</div>
+            <div class="ui-grid">
+                <!-- Returns Table -->
+                <div class="ui-card" style="grid-column: span 2;">
+                    <span class="ui-label label-proposed" style="background: #e8f5e9; color: #2e7d32;">Unified Returns Management</span>
+                    <p>Dedicated interface for inspecting buyer evidence and taking decisive action (Approve/Reject/Dispute).</p>
+                    <div class="mockup">
+                        <div style="display: flex; gap: 10px; border-bottom: 1px solid #eee; padding-bottom: 8px; margin-bottom: 10px;">
+                            <div style="color: var(--shopee-orange); border-bottom: 2px solid var(--shopee-orange); font-weight: bold;">All Requests (1)</div>
+                            <div style="color: #64748b;">Pending (1)</div>
+                            <div style="color: #64748b;">Approved (0)</div>
+                        </div>
+                        <table style="width: 100%; border-collapse: collapse; font-size: 11px;">
+                            <thead>
+                                <tr style="background: #f8fafc; border-bottom: 1px solid #e2e8f0; text-align: left;">
+                                    <th style="padding: 8px;">ORDER / DATE</th>
+                                    <th style="padding: 8px;">CUSTOMER</th>
+                                    <th style="padding: 8px;">TYPE</th>
+                                    <th style="padding: 8px;">STATUS</th>
+                                    <th style="padding: 8px; text-align: right;">ACTIONS</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr style="border-bottom: 1px solid #f1f5f9;">
+                                     <td style="padding: 8px;"><strong>#cmjpmwr5</strong><br><span style="color: #94a3b8; font-size: 9px;">12/28/2025</span></td>
+                                     <td style="padding: 8px;">Steve Rogers<br><span style="color: #94a3b8; font-size: 9px;">steve.rogers@budolshap.com</span></td>
+                                     <td style="padding: 8px;"><span style="color: #64748b; font-weight: bold; font-size: 9px;">REFUND ONLY</span></td>
+                                     <td style="padding: 8px;"><span style="background: #fef3c7; color: #d97706; padding: 2px 8px; border-radius: 12px; font-weight: bold; font-size: 9px;">PENDING</span></td>
+                                     <td style="padding: 8px; text-align: right;">
+                                         <span title="Accept Refund" style="color: #22c55e; cursor: pointer; margin-right: 5px;">✅</span>
+                                         <span title="Reject" style="color: #ef4444; cursor: pointer; margin-right: 5px;">❌</span>
+                                         <span title="View Details" style="color: #64748b; cursor: pointer;">👁️</span>
+                                     </td>
+                                 </tr>
+                                 <tr style="border-bottom: 1px solid #f1f5f9;">
+                                    <td style="padding: 8px;"><strong>#rr99x2z1</strong><br><span style="color: #94a3b8; font-size: 9px;">12/28/2025</span></td>
+                                    <td style="padding: 8px;">Natasha Romanoff<br><span style="color: #94a3b8; font-size: 9px;">nat.rom@budolshap.com</span></td>
+                                    <td style="padding: 8px;"><span style="color: #2563eb; font-weight: bold; font-size: 9px;">RETURN & REFUND</span></td>
+                                    <td style="padding: 8px;"><span style="background: #dcfce7; color: #166534; padding: 2px 8px; border-radius: 12px; font-weight: bold; font-size: 9px;">APPROVED</span></td>
+                                    <td style="padding: 8px; text-align: right;">
+                                        <button style="background: #2563eb; color: white; border: none; padding: 2px 6px; border-radius: 4px; font-size: 8px; cursor: pointer;">Confirm Receipt</button>
+                                    </td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Section 4: Return Shipping lifecycle -->
+        <div class="comparison-section">
+            <div class="section-header">4. Return & Refund Flow (Buyer Return Shipping)</div>
+            <div class="ui-grid">
+                <!-- Buyer View: Shipping Back -->
+                <div class="ui-card">
+                    <span class="ui-label label-proposed" style="background: #e0f2fe; color: #0369a1;">Buyer: Return in Transit</span>
+                    <p>When "Return & Refund" is selected, the bar tracks the return parcel's journey back to the seller.</p>
+                    <div class="mockup">
+                        <div class="status-bar">
+                            <div class="progress-line" style="width: 75%;"></div>
+                            <div class="step"><div class="dot active">📦</div><span>Delivered</span></div>
+                            <div class="step"><div class="dot active">↩️</div><span>Requested</span></div>
+                            <div class="step"><div class="dot current">🚚</div><span style="color: #f59e0b; font-weight: bold;">In Return</span></div>
+                            <div class="step"><div class="dot">⏳</div><span>Review</span></div>
+                            <div class="step"><div class="dot">💰</div><span>Refunded</span></div>
+                        </div>
+                        <div class="tracking-history">
+                            <div class="history-item">
+                                <span class="history-time">Dec 28, 2025, 06:45 PM</span>
+                                <span class="history-label">Return In Transit</span>
+                                <p class="history-desc">Return parcel is being shipped back to seller (Tracking: BUDOL-RET-123)</p>
+                            </div>
+                            <div class="history-item">
+                                <span class="history-time">Dec 28, 2025, 06:30 PM</span>
+                                <span class="history-label">Return Approved</span>
+                                <p class="history-desc">Seller approved return. Please ship the item back.</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <!-- Seller View: Receipt Confirmation -->
+                <div class="ui-card">
+                    <span class="ui-label label-proposed" style="background: #fef2f2; color: #991b1b;">Seller: Confirming Receipt</span>
+                    <p>Sellers gain a new "Confirm Receipt" button once the return parcel is delivered to them.</p>
+                    <div class="mockup">
+                        <div style="background: #fffbeb; border: 1px solid #fef3c7; padding: 10px; border-radius: 6px; margin-bottom: 10px;">
+                            <div style="display: flex; align-items: center; gap: 8px; color: #92400e; font-weight: bold; font-size: 11px;">
+                                <span>⚠️ Action Required</span>
+                            </div>
+                            <p style="font-size: 10px; margin: 5px 0; color: #b45309;">The buyer has returned the item. Please inspect it and confirm receipt to release the refund.</p>
+                            <button style="width: 100%; background: #22c55e; color: white; border: none; padding: 8px; border-radius: 4px; font-weight: bold; cursor: pointer;">Confirm Parcel Received</button>
+                        </div>
+                        <div style="font-size: 11px; border: 1px solid #eee; padding: 10px; border-radius: 6px;">
+                            <strong>Return Details: #rr99x2z1</strong><br>
+                            <span style="color: #64748b;">Reason: Wrong Item Received</span><br>
+                            <span style="color: #64748b;">Return Status: DELIVERED TO SELLER</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="nav-footer">
+            <a href="comparative-analysis-plan.html" class="nav-link">← Previous: Analysis & Plan</a>
+            <a href="index.html" class="nav-link">Back to Index</a>
+            <a href="phase-1-return-lifecycle.html" class="nav-link">Next: 1. Return Lifecycle →</a>
+        </div>
+    </div>
+</body>
+</html>

@@ -1,0 +1,622 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>User Deletion Fix - Budolshap V3</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            line-height: 1.6;
+            color: #1e293b;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            padding: 2rem;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 20px;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+            overflow: hidden;
+        }
+
+        .header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 3rem 2rem;
+            text-align: center;
+        }
+
+        .header h1 {
+            font-size: 2.5rem;
+            font-weight: 700;
+            margin-bottom: 0.5rem;
+        }
+
+        .header p {
+            font-size: 1.1rem;
+            opacity: 0.95;
+        }
+
+        .content {
+            padding: 2rem;
+        }
+
+        .section {
+            margin-bottom: 2.5rem;
+        }
+
+        .section h2 {
+            color: #667eea;
+            font-size: 1.8rem;
+            margin-bottom: 1rem;
+            padding-bottom: 0.5rem;
+            border-bottom: 3px solid #667eea;
+        }
+
+        .section h3 {
+            color: #764ba2;
+            font-size: 1.4rem;
+            margin: 1.5rem 0 1rem;
+        }
+
+        .card {
+            background: #f8fafc;
+            border-left: 4px solid #667eea;
+            padding: 1.5rem;
+            margin: 1rem 0;
+            border-radius: 8px;
+        }
+
+        .card.error {
+            border-left-color: #ef4444;
+            background: #fef2f2;
+        }
+
+        .card.success {
+            border-left-color: #10b981;
+            background: #f0fdf4;
+        }
+
+        .card.warning {
+            border-left-color: #f59e0b;
+            background: #fffbeb;
+        }
+
+        code {
+            background: #1e293b;
+            color: #f1f5f9;
+            padding: 0.2rem 0.5rem;
+            border-radius: 4px;
+            font-family: 'Fira Code', 'Courier New', monospace;
+            font-size: 0.9rem;
+        }
+
+        pre {
+            background: #1e293b;
+            color: #f1f5f9;
+            padding: 1.5rem;
+            border-radius: 8px;
+            overflow-x: auto;
+            margin: 1rem 0;
+        }
+
+        pre code {
+            background: transparent;
+            padding: 0;
+        }
+
+        ul,
+        ol {
+            margin-left: 2rem;
+            margin-top: 0.5rem;
+        }
+
+        li {
+            margin: 0.5rem 0;
+        }
+
+        .badge {
+            display: inline-block;
+            padding: 0.25rem 0.75rem;
+            border-radius: 20px;
+            font-size: 0.85rem;
+            font-weight: 600;
+            margin: 0.25rem;
+        }
+
+        .badge.critical {
+            background: #ef4444;
+            color: white;
+        }
+
+        .badge.fixed {
+            background: #10b981;
+            color: white;
+        }
+
+        .badge.info {
+            background: #3b82f6;
+            color: white;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 1rem 0;
+        }
+
+        th,
+        td {
+            padding: 0.75rem;
+            text-align: left;
+            border-bottom: 1px solid #e2e8f0;
+        }
+
+        th {
+            background: #f1f5f9;
+            font-weight: 600;
+            color: #475569;
+        }
+
+        .flow-diagram {
+            background: white;
+            border: 2px solid #e2e8f0;
+            border-radius: 8px;
+            padding: 1.5rem;
+            margin: 1rem 0;
+        }
+
+        .flow-step {
+            background: #f8fafc;
+            border-left: 3px solid #667eea;
+            padding: 1rem;
+            margin: 0.5rem 0;
+            border-radius: 4px;
+        }
+
+        .flow-step strong {
+            color: #667eea;
+        }
+
+        .timestamp {
+            color: #64748b;
+            font-size: 0.9rem;
+            font-style: italic;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🔧 User Deletion Fix</h1>
+            <p>Resolving Foreign Key Constraint Violations</p>
+            <p class="timestamp">Fixed: December 12, 2025</p>
+        </div>
+
+        <div class="content">
+            <!-- Problem Statement -->
+            <div class="section">
+                <h2>❌ Problem Statement</h2>
+                <div class="card error">
+                    <h3>Issue</h3>
+                    <p>Admin users were unable to delete users from the system. When attempting to delete a user, the
+                        operation would fail silently or return an error.</p>
+
+                    <h3 style="margin-top: 1rem;">Root Cause</h3>
+                    <p>The DELETE endpoint at <code>/api/admin/users/[userId]</code> was not properly handling foreign
+                        key constraints in the database. Specifically:</p>
+                    <ul>
+                        <li><strong>OrderItems</strong> were not being deleted before <strong>Orders</strong></li>
+                        <li>The <code>Order</code> model has a relation to <code>User</code> without
+                            <code>onDelete: Cascade</code></li>
+                        <li>Products owned by the user's store were not being deleted before the store</li>
+                        <li>The deletion order was incorrect, causing foreign key constraint violations</li>
+                    </ul>
+                </div>
+
+                <div class="card warning">
+                    <h3>Database Constraint Issue</h3>
+                    <p>From the Prisma schema (<code>prisma/schema.prisma</code>):</p>
+                    <pre><code>model Order {
+    // ...
+    user    User    @relation("BuyerRelation", fields: [userId], references: [id])
+    // ⚠️ Missing: onDelete: Cascade
+}</code></pre>
+                    <p>This means when trying to delete a user, PostgreSQL would throw a foreign key constraint error if
+                        the user had any orders.</p>
+                </div>
+            </div>
+
+            <!-- Solution -->
+            <div class="section">
+                <h2>✅ Solution Implemented</h2>
+                <div class="card success">
+                    <h3>Enhanced Deletion Logic</h3>
+                    <p>Implemented a comprehensive deletion strategy using Prisma transactions to ensure all related
+                        records are deleted in the correct order:</p>
+                </div>
+
+                <div class="flow-diagram">
+                    <h3>Deletion Flow</h3>
+                    <div class="flow-step">
+                        <strong>Step 1:</strong> Find all orders where the user is the buyer
+                    </div>
+                    <div class="flow-step">
+                        <strong>Step 2:</strong> Delete all OrderItems for those orders
+                    </div>
+                    <div class="flow-step">
+                        <strong>Step 3:</strong> If user has a store, find all store orders
+                    </div>
+                    <div class="flow-step">
+                        <strong>Step 4:</strong> Delete all OrderItems for store orders
+                    </div>
+                    <div class="flow-step">
+                        <strong>Step 5:</strong> Delete all store orders
+                    </div>
+                    <div class="flow-step">
+                        <strong>Step 6:</strong> Delete all products (cascades to ratings and cart items)
+                    </div>
+                    <div class="flow-step">
+                        <strong>Step 7:</strong> Delete the store (cascades to wallet, transactions, payout requests)
+                    </div>
+                    <div class="flow-step">
+                        <strong>Step 8:</strong> Delete user's orders as buyer
+                    </div>
+                    <div class="flow-step">
+                        <strong>Step 9:</strong> Delete the user (cascades to ratings, addresses, cart, chats, messages,
+                        audit logs)
+                    </div>
+                </div>
+            </div>
+
+            <!-- Technical Implementation -->
+            <div class="section">
+                <h2>🔨 Technical Implementation</h2>
+
+                <h3>File Modified</h3>
+                <div class="card">
+                    <code>app/api/admin/users/[userId]/route.js</code>
+                </div>
+
+                <h3>Key Changes</h3>
+                <pre><code>// DELETE user (admin only)
+export async function DELETE(request, { params }) {
+    try {
+        const { userId } = await params
+
+        // Check if user exists
+        const user = await prisma.user.findUnique({
+            where: { id: userId },
+            include: { store: true }
+        })
+
+        if (!user) {
+            return NextResponse.json(
+                { error: 'User not found' },
+                { status: 404 }
+            )
+        }
+
+        // Use a transaction to ensure all deletions succeed or fail together
+        await prisma.$transaction(async (tx) => {
+            // 1. Delete OrderItems for user's orders (as buyer)
+            const userOrders = await tx.order.findMany({
+                where: { userId: userId },
+                select: { id: true }
+            })
+            
+            if (userOrders.length > 0) {
+                await tx.orderItem.deleteMany({
+                    where: { 
+                        orderId: { in: userOrders.map(o => o.id) }
+                    }
+                })
+            }
+
+            // 2. If user has a store, delete store-related records
+            if (user.store) {
+                // Get all orders from this store
+                const storeOrders = await tx.order.findMany({
+                    where: { storeId: user.store.id },
+                    select: { id: true }
+                })
+
+                // Delete OrderItems for store orders
+                if (storeOrders.length > 0) {
+                    await tx.orderItem.deleteMany({
+                        where: { 
+                            orderId: { in: storeOrders.map(o => o.id) }
+                        }
+                    })
+                }
+
+                // Delete store orders
+                await tx.order.deleteMany({
+                    where: { storeId: user.store.id }
+                })
+
+                // Delete products (cascade to ratings and cart items)
+                await tx.product.deleteMany({
+                    where: { storeId: user.store.id }
+                })
+
+                // Delete the store (cascade to wallet, transactions, etc.)
+                await tx.store.delete({
+                    where: { id: user.store.id }
+                })
+            }
+
+            // 3. Delete user's orders (as buyer)
+            await tx.order.deleteMany({
+                where: { userId: userId }
+            })
+
+            // 4. Delete user (cascade to other records)
+            await tx.user.delete({
+                where: { id: userId }
+            })
+        })
+
+        return NextResponse.json({ message: 'User deleted successfully' })
+    } catch (error) {
+        console.error('Error deleting user:', error)
+        return NextResponse.json(
+            { error: 'Failed to delete user', details: error.message },
+            { status: 500 }
+        )
+    }
+}</code></pre>
+            </div>
+
+            <!-- Benefits -->
+            <div class="section">
+                <h2>🎯 Benefits</h2>
+                <div class="card success">
+                    <h3>Transaction Safety</h3>
+                    <p>Using <code>prisma.$transaction()</code> ensures that either all deletions succeed or none do.
+                        This prevents partial deletions that could leave the database in an inconsistent state.</p>
+                </div>
+
+                <div class="card success">
+                    <h3>Proper Deletion Order</h3>
+                    <p>By deleting records in the correct order (child records before parent records), we avoid foreign
+                        key constraint violations.</p>
+                </div>
+
+                <div class="card success">
+                    <h3>Comprehensive Coverage</h3>
+                    <p>The solution handles all related records:</p>
+                    <ul>
+                        <li>Orders (as buyer and seller)</li>
+                        <li>OrderItems</li>
+                        <li>Products</li>
+                        <li>Store</li>
+                        <li>Wallet & Transactions</li>
+                        <li>Ratings, Addresses, Cart, Chats, Messages, Audit Logs (via cascade)</li>
+                    </ul>
+                </div>
+
+                <div class="card success">
+                    <h3>Better Error Reporting</h3>
+                    <p>The error response now includes the error message details, making debugging easier if issues
+                        occur.</p>
+                </div>
+            </div>
+
+            <!-- Database Relations -->
+            <div class="section">
+                <h2>🗄️ Database Relations Overview</h2>
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Model</th>
+                            <th>Relation to User</th>
+                            <th>Cascade Behavior</th>
+                            <th>Deletion Strategy</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td><code>Order</code></td>
+                            <td>userId (buyer)</td>
+                            <td>❌ No cascade</td>
+                            <td>Manual deletion required</td>
+                        </tr>
+                        <tr>
+                            <td><code>OrderItem</code></td>
+                            <td>Via Order</td>
+                            <td>✅ Cascade on Order</td>
+                            <td>Delete before Order</td>
+                        </tr>
+                        <tr>
+                            <td><code>Store</code></td>
+                            <td>userId (owner)</td>
+                            <td>❌ No cascade</td>
+                            <td>Manual deletion required</td>
+                        </tr>
+                        <tr>
+                            <td><code>Product</code></td>
+                            <td>Via Store</td>
+                            <td>✅ Cascade on Store</td>
+                            <td>Delete before Store</td>
+                        </tr>
+                        <tr>
+                            <td><code>Rating</code></td>
+                            <td>userId</td>
+                            <td>✅ Cascade</td>
+                            <td>Auto-deleted</td>
+                        </tr>
+                        <tr>
+                            <td><code>Address</code></td>
+                            <td>userId</td>
+                            <td>✅ Cascade</td>
+                            <td>Auto-deleted</td>
+                        </tr>
+                        <tr>
+                            <td><code>Cart</code></td>
+                            <td>userId</td>
+                            <td>✅ Cascade</td>
+                            <td>Auto-deleted</td>
+                        </tr>
+                        <tr>
+                            <td><code>Chat</code></td>
+                            <td>buyerId/sellerId</td>
+                            <td>✅ Cascade</td>
+                            <td>Auto-deleted</td>
+                        </tr>
+                        <tr>
+                            <td><code>Message</code></td>
+                            <td>senderId</td>
+                            <td>✅ Cascade</td>
+                            <td>Auto-deleted</td>
+                        </tr>
+                        <tr>
+                            <td><code>AuditLog</code></td>
+                            <td>userId</td>
+                            <td>✅ Cascade</td>
+                            <td>Auto-deleted</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+
+            <!-- Testing -->
+            <div class="section">
+                <h2>🧪 Testing Instructions</h2>
+                <div class="card info">
+                    <h3>How to Test</h3>
+                    <ol>
+                        <li>Start the development server: <code>npm run dev</code></li>
+                        <li>Log in as an admin user</li>
+                        <li>Navigate to <code>/admin/users</code></li>
+                        <li>Find a test user (like "Test Player")</li>
+                        <li>Click the <strong>Delete</strong> button</li>
+                        <li>Confirm the deletion</li>
+                        <li>Verify the user is removed from the list</li>
+                        <li>Check the database to ensure all related records are deleted</li>
+                    </ol>
+                </div>
+
+                <div class="card warning">
+                    <h3>⚠️ Important Notes</h3>
+                    <ul>
+                        <li>This operation is <strong>irreversible</strong></li>
+                        <li>All user data, orders, and related records will be permanently deleted</li>
+                        <li>Test on development/staging environment first</li>
+                        <li>Consider implementing a "soft delete" feature for production use</li>
+                    </ul>
+                </div>
+            </div>
+
+            <!-- Future Improvements -->
+            <div class="section">
+                <h2>🚀 Future Improvements</h2>
+                <div class="card">
+                    <h3>1. Soft Delete Implementation</h3>
+                    <p>Instead of permanently deleting users, implement a soft delete mechanism:</p>
+                    <ul>
+                        <li>Add <code>deletedAt</code> field to User model</li>
+                        <li>Mark users as deleted instead of removing them</li>
+                        <li>Allow data recovery within a grace period</li>
+                        <li>Implement automatic hard delete after 30 days</li>
+                    </ul>
+                </div>
+
+                <div class="card">
+                    <h3>2. Audit Trail</h3>
+                    <p>Log all user deletions for compliance:</p>
+                    <ul>
+                        <li>Record who deleted the user</li>
+                        <li>Record when the deletion occurred</li>
+                        <li>Store reason for deletion</li>
+                        <li>Keep a snapshot of deleted user data</li>
+                    </ul>
+                </div>
+
+                <div class="card">
+                    <h3>3. Data Anonymization</h3>
+                    <p>For GDPR compliance, consider anonymizing instead of deleting:</p>
+                    <ul>
+                        <li>Replace personal data with anonymized values</li>
+                        <li>Keep order history for business analytics</li>
+                        <li>Remove PII while maintaining data integrity</li>
+                    </ul>
+                </div>
+
+                <div class="card">
+                    <h3>4. Schema Migration</h3>
+                    <p>Update Prisma schema to add cascade delete where appropriate:</p>
+                    <pre><code>model Order {
+    // ...
+    user User @relation("BuyerRelation", fields: [userId], references: [id], onDelete: Cascade)
+}</code></pre>
+                    <p><strong>Note:</strong> This would simplify the deletion logic but requires a database migration.
+                    </p>
+                </div>
+
+                <div class="card">
+                    <h3>5. Bulk Deletion</h3>
+                    <p>Add ability to delete multiple users at once:</p>
+                    <ul>
+                        <li>Select multiple users via checkboxes</li>
+                        <li>Bulk delete with confirmation</li>
+                        <li>Progress indicator for large deletions</li>
+                    </ul>
+                </div>
+            </div>
+
+            <!-- Deployment -->
+            <div class="section">
+                <h2>🚢 Deployment Checklist</h2>
+                <div class="card">
+                    <h3>Before Deploying to Production</h3>
+                    <ol>
+                        <li>✅ Test deletion on development environment</li>
+                        <li>✅ Test deletion on staging environment</li>
+                        <li>✅ Verify all related records are deleted</li>
+                        <li>✅ Ensure no orphaned records remain</li>
+                        <li>✅ Test with users who have:
+                            <ul>
+                                <li>No orders</li>
+                                <li>Orders as buyer only</li>
+                                <li>A store with products</li>
+                                <li>A store with orders</li>
+                                <li>Both buyer orders and seller orders</li>
+                            </ul>
+                        </li>
+                        <li>✅ Backup production database before deployment</li>
+                        <li>✅ Deploy during low-traffic period</li>
+                        <li>✅ Monitor error logs after deployment</li>
+                    </ol>
+                </div>
+            </div>
+
+            <!-- Summary -->
+            <div class="section">
+                <h2>📝 Summary</h2>
+                <div class="card success">
+                    <p><strong>Problem:</strong> Users could not be deleted due to foreign key constraint violations.
+                    </p>
+                    <p><strong>Solution:</strong> Implemented comprehensive deletion logic using Prisma transactions to
+                        delete all related records in the correct order.</p>
+                    <p><strong>Result:</strong> Admins can now successfully delete users from the system, with all
+                        related data properly cleaned up.</p>
+                    <p><strong>Status:</strong> <span class="badge fixed">FIXED</span></p>
+                </div>
+            </div>
+        </div>
+    </div>
+</body>
+
+</html>

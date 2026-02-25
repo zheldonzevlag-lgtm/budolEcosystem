@@ -1,0 +1,92 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>UI Synchronization: Auto-Sync & Polling</title>
+    <style>
+        :root {
+            --primary: #1a56db;
+            --bg: #f9fafb;
+            --card-bg: #ffffff;
+            --text: #111827;
+            --code-bg: #1e293b;
+        }
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: var(--bg);
+            color: var(--text);
+            line-height: 1.6;
+            margin: 0;
+            padding: 2rem;
+        }
+        .container { max-width: 900px; margin: 0 auto; }
+        .card { background: var(--card-bg); padding: 2rem; border-radius: 0.75rem; box-shadow: 0 4px 6px rgba(0,0,0,0.05); margin-bottom: 2rem; }
+        h1 { color: var(--primary); border-bottom: 2px solid var(--primary); padding-bottom: 0.5rem; }
+        h2 { color: var(--primary); margin-top: 2rem; }
+        pre { background: var(--code-bg); color: #f8f8f2; padding: 1.5rem; border-radius: 0.5rem; overflow-x: auto; font-size: 0.9rem; }
+        code { font-family: 'Fira Code', monospace; }
+        .back-link { display: inline-block; margin-bottom: 1rem; color: var(--primary); text-decoration: none; font-weight: 500; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <a href="index.html" class="back-link">← Back to Index</a>
+        <div class="card">
+            <h1>UI Synchronization: Auto-Sync & Polling</h1>
+            
+            <h2>Problem: The "Passive UI" Limitation</h2>
+            <p>
+                Previously, the Seller UI only updated its status if a webhook was received or if the Buyer specifically 
+                viewed the order detail page. If the webhook failed or was delayed, the Seller UI appeared "stuck".
+            </p>
+
+            <h2>Solution: Proactive Client-Side Sync</h2>
+            <p>
+                We implemented a <code>useEffect</code> hook in both the Seller's Store Orders page and the Buyer's 
+                Order List page to proactively poll the synchronization endpoint for active Lalamove orders.
+            </p>
+
+            <h3>Implementation (Seller UI)</h3>
+            <pre><code>useEffect(() => {
+  if (!orders || orders.length === 0) return;
+
+  // 1. Filter for orders that require active tracking
+  const activeLalamoveOrders = orders.filter(order => 
+    order.shipping?.provider === 'lalamove' && 
+    order.shipping?.bookingId &&
+    ['ORDER_PLACED', 'PROCESSING', 'SHIPPED', 'PICKED_UP', 'IN_TRANSIT'].includes(order.status)
+  );
+
+  if (activeLalamoveOrders.length === 0) return;
+
+  // 2. Define sync function
+  const syncAll = async () => {
+    for (const order of activeLalamoveOrders) {
+      await fetch(`/api/orders/${order.id}/sync-lalamove`, { method: 'POST' });
+    }
+    mutate(); // Refresh SWR cache
+  };
+
+  // 3. Set 15-second interval
+  const interval = setInterval(syncAll, 15000);
+  return () => clearInterval(interval);
+}, [orders, mutate]);</code></pre>
+
+            <h3>Polling Strategy</h3>
+            <ul>
+                <li><strong>Interval:</strong> 15 seconds. This provides a balance between responsiveness and server load.</li>
+                <li><strong>Targeting:</strong> Only polls orders in transient statuses (e.g., <code>IN_TRANSIT</code>). Does not poll <code>DELIVERED</code> or <code>CANCELLED</code> orders.</li>
+                <li><strong>Refresh:</strong> Calls <code>mutate()</code> from SWR to update the local UI state immediately after the server-side sync completes.</li>
+            </ul>
+
+            <h2>Benefits</h2>
+            <ul>
+                <li><strong>Redundancy:</strong> Status sync works even if Lalamove webhooks are down.</li>
+                <li><strong>Independence:</strong> Seller UI updates correctly regardless of what page the Buyer is on.</li>
+                <li><strong>Consistency:</strong> Both Buyer and Seller see identical status information within a 15-second window.</li>
+            </ul>
+        </div>
+    </div>
+</body>
+</html>

@@ -1,0 +1,59 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Phase 1: Diagnosis - Map Rendering Fix</title>
+    <style>
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; line-height: 1.6; color: #333; max-width: 900px; margin: 0 auto; padding: 20px; background-color: #f4f7f6; }
+        .container { background-color: #fff; padding: 40px; border-radius: 8px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); }
+        h1 { color: #2c3e50; border-bottom: 2px solid #3498db; padding-bottom: 10px; }
+        h2 { color: #2980b9; margin-top: 30px; }
+        .issue-box { background-color: #fff5f5; border-left: 5px solid #e74c3c; padding: 15px; margin: 20px 0; }
+        .analysis-box { background-color: #e8f4fd; border-left: 5px solid #3498db; padding: 15px; margin: 20px 0; }
+        code { background-color: #f8f9fa; padding: 2px 5px; border-radius: 4px; font-family: 'Courier New', Courier, monospace; }
+        .navigation { margin-top: 40px; display: flex; justify-content: space-between; }
+        .btn { padding: 10px 20px; background-color: #3498db; color: white; text-decoration: none; border-radius: 5px; transition: background-color 0.3s; }
+        .btn:hover { background-color: #2980b9; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Phase 1: Diagnosis & Root Cause Analysis</h1>
+        
+        <section>
+            <h2>The Issue</h2>
+            <div class="issue-box">
+                <p><strong>Symptom:</strong> The interactive map in the Address Form was appearing as a white/empty box with only the border visible. No map tiles or center pins were rendered, although the "Coordinates Verified" overlay was visible.</p>
+            </div>
+        </section>
+
+        <section>
+            <h2>Root Cause Analysis</h2>
+            <div class="analysis-box">
+                <p>After examining the codebase and the rendered UI, the following causes were identified:</p>
+                <ul>
+                    <li><strong>Height Collapse:</strong> The <code>MapPicker</code> component was receiving a <code>height="100%"</code> prop. In CSS, percentage heights only work if the immediate parent has an explicit height. The wrapper div in <code>MapPicker.jsx</code> didn't have an explicit height, causing the map container to collapse to 0 pixels.</li>
+                    <li><strong>CSS Specificity:</strong> The Tailwind classes were not sufficient to force the Leaflet container to expand when nested inside several relative/absolute containers without explicit dimensions.</li>
+                    <li><strong>Theme Inconsistency:</strong> The map markers and UI elements were still using the old orange branding (<code>#ea580c</code>), which conflicted with the newly reverted green theme (<code>#10b981</code>).</li>
+                </ul>
+            </div>
+        </section>
+
+        <section>
+            <h2>Technical Specifications</h2>
+            <ul>
+                <li><strong>Component:</strong> <code>MapPicker.jsx</code></li>
+                <li><strong>Parent Component:</strong> <code>AddressFormManager.jsx</code></li>
+                <li><strong>Styling Framework:</strong> Tailwind CSS + Inline Styles for dynamic height</li>
+                <li><strong>Map Library:</strong> Leaflet.js / react-leaflet</li>
+            </ul>
+        </section>
+
+        <div class="navigation">
+            <a href="index.html" class="btn">Back to Index</a>
+            <a href="phase-2-implementation.html" class="btn">Next: Implementation</a>
+        </div>
+    </div>
+</body>
+</html>

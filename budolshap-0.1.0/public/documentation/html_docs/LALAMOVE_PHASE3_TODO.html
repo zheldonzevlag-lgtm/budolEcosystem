@@ -1,0 +1,646 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Phase 3 - Lalamove Frontend Integration TODO</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 2rem;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            background: rgba(255, 255, 255, 0.95);
+            border-radius: 20px;
+            padding: 3rem;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+        }
+
+        h1 {
+            color: #667eea;
+            margin-bottom: 1rem;
+            font-size: 2.5rem;
+            text-align: center;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+
+        .subtitle {
+            text-align: center;
+            color: #666;
+            margin-bottom: 2rem;
+            font-size: 1.1rem;
+        }
+
+        .phase-info {
+            background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+            color: white;
+            padding: 1.5rem;
+            border-radius: 15px;
+            margin-bottom: 2rem;
+            box-shadow: 0 10px 30px rgba(240, 147, 251, 0.3);
+        }
+
+        .phase-info h2 {
+            margin-bottom: 0.5rem;
+            font-size: 1.5rem;
+        }
+
+        .section {
+            margin-bottom: 2rem;
+            background: white;
+            padding: 2rem;
+            border-radius: 15px;
+            border-left: 5px solid #667eea;
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.1);
+            transition: transform 0.3s ease, box-shadow 0.3s ease;
+        }
+
+        .section:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.15);
+        }
+
+        .section h2 {
+            color: #667eea;
+            margin-bottom: 1rem;
+            font-size: 1.8rem;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .section-number {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: bold;
+            font-size: 1.2rem;
+        }
+
+        .todo-item {
+            background: #f8f9fa;
+            padding: 1.5rem;
+            margin-bottom: 1rem;
+            border-radius: 10px;
+            border-left: 4px solid #28a745;
+            transition: all 0.3s ease;
+        }
+
+        .todo-item:hover {
+            background: #e9ecef;
+            transform: translateX(10px);
+        }
+
+        .todo-item h3 {
+            color: #333;
+            margin-bottom: 0.5rem;
+            font-size: 1.3rem;
+        }
+
+        .todo-item p {
+            color: #666;
+            line-height: 1.6;
+            margin-bottom: 0.5rem;
+        }
+
+        .todo-item ul {
+            margin-left: 1.5rem;
+            margin-top: 0.5rem;
+        }
+
+        .todo-item li {
+            color: #555;
+            margin-bottom: 0.3rem;
+            line-height: 1.6;
+        }
+
+        .priority {
+            display: inline-block;
+            padding: 0.3rem 0.8rem;
+            border-radius: 20px;
+            font-size: 0.85rem;
+            font-weight: bold;
+            margin-top: 0.5rem;
+        }
+
+        .priority-high {
+            background: #ff6b6b;
+            color: white;
+        }
+
+        .priority-medium {
+            background: #ffd93d;
+            color: #333;
+        }
+
+        .priority-low {
+            background: #6bcf7f;
+            color: white;
+        }
+
+        .file-path {
+            background: #2d3748;
+            color: #68d391;
+            padding: 0.3rem 0.8rem;
+            border-radius: 5px;
+            font-family: 'Courier New', monospace;
+            font-size: 0.9rem;
+            display: inline-block;
+            margin-top: 0.5rem;
+        }
+
+        .dependencies {
+            background: #fff3cd;
+            border-left: 4px solid #ffc107;
+            padding: 1rem;
+            margin-top: 1rem;
+            border-radius: 5px;
+        }
+
+        .dependencies h4 {
+            color: #856404;
+            margin-bottom: 0.5rem;
+        }
+
+        .dependencies ul {
+            margin-left: 1.5rem;
+        }
+
+        .dependencies li {
+            color: #856404;
+        }
+
+        .progress-bar {
+            background: #e9ecef;
+            height: 30px;
+            border-radius: 15px;
+            overflow: hidden;
+            margin-bottom: 2rem;
+        }
+
+        .progress-fill {
+            background: linear-gradient(90deg, #667eea 0%, #764ba2 100%);
+            height: 100%;
+            width: 0%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-weight: bold;
+            transition: width 0.5s ease;
+        }
+
+        .completion-status {
+            text-align: center;
+            margin-bottom: 2rem;
+            font-size: 1.2rem;
+            color: #667eea;
+            font-weight: bold;
+        }
+
+        @keyframes fadeIn {
+            from {
+                opacity: 0;
+                transform: translateY(20px);
+            }
+
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .section {
+            animation: fadeIn 0.5s ease;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="container">
+        <h1>🚀 Lalamove Integration - Phase 3</h1>
+        <p class="subtitle">Frontend Integration & User Experience</p>
+
+        <div class="phase-info">
+            <h2>Phase 3 Overview</h2>
+            <p>This phase focuses on integrating the Lalamove backend API into the frontend, creating a seamless user
+                experience for selecting Lalamove as a shipping option, viewing quotes, and tracking deliveries.</p>
+        </div>
+
+        <div class="completion-status">
+            Phase 3 Progress: 0% Complete
+        </div>
+
+        <div class="progress-bar">
+            <div class="progress-fill" style="width: 0%">0%</div>
+        </div>
+
+        <!-- Task 1 -->
+        <div class="section">
+            <h2><span class="section-number">1</span> Checkout Page Integration</h2>
+
+            <div class="todo-item">
+                <h3>1.1 Add Lalamove Shipping Option</h3>
+                <p>Integrate Lalamove as a shipping method option in the checkout flow.</p>
+                <ul>
+                    <li>Add "Lalamove Delivery" radio button option in shipping method selection</li>
+                    <li>Display Lalamove logo and description</li>
+                    <li>Show estimated delivery time (same-day delivery)</li>
+                    <li>Add "Get Quote" button to fetch real-time pricing</li>
+                </ul>
+                <span class="file-path">app/(public)/checkout/page.jsx</span>
+                <span class="priority priority-high">HIGH PRIORITY</span>
+            </div>
+
+            <div class="todo-item">
+                <h3>1.2 Implement Quote Fetching</h3>
+                <p>Create functionality to fetch and display Lalamove shipping quotes.</p>
+                <ul>
+                    <li>Call <code>/api/lalamove/quote</code> endpoint with delivery address</li>
+                    <li>Display loading state while fetching quote</li>
+                    <li>Show quoted price and estimated delivery time</li>
+                    <li>Handle errors gracefully (out of service area, API errors)</li>
+                    <li>Cache quote for 5 minutes to avoid repeated API calls</li>
+                </ul>
+                <span class="file-path">app/(public)/checkout/page.jsx</span>
+                <span class="priority priority-high">HIGH PRIORITY</span>
+            </div>
+
+            <div class="todo-item">
+                <h3>1.3 Address Validation</h3>
+                <p>Ensure delivery address is complete and valid for Lalamove.</p>
+                <ul>
+                    <li>Validate that address includes street, city, and coordinates</li>
+                    <li>Show error if address is incomplete</li>
+                    <li>Suggest using address autocomplete for better accuracy</li>
+                    <li>Validate address is within Lalamove service area</li>
+                </ul>
+                <span class="file-path">app/(public)/checkout/page.jsx</span>
+                <span class="priority priority-high">HIGH PRIORITY</span>
+            </div>
+
+            <div class="todo-item">
+                <h3>1.4 Order Placement with Lalamove</h3>
+                <p>Modify order creation to book Lalamove delivery when selected.</p>
+                <ul>
+                    <li>Include Lalamove shipping details in order creation payload</li>
+                    <li>Call <code>/api/lalamove/book</code> after successful payment</li>
+                    <li>Store Lalamove order ID in database</li>
+                    <li>Handle booking failures and provide fallback options</li>
+                    <li>Show confirmation with Lalamove tracking details</li>
+                </ul>
+                <span class="file-path">app/(public)/checkout/page.jsx</span>
+                <span class="file-path">app/api/orders/route.js</span>
+                <span class="priority priority-high">HIGH PRIORITY</span>
+            </div>
+        </div>
+
+        <!-- Task 2 -->
+        <div class="section">
+            <h2><span class="section-number">2</span> Order Tracking Integration</h2>
+
+            <div class="todo-item">
+                <h3>2.1 Display Lalamove Tracking Info</h3>
+                <p>Show Lalamove delivery status on order details page.</p>
+                <ul>
+                    <li>Add Lalamove tracking section to order details</li>
+                    <li>Display current delivery status (ASSIGNING_DRIVER, ON_GOING, PICKED_UP, COMPLETED)</li>
+                    <li>Show driver details when available (name, phone, photo)</li>
+                    <li>Display estimated arrival time</li>
+                    <li>Show real-time location map if available</li>
+                </ul>
+                <span class="file-path">app/(public)/orders/[orderId]/page.jsx</span>
+                <span class="priority priority-high">HIGH PRIORITY</span>
+            </div>
+
+            <div class="todo-item">
+                <h3>2.2 Real-time Status Updates</h3>
+                <p>Implement real-time tracking updates using webhooks.</p>
+                <ul>
+                    <li>Poll <code>/api/lalamove/track</code> endpoint for status updates</li>
+                    <li>Update UI automatically when status changes</li>
+                    <li>Show notifications for key status changes (driver assigned, picked up, delivered)</li>
+                    <li>Add refresh button for manual status check</li>
+                </ul>
+                <span class="file-path">app/(public)/orders/[orderId]/page.jsx</span>
+                <span class="priority priority-medium">MEDIUM PRIORITY</span>
+            </div>
+
+            <div class="todo-item">
+                <h3>2.3 Delivery Timeline Visualization</h3>
+                <p>Create visual timeline showing delivery progress.</p>
+                <ul>
+                    <li>Design step-by-step progress indicator</li>
+                    <li>Highlight current status in timeline</li>
+                    <li>Show timestamps for completed steps</li>
+                    <li>Add icons for each delivery stage</li>
+                </ul>
+                <span class="file-path">components/LalamoveTimeline.jsx</span>
+                <span class="priority priority-medium">MEDIUM PRIORITY</span>
+            </div>
+        </div>
+
+        <!-- Task 3 -->
+        <div class="section">
+            <h2><span class="section-number">3</span> Admin Dashboard Integration</h2>
+
+            <div class="todo-item">
+                <h3>3.1 Lalamove Orders Management</h3>
+                <p>Add Lalamove-specific features to admin order management.</p>
+                <ul>
+                    <li>Add filter to show only Lalamove orders</li>
+                    <li>Display Lalamove status badge on order list</li>
+                    <li>Show Lalamove order ID and tracking link</li>
+                    <li>Add quick actions for Lalamove orders (track, cancel)</li>
+                </ul>
+                <span class="file-path">app/admin/orders/page.jsx</span>
+                <span class="priority priority-medium">MEDIUM PRIORITY</span>
+            </div>
+
+            <div class="todo-item">
+                <h3>3.2 Cancel Lalamove Delivery</h3>
+                <p>Implement delivery cancellation functionality for admins.</p>
+                <ul>
+                    <li>Add "Cancel Delivery" button for Lalamove orders</li>
+                    <li>Call <code>/api/lalamove/cancel</code> endpoint</li>
+                    <li>Show confirmation dialog before cancellation</li>
+                    <li>Update order status after successful cancellation</li>
+                    <li>Handle cancellation errors and restrictions</li>
+                </ul>
+                <span class="file-path">app/admin/orders/[orderId]/page.jsx</span>
+                <span class="priority priority-medium">MEDIUM PRIORITY</span>
+            </div>
+
+            <div class="todo-item">
+                <h3>3.3 Lalamove Analytics Dashboard</h3>
+                <p>Create analytics view for Lalamove deliveries.</p>
+                <ul>
+                    <li>Show total Lalamove orders count</li>
+                    <li>Display delivery success rate</li>
+                    <li>Show average delivery time</li>
+                    <li>Calculate total Lalamove shipping costs</li>
+                    <li>Add charts for delivery trends</li>
+                </ul>
+                <span class="file-path">app/admin/analytics/lalamove/page.jsx</span>
+                <span class="priority priority-low">LOW PRIORITY</span>
+            </div>
+        </div>
+
+        <!-- Task 4 -->
+        <div class="section">
+            <h2><span class="section-number">4</span> Store Dashboard Integration</h2>
+
+            <div class="todo-item">
+                <h3>4.1 Store Order Tracking</h3>
+                <p>Enable store owners to track Lalamove deliveries for their products.</p>
+                <ul>
+                    <li>Show Lalamove status on store orders page</li>
+                    <li>Display driver details when available</li>
+                    <li>Add tracking link for store owners</li>
+                    <li>Show delivery notifications</li>
+                </ul>
+                <span class="file-path">app/store/orders/page.jsx</span>
+                <span class="priority priority-medium">MEDIUM PRIORITY</span>
+            </div>
+
+            <div class="todo-item">
+                <h3>4.2 Pickup Preparation Status</h3>
+                <p>Allow store owners to mark orders as ready for pickup.</p>
+                <ul>
+                    <li>Add "Ready for Pickup" button for Lalamove orders</li>
+                    <li>Update order status when marked ready</li>
+                    <li>Notify customer when order is ready</li>
+                    <li>Show estimated driver arrival time</li>
+                </ul>
+                <span class="file-path">app/store/orders/[orderId]/page.jsx</span>
+                <span class="priority priority-medium">MEDIUM PRIORITY</span>
+            </div>
+        </div>
+
+        <!-- Task 5 -->
+        <div class="section">
+            <h2><span class="section-number">5</span> UI Components & Styling</h2>
+
+            <div class="todo-item">
+                <h3>5.1 Lalamove Branding Components</h3>
+                <p>Create reusable components with Lalamove branding.</p>
+                <ul>
+                    <li>Create LalamoveLogo component</li>
+                    <li>Design LalamoveStatusBadge component</li>
+                    <li>Build LalamoveQuoteCard component</li>
+                    <li>Create LalamoveDriverCard component</li>
+                </ul>
+                <span class="file-path">components/lalamove/</span>
+                <span class="priority priority-medium">MEDIUM PRIORITY</span>
+            </div>
+
+            <div class="todo-item">
+                <h3>5.2 Loading & Error States</h3>
+                <p>Design consistent loading and error states for Lalamove features.</p>
+                <ul>
+                    <li>Create loading skeleton for quote fetching</li>
+                    <li>Design error messages for API failures</li>
+                    <li>Add retry functionality for failed requests</li>
+                    <li>Show helpful messages for common errors</li>
+                </ul>
+                <span class="file-path">components/lalamove/</span>
+                <span class="priority priority-medium">MEDIUM PRIORITY</span>
+            </div>
+
+            <div class="todo-item">
+                <h3>5.3 Mobile Responsiveness</h3>
+                <p>Ensure all Lalamove features work perfectly on mobile devices.</p>
+                <ul>
+                    <li>Test checkout flow on mobile</li>
+                    <li>Optimize tracking page for mobile</li>
+                    <li>Ensure maps display correctly on small screens</li>
+                    <li>Test touch interactions</li>
+                </ul>
+                <span class="priority priority-medium">MEDIUM PRIORITY</span>
+            </div>
+        </div>
+
+        <!-- Task 6 -->
+        <div class="section">
+            <h2><span class="section-number">6</span> Database Schema Updates</h2>
+
+            <div class="todo-item">
+                <h3>6.1 Add Lalamove Fields to Order Model</h3>
+                <p>Update database schema to store Lalamove delivery information.</p>
+                <ul>
+                    <li>Add <code>lalamoveOrderId</code> field (String, optional)</li>
+                    <li>Add <code>lalamoveStatus</code> field (String, optional)</li>
+                    <li>Add <code>lalamoveDriverInfo</code> field (JSON, optional)</li>
+                    <li>Add <code>lalamoveTrackingUrl</code> field (String, optional)</li>
+                    <li>Add <code>lalamoveQuoteId</code> field (String, optional)</li>
+                    <li>Run Prisma migration</li>
+                </ul>
+                <span class="file-path">prisma/schema.prisma</span>
+                <span class="priority priority-high">HIGH PRIORITY</span>
+            </div>
+
+            <div class="todo-item">
+                <h3>6.2 Create Lalamove Delivery Model</h3>
+                <p>Create dedicated model for storing Lalamove delivery details.</p>
+                <ul>
+                    <li>Create LalamoveDelivery model</li>
+                    <li>Link to Order model via relation</li>
+                    <li>Store full webhook payload history</li>
+                    <li>Track status change timestamps</li>
+                    <li>Run Prisma migration</li>
+                </ul>
+                <span class="file-path">prisma/schema.prisma</span>
+                <span class="priority priority-medium">MEDIUM PRIORITY</span>
+            </div>
+        </div>
+
+        <!-- Task 7 -->
+        <div class="section">
+            <h2><span class="section-number">7</span> Testing & Quality Assurance</h2>
+
+            <div class="todo-item">
+                <h3>7.1 End-to-End Testing</h3>
+                <p>Test complete Lalamove integration flow.</p>
+                <ul>
+                    <li>Test quote fetching with various addresses</li>
+                    <li>Test order placement with Lalamove shipping</li>
+                    <li>Test order tracking and status updates</li>
+                    <li>Test delivery cancellation</li>
+                    <li>Test error handling and edge cases</li>
+                </ul>
+                <span class="priority priority-high">HIGH PRIORITY</span>
+            </div>
+
+            <div class="todo-item">
+                <h3>7.2 Sandbox Environment Testing</h3>
+                <p>Thoroughly test with Lalamove sandbox API.</p>
+                <ul>
+                    <li>Test all API endpoints in sandbox</li>
+                    <li>Verify webhook delivery and processing</li>
+                    <li>Test different delivery scenarios</li>
+                    <li>Document any sandbox limitations</li>
+                </ul>
+                <span class="priority priority-high">HIGH PRIORITY</span>
+            </div>
+
+            <div class="todo-item">
+                <h3>7.3 User Acceptance Testing</h3>
+                <p>Conduct user testing for Lalamove features.</p>
+                <ul>
+                    <li>Test checkout flow with real users</li>
+                    <li>Gather feedback on tracking interface</li>
+                    <li>Verify mobile experience</li>
+                    <li>Test with different user roles (customer, store owner, admin)</li>
+                </ul>
+                <span class="priority priority-medium">MEDIUM PRIORITY</span>
+            </div>
+        </div>
+
+        <!-- Task 8 -->
+        <div class="section">
+            <h2><span class="section-number">8</span> Documentation & Deployment</h2>
+
+            <div class="todo-item">
+                <h3>8.1 Create User Documentation</h3>
+                <p>Write documentation for end users.</p>
+                <ul>
+                    <li>How to select Lalamove shipping</li>
+                    <li>How to track Lalamove deliveries</li>
+                    <li>FAQ for common issues</li>
+                    <li>Contact information for delivery issues</li>
+                </ul>
+                <span class="priority priority-low">LOW PRIORITY</span>
+            </div>
+
+            <div class="todo-item">
+                <h3>8.2 Update Environment Variables</h3>
+                <p>Ensure all environment variables are configured for production.</p>
+                <ul>
+                    <li>Verify Lalamove production credentials</li>
+                    <li>Update webhook URL to production domain</li>
+                    <li>Configure Lalamove webhook in production portal</li>
+                    <li>Test production API connection</li>
+                </ul>
+                <span class="priority priority-high">HIGH PRIORITY</span>
+            </div>
+
+            <div class="todo-item">
+                <h3>8.3 Deploy to Production</h3>
+                <p>Deploy Phase 3 changes to production environment.</p>
+                <ul>
+                    <li>Run database migrations on production</li>
+                    <li>Deploy frontend changes</li>
+                    <li>Verify all Lalamove features work in production</li>
+                    <li>Monitor for errors and issues</li>
+                    <li>Create rollback plan if needed</li>
+                </ul>
+                <span class="priority priority-high">HIGH PRIORITY</span>
+            </div>
+        </div>
+
+        <div class="dependencies">
+            <h4>📦 Dependencies & Prerequisites</h4>
+            <ul>
+                <li>✅ Phase 1: Lalamove service configuration (COMPLETED)</li>
+                <li>✅ Phase 2: Backend API endpoints (COMPLETED)</li>
+                <li>⏳ Address autocomplete functionality (if not already implemented)</li>
+                <li>⏳ Map integration for location display (optional)</li>
+                <li>⏳ Real-time notification system (optional)</li>
+            </ul>
+        </div>
+    </div>
+
+    <script>
+        // Animate progress bar on load
+        window.addEventListener('load', () => {
+            const progressFill = document.querySelector('.progress-fill');
+            setTimeout(() => {
+                progressFill.style.width = '0%';
+            }, 500);
+        });
+
+        // Add click handlers to todo items to mark as complete
+        document.querySelectorAll('.todo-item').forEach(item => {
+            item.addEventListener('click', function () {
+                this.style.opacity = this.style.opacity === '0.6' ? '1' : '0.6';
+                updateProgress();
+            });
+        });
+
+        function updateProgress() {
+            const totalItems = document.querySelectorAll('.todo-item').length;
+            const completedItems = Array.from(document.querySelectorAll('.todo-item'))
+                .filter(item => item.style.opacity === '0.6').length;
+            const percentage = Math.round((completedItems / totalItems) * 100);
+
+            const progressFill = document.querySelector('.progress-fill');
+            progressFill.style.width = percentage + '%';
+            progressFill.textContent = percentage + '%';
+
+            const statusText = document.querySelector('.completion-status');
+            statusText.textContent = `Phase 3 Progress: ${percentage}% Complete`;
+        }
+    </script>
+</body>
+
+</html>

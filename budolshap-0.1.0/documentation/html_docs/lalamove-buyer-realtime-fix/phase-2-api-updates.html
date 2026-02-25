@@ -1,0 +1,56 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Phase 2: API & Hook Integration - Buyer Real-time Status Fix</title>
+    <style>
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; line-height: 1.6; color: #333; max-width: 1000px; margin: 0 auto; padding: 20px; background-color: #f4f7f6; }
+        header { background-color: #2c3e50; color: white; padding: 1.5rem; border-radius: 8px; margin-bottom: 2rem; }
+        .nav { margin-bottom: 1rem; }
+        .nav a { color: #3498db; text-decoration: none; font-weight: bold; }
+        .container { background: white; padding: 2rem; border-radius: 8px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); }
+        h2 { color: #2c3e50; border-bottom: 2px solid #3498db; padding-bottom: 0.5rem; }
+        .code-block { background: #2d3436; color: #dfe6e9; padding: 1rem; border-radius: 8px; overflow-x: auto; margin: 1rem 0; }
+        .file-path { font-weight: bold; color: #e67e22; margin-top: 1.5rem; display: block; }
+    </style>
+</head>
+<body>
+    <div class="nav"><a href="index.html">&larr; Back to Index</a></div>
+    <header>
+        <h1>Phase 2: API & Hook Integration</h1>
+        <p>Synchronizing events across seller and buyer channels.</p>
+    </header>
+    <div class="container">
+        <h2>Implementation Details</h2>
+        <p>This phase focused on ensuring that every status update event is broadcasted to both the <strong>Store</strong> channel (for sellers) and the <strong>User</strong> channel (for buyers).</p>
+
+        <span class="file-path">1. Hook Update: <code>hooks/useRealtimeBuyerOrders.js</code></span>
+        <p>Added the <code>order-updated</code> event listener to the buyer-side hook. This ensures that the buyer's order list refreshes immediately when a status changes.</p>
+        <div class="code-block">
+<pre><code>channel.bind('order-updated', (data) => {
+    console.log('⚡ [Buyer] Order Updated (Pusher):', data);
+    mutate(); // Triggers SWR refresh
+});</code></pre>
+        </div>
+
+        <span class="file-path">2. API Update: <code>app/api/orders/[orderId]/sync-lalamove/route.js</code></span>
+        <p>Updated the Lalamove synchronization endpoint to trigger events for both channels simultaneously using <code>Promise.all</code>.</p>
+        <div class="code-block">
+<pre><code>await Promise.all([
+    triggerRealtimeEvent(`store-${order.storeId}`, 'order-updated', eventData),
+    triggerRealtimeEvent(`user-${order.userId}`, 'order-updated', eventData)
+]);</code></pre>
+        </div>
+
+        <span class="file-path">3. Webhook Update: <code>app/api/webhooks/lalamove/route.js</code></span>
+        <p>The webhook handler now broadcasts updates to the buyer as well, ensuring that background updates from Lalamove are reflected in the buyer's UI in real-time.</p>
+
+        <span class="file-path">4. General Sync Update: <code>app/api/orders/[orderId]/sync/route.js</code></span>
+        <p>Applied the same dual-channel triggering logic to the general synchronization endpoint.</p>
+
+        <h2>Status</h2>
+        <p>All core synchronization logic is now dual-channel. The next phase will focus on refining the Buyer's Order Detail page to ensure it reacts to these real-time events without relying solely on polling.</p>
+    </div>
+</body>
+</html>

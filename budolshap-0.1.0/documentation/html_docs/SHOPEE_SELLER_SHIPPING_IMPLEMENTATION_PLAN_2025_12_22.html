@@ -1,0 +1,635 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Shopee-Aligned Seller Shipping Implementation Plan (budolShap)</title>
+    <style>
+        :root {
+            --primary: #0f172a;
+            --secondary: #334155;
+            --muted: #64748b;
+            --accent: #f97316;
+            --bg: #f8fafc;
+            --card-bg: #ffffff;
+            --border: #e2e8f0;
+            --code-bg: #0b1220;
+            --code-text: #e2e8f0;
+            --ok: #16a34a;
+            --warn: #d97706;
+            --bad: #dc2626;
+        }
+
+        * {
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+            line-height: 1.6;
+            color: var(--secondary);
+            background: var(--bg);
+            margin: 0;
+            padding: 40px;
+        }
+
+        .container {
+            max-width: 1100px;
+            margin: 0 auto;
+        }
+
+        header {
+            margin-bottom: 28px;
+            border-bottom: 3px solid var(--accent);
+            padding-bottom: 16px;
+        }
+
+        h1 {
+            color: var(--primary);
+            font-size: 2.2rem;
+            margin: 0 0 8px 0;
+        }
+
+        .subtitle {
+            color: var(--muted);
+            margin: 0;
+        }
+
+        .pillrow {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+            margin-top: 14px;
+        }
+
+        .pill {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            padding: 6px 12px;
+            border-radius: 999px;
+            border: 1px solid var(--border);
+            background: #fff;
+            color: var(--secondary);
+            font-weight: 600;
+            font-size: 0.85rem;
+        }
+
+        .pill.ok {
+            border-color: #bbf7d0;
+            background: #f0fdf4;
+            color: #14532d;
+        }
+
+        .pill.warn {
+            border-color: #fde68a;
+            background: #fffbeb;
+            color: #92400e;
+        }
+
+        .pill.bad {
+            border-color: #fecaca;
+            background: #fef2f2;
+            color: #7f1d1d;
+        }
+
+        .grid {
+            display: grid;
+            grid-template-columns: 1fr;
+            gap: 18px;
+        }
+
+        @media (min-width: 980px) {
+            .grid.two {
+                grid-template-columns: 1fr 1fr;
+            }
+        }
+
+        .card {
+            background: var(--card-bg);
+            border-radius: 12px;
+            box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.08);
+            padding: 22px;
+            border: 1px solid var(--border);
+        }
+
+        h2 {
+            color: var(--primary);
+            border-left: 4px solid var(--accent);
+            padding-left: 12px;
+            margin: 0 0 12px 0;
+            font-size: 1.35rem;
+        }
+
+        h3 {
+            color: var(--primary);
+            margin: 18px 0 10px 0;
+            font-size: 1.05rem;
+        }
+
+        ul {
+            margin: 0 0 10px 18px;
+        }
+
+        li {
+            margin: 6px 0;
+        }
+
+        a {
+            color: #0ea5e9;
+            text-decoration: none;
+        }
+
+        a:hover {
+            text-decoration: underline;
+        }
+
+        .toc {
+            display: grid;
+            grid-template-columns: 1fr;
+            gap: 8px;
+        }
+
+        @media (min-width: 700px) {
+            .toc {
+                grid-template-columns: 1fr 1fr;
+            }
+        }
+
+        .toc a {
+            display: block;
+            padding: 10px 12px;
+            border: 1px solid var(--border);
+            border-radius: 10px;
+            background: #fff;
+            color: var(--secondary);
+            font-weight: 600;
+        }
+
+        code {
+            background: #f1f5f9;
+            padding: 2px 6px;
+            border-radius: 6px;
+            font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+            font-size: 0.9em;
+            color: #0f172a;
+        }
+
+        pre {
+            background: var(--code-bg);
+            color: var(--code-text);
+            padding: 14px;
+            border-radius: 10px;
+            overflow: auto;
+            border: 1px solid #1f2937;
+        }
+
+        pre code {
+            background: transparent;
+            padding: 0;
+            color: inherit;
+        }
+
+        details {
+            border: 1px solid var(--border);
+            border-radius: 10px;
+            padding: 12px;
+            background: #fff;
+            margin: 10px 0;
+        }
+
+        summary {
+            cursor: pointer;
+            font-weight: 800;
+            color: var(--primary);
+        }
+
+        .table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 8px;
+        }
+
+        .table th,
+        .table td {
+            border: 1px solid var(--border);
+            padding: 10px;
+            vertical-align: top;
+        }
+
+        .table th {
+            background: #f1f5f9;
+            color: var(--primary);
+            text-align: left;
+        }
+
+        .tag {
+            display: inline-flex;
+            align-items: center;
+            padding: 2px 8px;
+            border-radius: 999px;
+            font-weight: 800;
+            font-size: 0.75rem;
+            border: 1px solid var(--border);
+            background: #fff;
+        }
+
+        .tag.ok {
+            border-color: #bbf7d0;
+            background: #f0fdf4;
+            color: #14532d;
+        }
+
+        .tag.partial {
+            border-color: #fde68a;
+            background: #fffbeb;
+            color: #92400e;
+        }
+
+        .tag.missing {
+            border-color: #fecaca;
+            background: #fef2f2;
+            color: #7f1d1d;
+        }
+
+        .foot {
+            color: var(--muted);
+            font-size: 0.9rem;
+            margin-top: 14px;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="container">
+        <header>
+            <h1>Shopee-Aligned Seller Shipping Implementation Plan</h1>
+            <p class="subtitle">Goal: align seller fulfillment UX to the Shopee “Arrange Shipment” flow while fitting the current budolShap architecture.</p>
+            <div class="pillrow" aria-label="document metadata">
+                <span class="pill ok">Scope: seller shipping workflow</span>
+                <span class="pill warn">Assumption: budolShap-managed orders (not Shopee API)</span>
+                <span class="pill">Date: 2025-12-22</span>
+            </div>
+        </header>
+
+        <section class="card" id="toc" aria-label="table of contents">
+            <h2>Contents</h2>
+            <div class="toc">
+                <a href="#executive">Executive Summary</a>
+                <a href="#source">Shopee Shipping Flow (Source Requirements)</a>
+                <a href="#current">Current Codebase Baseline</a>
+                <a href="#gap">Gap Analysis</a>
+                <a href="#phases">Phased Implementation Plan</a>
+                <a href="#data">Data Model & API Contract</a>
+                <a href="#testing">Testing Strategy & Checkpoints</a>
+                <a href="#rollout">Rollout, Monitoring, Rollback</a>
+                <a href="#deps">Dependencies & Timeline</a>
+            </div>
+        </section>
+
+        <section class="card" id="executive">
+            <h2>Executive Summary</h2>
+            <ul>
+                <li>Implement a seller-first “To Ship → To Process → Arrange Shipment” workflow that matches Shopee’s steps: review order, confirm buyer contact/address, choose shipment model (pickup/drop-off), produce a waybill/label + packing list, hand over package, and track logistics status.</li>
+                <li>Reuse existing budolShap shipping boundaries: service-layer orchestration in <code>lib/services/shippingService.js</code>, provider integration via <code>services/shippingFactory.js</code>, and seller UI entrypoints in <code>app/store/orders/page.jsx</code>.</li>
+                <li>Add missing capabilities: seller shipment “handover deadlines”, label/packing-list generation, guardrails against duplicate waybill/tracking numbers, and drop-off vs pickup guidance surfaced in UI.</li>
+                <li>Deliver incrementally behind a feature flag so the current booking flow continues working during rollout.</li>
+            </ul>
+        </section>
+
+        <section class="card" id="source">
+            <h2>Shopee Shipping Flow (Source Requirements)</h2>
+            <p>The BigSeller guide describes a seller flow in Shopee Seller Centre:</p>
+            <ul>
+                <li>Navigate to <code>My Shipment → To Ship → To Process</code>, open the order, confirm item details + buyer phone + shipping address, and optionally contact the buyer via chat.</li>
+                <li>Click <code>Arrange Shipment</code>, then pick a shipment model: <strong>Pickup</strong> or <strong>Drop-off</strong>.</li>
+                <li>Prepare the parcel, stick the air waybill/label, then hand over via drop-off point or schedule pickup. The courier delivers to the buyer.</li>
+                <li>Track shipping status via the shipping page / logistics info; ship on time to avoid late shipment cancellation/penalties.</li>
+                <li>Operational constraints called out in the article snippet: avoid using the same air waybill across multiple parcels; pickup eligibility may require a minimum daily order threshold; sellers may print combined waybill + packing list and customize label information.</li>
+            </ul>
+            <p class="foot">Source: <a href="https://www.bigseller.com/blog/articleDetails/825/A-complete-guide-to-shipping-Shopee-orders-2024.htm" target="_blank" rel="noopener noreferrer">How to Ship Shopee Orders – BigSeller (2024)</a>.</p>
+        </section>
+
+        <section class="card" id="current">
+            <h2>Current Codebase Baseline</h2>
+            <div class="grid two">
+                <div class="card" style="padding: 16px;">
+                    <h3>Seller UX (Orders)</h3>
+                    <ul>
+                        <li>Seller order management lives in <code>app/store/orders/page.jsx</code>, including a “Needs Booking”/“Booked”/“In Transit” filter and booking actions (<code>handleBookLalamove</code> at <code>app/store/orders/page.jsx:110</code> and <code>handleManualBook</code> at <code>app/store/orders/page.jsx:265</code>).</li>
+                        <li>Existing flow already resembles Shopee’s “To Process → Arrange Shipment”, but it is framed as “booking” rather than “arrange shipment”.</li>
+                    </ul>
+                </div>
+                <div class="card" style="padding: 16px;">
+                    <h3>Shipping Service Boundary</h3>
+                    <ul>
+                        <li>Quotes + bookings are orchestrated by <code>lib/services/shippingService.js</code> (<code>getShippingQuote</code> at <code>lib/services/shippingService.js:22</code>, <code>bookShipping</code> at <code>lib/services/shippingService.js:131</code>).</li>
+                        <li>Lalamove booking and tracking update order state; manual shipping stores tracking number and sets order status to <code>PROCESSING</code> (<code>lib/services/shippingService.js:158</code>).</li>
+                        <li>Shipping provider selection exists via <code>services/shippingFactory.js</code> but currently only returns Lalamove (<code>services/shippingFactory.js:13</code>).</li>
+                    </ul>
+                </div>
+            </div>
+
+            <div class="grid two" style="margin-top: 18px;">
+                <div class="card" style="padding: 16px;">
+                    <h3>Shipping Status Updates</h3>
+                    <ul>
+                        <li>Webhook-driven status transitions exist for Lalamove in <code>app/api/webhooks/lalamove/route.js</code> (state machine around <code>app/api/webhooks/lalamove/route.js:183</code>).</li>
+                        <li>Seller can manually sync status in <code>app/api/orders/[orderId]/sync/route.js</code> (<code>app/api/orders/[orderId]/sync/route.js:83</code>).</li>
+                    </ul>
+                </div>
+                <div class="card" style="padding: 16px;">
+                    <h3>Data Model</h3>
+                    <ul>
+                        <li>Order shipping is a flexible JSON column: <code>Order.shipping Json?</code> in <code>prisma/schema.prisma:58</code>. This allows adding “waybill”, “handover”, “pickup/dropoff” without DB migrations, but requires disciplined JSON contract management.</li>
+                    </ul>
+                </div>
+            </div>
+        </section>
+
+        <section class="card" id="gap">
+            <h2>Gap Analysis (Shopee Flow vs budolShap)</h2>
+            <table class="table" aria-label="gap analysis table">
+                <thead>
+                    <tr>
+                        <th>Capability</th>
+                        <th>Shopee guide expectation</th>
+                        <th>budolShap current state</th>
+                        <th>Work needed</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td>To Process queue + Arrange Shipment</td>
+                        <td>Dedicated list of orders awaiting shipment arrangement</td>
+                        <td><span class="tag ok">Supported</span> via “Needs Booking” filter and modal actions in <code>app/store/orders/page.jsx:18</code></td>
+                        <td>Rename/align terminology and add explicit “Arrange Shipment” entry point and SLA hint</td>
+                    </tr>
+                    <tr>
+                        <td>Pickup vs Drop-off model</td>
+                        <td>Seller chooses pickup or drop-off; eligibility rules may apply</td>
+                        <td><span class="tag partial">Partial</span> Lalamove implies pickup; manual implies drop-off but not explicit</td>
+                        <td>Add a first-class “shipment model” field + UI, with eligibility checks and instructions</td>
+                    </tr>
+                    <tr>
+                        <td>Air waybill/label generation</td>
+                        <td>Print labels/waybills; do not reuse the same waybill</td>
+                        <td><span class="tag missing">Missing</span> (manual tracking only; no label artifacts)</td>
+                        <td>Add label/packing list generator, storage, and duplicate-waybill guardrails</td>
+                    </tr>
+                    <tr>
+                        <td>Packing list + combined print</td>
+                        <td>Print packing list + combined docs</td>
+                        <td><span class="tag missing">Missing</span></td>
+                        <td>Add server-side PDF render for packing list and optional combined PDF bundle</td>
+                    </tr>
+                    <tr>
+                        <td>Handover deadline + late shipment prevention</td>
+                        <td>Ship on time to avoid cancellation/penalties</td>
+                        <td><span class="tag partial">Partial</span> no explicit ship-by deadlines; only delivery lifecycle is tracked</td>
+                        <td>Add ship-by deadline fields + reminders + enforcement policy</td>
+                    </tr>
+                    <tr>
+                        <td>Logistics tracking info in seller view</td>
+                        <td>Seller checks logistics info and shipment status</td>
+                        <td><span class="tag ok">Supported</span> for Lalamove via webhook + sync routes</td>
+                        <td>Extend tracking UX to manual carriers and add consistent timeline format</td>
+                    </tr>
+                </tbody>
+            </table>
+        </section>
+
+        <section class="card" id="phases">
+            <h2>Phased Implementation Plan</h2>
+
+            <details open>
+                <summary>Phase 0 — Define Seller Shipping SLA & Acceptance Criteria (0.5–1 day)</summary>
+                <ul>
+                    <li>Define “ship-by” calculation policy (e.g., <code>createdAt + N business days</code>) and what happens on breach (auto-cancel, auto-alert, or disable booking).</li>
+                    <li>Define shipment models and how they map to providers: e.g. <code>PICKUP</code> for Lalamove; <code>DROPOFF</code> for manual carriers; allow both per store if configured.</li>
+                    <li>Define seller surface area: seller order list + order details modal in <code>app/store/orders/page.jsx</code>.</li>
+                    <li>Exit gate: 1-page spec for SLA + shipping states + UI entry points.</li>
+                </ul>
+            </details>
+
+            <details open>
+                <summary>Phase 1 — Formalize Shipping JSON Contract & Feature Flag (1–2 days)</summary>
+                <ul>
+                    <li>Create a single shared “shipping schema” contract (JS object shape) for <code>Order.shipping</code> and standardize fields used across Lalamove + manual.</li>
+                    <li>Add a feature flag (env-driven) to toggle the Shopee-aligned “Arrange Shipment” UI path.</li>
+                    <li>Implement duplicate-waybill guardrails for manual shipping by rejecting a tracking number already attached to another active order.</li>
+                    <li>Exit gate: manual booking still works; flag can enable/disable new UX; uniqueness check verified in dev.</li>
+                </ul>
+                <p class="foot">Primary touchpoints: <code>lib/services/shippingService.js:158</code>, <code>app/api/shipping/manual/book/route.js:10</code>, <code>prisma/schema.prisma:58</code>.</p>
+            </details>
+
+            <details open>
+                <summary>Phase 2 — “Arrange Shipment” UX Alignment (2–4 days)</summary>
+                <ul>
+                    <li>Rename/realign UI language: “Needs Booking” becomes “To Process” and “Book” becomes “Arrange Shipment”, keeping the underlying API calls.</li>
+                    <li>Before shipment arrangement, show a “Verify buyer details” panel (address + phone + item list) sourced from order data and allow quick “Chat buyer” jump.</li>
+                    <li>Add “Shipment model” selection (pickup vs drop-off) and show contextual instructions (pickup scheduling vs drop-off point guidance).</li>
+                    <li>Exit gate: seller can reliably find orders that need action and complete arrangement with fewer support prompts.</li>
+                </ul>
+                <p class="foot">Primary touchpoints: <code>app/store/orders/page.jsx:18</code>, <code>app/store/orders/page.jsx:110</code>, <code>app/store/orders/page.jsx:265</code>.</p>
+            </details>
+
+            <details>
+                <summary>Phase 3 — Label/Waybill + Packing List Generation (3–6 days)</summary>
+                <ul>
+                    <li>Add a server-side PDF generator for:
+                        <ul>
+                            <li>Packing list (items, quantities, order id, buyer name, store name).</li>
+                            <li>Shipping label ("air waybill" equivalent) with recipient + sender blocks and optional QR/code.</li>
+                            <li>Combined PDF bundle (packing list + label) to support “one print” workflows.</li>
+                        </ul>
+                    </li>
+                    <li>Persist generated artifacts in object storage (Cloudinary is present in dependencies; use existing upload patterns if available).</li>
+                    <li>Add UI buttons: “Print Waybill”, “Print Packing List”, “Print Combined”.</li>
+                    <li>Exit gate: seller can print documents; URLs are stable and access-controlled.</li>
+                </ul>
+            </details>
+
+            <details>
+                <summary>Phase 4 — Operational Controls: Deadlines, Reminders, Enforcement (2–4 days)</summary>
+                <ul>
+                    <li>Compute and store <code>shipByAt</code> and <code>handoverAt</code> in <code>Order.shipping</code> when an order is created/paid.</li>
+                    <li>Add reminders: realtime notification + email 24h before deadline and at deadline.</li>
+                    <li>Add an enforcement policy job (cron route) to mark orders as “overdue shipment” (or auto-cancel per your business rule).</li>
+                    <li>Exit gate: overdue cases are visible to seller/admin; measurable reduction in late handovers.</li>
+                </ul>
+            </details>
+
+            <details>
+                <summary>Phase 5 — Provider Expansion (Optional) (5–10 days)</summary>
+                <ul>
+                    <li>Extend <code>services/shippingFactory.js</code> to support additional carriers (J&amp;T, NinjaVan, 2GO), using a unified interface (<code>getQuote</code>, <code>createOrder</code>, <code>trackOrder</code>, <code>cancelOrder</code>).</li>
+                    <li>For providers without API integration, keep them as “manual carriers” with normalized tracking links and timeline updates.</li>
+                    <li>Exit gate: seller can choose multiple carriers without changing the order UX.</li>
+                </ul>
+            </details>
+        </section>
+
+        <section class="card" id="data">
+            <h2>Data Model & API Contract</h2>
+
+            <h3>Proposed <code>Order.shipping</code> JSON shape</h3>
+            <pre><code>{
+  "provider": "lalamove" | "manual" | "jnt" | "ninjavan" | "2go",
+  "shipmentModel": "PICKUP" | "DROPOFF",
+  "status": "NEEDS_ARRANGEMENT" | "ARRANGED" | "BOOKED" | "PICKED_UP" | "IN_TRANSIT" | "DELIVERED" | "CANCELLED" | "FAILED",
+  "bookingId": "...",
+  "trackingUrl": "...",
+  "waybillNumber": "...",
+  "documents": {
+    "waybillPdfUrl": "...",
+    "packingListPdfUrl": "...",
+    "combinedPdfUrl": "..."
+  },
+  "shipByAt": "2025-12-31T16:00:00.000Z",
+  "arrangedAt": "...",
+  "handedOverAt": "...",
+  "timeline": [
+    {"event": "ARRANGED", "timestamp": "..."},
+    {"event": "PICKED_UP", "timestamp": "..."}
+  ],
+  "previousAttempts": [
+    {"bookingId": "...", "failureReason": "...", "failedAt": "..."}
+  ]
+}</code></pre>
+
+            <h3>API endpoints to add</h3>
+            <ul>
+                <li><code>POST /api/shipping/documents</code>: generate waybill/packing list PDFs for an order</li>
+                <li><code>POST /api/shipping/arrange</code>: persist shipment model selection + mark as arranged</li>
+                <li><code>POST /api/orders/overdue-shipping/sweep</code> (cron): enforce deadlines and emit alerts</li>
+            </ul>
+
+            <details>
+                <summary>Security and access control</summary>
+                <ul>
+                    <li>Only the owning store/admin can generate or download waybill documents.</li>
+                    <li>Document URLs should be signed or proxied via an authenticated download endpoint.</li>
+                    <li>Never embed buyer phone/address in public, unauthenticated URLs.</li>
+                </ul>
+            </details>
+        </section>
+
+        <section class="card" id="testing">
+            <h2>Testing Strategy & Checkpoints</h2>
+            <h3>Unit/Service-level</h3>
+            <ul>
+                <li>Manual shipping uniqueness: attempting to reuse a tracking/waybill number fails with a clear error.</li>
+                <li>Shipping JSON contract: serialization/deserialization sanity checks for new fields.</li>
+            </ul>
+
+            <h3>Integration</h3>
+            <ul>
+                <li>Arrange shipment → book → webhook/sync updates status and timeline (Lalamove path).</li>
+                <li>Arrange shipment → manual carrier → seller can attach tracking URL and see status state in UI.</li>
+                <li>Document generation: PDFs are generated, stored, and retrievable only by authorized users.</li>
+            </ul>
+
+            <h3>Operational</h3>
+            <ul>
+                <li>Deadline reminders trigger at correct times for test orders.</li>
+                <li>Overdue sweep does not cancel orders incorrectly; actions are auditable.</li>
+            </ul>
+
+            <details>
+                <summary>Recommended commands (existing scripts)</summary>
+                <pre><code>npm run lint
+npm run build
+npm run test:phase1
+npm run test:phase2
+npm run test:phase3</code></pre>
+            </details>
+        </section>
+
+        <section class="card" id="rollout">
+            <h2>Rollout, Monitoring, Rollback</h2>
+            <h3>Rollout strategy</h3>
+            <ul>
+                <li>Ship behind a feature flag, enable for internal admin + a single pilot store.</li>
+                <li>Gradually expand to 10%, 50%, 100% of stores once error rates and support tickets are stable.</li>
+            </ul>
+
+            <h3>Monitoring</h3>
+            <ul>
+                <li>Track: “orders in To Process”, “time-to-arrange”, “late shipment rate”, “booking failures”, and “duplicate waybill rejections”.</li>
+                <li>Ensure webhook processing reliability for status transitions (<code>app/api/webhooks/lalamove/route.js</code>).</li>
+            </ul>
+
+            <h3>Rollback</h3>
+            <ul>
+                <li>Disable feature flag to revert seller UI to current booking flow without data loss.</li>
+                <li>Leave generated documents in storage; keep links but hide UI actions when flag is off.</li>
+            </ul>
+        </section>
+
+        <section class="card" id="deps">
+            <h2>Dependencies & Timeline</h2>
+            <h3>Dependency map</h3>
+            <ul>
+                <li>Phase 2 depends on Phase 1 contract + feature flag.</li>
+                <li>Phase 3 depends on Phase 1 contract and a storage solution for PDFs.</li>
+                <li>Phase 4 depends on Phase 1 contract and an agreed SLA policy (Phase 0).</li>
+            </ul>
+
+            <h3>Proposed timeline (single developer)</h3>
+            <table class="table" aria-label="timeline">
+                <thead>
+                    <tr>
+                        <th>Phase</th>
+                        <th>Estimate</th>
+                        <th>Deliverable</th>
+                        <th>Exit Gate</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td>0</td>
+                        <td>0.5–1 day</td>
+                        <td>SLA + state spec</td>
+                        <td>Agreed rules</td>
+                    </tr>
+                    <tr>
+                        <td>1</td>
+                        <td>1–2 days</td>
+                        <td>Shipping JSON contract + flag + uniqueness</td>
+                        <td>No regressions</td>
+                    </tr>
+                    <tr>
+                        <td>2</td>
+                        <td>2–4 days</td>
+                        <td>Seller UX aligned to Shopee steps</td>
+                        <td>UAT pass</td>
+                    </tr>
+                    <tr>
+                        <td>3</td>
+                        <td>3–6 days</td>
+                        <td>Waybill + packing list + combined print</td>
+                        <td>Docs printable</td>
+                    </tr>
+                    <tr>
+                        <td>4</td>
+                        <td>2–4 days</td>
+                        <td>Deadlines + reminders + enforcement</td>
+                        <td>Late shipment down</td>
+                    </tr>
+                </tbody>
+            </table>
+        </section>
+
+        <section class="card" id="notes">
+            <h2>Notes</h2>
+            <ul>
+                <li>This plan aligns budolShap’s existing “booking” workflow with the Shopee seller “Arrange Shipment” flow described in the linked guide, without requiring Shopee API integration.</li>
+                <li>If the roadmap includes “Shopee as a sales channel” (import orders from Shopee), treat that as a separate project phase (OAuth/app credentials, order ingestion, status pushback).</li>
+            </ul>
+        </section>
+    </div>
+</body>
+
+</html>

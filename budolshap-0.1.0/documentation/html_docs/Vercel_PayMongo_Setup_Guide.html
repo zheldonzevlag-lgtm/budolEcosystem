@@ -1,0 +1,220 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <title>Budolshap – Vercel Deployment & PayMongo Setup Guide</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --bg: #0d0d0d;
+            --card: #1a1a1a;
+            --accent: #00d1ff;
+            --text: #e0e0e0;
+            --muted: #777;
+            --radius: 12px;
+            --shadow: 0 4px 12px rgba(0, 0, 0, .4);
+            --gradient: linear-gradient(135deg, #001f3f, #001b2c);
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0
+        }
+
+        body {
+            font-family: 'Inter', sans-serif;
+            background: var(--gradient);
+            color: var(--text);
+            line-height: 1.6;
+            padding: 2rem;
+        }
+
+        h1 {
+            font-size: 2.4rem;
+            font-weight: 700;
+            color: var(--accent);
+            margin-bottom: 1rem
+        }
+
+        h2 {
+            font-size: 1.8rem;
+            margin-top: 2rem;
+            color: #fff
+        }
+
+        p,
+        li {
+            margin: 0.6rem 0
+        }
+
+        a {
+            color: var(--accent);
+            text-decoration: none
+        }
+
+        a:hover {
+            text-decoration: underline
+        }
+
+        .card {
+            background: var(--card);
+            border-radius: var(--radius);
+            padding: 1.6rem;
+            margin: 1rem 0;
+            box-shadow: var(--shadow);
+            backdrop-filter: blur(8px);
+        }
+
+        .code {
+            background: #111;
+            color: #0ff;
+            padding: 0.8rem;
+            border-radius: 6px;
+            overflow-x: auto;
+            font-family: monospace;
+            font-size: 0.94rem;
+            margin: 0.8rem 0;
+        }
+
+        .step {
+            margin: 1rem 0
+        }
+
+        .step::before {
+            content: "Step " counter(step-counter) ": ";
+            counter-increment: step-counter;
+            font-weight: 600;
+            color: var(--accent);
+        }
+
+        .grid {
+            display: grid;
+            gap: 1rem
+        }
+
+        .grid-2 {
+            grid-template-columns: repeat(auto-fit, minmax(260px, 1fr))
+        }
+
+        .note {
+            color: #ffb74d;
+            background: #222;
+            padding: 0.8rem;
+            border-left: 4px solid #ffb74d;
+            border-radius: 4px
+        }
+
+        .img {
+            max-width: 100%;
+            border-radius: 8px;
+            margin: 1rem 0
+        }
+    </style>
+</head>
+
+<body>
+    <h1>Budolshap – Deploy to Vercel & Configure PayMongo (GCash)</h1>
+
+    <div class="card">
+        <h2>📦 Prerequisites</h2>
+        <ul>
+            <li>Vercel account (free tier works fine)</li>
+            <li>PayMongo account with a <strong>Secret Key</strong> and optional <strong>Webhook Secret</strong></li>
+            <li>PostgreSQL database (Vercel Postgres, Supabase, Railway, etc.)</li>
+            <li>Git repository (GitHub, GitLab or Bitbucket) linked to Vercel</li>
+        </ul>
+    </div>
+
+    <div class="card">
+        <h2>🚀 1️⃣ Push Your Code to Git</h2>
+        <div class="step">Initialize a repo (if you haven’t already)</div>
+        <pre class="code">git init
+git add .
+git commit -m "Initial commit"
+git branch -M main
+git remote add origin &lt;YOUR_REPO_URL&gt;
+git push -u origin main</pre>
+
+        <div class="step">Make sure <code>.gitignore</code> excludes <code>.env</code> (already present).</div>
+    </div>
+
+    <div class="card">
+        <h2>🔧 2️⃣ Connect to Vercel</h2>
+        <ol class="grid-2">
+            <li>Log in to <a href="https://vercel.com" target="_blank">vercel.com</a></li>
+            <li>Click **New Project → Import Git Repository** → select your repo</li>
+            <li>Leave the default **Framework Preset** as **Next.js**</li>
+            <li>Click **Deploy** – Vercel will run <code>npm install</code> and <code>npm run build</code></li>
+        </ol>
+        <img src="C:/Users/jongalvez/.gemini/antigravity/brain/19ea4b3a-0fac-4752-b5e3-9c491718e146/vercel_env_vars_mockup_1763945264039.png"
+            alt="Vercel Env Vars UI mockup" class="img">
+    </div>
+
+    <div class="card">
+        <h2>🔐 3️⃣ Add Environment Variables</h2>
+        <p>Open <strong>Settings → Environment Variables</strong> in your Vercel project and add the following:</p>
+        <div class="code">
+            PAYMONGO_SECRET_KEY <span style="color:#777;"># your PayMongo secret key (Secret)</span><br>
+            PAYMONGO_WEBHOOK_SECRET <span style="color:#777;"># optional, for webhook verification (Secret)</span><br>
+            NEXT_PUBLIC_SITE_URL <span style="color:#777;"># e.g. https://your-app.vercel.app (Plain)</span><br>
+            DATABASE_URL <span style="color:#777;"># PostgreSQL connection string (Secret)</span>
+        </div>
+        <p>Set each for <strong>Production</strong> (and optionally <strong>Preview</strong>).</p>
+        <p class="note">💡 <strong>Never expose secret keys as public variables.</strong> Vercel masks them in logs.</p>
+    </div>
+
+    <div class="card">
+        <h2>🛠️ 4️⃣ Verify the Setup (Optional)</h2>
+        <p>Create a quick test endpoint to ensure the variables are loaded:</p>
+        <pre class="code">/* app/api/debug/env/route.js */
+import { NextResponse } from 'next/server';
+export async function GET() {
+  return NextResponse.json({
+    paymongo: !!process.env.PAYMONGO_SECRET_KEY,
+    webhook: !!process.env.PAYMONGO_WEBHOOK_SECRET,
+    siteUrl: process.env.NEXT_PUBLIC_SITE_URL,
+  });
+}
+</pre>
+        <p>Deploy, then visit <code>/api/debug/env</code>. You should see <code>true</code> for the keys you added.</p>
+    </div>
+
+    <div class="card">
+        <h2>⚙️ 5️⃣ Build & Deploy</h2>
+        <p>Vercel automatically rebuilds on every push. If you need a manual trigger:</p>
+        <pre class="code">vercel --prod   # from the CLI, forces a production deployment</pre>
+        <p>Or click **Redeploy** in the Vercel dashboard.</p>
+    </div>
+
+    <div class="card">
+        <h2>💳 6️⃣ GCash (PayMongo) Integration</h2>
+        <ol>
+            <li>Make sure <code>lib/paymongo.js</code> contains the lazy client (already committed).</li>
+            <li>Use the <code>createGCashSource</code> function in <code>app/api/payment/gcash/create/route.js</code> to
+                generate a checkout URL.</li>
+            <li>Redirect users to the returned <code>checkoutUrl</code>.</li>
+            <li>After payment, PayMongo redirects to <code>process.env.NEXT_PUBLIC_SITE_URL/payment/success</code> (or
+                <code>/failed</code>).</li>
+        </ol>
+        <p class="note">If you use webhooks, set the <code>PAYMONGO_WEBHOOK_SECRET</code> and configure the webhook URL
+            in PayMongo to <code>https://your-app.vercel.app/api/webhooks/paymongo</code>.</p>
+    </div>
+
+    <div class="card">
+        <h2>🧹 7️⃣ Clean‑up & Future Steps</h2>
+        <ul>
+            <li>Remove any local <code>.env</code> from the repo (keep it in <code>.gitignore</code>).</li>
+            <li>Enable <strong>Automatic PR Deployments</strong> in Vercel for preview environments.</li>
+            <li>Monitor logs via **Vercel → Functions → Logs** for any runtime errors.</li>
+            <li>Consider adding a custom domain in **Settings → Domains**.</li>
+        </ul>
+    </div>
+
+    <footer style="margin-top:2rem;color:#777;font-size:0.9rem;">
+        <p>Generated by Antigravity – your AI‑powered coding assistant.</p>
+    </footer>
+</body>
+
+</html>

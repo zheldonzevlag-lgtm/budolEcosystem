@@ -1,0 +1,223 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dev Session Log - Dec 12, 2025</title>
+    <style>
+        :root {
+            --primary: #0f172a;
+            --secondary: #334155;
+            --accent: #22c55e;
+            --bg: #f8fafc;
+            --card-bg: #ffffff;
+            --border: #e2e8f0;
+            --code-bg: #1e293b;
+            --code-text: #e2e8f0;
+        }
+
+        body {
+            font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+            line-height: 1.6;
+            color: var(--secondary);
+            background: var(--bg);
+            margin: 0;
+            padding: 40px;
+        }
+
+        .container {
+            max-width: 900px;
+            margin: 0 auto;
+        }
+
+        header {
+            margin-bottom: 40px;
+            border-bottom: 3px solid var(--accent);
+            padding-bottom: 20px;
+        }
+
+        h1 {
+            color: var(--primary);
+            font-size: 2.2rem;
+            margin: 0;
+        }
+
+        .meta {
+            color: #64748b;
+            font-size: 0.9rem;
+            margin-top: 5px;
+        }
+
+        .timeline-item {
+            position: relative;
+            padding-left: 40px;
+            margin-bottom: 40px;
+        }
+
+        .timeline-item::before {
+            content: '';
+            position: absolute;
+            left: 0;
+            top: 0;
+            bottom: -40px;
+            width: 2px;
+            background: #cbd5e1;
+        }
+
+        .timeline-item:last-child::before {
+            display: none;
+        }
+
+        .time-badge {
+            position: absolute;
+            left: -14px;
+            top: 0;
+            background: var(--accent);
+            color: white;
+            padding: 4px 10px;
+            border-radius: 20px;
+            font-size: 0.75rem;
+            font-weight: bold;
+            box-shadow: 0 0 0 4px var(--bg);
+        }
+
+        .card {
+            background: var(--card-bg);
+            border-radius: 12px;
+            box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1);
+            padding: 25px;
+            border: 1px solid var(--border);
+        }
+
+        h3 {
+            color: var(--primary);
+            margin: 0 0 10px 0;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .tag {
+            background: #e2e8f0;
+            color: #475569;
+            padding: 2px 8px;
+            border-radius: 4px;
+            font-size: 0.75rem;
+            font-weight: 600;
+        }
+
+        ul {
+            margin: 0;
+            padding-left: 20px;
+        }
+
+        li {
+            margin-bottom: 8px;
+        }
+
+        .code-file {
+            font-family: 'Consolas', monospace;
+            color: #d946ef;
+            background: #fdf4ff;
+            padding: 1px 4px;
+            border-radius: 3px;
+            font-size: 0.9em;
+        }
+    </style>
+</head>
+
+<body>
+
+    <div class="container">
+        <header>
+            <h1>Development Session Log</h1>
+            <div class="meta">Date: December 12, 2025 | Developers: User & Antigravity</div>
+        </header>
+
+        <div class="timeline-item">
+            <div class="time-badge">02:00 AM - 03:50 AM</div>
+            <div class="card">
+                <h3>Audit Trail Geolocation & Maps <span class="tag">BACKEND + UI</span></h3>
+                <p>Enhanced the security audit system to capture precise location data and display it on the admin
+                    dashboard.</p>
+                <ul>
+                    <li><strong>Universal Geolocation:</strong> Implemented a robust fallback system in <span
+                            class="code-file">lib/audit.js</span>. It prioritizes Vercel headers but falls back to
+                        <code>ip-api.com</code> for accurate Lat/Long data on any host.</li>
+                    <li><strong>Map Integration:</strong> Added a "View on Map ↗" link in <span
+                            class="code-file">app/admin/settings/audit-logs/page.jsx</span> that opens Google Maps with
+                        exact coordinates.</li>
+                    <li><strong>Database Update:</strong> Modified schema to replace <code>hostname</code> with
+                        <code>latitude</code> and <code>longitude</code>.</li>
+                    <li><strong>Documentation:</strong> Created <span
+                            class="code-file">audit-trail-logs-with-geolocation-ip-api-com</span> branch and
+                        documentation.</li>
+                </ul>
+            </div>
+        </div>
+
+        <div class="timeline-item">
+            <div class="time-badge">09:38 AM - 09:55 AM</div>
+            <div class="card">
+                <h3>Admin Idle Timeout Fix <span class="tag">BUGFIX</span></h3>
+                <p>Resolved an issue where the Admin session would not auto-logout after inactivity.</p>
+                <ul>
+                    <li><strong>Root Cause:</strong> The logout handler was being recreated on every render, resetting
+                        the idle timer in <code>useIdleTimeout</code> hook.</li>
+                    <li><strong>Fix:</strong> Memoized <code>handleLogout</code> using <code>useCallback</code> in <span
+                            class="code-file">components/admin/AdminLayout.jsx</span>.</li>
+                </ul>
+            </div>
+        </div>
+
+        <div class="timeline-item">
+            <div class="time-badge">09:55 AM - 10:10 AM</div>
+            <div class="card">
+                <h3>Seller Idle Timeout Fix <span class="tag">BUGFIX</span></h3>
+                <p>Applied the same idle timeout fix to the Seller Dashboard.</p>
+                <ul>
+                    <li><strong>Fix:</strong> Implemented <code>useCallback</code> for the logout handler in <span
+                            class="code-file">components/store/StoreLayout.jsx</span>.</li>
+                    <li><strong>Result:</strong> Both Admin and Sellers now correctly auto-logout after 15 minutes of
+                        inactivity.</li>
+                </ul>
+            </div>
+        </div>
+
+        <div class="timeline-item">
+            <div class="time-badge">10:12 AM - 10:55 AM</div>
+            <div class="card">
+                <h3>New Payment & Shipping Options <span class="tag">FEATURE</span></h3>
+                <p>Added custom branding options to the checkout flow.</p>
+                <ul>
+                    <li><strong>budolPay:</strong> Added as a payment option. Updated Prisma Enum
+                        <code>PaymentMethod</code> to include <code>BUDOL_PAY</code>.</li>
+                    <li><strong>budExpress:</strong> Added as a shipping option. Stylized with Green "budol" branding.
+                    </li>
+                    <li><strong>Checkout Logic:</strong> Updated <span class="code-file">api/orders/route.js</span> to
+                        handle the new payment status logic (treated as pending/COD).</li>
+                </ul>
+            </div>
+        </div>
+
+        <div class="timeline-item">
+            <div class="time-badge">11:05 AM - 11:15 AM</div>
+            <div class="card">
+                <h3>Cart Performance Optimization <span class="tag">OPTIMIZATION</span></h3>
+                <p>Fixed the UI flickering/refreshing when updating item quantities.</p>
+                <ul>
+                    <li><strong>Issue:</strong> The cart was re-fetching all product data from the server on every +/-
+                        click.</li>
+                    <li><strong>Fix:</strong> Updated <span class="code-file">app/(public)/cart/page.jsx</span> to
+                        perform local quantity updates when product data is already loaded. This removed the loading
+                        spinner for a smoother experience.</li>
+                </ul>
+            </div>
+        </div>
+
+    </div>
+
+</body>
+
+</html>

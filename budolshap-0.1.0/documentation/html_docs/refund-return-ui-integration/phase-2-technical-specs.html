@@ -1,0 +1,163 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Phase 6: Technical Specifications - BudolShap</title>
+    <style>
+        :root {
+            --primary: #10b981;
+            --primary-dark: #059669;
+            --secondary: #64748b;
+            --bg: #f8fafc;
+            --card-bg: #ffffff;
+            --text: #1e293b;
+            --border: #e2e8f0;
+            --orange: #f97316;
+        }
+        body {
+            font-family: 'Inter', -apple-system, sans-serif;
+            background-color: var(--bg);
+            color: var(--text);
+            line-height: 1.6;
+            margin: 0;
+            padding: 0;
+        }
+        .container {
+            max-width: 1000px;
+            margin: 40px auto;
+            padding: 0 20px;
+        }
+        header {
+            background: linear-gradient(135deg, #1e293b 0%, #334155 100%);
+            color: white;
+            padding: 40px 20px;
+            text-align: center;
+            border-radius: 0 0 20px 20px;
+        }
+        h1 { margin: 0; font-size: 2rem; }
+        .card {
+            background: var(--card-bg);
+            border-radius: 16px;
+            padding: 30px;
+            margin-bottom: 30px;
+            box-shadow: 0 4px 6px -1px rgba(0,0,0,0.1);
+            border: 1px solid var(--border);
+        }
+        h2 { color: var(--primary-dark); border-bottom: 2px solid var(--bg); padding-bottom: 10px; }
+        .code-block {
+            background: #1e293b;
+            color: #f8fafc;
+            padding: 20px;
+            border-radius: 8px;
+            font-family: 'Fira Code', monospace;
+            font-size: 0.9rem;
+            overflow-x: auto;
+            margin: 15px 0;
+        }
+        .feature-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 20px;
+            margin-top: 20px;
+        }
+        .feature-item {
+            padding: 20px;
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            background: var(--bg);
+        }
+        .feature-item h3 { margin-top: 0; color: var(--text); }
+    </style>
+</head>
+<body>
+
+<header>
+    <h1>Technical Specifications & Architecture</h1>
+    <p>Phase 6: Refund & Return UI Integration</p>
+</header>
+
+<div class="container">
+    <section class="card">
+        <h2>Escrow Protection Workflow</h2>
+        <p>The Shopee-style guarantee system follows a strict state machine to ensure funds are protected during disputes.</p>
+        <div class="feature-grid">
+            <div class="feature-item">
+                <h3>1. Order Delivered</h3>
+                <p>Funds remain in Escrow. <code>autoCompleteAt</code> timer starts (default 7 days).</p>
+            </div>
+            <div class="feature-item">
+                <h3>2. Guarantee Extension</h3>
+                <p>Buyer can extend the window by 3 days. <code>isGuaranteeExtended</code> becomes true.</p>
+            </div>
+            <div class="feature-item">
+                <h3>3. Return Requested</h3>
+                <p>Funds are locked. Status changes to <code>RETURN_REQUESTED</code>. Timer pauses.</p>
+            </div>
+            <div class="feature-item">
+                <h3>4. Dispute Resolution</h3>
+                <p>Seller accepts (Refund) or Rejects (Admin Dispute). RSF is calculated based on reason.</p>
+            </div>
+        </div>
+    </section>
+
+    <section class="card">
+        <h2>RSF (Return Shipping Fee) Logic</h2>
+        <p>Return Shipping Fees are automatically assigned based on the reason for return:</p>
+        <table>
+            <thead>
+                <tr>
+                    <th>Reason</th>
+                    <th>Payer</th>
+                    <th>Logic</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td>Wrong Product / Damaged</td>
+                    <td><strong>Seller</strong></td>
+                    <td>Full refund to buyer. Seller loses shipping fee.</td>
+                </tr>
+                <tr>
+                    <td>Change of Mind</td>
+                    <td><strong>Buyer</strong></td>
+                    <td>RSF deducted from buyer refund.</td>
+                </tr>
+                <tr>
+                    <td>Faulty Product</td>
+                    <td><strong>Seller</strong></td>
+                    <td>Full refund to buyer.</td>
+                </tr>
+            </tbody>
+        </table>
+    </section>
+
+    <section class="card">
+        <h2>Real-time Events (Pusher)</h2>
+        <p>UI synchronization is handled via the following event channels:</p>
+        <div class="code-block">
+// Channel: user-{userId}
+// Event: order-updated
+{
+  "orderId": "ORD-123",
+  "status": "RETURN_REQUESTED",
+  "message": "Buyer has requested a return."
+}
+
+// Channel: store-{storeId}
+// Event: return-requested
+{
+  "orderId": "ORD-123",
+  "returnId": "RET-456",
+  "rsfPayer": "SELLER"
+}
+        </div>
+    </section>
+
+    <footer style="text-align: center; padding: 20px; color: var(--secondary); font-size: 0.8rem;">
+        &copy; 2025 BudolShap Technical Team | Phase 6 Documentation
+    </footer>
+</div>
+
+</body>
+</html>

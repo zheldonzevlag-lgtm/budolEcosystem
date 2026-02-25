@@ -1,0 +1,65 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Phase 2: Robust Webhook Implementation</title>
+    <style>
+        :root {
+            --primary: #1a56db;
+            --bg: #f9fafb;
+            --card-bg: #ffffff;
+            --text: #111827;
+        }
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: var(--bg);
+            color: var(--text);
+            line-height: 1.6;
+            margin: 0;
+            padding: 2rem;
+        }
+        .container { max-width: 800px; margin: 0 auto; }
+        .card { background: var(--card-bg); padding: 2rem; border-radius: 0.75rem; box-shadow: 0 1px 3px rgba(0,0,0,0.1); margin-bottom: 2rem; }
+        h1 { color: var(--primary); }
+        pre { background: #1e293b; color: #f8f8f2; padding: 1rem; border-radius: 0.5rem; overflow-x: auto; }
+        .back-link { display: inline-block; margin-bottom: 1rem; color: var(--primary); text-decoration: none; font-weight: 500; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <a href="index.html" class="back-link">← Back to Index</a>
+        <div class="card">
+            <h1>Phase 2: Robust Webhook Implementation</h1>
+            <p>
+                The webhook handler in <code>app/api/webhooks/lalamove/route.js</code> was updated to include 
+                security verification and enhanced logging.
+            </p>
+
+            <h2>HMAC Signature Verification</h2>
+            <p>
+                We implemented HMAC SHA256 verification to ensure that incoming requests are genuinely from Lalamove.
+            </p>
+            <pre><code>// Signature Verification Logic
+const lalamove = getShippingProvider('lalamove');
+const isValid = lalamove.verifyWebhookSignature(rawBody, signature);
+
+if (!isValid) {
+    console.error('❌ Invalid Lalamove webhook signature');
+    return NextResponse.json({ error: 'Invalid signature' }, { status: 401 });
+}</code></pre>
+
+            <h2>State Machine Updates</h2>
+            <p>
+                The webhook now correctly updates the <code>shipping</code> JSON field in the database, 
+                capturing driver info, location updates, and delivery timelines.
+            </p>
+            <ul>
+                <li>Updates <code>order.status</code> based on Lalamove events.</li>
+                <li>Archives failed booking attempts in <code>shipping.previousAttempts</code>.</li>
+                <li>Triggers realtime events via <code>triggerRealtimeEvent</code>.</li>
+            </ul>
+        </div>
+    </div>
+</body>
+</html>

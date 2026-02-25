@@ -1,0 +1,51 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Lalamove Shipping Fee Fix - Phase 2: Root Cause Identification</title>
+    <style>
+        body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; line-height: 1.6; color: #333; max-width: 800px; margin: 0 auto; padding: 20px; }
+        h1 { color: #2c3e50; border-bottom: 2px solid #eee; padding-bottom: 10px; }
+        h2 { color: #34495e; margin-top: 30px; }
+        code { background: #f4f4f4; padding: 2px 5px; border-radius: 3px; font-family: "SFMono-Regular", Consolas, "Liberation Mono", Menlo, monospace; }
+        pre { background: #f4f4f4; padding: 15px; border-radius: 5px; overflow-x: auto; border: 1px solid #ddd; }
+        .navigation { margin-top: 40px; border-top: 1px solid #eee; padding-top: 20px; display: flex; justify-content: space-between; }
+        .navigation a { color: #3498db; text-decoration: none; }
+        .navigation a:hover { text-decoration: underline; }
+    </style>
+</head>
+<body>
+    <h1>Lalamove Shipping Fee Fix - Phase 2: Root Cause Identification</h1>
+    
+    <h2>Primary Root Cause</h2>
+    <p>The primary issue was identified in <code>lib/services/shippingService.js</code>. While the service correctly fetched a quotation from Lalamove, it was filtering the response and only returning a subset of fields. Crucially, it was omitting the <code>stops</code> array.</p>
+
+    <pre><code>// Original (Partial) Return in shippingService.js
+return {
+    success: true,
+    quote: {
+        quoteId: quote.quotationId,
+        price: { ... },
+        // stops were missing here!
+    }
+};</code></pre>
+
+    <h2>Impact</h2>
+    <ul>
+        <li><strong>Order Creation Failure:</strong> The <code>lalamove.js</code> service's <code>createOrder</code> method validates the presence of <code>stops</code> and <code>stopId</code>. Without these, the Lalamove API would reject the order creation request.</li>
+        <li><strong>Inconsistent Fee Display:</strong> While the fee might be shown in the UI during the quote phase, the disconnect in data propagation could lead to errors when the user attempts to finalize the order.</li>
+    </ul>
+
+    <h2>Secondary Considerations</h2>
+    <ul>
+        <li><strong>Order Total Calculation:</strong> Verified that <code>OrderSummary.jsx</code> correctly adds the Lalamove shipping fee to the subtotal before sending it to the backend.</li>
+        <li><strong>Database Schema:</strong> Confirmed that the <code>Order</code> model in <code>schema.mysql.prisma</code> has <code>shippingCost</code> and <code>shipping</code> (JSON) fields to accommodate this data.</li>
+    </ul>
+
+    <div class="navigation">
+        <a href="phase-1-analysis.html">&larr; Previous: Phase 1 - Analysis</a>
+        <a href="phase-3-implementation.html">Next: Phase 3 - Implementation &rarr;</a>
+    </div>
+</body>
+</html>

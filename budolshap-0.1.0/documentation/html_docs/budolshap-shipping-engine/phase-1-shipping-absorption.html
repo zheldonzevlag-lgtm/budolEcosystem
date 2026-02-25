@@ -1,0 +1,159 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Phase 1: Multi-Party Shipping Absorption - BudolShap</title>
+    <style>
+        :root {
+            --primary: #2563eb;
+            --secondary: #64748b;
+            --success: #22c55e;
+            --code-bg: #1e293b;
+            --code-text: #f8fafc;
+            --bg: #f8fafc;
+            --text: #1e293b;
+        }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+            line-height: 1.6;
+            color: var(--text);
+            background-color: var(--bg);
+            margin: 0;
+            padding: 0;
+        }
+        .container {
+            max-width: 1000px;
+            margin: 2rem auto;
+            padding: 0 1rem;
+        }
+        nav {
+            margin-bottom: 2rem;
+        }
+        nav a {
+            color: var(--primary);
+            text-decoration: none;
+            font-weight: 500;
+        }
+        h1, h2, h3 { color: var(--primary); margin-top: 2rem; }
+        .card {
+            background: white;
+            border-radius: 0.5rem;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+            padding: 1.5rem;
+            margin-bottom: 1.5rem;
+        }
+        code {
+            background: #e2e8f0;
+            padding: 0.2rem 0.4rem;
+            border-radius: 0.25rem;
+            font-family: monospace;
+            font-size: 0.9em;
+        }
+        pre {
+            background: var(--code-bg);
+            color: var(--code-text);
+            padding: 1rem;
+            border-radius: 0.5rem;
+            overflow-x: auto;
+            font-size: 0.875rem;
+        }
+        .success-box {
+            background: #dcfce7;
+            border-left: 4px solid var(--success);
+            padding: 1rem;
+            margin: 1rem 0;
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 1rem 0;
+        }
+        th, td {
+            text-align: left;
+            padding: 0.75rem;
+            border-bottom: 1px solid #e2e8f0;
+        }
+        th { background: #f1f5f9; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <nav>
+            <a href="index.html">← Back to Plan Overview</a>
+        </nav>
+
+        <header>
+            <h1>Phase 1: Multi-Party Shipping Absorption</h1>
+            <p>Implementing the core logic for platform vouchers, seller subsidies, and transparent cost breakdowns.</p>
+        </header>
+
+        <section class="card">
+            <h2>Executive Summary</h2>
+            <p>This phase focused on the "Absorption Logic" where shipping costs are split between three parties: the Platform (via Vouchers), the Seller (via Subsidies), and the Buyer (Net Fee). We implemented calculation safeguards to prevent negative shipping costs and created hierarchical UI components for total transparency.</p>
+        </section>
+
+        <section class="card">
+            <h2>Technical Specifications</h2>
+            <h3>1. Calculation Engine</h3>
+            <p>The core calculation is handled in <code>OrderSummary.jsx</code> (Frontend) and <code>ordersService.js</code> (Backend):</p>
+            <pre>
+netShipping = Math.max(0, rawShippingCost - sellerSubsidy - platformVoucher);
+totalAmount = subtotal + netShipping;</pre>
+
+            <h3>2. Data Storage</h3>
+            <p>The <code>Order</code> model in Prisma was updated to store the <code>netShipping</code> value in the <code>shippingCost</code> field, ensuring financial records match actual payments.</p>
+            
+            <h3>3. UI Components Updated</h3>
+            <ul>
+                <li><strong>OrderSummary.jsx</strong>: Added dynamic discount application and hierarchical breakdown.</li>
+                <li><strong>return/page.jsx</strong>: Added post-payment transparency for buyers.</li>
+                <li><strong>store/orders/page.jsx</strong>: Added detailed breakdown for store owners to see their subsidy contributions.</li>
+                <li><strong>OrderItem.jsx</strong>: Enhanced buyer order list with a detailed tooltip breakdown.</li>
+            </ul>
+        </section>
+
+        <section class="card">
+            <h2>Testing Protocol</h2>
+            <table>
+                <thead>
+                    <tr>
+                        <th>Test Case</th>
+                        <th>Expected Outcome</th>
+                        <th>Status</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td>Apply ₱50 Voucher to ₱40 Shipping</td>
+                        <td>Net Shipping = ₱0 (No negative values)</td>
+                        <td>✅ Passed</td>
+                    </tr>
+                    <tr>
+                        <td>Seller Subsidy + Platform Voucher</td>
+                        <td>Both deducted correctly from total</td>
+                        <td>✅ Passed</td>
+                    </tr>
+                    <tr>
+                        <td>Checkout Transaction</td>
+                        <td>Database stores net shipping cost</td>
+                        <td>✅ Passed</td>
+                    </tr>
+                </tbody>
+            </table>
+        </section>
+
+        <section class="card">
+            <h2>Risk Assessment & Mitigation</h2>
+            <ul>
+                <li><strong>Risk:</strong> Negative shipping costs leading to payment errors. <br><strong>Mitigation:</strong> Implemented <code>Math.max(0, ...)</code> wrapper on all shipping calculations.</li>
+                <li><strong>Risk:</strong> UI confusion regarding "Free Shipping". <br><strong>Mitigation:</strong> Hierarchical breakdown shows exactly how the discount was applied (e.g., "↳ Seller Subsidy").</li>
+            </ul>
+        </section>
+
+        <div class="success-box">
+            <strong>Phase 1 Completion Status:</strong> All core logic and UI updates have been implemented and verified against the initial specification.
+        </div>
+    </div>
+</body>
+</html>

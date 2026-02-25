@@ -1,0 +1,110 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Developer Manual - v423</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <style>
+        :root { --primary: #0052cc; --secondary: #172b4d; --bg: #f4f5f7; --white: #ffffff; --border: #dfe1e6; }
+        body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; margin: 0; display: flex; background: var(--bg); color: var(--secondary); }
+        .sidebar { width: 280px; background: #f4f5f7; height: 100vh; border-right: 1px solid var(--border); position: fixed; padding: 20px; overflow-y: auto; }
+        .main-content { margin-left: 320px; padding: 40px; max-width: 900px; }
+        .card { background: var(--white); border-radius: 8px; padding: 24px; margin-bottom: 24px; box-shadow: 0 1px 1px rgba(9,30,66,.25); }
+        code { background: #f4f5f7; padding: 2px 4px; border-radius: 4px; font-family: monospace; }
+        pre { background: #091e42; color: #ffffff; padding: 16px; border-radius: 8px; overflow-x: auto; font-size: 14px; }
+        .nav-link { display: block; padding: 8px 12px; color: #172b4d; text-decoration: none; border-radius: 4px; }
+        .nav-link:hover { background: #ebecf0; }
+        .nav-link.active { background: #deebff; color: var(--primary); font-weight: 500; }
+        .file-link { color: var(--primary); text-decoration: none; font-weight: 500; }
+        .file-link:hover { text-decoration: underline; }
+    </style>
+</head>
+<body>
+    <div class="sidebar">
+        <h3>v423 Documentation</h3>
+        <nav>
+            <a href="index.html" class="nav-link"><i class="fas fa-home"></i> Overview</a>
+            <a href="developer_manual.html" class="nav-link active"><i class="fas fa-code"></i> Developer Manual</a>
+            <a href="system_admin_manual.html" class="nav-link"><i class="fas fa-server"></i> System Admin Manual</a>
+            <a href="user_manual.html" class="nav-link"><i class="fas fa-user"></i> User Manual</a>
+            <a href="risk_register.html" class="nav-link"><i class="fas fa-exclamation-triangle"></i> Risk Register</a>
+        </nav>
+    </div>
+
+    <div class="main-content">
+        <h1>Developer Manual - v423</h1>
+
+        <div class="card">
+            <h2>Technical Explanation</h2>
+            <p>The implementation involved extending the Admin User Management system to handle structured address data and phone numbers. This required changes across the full stack.</p>
+            
+            <h3>Backend Changes</h3>
+            <p>We updated the API routes to handle <code>phoneNumber</code> (stored in the User model) and <code>address</code> (stored in the Address model, linked to the User).</p>
+            <ul>
+                <li><strong>API Route (Create):</strong> <a class="file-link" href="file:///d:/IT Projects/budolEcosystem/budolshap-0.1.0/app/api/admin/users/route.js">app/api/admin/users/route.js</a></li>
+                <li><strong>API Route (Update):</strong> <a class="file-link" href="file:///d:/IT Projects/budolEcosystem/budolshap-0.1.0/app/api/admin/users/[userId]/route.js">app/api/admin/users/[userId]/route.js</a></li>
+            </ul>
+
+            <h3>Frontend Changes</h3>
+            <p>The admin users page was updated to include a phone input and integrate the <code>StoreAddressModal</code> component.</p>
+            <ul>
+                <li><strong>Admin Users Page:</strong> <a class="file-link" href="file:///d:/IT Projects/budolEcosystem/budolshap-0.1.0/app/admin/users/page.jsx">app/admin/users/page.jsx</a></li>
+                <li><strong>Shared Component:</strong> <a class="file-link" href="file:///d:/IT Projects/budolEcosystem/budolshap-0.1.0/components/StoreAddressModal.jsx">components/StoreAddressModal.jsx</a></li>
+            </ul>
+        </div>
+
+        <div class="card">
+            <h2>Code Snippets</h2>
+            
+            <h3>1. Handling Address Creation in API</h3>
+            <pre><code>// app/api/admin/users/route.js
+if (address && Object.keys(address).length > 0) {
+    userData.Address = {
+        create: {
+            name: address.name || name,
+            email: address.email || email,
+            phone: address.phone || phoneNumber,
+            street: address.street || '',
+            barangay: address.barangay || '',
+            city: address.city || '',
+            state: address.state || '',
+            zip: address.zip || '',
+            country: address.country || 'Philippines',
+            latitude: address.latitude ? parseFloat(address.latitude) : null,
+            longitude: address.longitude ? parseFloat(address.longitude) : null
+        }
+    }
+}</code></pre>
+
+            <h3>2. Frontend Modal Integration</h3>
+            <pre><code>// app/admin/users/page.jsx
+{showAddressModal && (
+    &lt;StoreAddressModal
+        setShowAddressModal={setShowAddressModal}
+        onSave={handleAddressSave}
+        initialData={formData.address ? {
+            phone: formData.phoneNumber,
+            street: formData.address.street || formData.address.detailedAddress,
+            barangay: formData.address.barangay,
+            city: formData.address.city,
+            state: formData.address.state || formData.address.province,
+            zip: formData.address.zip
+        } : {
+            phone: formData.phoneNumber
+        }}
+    /&gt;
+)}</code></pre>
+        </div>
+
+        <div class="card">
+            <h2>Dependencies</h2>
+            <ul>
+                <li><strong>Prisma ORM:</strong> Used for database operations and relations.</li>
+                <li><strong>Lucide React:</strong> For icons (Phone, MapPin).</li>
+                <li><strong>StoreAddressModal:</strong> Reused universal address component.</li>
+            </ul>
+        </div>
+    </div>
+</body>
+</html>

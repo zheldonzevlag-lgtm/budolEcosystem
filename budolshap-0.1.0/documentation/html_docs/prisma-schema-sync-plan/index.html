@@ -1,0 +1,178 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Prisma Schema Synchronization - Implementation Plan</title>
+    <style>
+        :root {
+            --primary-color: #2563eb;
+            --secondary-color: #1e40af;
+            --text-color: #1f2937;
+            --bg-color: #f3f4f6;
+            --card-bg: #ffffff;
+            --border-color: #e5e7eb;
+        }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            line-height: 1.6;
+            color: var(--text-color);
+            background-color: var(--bg-color);
+            margin: 0;
+            padding: 0;
+        }
+        header {
+            background-color: var(--primary-color);
+            color: white;
+            padding: 2rem 1rem;
+            text-align: center;
+        }
+        nav {
+            background-color: white;
+            padding: 1rem;
+            border-bottom: 1px solid var(--border-color);
+            position: sticky;
+            top: 0;
+            z-index: 100;
+        }
+        nav ul {
+            list-style: none;
+            padding: 0;
+            margin: 0;
+            display: flex;
+            justify-content: center;
+            gap: 2rem;
+        }
+        nav a {
+            text-decoration: none;
+            color: var(--text-color);
+            font-weight: 600;
+        }
+        nav a:hover {
+            color: var(--primary-color);
+        }
+        main {
+            max-width: 1000px;
+            margin: 2rem auto;
+            padding: 0 1rem;
+        }
+        .card {
+            background: var(--card-bg);
+            padding: 2rem;
+            border-radius: 0.5rem;
+            box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.1);
+            margin-bottom: 2rem;
+        }
+        h1, h2, h3 {
+            color: var(--primary-color);
+        }
+        .status-badge {
+            display: inline-block;
+            padding: 0.25rem 0.75rem;
+            border-radius: 9999px;
+            font-size: 0.875rem;
+            font-weight: 500;
+            text-transform: uppercase;
+        }
+        .status-pending { background-color: #fef3c7; color: #92400e; }
+        .status-in-progress { background-color: #dbeafe; color: #1e40af; }
+        .status-completed { background-color: #d1fae5; color: #065f46; }
+        
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 1rem 0;
+        }
+        th, td {
+            text-align: left;
+            padding: 0.75rem;
+            border-bottom: 1px solid var(--border-color);
+        }
+        th {
+            background-color: #f9fafb;
+        }
+        pre {
+            background-color: #1e293b;
+            color: #f8fafc;
+            padding: 1rem;
+            border-radius: 0.375rem;
+            overflow-x: auto;
+        }
+        code {
+            font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+        }
+    </style>
+</head>
+<body>
+    <header>
+        <h1>Prisma Schema Synchronization Plan</h1>
+        <p>Resolving Return Request "Unknown argument isEscrowLocked" Error</p>
+    </header>
+    <nav>
+        <ul>
+            <li><a href="index.html">Overview</a></li>
+            <li><a href="phase-1-analysis.html">Phase 1: Analysis</a></li>
+            <li><a href="phase-2-synchronization.html">Phase 2: Synchronization</a></li>
+            <li><a href="phase-3-deployment.html">Phase 3: Deployment</a></li>
+            <li><a href="phase-4-verification.html">Phase 4: Verification</a></li>
+        </ul>
+    </nav>
+    <main>
+        <section class="card">
+            <h2>Executive Summary</h2>
+            <p>This implementation plan addresses the <code>PrismaClientValidationError</code> encountered during return request creation. The error is caused by a mismatch between the Prisma schema used for client generation and the code attempting to use the <code>isEscrowLocked</code> field in the <code>Return</code> model.</p>
+            <p>The project uses multiple schema files (<code>schema.prisma</code>, <code>schema.local.prisma</code>, <code>schema.mysql.prisma</code>) which have become out of sync. This plan outlines the steps to synchronize these files and update the local development environment.</p>
+        </section>
+
+        <section class="card">
+            <h2>Implementation Phases</h2>
+            <table>
+                <thead>
+                    <tr>
+                        <th>Phase</th>
+                        <th>Description</th>
+                        <th>Status</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td><a href="phase-1-analysis.html">Phase 1: Analysis</a></td>
+                        <td>Identify all inconsistencies across schema files.</td>
+                        <td><span class="status-badge status-completed">Completed</span></td>
+                    </tr>
+                    <tr>
+                        <td><a href="phase-2-synchronization.html">Phase 2: Synchronization</a></td>
+                        <td>Apply missing fields and models to all schema files.</td>
+                        <td><span class="status-badge status-in-progress">In Progress</span></td>
+                    </tr>
+                    <tr>
+                        <td><a href="phase-3-deployment.html">Phase 3: Deployment</a></td>
+                        <td>Regenerate Prisma client and push changes to the database.</td>
+                        <td><span class="status-badge status-pending">Pending</span></td>
+                    </tr>
+                    <tr>
+                        <td><a href="phase-4-verification.html">Phase 4: Verification</a></td>
+                        <td>Test return request flow and verify field availability.</td>
+                        <td><span class="status-badge status-pending">Pending</span></td>
+                    </tr>
+                </tbody>
+            </table>
+        </section>
+
+        <section class="card">
+            <h2>Quick Links</h2>
+            <ul>
+                <li><strong>Current Error:</strong> <code>Unknown argument isEscrowLocked</code> in <code>tx.return.create()</code></li>
+                <li><strong>Root Cause:</strong> <code>schema.local.prisma</code> missing <code>isEscrowLocked</code> field.</li>
+                <li><strong>Target Files:</strong>
+                    <ul>
+                        <li><code>prisma/schema.prisma</code> (Source of Truth)</li>
+                        <li><code>prisma/schema.local.prisma</code> (Needs Update)</li>
+                        <li><code>prisma/schema.mysql.prisma</code> (Needs Update)</li>
+                    </ul>
+                </li>
+            </ul>
+        </section>
+    </main>
+</body>
+</html>

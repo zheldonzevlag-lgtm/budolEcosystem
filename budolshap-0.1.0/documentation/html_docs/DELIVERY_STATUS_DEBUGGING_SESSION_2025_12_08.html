@@ -1,0 +1,132 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Delivery Status Debugging Session - Dec 8, 2025</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            line-height: 1.6;
+            color: #333;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+
+        h1 {
+            color: #2c3e50;
+            border-bottom: 2px solid #3498db;
+            padding-bottom: 10px;
+        }
+
+        h2 {
+            color: #2980b9;
+            margin-top: 30px;
+        }
+
+        .status-badge {
+            display: inline-block;
+            padding: 4px 8px;
+            border-radius: 4px;
+            font-size: 0.9em;
+            font-weight: bold;
+        }
+
+        .status-investigating {
+            background-color: #f1c40f;
+            color: #fff;
+        }
+
+        .code-block {
+            background-color: #f8f9fa;
+            border: 1px solid #e9ecef;
+            border-radius: 5px;
+            padding: 15px;
+            overflow-x: auto;
+            font-family: 'Consolas', 'Monaco', monospace;
+        }
+
+        .issue-card {
+            background-color: #fff3cd;
+            border-left: 5px solid #ffc107;
+            padding: 15px;
+            margin: 20px 0;
+        }
+
+        .plan-step {
+            margin-bottom: 10px;
+            padding-left: 20px;
+            border-left: 3px solid #dee2e6;
+        }
+    </style>
+</head>
+
+<body>
+    <h1>Delivery Status Debugging Session</h1>
+    <p><strong>Date:</strong> December 8, 2025</p>
+    <p><strong>Status:</strong> <span class="status-badge"
+            style="background-color: #27ae60; color: white;">RESOLVED</span></p>
+
+    <div class="issue-card" style="border-left-color: #27ae60; background-color: #e8f8f5;">
+        <h3>✅ Resolution: Missing Provider Field</h3>
+        <p><strong>Root Cause:</strong> The API response for successful booking did not return
+            <code>provider: 'lalamove'</code>. The frontend logic explicitly checks
+            <code>order.shipping.provider === 'lalamove'</code>. Because the optimistic UI update relied solely on the
+            API response, the provider check failed immediately after booking.</p>
+        <p><strong>Fix Applied:</strong></p>
+        <ul>
+            <li>Updated <code>app/api/shipping/lalamove/book/route.js</code> to include
+                <code>provider: 'lalamove'</code> in the response.</li>
+            <li>Updated <code>app/store/orders/page.jsx</code> to optimistically set <code>provider: 'lalamove'</code>
+                and update order status to <code>PROCESSING</code>.</li>
+        </ul>
+    </div>
+
+    <div class="issue-card">
+        <h3>🚨 Issue: Booked Orders Not Visible in "Booked" Tab</h3>
+        <p><strong>Description:</strong> After successfully booking a Lalamove delivery for an order, the order does not
+            appear in the "Booked" filter tab in the Store Orders dashboard.</p>
+        <p><strong>Impact:</strong> Sellers cannot easily track which orders have been booked, leading to confusion and
+            potential double-booking or missed shipments.</p>
+    </div>
+
+    <h2>Hypothesis & Investigation Plan</h2>
+
+    <div class="plan-step">
+        <h3>1. Frontend Delivery Status Logic</h3>
+        <p>The "Booked" tab relies on the <code>getDeliveryStatus</code> helper function in the frontend. This function
+            likely checks for a <code>bookingId</code> within the order's shipping details.</p>
+        <p><strong>Check:</strong> Does the order object received by the frontend actually contain the
+            <code>shipping</code> object with a valid <code>bookingId</code>?
+        </p>
+    </div>
+
+    <div class="plan-step">
+        <h3>2. Backend Booking Persistence</h3>
+        <p>When the <code>/api/shipping/lalamove/book</code> endpoint is called, it should save the Lalamove
+            <code>orderRef</code> or <code>orderId</code> into our database as the <code>bookingId</code>.
+        </p>
+        <p><strong>Check:</strong> Verify <code>app/api/shipping/lalamove/book/route.js</code> is correctly saving this
+            ID to the database.</p>
+    </div>
+
+    <div class="plan-step">
+        <h3>3. Order Fetching Logic</h3>
+        <p>When valid orders are fetched via <code>/api/orders</code>, the associated shipping information must be
+            included in the response.</p>
+        <p><strong>Check:</strong> Verify <code>app/api/orders/route.js</code> includes the <code>shipping</code>
+            relation in its Prisma query.</p>
+    </div>
+
+    <h2>Implementation Plan</h2>
+    <ol>
+        <li>Inspect <code>app/api/shipping/lalamove/book/route.js</code> to confirm database write.</li>
+        <li>Inspect <code>app/api/orders/route.js</code> to confirm data retrieval.</li>
+        <li>Debug <code>app/store/orders/page.jsx</code> to ensure frontend logic matches backend data structure.</li>
+        <li>Apply fixes and deploy.</li>
+    </ol>
+</body>
+
+</html>

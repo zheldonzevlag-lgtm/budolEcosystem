@@ -1,0 +1,167 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Forensic Audit Implementation Plan - Budol Ecosystem</title>
+    <style>
+        :root {
+            --primary: #0055ff;
+            --secondary: #f4f5f7;
+            --text: #172b4d;
+            --border: #dfe1e6;
+        }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, 'Open Sans', 'Helvetica Neue', sans-serif;
+            line-height: 1.6;
+            color: var(--text);
+            max-width: 1200px;
+            margin: 0 auto;
+            display: grid;
+            grid-template-columns: 280px 1fr;
+        }
+        aside {
+            background: var(--secondary);
+            padding: 2rem;
+            height: 100vh;
+            position: sticky;
+            top: 0;
+            border-right: 1px solid var(--border);
+        }
+        main {
+            padding: 2rem 4rem;
+        }
+        h1, h2, h3 { color: var(--text); }
+        h1 { border-bottom: 2px solid var(--border); padding-bottom: 1rem; }
+        .badge {
+            display: inline-block;
+            padding: 0.25rem 0.5rem;
+            border-radius: 4px;
+            font-size: 0.85rem;
+            font-weight: 600;
+        }
+        .badge-high { background: #ffebe6; color: #de350b; }
+        .badge-medium { background: #fffae6; color: #ff991f; }
+        .status-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 1rem 0;
+        }
+        .status-table th, .status-table td {
+            border: 1px solid var(--border);
+            padding: 0.75rem;
+            text-align: left;
+        }
+        .status-table th { background: var(--secondary); }
+        code {
+            background: #f4f5f7;
+            padding: 0.2rem 0.4rem;
+            border-radius: 3px;
+            font-family: 'SFMono-Medium', 'SF Mono', Consolas, 'Liberation Mono', Menlo, monospace;
+        }
+    </style>
+</head>
+<body>
+    <aside>
+        <h3>Contents</h3>
+        <ul style="list-style: none; padding: 0;">
+            <li><a href="#overview">Overview</a></li>
+            <li><a href="#phase1">Phase 1: Data Capture</a></li>
+            <li><a href="#phase2">Phase 2: Storage & Security</a></li>
+            <li><a href="#phase3">Phase 3: Fraud Detection</a></li>
+            <li><a href="#phase4">Phase 4: Investigation Workflow</a></li>
+            <li><a href="#compliance">Regulatory Compliance</a></li>
+        </ul>
+        <div style="margin-top: 2rem;">
+            <strong>Version:</strong> 1.0<br>
+            <strong>Date:</strong> 2026-02-16<br>
+            <strong>Status:</strong> <span class="badge badge-high">IN PROGRESS</span>
+        </div>
+    </aside>
+
+    <main>
+        <h1 id="overview">Shopee-like Forensic Audit Implementation Plan</h1>
+        
+        <div style="background: #e3fcef; padding: 1.5rem; border-radius: 8px; margin-bottom: 2rem;">
+            <strong>Objective:</strong> Implement a forensic-grade audit trail system that records, preserves, and analyzes system activities to detect fraud, disputes, abuse, and regulatory violations, compliant with BSP and NPC standards.
+        </div>
+
+        <h2 id="phase1">Phase 1: Data Capture Layer (Event Logging)</h2>
+        <p>Implementation of a centralized `AuditLogger` service to capture high-fidelity event data.</p>
+        
+        <table class="status-table">
+            <thead>
+                <tr>
+                    <th>Event Type</th>
+                    <th>Required Fields</th>
+                    <th>Status</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td>Authentication</td>
+                    <td>User ID, IP, Device Fingerprint, Geo-location, Auth Method (OTP/Password)</td>
+                    <td><span class="badge badge-medium">PARTIAL</span></td>
+                </tr>
+                <tr>
+                    <td>Financial</td>
+                    <td>Transaction ID, Wallet Balance (Pre/Post), Ledger Ref, Hash Chain</td>
+                    <td><span class="badge badge-high">PENDING</span></td>
+                </tr>
+                <tr>
+                    <td>Data Changes</td>
+                    <td>Entity ID, Previous Value, New Value, Diff Snapshot</td>
+                    <td><span class="badge badge-high">PENDING</span></td>
+                </tr>
+            </tbody>
+        </table>
+
+        <h3>Implementation Details</h3>
+        <pre><code>
+// Standardized Log Schema
+{
+  timestamp: "UTC ISO String",
+  actor: { id: "user_123", role: "SELLER", ip: "1.1.1.1", device: "Android 13" },
+  action: "PAYOUT_REQUEST",
+  target: { type: "WALLET", id: "w_999" },
+  changes: { field: "balance", old: 1000, new: 0 },
+  metadata: { riskScore: 0.85, sessionID: "sess_abc" },
+  integrity: { hash: "sha256_signature" }
+}
+        </code></pre>
+
+        <h2 id="phase2">Phase 2: Centralized Log Storage & Security</h2>
+        <ul>
+            <li><strong>Immutable Storage:</strong> Use database constraints to prevent `UPDATE` or `DELETE` on audit tables.</li>
+            <li><strong>Encryption:</strong> Sensitive fields (PII) encrypted at rest using AES-256.</li>
+            <li><strong>Retention Policy:</strong> Automated archival script for logs > 5 years (Data Lake offloading).</li>
+        </ul>
+
+        <h2 id="phase3">Phase 3: Risk & Fraud Monitoring Layer</h2>
+        <p>Real-time analysis engine triggering alerts based on velocity and pattern matching.</p>
+        
+        <h3>Trigger Rules</h3>
+        <ul>
+            <li><strong>Multi-Account Collusion:</strong> >3 accounts sharing same Device ID / IP within 1 hour.</li>
+            <li><strong>Rapid Cycling:</strong> Order -> Cancel -> Refund cycle < 5 mins.</li>
+            <li><strong>Velocity Checks:</strong> >5 failed login attempts or >3 payout requests/day.</li>
+        </ul>
+
+        <h2 id="phase4">Phase 4: Forensic Investigation Workflow</h2>
+        <p>Admin tools for Case Management and Evidence Reconstruction.</p>
+        <ul>
+            <li><strong>Timeline View:</strong> Chronological reconstruction of user actions across sessions.</li>
+            <li><strong>Export Evidence:</strong> CSV/PDF export with cryptographic proof (implemented).</li>
+            <li><strong>Case Linking:</strong> Ability to group logs under a "Case ID" for disputes.</li>
+        </ul>
+
+        <h2 id="compliance">Regulatory Compliance (BSP/NPC)</h2>
+        <p>Adherence to Philippine regulatory standards.</p>
+        <ul>
+            <li><strong>AMLA:</strong> 5-year retention for financial transaction logs.</li>
+            <li><strong>Data Privacy Act:</strong> Redaction of sensitive PII in general admin views (RBAC).</li>
+            <li><strong>Non-Repudiation:</strong> Digital signatures on critical logs.</li>
+        </ul>
+    </main>
+</body>
+</html>

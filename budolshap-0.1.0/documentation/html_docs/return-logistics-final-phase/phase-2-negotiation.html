@@ -1,0 +1,80 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Return Logistics Implementation - Phase 2: Negotiation Loop</title>
+    <style>
+        :root {
+            --primary: #ee4d2d;
+            --secondary: #2673dd;
+            --success: #2ecc71;
+            --bg: #f5f5f5;
+            --text: #333;
+        }
+        body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; line-height: 1.6; color: var(--text); background: var(--bg); margin: 0; padding: 20px; }
+        .container { max-width: 900px; margin: 0 auto; background: white; padding: 40px; border-radius: 12px; shadow: 0 4px 6px rgba(0,0,0,0.1); }
+        h1 { color: var(--primary); border-bottom: 2px solid var(--primary); padding-bottom: 10px; }
+        h2 { color: var(--secondary); margin-top: 30px; }
+        .status { display: inline-block; padding: 4px 12px; border-radius: 20px; font-size: 0.8em; font-weight: bold; text-transform: uppercase; }
+        .status-complete { background: #d4edda; color: #155724; }
+        .status-in-progress { background: #fff3cd; color: #856404; }
+        code { background: #eee; padding: 2px 5px; border-radius: 4px; font-family: monospace; }
+        pre { background: #2d3436; color: #dfe6e9; padding: 15px; border-radius: 8px; overflow-x: auto; }
+        .task-list { list-style: none; padding: 0; }
+        .task-item { display: flex; align-items: flex-start; gap: 10px; margin-bottom: 10px; padding: 10px; border-left: 4px solid #ddd; background: #fafafa; }
+        .task-item.complete { border-left-color: var(--success); }
+        nav { margin-bottom: 30px; }
+        nav a { margin-right: 15px; text-decoration: none; color: var(--secondary); font-weight: bold; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <nav>
+            <a href="index.html">Summary</a> | 
+            <a href="phase-1-logistics.html">Phase 1</a> | 
+            <a href="phase-2-negotiation.html">Phase 2</a> | 
+            <a href="phase-3-verification.html">Phase 3</a>
+        </nav>
+
+        <h1>Phase 2: Negotiation Loop (Partial Refunds)</h1>
+        <p>Implementation of the Shopee-style negotiation flow where sellers can offer partial refunds to avoid physical returns.</p>
+
+        <div class="status status-complete">Completed</div>
+
+        <h2>Technical Specification</h2>
+        <p>The negotiation loop involves a state machine in <code>returnsService.js</code> that manages <code>OFFER_PARTIAL</code> actions.</p>
+
+        <h3>Workflows</h3>
+        <ul>
+            <li><strong>Seller Side:</strong> Seller uses <code>OFFER_PARTIAL</code> with a <code>partialAmount</code>.</li>
+            <li><strong>Buyer Side:</strong> Buyer can <code>ACCEPT</code> or <code>REJECT</code> the offer.</li>
+            <li><strong>Finalization:</strong> Accepting triggers an immediate escrow release of the partial amount to the buyer and the remainder to the seller.</li>
+        </ul>
+
+        <h2>Implementation Details</h2>
+        <pre>
+// returnsService.js - respondToReturn
+if (action === 'OFFER_PARTIAL') {
+    finalRefundAmount = partialAmount;
+    newStatus = 'PENDING'; // Buyer must now respond
+    sellerAction = 'OFFER_PARTIAL';
+}
+        </pre>
+
+        <h2>UI Components</h2>
+        <ul class="task-list">
+            <li class="task-item complete">
+                <div>
+                    <strong>Seller Modal:</strong> Added a partial refund input field in the Store Returns action modal.
+                </div>
+            </li>
+            <li class="task-item complete">
+                <div>
+                    <strong>Buyer Buttons:</strong> Added "Accept ₱X" and "Reject Offer" buttons in the Buyer Order Details page.
+                </div>
+            </li>
+        </ul>
+    </div>
+</body>
+</html>

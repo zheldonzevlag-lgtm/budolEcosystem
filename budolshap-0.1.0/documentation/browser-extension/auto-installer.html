@@ -1,0 +1,295 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Auto Extension Installer - BudolShap</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+        }
+
+        .container {
+            background: white;
+            border-radius: 16px;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+            padding: 40px;
+            max-width: 700px;
+            width: 100%;
+        }
+
+        h1 {
+            color: #2d3748;
+            font-size: 2em;
+            margin-bottom: 10px;
+            text-align: center;
+        }
+
+        .status-box {
+            background: #f7fafc;
+            border: 2px solid #e2e8f0;
+            border-radius: 8px;
+            padding: 20px;
+            margin: 20px 0;
+        }
+
+        .step {
+            background: white;
+            border-left: 4px solid #667eea;
+            padding: 15px 20px;
+            margin: 15px 0;
+            border-radius: 4px;
+        }
+
+        .step-number {
+            display: inline-block;
+            background: #667eea;
+            color: white;
+            width: 30px;
+            height: 30px;
+            border-radius: 50%;
+            text-align: center;
+            line-height: 30px;
+            font-weight: bold;
+            margin-right: 10px;
+        }
+
+        .btn {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            padding: 15px 30px;
+            border-radius: 8px;
+            font-size: 1.1em;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s;
+            width: 100%;
+            margin: 10px 0;
+        }
+
+        .btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4);
+        }
+
+        .btn:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+
+        .info {
+            background: #dbeafe;
+            border-left: 4px solid #3b82f6;
+            padding: 15px;
+            margin: 20px 0;
+            border-radius: 4px;
+        }
+
+        .warning {
+            background: #fef3c7;
+            border-left: 4px solid #f59e0b;
+            padding: 15px;
+            margin: 20px 0;
+            border-radius: 4px;
+        }
+
+        .success {
+            background: #d1fae5;
+            border-left: 4px solid #10b981;
+            padding: 15px;
+            margin: 20px 0;
+            border-radius: 4px;
+        }
+
+        .code {
+            background: #2d3748;
+            color: #68d391;
+            padding: 10px;
+            border-radius: 4px;
+            font-family: 'Courier New', monospace;
+            margin: 10px 0;
+            overflow-x: auto;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="container">
+        <h1>🚀 Auto Extension Installer</h1>
+
+        <div class="warning">
+            <strong>⚠️ Browser Security Limitation:</strong>
+            <p>Due to browser security policies, extensions cannot be installed automatically. However, this tool will
+                automate as much as possible!</p>
+        </div>
+
+        <div class="status-box" id="statusBox">
+            <h3>Installation Status</h3>
+            <p id="statusText">Ready to begin automated installation...</p>
+        </div>
+
+        <button class="btn" id="startBtn" onclick="startAutoInstall()">
+            🤖 Start Automated Installation
+        </button>
+
+        <div id="stepsContainer" style="display: none;">
+            <div class="step">
+                <span class="step-number">1</span>
+                <strong>Opening Extensions Page...</strong>
+                <p id="step1Status">Waiting...</p>
+            </div>
+
+            <div class="step">
+                <span class="step-number">2</span>
+                <strong>Instructions for Manual Steps:</strong>
+                <div id="step2Content">
+                    <p>You'll need to manually:</p>
+                    <ol style="margin-left: 30px; margin-top: 10px;">
+                        <li>Enable "Developer mode" (toggle in top-right)</li>
+                        <li>Click "Load unpacked"</li>
+                        <li>Select the extension folder</li>
+                    </ol>
+                </div>
+            </div>
+
+            <div class="step">
+                <span class="step-number">3</span>
+                <strong>Extension Folder Path:</strong>
+                <div class="code" id="extensionPath">C:\Program Files\budolshap\browser-extension</div>
+                <button onclick="copyPath()"
+                    style="background: #10b981; color: white; border: none; padding: 8px 16px; border-radius: 4px; cursor: pointer; margin-top: 10px;">
+                    📋 Copy Path
+                </button>
+            </div>
+
+            <div class="step">
+                <span class="step-number">4</span>
+                <strong>Verification:</strong>
+                <p id="step4Status">After installation, this page will detect the extension automatically.</p>
+            </div>
+        </div>
+
+        <div class="info" id="infoBox" style="display: none;">
+            <h3>💡 What's Automated:</h3>
+            <ul style="margin-left: 20px; margin-top: 10px;">
+                <li>✅ Opens extensions page automatically</li>
+                <li>✅ Copies extension path to clipboard</li>
+                <li>✅ Detects when extension is installed</li>
+                <li>✅ Provides clear instructions</li>
+            </ul>
+        </div>
+
+        <div class="success" id="successBox" style="display: none;">
+            <h3>✅ Extension Detected!</h3>
+            <p>Your extension is installed and ready to use!</p>
+            <p style="margin-top: 10px;"><strong>Test it:</strong> Go to any website and press <kbd
+                    style="background: #2d3748; color: white; padding: 4px 8px; border-radius: 4px;">Ctrl+Shift+K</kbd>
+            </p>
+        </div>
+    </div>
+
+    <script>
+        const EXTENSION_PATH = 'C:\\Program Files\\budolshap\\browser-extension';
+
+        function startAutoInstall() {
+            document.getElementById('startBtn').disabled = true;
+            document.getElementById('startBtn').textContent = '⏳ Installing...';
+            document.getElementById('statusText').textContent = 'Starting automated installation process...';
+            document.getElementById('stepsContainer').style.display = 'block';
+            document.getElementById('infoBox').style.display = 'block';
+
+            // Step 1: Open extensions page
+            setTimeout(() => {
+                document.getElementById('step1Status').textContent = 'Opening extensions page...';
+                openExtensionsPage();
+                document.getElementById('step1Status').innerHTML = '✅ Extensions page opened!<br><small>Please enable Developer mode and click Load unpacked</small>';
+            }, 500);
+
+            // Step 2: Copy path to clipboard
+            setTimeout(() => {
+                copyPath();
+            }, 1000);
+
+            // Step 3: Start checking for extension
+            setTimeout(() => {
+                startExtensionDetection();
+            }, 2000);
+        }
+
+        function openExtensionsPage() {
+            // Detect browser and open appropriate extensions page
+            if (navigator.userAgent.includes('Edg')) {
+                window.open('edge://extensions/', '_blank');
+            } else {
+                window.open('chrome://extensions/', '_blank');
+            }
+        }
+
+        function copyPath() {
+            navigator.clipboard.writeText(EXTENSION_PATH).then(() => {
+                document.getElementById('step3Status')?.remove();
+                const status = document.createElement('p');
+                status.id = 'step3Status';
+                status.innerHTML = '✅ Path copied to clipboard!<br><small>Paste it when selecting the folder</small>';
+                status.style.color = '#10b981';
+                status.style.marginTop = '10px';
+                document.querySelector('.step:nth-child(3)').appendChild(status);
+            }).catch(() => {
+                // Fallback
+                const textarea = document.createElement('textarea');
+                textarea.value = EXTENSION_PATH;
+                document.body.appendChild(textarea);
+                textarea.select();
+                document.execCommand('copy');
+                document.body.removeChild(textarea);
+            });
+        }
+
+        function startExtensionDetection() {
+            document.getElementById('step4Status').textContent = 'Checking for extension...';
+
+            const checkInterval = setInterval(() => {
+                // Check if extension is installed
+                if (typeof window !== 'undefined' && window.kbExtensionInstalled) {
+                    clearInterval(checkInterval);
+                    document.getElementById('successBox').style.display = 'block';
+                    document.getElementById('statusText').textContent = '✅ Extension successfully installed!';
+                    document.getElementById('step4Status').innerHTML = '✅ <strong>Extension detected!</strong> Installation complete!';
+                }
+            }, 1000);
+
+            // Stop checking after 5 minutes
+            setTimeout(() => {
+                clearInterval(checkInterval);
+                if (!window.kbExtensionInstalled) {
+                    document.getElementById('step4Status').innerHTML = '⏳ Still waiting for installation...<br><small>Make sure you selected the correct folder and enabled Developer mode</small>';
+                }
+            }, 300000);
+        }
+
+        // Check if extension is already installed on page load
+        window.addEventListener('load', () => {
+            if (typeof window !== 'undefined' && window.kbExtensionInstalled) {
+                document.getElementById('successBox').style.display = 'block';
+                document.getElementById('statusText').textContent = '✅ Extension is already installed!';
+                document.getElementById('startBtn').style.display = 'none';
+            }
+        });
+    </script>
+</body>
+
+</html>

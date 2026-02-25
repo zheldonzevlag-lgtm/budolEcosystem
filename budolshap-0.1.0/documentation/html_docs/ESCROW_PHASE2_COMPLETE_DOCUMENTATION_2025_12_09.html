@@ -1,0 +1,315 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Phase 2: Escrow System - Complete Documentation</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700&display=swap" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+        }
+    </style>
+</head>
+
+<body class="bg-gradient-to-br from-indigo-50 to-purple-100 p-8">
+    <div class="max-w-7xl mx-auto bg-white shadow-2xl rounded-xl overflow-hidden">
+
+        <!-- Header -->
+        <div class="bg-gradient-to-r from-indigo-600 to-purple-600 text-white p-10">
+            <h1 class="text-4xl font-bold mb-3">📘 Phase 2: Escrow System</h1>
+            <p class="text-indigo-100 text-lg">Complete Implementation Documentation</p>
+            <div class="mt-6 flex gap-6 text-xs font-mono text-indigo-200">
+                <span>📅 2025-12-09</span>
+                <span>✅ Status: Complete</span>
+                <span>🎯 Success Rate: 100%</span>
+            </div>
+        </div>
+
+        <div class="p-10 space-y-8">
+
+            <!-- Table of Contents -->
+            <section class="bg-gray-50 p-6 rounded-lg border border-gray-200">
+                <h2 class="text-2xl font-bold mb-4">📑 Table of Contents</h2>
+                <div class="grid md:grid-cols-2 gap-2 text-sm">
+                    <a href="#overview" class="text-indigo-600 hover:underline">1. Overview</a>
+                    <a href="#processes" class="text-indigo-600 hover:underline">2. Implementation Processes</a>
+                    <a href="#dashboard" class="text-indigo-600 hover:underline">3. Dashboard Elements</a>
+                    <a href="#issues" class="text-indigo-600 hover:underline">4. Issues & Fixes</a>
+                    <a href="#testing" class="text-indigo-600 hover:underline">5. Testing Results</a>
+                    <a href="#recommendations" class="text-indigo-600 hover:underline">6. Future Recommendations</a>
+                </div>
+            </section>
+
+            <!-- 1. Overview -->
+            <section id="overview">
+                <h2 class="text-3xl font-bold mb-6">1. Overview</h2>
+                <div class="bg-indigo-50 p-6 rounded-lg border-l-4 border-indigo-600">
+                    <h3 class="font-bold text-indigo-900 mb-3">Objective</h3>
+                    <p class="text-indigo-800 mb-4">Implement a gateway-agnostic escrow service that holds seller funds
+                        for 7 days after delivery, with a 5% platform fee, and update seller dashboards to display
+                        escrow balances.</p>
+
+                    <h3 class="font-bold text-indigo-900 mb-3 mt-4">Key Achievements</h3>
+                    <ul class="text-sm text-indigo-800 space-y-1">
+                        <li>✅ Created escrow service module (lib/escrow.js)</li>
+                        <li>✅ Updated PayMongo webhook integration</li>
+                        <li>✅ Modified seller dashboards (main + wallet)</li>
+                        <li>✅ Implemented visual escrow indicators</li>
+                        <li>✅ All tests passed (100% success)</li>
+                    </ul>
+                </div>
+            </section>
+
+            <!-- 2. Implementation Processes -->
+            <section id="processes">
+                <h2 class="text-3xl font-bold mb-6">2. Implementation Processes</h2>
+
+                <!-- Process 1 -->
+                <div class="mb-6 bg-white border-2 border-blue-200 rounded-lg p-6">
+                    <h3 class="text-xl font-bold text-blue-900 mb-4">2.1 Escrow Service Creation</h3>
+                    <div class="space-y-3 text-sm">
+                        <div class="bg-blue-50 p-4 rounded">
+                            <p class="font-bold mb-2">File: <code class="text-blue-600">lib/escrow.js</code></p>
+                            <p class="text-gray-700 mb-2">Core Functions:</p>
+                            <ul class="text-gray-700 space-y-1 ml-4">
+                                <li>• <strong>creditPendingBalance()</strong> - Credits seller's pendingBalance with 5%
+                                    fee deduction</li>
+                                <li>• <strong>releaseFunds()</strong> - Transfers from pendingBalance to balance</li>
+                                <li>• <strong>getEscrowSummary()</strong> - Retrieves wallet summary</li>
+                                <li>• <strong>calculatePlatformFee()</strong> - Calculates 5% platform fee</li>
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Process 2 -->
+                <div class="mb-6 bg-white border-2 border-green-200 rounded-lg p-6">
+                    <h3 class="text-xl font-bold text-green-900 mb-4">2.2 PayMongo Webhook Update</h3>
+                    <div class="bg-green-50 p-4 rounded text-sm">
+                        <p class="font-bold mb-2">File: <code
+                                class="text-green-600">app/api/webhooks/paymongo/route.js</code></p>
+                        <p class="text-gray-700 mb-2">Changes:</p>
+                        <ul class="text-gray-700 space-y-1 ml-4">
+                            <li>• Imported creditPendingBalance from escrow service</li>
+                            <li>• Modified handlePaymentPaid to use escrow</li>
+                            <li>• Funds now go to pendingBalance instead of balance</li>
+                            <li>• Platform fee automatically deducted</li>
+                        </ul>
+                    </div>
+                </div>
+
+                <!-- Process 3 -->
+                <div class="mb-6 bg-white border-2 border-purple-200 rounded-lg p-6">
+                    <h3 class="text-xl font-bold text-purple-900 mb-4">2.3 Dashboard Updates</h3>
+                    <div class="space-y-3">
+                        <div class="bg-purple-50 p-4 rounded text-sm">
+                            <p class="font-bold mb-2">Main Dashboard: <code
+                                    class="text-purple-600">app/store/page.jsx</code></p>
+                            <ul class="text-gray-700 space-y-1 ml-4">
+                                <li>• Renamed "Pending Earnings" → "In Escrow" (orange icon)</li>
+                                <li>• Renamed "Total Earnings" → "Available Balance" (green icon)</li>
+                                <li>• Added color coding system</li>
+                                <li>• Updated tooltips with escrow explanations</li>
+                            </ul>
+                        </div>
+                        <div class="bg-purple-50 p-4 rounded text-sm">
+                            <p class="font-bold mb-2">Wallet Page: <code
+                                    class="text-purple-600">app/store/wallet/page.jsx</code></p>
+                            <ul class="text-gray-700 space-y-1 ml-4">
+                                <li>• Created two separate balance cards</li>
+                                <li>• Added informational banner</li>
+                                <li>• Updated withdrawal form validation</li>
+                                <li>• Added lock icon for pending balance</li>
+                            </ul>
+                        </div>
+                        <div class="bg-purple-50 p-4 rounded text-sm">
+                            <p class="font-bold mb-2">Dashboard API: <code
+                                    class="text-purple-600">app/api/dashboard/store/route.js</code></p>
+                            <ul class="text-gray-700 space-y-1 ml-4">
+                                <li>• Fetches wallet data from database</li>
+                                <li>• Returns balance and pendingBalance</li>
+                                <li>• Includes wallet object in response</li>
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- 3. Dashboard Elements -->
+            <section id="dashboard">
+                <h2 class="text-3xl font-bold mb-6">3. Dashboard Elements Explained</h2>
+
+                <div class="grid md:grid-cols-3 gap-4 mb-6">
+                    <!-- Potential Earnings -->
+                    <div class="bg-blue-50 p-6 rounded-lg border-2 border-blue-300">
+                        <h3 class="font-bold text-blue-900 mb-3">💭 Potential Earnings</h3>
+                        <div class="text-sm text-blue-800 space-y-2">
+                            <p><strong>What:</strong> Total value of ALL orders</p>
+                            <p><strong>Includes:</strong> Paid + Unpaid orders</p>
+                            <p><strong>Purpose:</strong> Shows maximum possible revenue</p>
+                            <p><strong>Formula:</strong> Sum of all order totals (except refunded)</p>
+                        </div>
+                    </div>
+
+                    <!-- In Escrow -->
+                    <div class="bg-orange-50 p-6 rounded-lg border-2 border-orange-300">
+                        <h3 class="font-bold text-orange-900 mb-3">🔒 In Escrow</h3>
+                        <div class="text-sm text-orange-800 space-y-2">
+                            <p><strong>What:</strong> Funds held for 7 days</p>
+                            <p><strong>Includes:</strong> Only PAID orders</p>
+                            <p><strong>Purpose:</strong> Buyer protection period</p>
+                            <p><strong>Formula:</strong> (Order Total - 5% Fee) in pendingBalance</p>
+                        </div>
+                    </div>
+
+                    <!-- Available Balance -->
+                    <div class="bg-green-50 p-6 rounded-lg border-2 border-green-300">
+                        <h3 class="font-bold text-green-900 mb-3">💰 Available Balance</h3>
+                        <div class="text-sm text-green-800 space-y-2">
+                            <p><strong>What:</strong> Funds ready for withdrawal</p>
+                            <p><strong>Includes:</strong> Released from escrow</p>
+                            <p><strong>Purpose:</strong> Withdrawable earnings</p>
+                            <p><strong>Formula:</strong> Funds in wallet.balance</p>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Flow Diagram -->
+                <div class="bg-gray-50 p-6 rounded-lg border border-gray-200">
+                    <h3 class="font-bold text-gray-900 mb-4">Fund Flow Diagram</h3>
+                    <div class="bg-white p-6 rounded border border-gray-300 text-sm font-mono">
+                        <p>Customer Pays ₱1,000</p>
+                        <p class="ml-4">↓</p>
+                        <p>Platform Fee: ₱50 (5%)</p>
+                        <p class="ml-4">↓</p>
+                        <p class="text-orange-600">In Escrow: ₱950 (pendingBalance)</p>
+                        <p class="ml-4">↓ [Wait 7 days after delivery]</p>
+                        <p class="text-green-600">Available Balance: ₱950 (balance)</p>
+                        <p class="ml-4">↓</p>
+                        <p>Seller Withdraws</p>
+                    </div>
+                </div>
+            </section>
+
+            <!-- 4. Issues & Fixes -->
+            <section id="issues">
+                <h2 class="text-3xl font-bold mb-6">4. Issues & Fixes</h2>
+
+                <div class="space-y-4">
+                    <div class="bg-red-50 p-6 rounded-lg border-l-4 border-red-500">
+                        <h3 class="font-bold text-red-900 mb-2">Issue #1: Prisma Import Error</h3>
+                        <p class="text-sm text-red-800 mb-2"><strong>Problem:</strong> Build failed with "import prisma
+                            from './prisma'" error</p>
+                        <p class="text-sm text-red-800 mb-2"><strong>Cause:</strong> Incorrect import syntax for Prisma
+                            client</p>
+                        <p class="text-sm text-green-800"><strong>Fix:</strong> Changed to named import:
+                            <code>import { prisma } from './prisma'</code></p>
+                    </div>
+
+                    <div class="bg-yellow-50 p-6 rounded-lg border-l-4 border-yellow-500">
+                        <h3 class="font-bold text-yellow-900 mb-2">Issue #2: Platform Fee Clarity</h3>
+                        <p class="text-sm text-yellow-800 mb-2"><strong>Problem:</strong> Unclear when/how platform fee
+                            is applied</p>
+                        <p class="text-sm text-yellow-800 mb-2"><strong>Cause:</strong> Insufficient documentation</p>
+                        <p class="text-sm text-green-800"><strong>Fix:</strong> Added clear documentation and UI
+                            indicators showing 5% fee</p>
+                    </div>
+                </div>
+            </section>
+
+            <!-- 5. Testing Results -->
+            <section id="testing">
+                <h2 class="text-3xl font-bold mb-6">5. Testing Results</h2>
+
+                <div class="bg-green-50 p-6 rounded-lg border-2 border-green-300">
+                    <h3 class="font-bold text-green-900 mb-4">✅ All Tests Passed (100%)</h3>
+                    <div class="grid md:grid-cols-2 gap-4 text-sm">
+                        <div class="bg-white p-4 rounded">
+                            <p class="font-bold mb-2">Main Dashboard (/store)</p>
+                            <ul class="text-gray-700 space-y-1">
+                                <li>✓ "In Escrow" card visible (orange)</li>
+                                <li>✓ "Available Balance" card visible (green)</li>
+                                <li>✓ Color coding correct</li>
+                                <li>✓ Tooltips working</li>
+                            </ul>
+                        </div>
+                        <div class="bg-white p-4 rounded">
+                            <p class="font-bold mb-2">Wallet Page (/store/wallet)</p>
+                            <ul class="text-gray-700 space-y-1">
+                                <li>✓ Two balance cards displaying</li>
+                                <li>✓ Information banner visible</li>
+                                <li>✓ Withdrawal form working</li>
+                                <li>✓ Lock icon on pending balance</li>
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- 6. Recommendations -->
+            <section id="recommendations">
+                <h2 class="text-3xl font-bold mb-6">6. Future Recommendations</h2>
+
+                <div class="space-y-4">
+                    <!-- Short-term -->
+                    <div class="bg-blue-50 p-6 rounded-lg border-l-4 border-blue-500">
+                        <h3 class="font-bold text-blue-900 mb-3">📅 Short-term (1-2 weeks)</h3>
+                        <ul class="text-sm text-blue-800 space-y-2">
+                            <li><strong>1. Phase 3 Implementation:</strong> Auto-release funds after 7 days</li>
+                            <li><strong>2. Email Notifications:</strong> Notify sellers when funds are released</li>
+                            <li><strong>3. Multi-Gateway Support:</strong> Add Xendit integration</li>
+                            <li><strong>4. Transaction History:</strong> Enhanced filtering and search</li>
+                        </ul>
+                    </div>
+
+                    <!-- Long-term -->
+                    <div class="bg-purple-50 p-6 rounded-lg border-l-4 border-purple-500">
+                        <h3 class="font-bold text-purple-900 mb-3">🚀 Long-term (1-3 months)</h3>
+                        <ul class="text-sm text-purple-800 space-y-2">
+                            <li><strong>1. Configurable Platform Fee:</strong> Allow admin to adjust fee percentage</li>
+                            <li><strong>2. Tiered Fee Structure:</strong> Different fees based on seller tier</li>
+                            <li><strong>3. Early Release Option:</strong> Manual fund release for trusted sellers</li>
+                            <li><strong>4. Refund Handling:</strong> Automatic escrow reversal on refunds</li>
+                            <li><strong>5. Analytics Dashboard:</strong> Escrow metrics and trends</li>
+                            <li><strong>6. Dispute Management:</strong> Hold funds during disputes</li>
+                        </ul>
+                    </div>
+
+                    <!-- Best Practices -->
+                    <div class="bg-green-50 p-6 rounded-lg border-l-4 border-green-500">
+                        <h3 class="font-bold text-green-900 mb-3">✨ Best Practices Established</h3>
+                        <ul class="text-sm text-green-800 space-y-2">
+                            <li>✓ Gateway-agnostic architecture for easy integration</li>
+                            <li>✓ Atomic database operations for fund transfers</li>
+                            <li>✓ Comprehensive transaction logging</li>
+                            <li>✓ Clear visual indicators for fund status</li>
+                            <li>✓ User education through UI (tooltips, banners)</li>
+                        </ul>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Summary -->
+            <section class="bg-gradient-to-r from-indigo-900 to-purple-900 text-white p-8 rounded-lg">
+                <h2 class="text-2xl font-bold mb-4">📋 Summary</h2>
+                <div class="space-y-2 text-indigo-100 text-sm">
+                    <p>✅ <strong>Escrow Service:</strong> Fully functional gateway-agnostic system</p>
+                    <p>✅ <strong>Dashboard Integration:</strong> Clear visual representation of fund status</p>
+                    <p>✅ <strong>Platform Fee:</strong> 5% automatically deducted from all payments</p>
+                    <p>✅ <strong>Testing:</strong> 100% pass rate on production environment</p>
+                    <p>✅ <strong>Documentation:</strong> Comprehensive guides and explanations</p>
+                </div>
+                <div class="mt-6 pt-6 border-t border-indigo-700">
+                    <p class="font-bold text-xl">🎯 Next Step: Phase 3</p>
+                    <p class="text-sm text-indigo-200">Implement automatic fund release after 7-day escrow period</p>
+                </div>
+            </section>
+
+        </div>
+    </div>
+</body>
+
+</html>

@@ -1,0 +1,143 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Phase 1: Return Logistics & Booking - BudolShap</title>
+    <style>
+        :root {
+            --primary: #1e293b;
+            --secondary: #64748b;
+            --blue: #2563eb;
+            --green: #16a34a;
+            --orange: #ea580c;
+            --border: #e2e8f0;
+            --bg: #f8fafc;
+        }
+        body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; line-height: 1.6; color: var(--primary); background: var(--bg); margin: 0; padding: 20px; }
+        .container { max-width: 900px; margin: 0 auto; background: white; padding: 40px; border-radius: 12px; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.1); }
+        header { border-bottom: 2px solid var(--border); margin-bottom: 30px; padding-bottom: 20px; }
+        h1 { margin: 0; color: var(--primary); font-size: 2rem; }
+        h2 { color: var(--blue); margin-top: 40px; border-left: 4px solid var(--blue); padding-left: 15px; }
+        .badge { display: inline-block; padding: 4px 12px; border-radius: 999px; font-size: 0.8rem; font-weight: 600; text-transform: uppercase; }
+        .badge-blue { background: #dbeafe; color: #1e40af; }
+        .badge-green { background: #dcfce7; color: #166534; }
+        .badge-orange { background: #ffedd5; color: #9a3412; }
+        .flow-card { border: 1px solid var(--border); border-radius: 8px; padding: 20px; margin: 20px 0; background: #fff; }
+        code { background: #f1f5f9; padding: 2px 6px; border-radius: 4px; font-family: monospace; }
+        pre { background: #1e293b; color: #f8fafc; padding: 20px; border-radius: 8px; overflow-x: auto; }
+        .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
+        .comparison-table { width: 100%; border-collapse: collapse; margin: 20px 0; }
+        .comparison-table th, .comparison-table td { padding: 12px; border: 1px solid var(--border); text-align: left; }
+        .comparison-table th { background: var(--bg); }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>📦 Return Logistics & Booking Plan</h1>
+            <p>Technical specification for handling the physical return of items in "Return & Refund" requests.</p>
+        </header>
+
+        <section>
+            <h2>1. Concept: The "Return Leg" Booking</h2>
+            <p>When a buyer requests a <strong>Return & Refund</strong>, a physical movement of goods is required from the Buyer back to the Seller. This is the "Return Leg" of the transaction.</p>
+            
+            <div class="flow-card">
+                <strong>Question:</strong> "Should the return & refund be book again?"<br>
+                <strong>Answer:</strong> <span class="badge badge-green">Yes</span>. A new courier booking must be created because the original booking only covered the Seller &rarr; Buyer path. The Return Leg requires a new pickup from the Buyer's location.
+            </div>
+        </section>
+
+        <section>
+            <h2>2. "Return & Refund" vs "Refund Only"</h2>
+            <table class="comparison-table">
+                <thead>
+                    <tr>
+                        <th>Feature</th>
+                        <th>Refund Only</th>
+                        <th>Return & Refund</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td><strong>Item Status</strong></td>
+                        <td>Buyer keeps item (or item never arrived)</td>
+                        <td>Buyer must ship item back</td>
+                    </tr>
+                    <tr>
+                        <td><strong>New Booking?</strong></td>
+                        <td><span class="badge badge-orange">No</span></td>
+                        <td><span class="badge badge-blue">Yes</span> (Return Leg)</td>
+                    </tr>
+                    <tr>
+                        <td><strong>Refund Timing</strong></td>
+                        <td>Immediately upon Seller Approval</td>
+                        <td>After Seller receives & inspects item</td>
+                    </tr>
+                    <tr>
+                        <td><strong>Use Case</strong></td>
+                        <td>Missing items, "Item Not Received", Low-value damage</td>
+                        <td>Wrong item, High-value damage, Change of mind</td>
+                    </tr>
+                </tbody>
+            </table>
+        </section>
+
+        <section>
+            <h2>3. Implementation Steps</h2>
+            
+            <h3>3.1 Database Updates</h3>
+            <p>Add <code>returnShipping</code> to the <code>Return</code> model to track the return parcel separately from the original order shipping.</p>
+            <pre><code>model Return {
+  // ... existing fields
+  returnShipping Json?  // Stores { bookingId, provider, trackingUrl, cost, etc }
+}</code></pre>
+
+            <h3>3.2 Buyer: Arrange Shipment Action</h3>
+            <p>Once the seller clicks "Request Return" (or approves the return request), the buyer is notified to arrange shipment.</p>
+            <ul>
+                <li><strong>Endpoint:</strong> <code>/api/shipping/lalamove/book-return</code></li>
+                <li><strong>Logic:</strong> Automatically swaps pickup (Buyer) and delivery (Seller) locations.</li>
+                <li><strong>Tracking:</strong> Generates a new Lalamove <code>orderRef</code> stored in the <code>Return</code> record.</li>
+            </ul>
+
+            <h3>3.3 Seller: Receive and Inspect</h3>
+            <p>The seller tracks the return parcel. Once delivered, they must click "Confirm Receipt & Refund".</p>
+            <ul>
+                <li><strong>Status:</strong> <code>RETURN_APPROVED</code> &rarr; <code>SHIPPED</code> (Return) &rarr; <code>RECEIVED</code> &rarr; <code>REFUNDED</code>.</li>
+            </ul>
+        </section>
+
+        <section>
+            <h2>4. Success Criteria</h2>
+            <ul>
+                <li>Buyer can successfully book a Lalamove rider for the return leg.</li>
+                <li>Shipping fee (RSF) is correctly handled (deducted from refund if buyer fault, or charged to seller if seller fault).</li>
+                <li>Seller can see the live tracking of the returning parcel.</li>
+            </ul>
+        </section>
+
+        <section>
+            <h2>5. Phase 3: Buyer & Seller UI Actions</h2>
+            <p>Integrated UI components for managing the return process with clearer terminology.</p>
+            <div class="badge badge-green">Implemented</div>
+            <ul>
+                <li><strong>Buyer Dashboard:</strong> "Return / Refund" button opens a simplified selection modal.</li>
+                <li><strong>Clearer Terminology:</strong>
+                    <ul>
+                        <li>"Refund Only" (No return needed) - For missing items.</li>
+                        <li>"Return Item" (Ship back to seller) - For damaged/wrong items.</li>
+                    </ul>
+                </li>
+                <li><strong>Booking:</strong> "Book Return Courier" button appears for approved returns.</li>
+                <li><strong>Negotiation:</strong> Accept/Reject buttons for partial refund offers.</li>
+            </ul>
+        </section>
+
+        <footer style="margin-top: 50px; padding-top: 20px; border-top: 1px solid var(--border); color: var(--secondary); font-size: 0.8rem;">
+            &copy; 2025 BudolShap Implementation Planning. All rights reserved.
+        </footer>
+    </div>
+</body>
+</html>

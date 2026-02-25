@@ -1,0 +1,246 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>PayMongo Webhook Implementation Plan</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            line-height: 1.6;
+            color: #333;
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+            background-color: #f4f7f6;
+        }
+
+        .container {
+            background-color: #fff;
+            padding: 40px;
+            border-radius: 8px;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.05);
+        }
+
+        h1 {
+            color: #2c3e50;
+            border-bottom: 2px solid #2980b9;
+            padding-bottom: 15px;
+            margin-bottom: 30px;
+        }
+
+        h2 {
+            color: #34495e;
+            margin-top: 30px;
+            border-left: 4px solid #2980b9;
+            padding-left: 10px;
+        }
+
+        h3 {
+            color: #16a085;
+        }
+
+        .feature-card {
+            background: #f8f9fa;
+            border: 1px solid #e9ecef;
+            border-left: 4px solid #2980b9;
+            padding: 20px;
+            margin-bottom: 20px;
+            border-radius: 4px;
+        }
+
+        code {
+            background-color: #f1f3f5;
+            padding: 2px 5px;
+            border-radius: 3px;
+            font-family: 'Consolas', monospace;
+            color: #c0392b;
+        }
+
+        .status-badge {
+            display: inline-block;
+            padding: 4px 8px;
+            border-radius: 4px;
+            font-size: 0.85em;
+            font-weight: bold;
+        }
+
+        .status-planned {
+            background-color: #e3f2fd;
+            color: #0d47a1;
+        }
+
+        .technical-details {
+            background-color: #2c3e50;
+            color: #ecf0f1;
+            padding: 20px;
+            border-radius: 6px;
+            overflow-x: auto;
+            font-family: 'Consolas', monospace;
+        }
+
+        .alert-box {
+            background-color: #fff3cd;
+            color: #856404;
+            padding: 15px;
+            border-radius: 4px;
+            border: 1px solid #ffeeba;
+            margin-top: 20px;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="container">
+        <h1>PayMongo Webhook Implementation Plan</h1>
+
+        <p><strong>Date:</strong> December 15, 2025</p>
+        <p><strong>Status:</strong> <span class="status-badge status-planned">PLANNED</span></p>
+        <p><strong>Target:</strong> Future Enhancement</p>
+
+        <h2>1. Overview</h2>
+        <p>This document outlines the plan to implement full server-side webhooks for PayMongo integration. This
+            enhancement aims to improve the reliability of order status updates by decoupling them from client-side
+            interactions.</p>
+
+        <h2>2. Current System & Limitations</h2>
+        <div class="feature-card">
+            <h3>Current Behavior</h3>
+            <p>Currently, the system relies on the client (browser) redirecting to <code>/payment/return</code> to
+                update the order status to "Paid".</p>
+            <h3>Limitations</h3>
+            <ul>
+                <li><strong>Fragility:</strong> If the user closes the browser immediately after payment but before the
+                    redirect completes, the order remains "Unpaid" in the database despite the payment being successful.
+                </li>
+                <li><strong>Security:</strong> Relying on client-side redirects can be spoofed or manipulated, although
+                    signature verification mitigates this, server-to-server communication is more secure.</li>
+                <li><strong>User Experience:</strong> Users may be confused if they pay but don't see the order update
+                    immediately if the network is slow during redirect.</li>
+            </ul>
+        </div>
+
+        <h2>3. Proposed Solution: Server-Side Webhooks</h2>
+        <div class="feature-card">
+            <p>Implementing a dedicated webhook endpoint to listen for PayMongo events guarantees that the system is
+                notified of payment status changes regardless of the user's browser state.</p>
+        </div>
+
+        <h2>4. Implementation Details</h2>
+
+        <h3>4.1 New API Endpoint</h3>
+        <p>Create a new route: <code>app/api/webhooks/paymongo/route.js</code></p>
+        <div class="technical-details">
+            <p><strong>POST /api/webhooks/paymongo</strong></p>
+            <p>This endpoint will handle incoming events from PayMongo.</p>
+            <pre>
+// Pseudocode for the webhook handler
+export async function POST(req) {
+    // 1. Verify Webhook Signature (Security Critical)
+    const signature = req.headers.get('paymongo-signature');
+    if (!isValidSignature(signature, req.body)) {
+        return Response.json({ error: 'Invalid signature' }, { status: 401 });
+    }
+
+    // 2. Parse Event
+    const event = await req.json();
+    const type = event.data.attributes.type;
+
+    // 3. Handle Events
+    switch (type) {
+        case 'source.chargeable':
+            // Handle GCash/GrabPay source becoming chargeable
+            await createPaymentFromSource(event.data);
+            break;
+        case 'payment_intent.succeeded':
+            // Handle Card/success
+            await markOrderAsPaid(event.data);
+            break;
+    }
+
+    return Response.json({ status: 'ok' });
+}
+            </pre>
+        </div>
+
+        <h3>4.2 Event Handling Logic</h3>
+
+        <h4>A. source.chargeable (GCash / PayMaya / GrabPay)</h4>
+        <p>When a source becomes chargeable:</p>
+        <ol>
+            <li>Retrieve the <code>amount</code> and <code>id</code> (source ID) from the event.</li>
+            <li><strong>Action:</strong> Immediately create a Payment resource using the PayMongo API.</li>
+            <li>This automatically charges the user's wallet.</li>
+        </ol>
+
+        <h4>B. payment_intent.succeeded (Credit/Debit Cards)</h4>
+        <p>When a payment intent succeeds:</p>
+        <ol>
+            <li>Extract the <code>metadata</code> attached to the payment intent (which should contain
+                <code>orderId</code>).
+            </li>
+            <li><strong>Action:</strong> Update the corresponding Order in the database to <code>PAID</code> status.
+            </li>
+            <li>Trigger any post-payment workflows (e.g., email notification, inventory deduction).</li>
+        </ol>
+
+        <h2>5. Migration & Deployment Strategy</h2>
+        <div class="alert-box">
+            <strong>Important:</strong> Webhooks must be registered in the PayMongo Dashboard or via API.
+        </div>
+        <ol>
+            <li><strong>Develop:</strong> Implement the API route and verification logic locally.</li>
+            <li><strong>Test:</strong> Use tools like <code>ngrok</code> to expose the local server and test webhook
+                delivery from PayMongo's test mode.</li>
+            <li><strong>Deploy:</strong> Push changes to production.</li>
+            <li><strong>Register:</strong> Add the production URL (e.g.,
+                <code>https://budolshap.com/api/webhooks/paymongo</code>) to the PayMongo Webhook settings for live
+                events.
+            </li>
+        </ol>
+
+        <h2>6. Implementation Timeframe</h2>
+        <div class="feature-card">
+            <h3>Estimated Duration: 3-5 Days</h3>
+
+            <h4>Phase 1: Development (1-2 Days)</h4>
+            <ul>
+                <li>Implement webhook endpoint with signature verification</li>
+                <li>Add event handling logic for <code>source.chargeable</code> and
+                    <code>payment_intent.succeeded</code></li>
+                <li>Create comprehensive error handling and logging</li>
+                <li>Write unit tests for webhook verification and event processing</li>
+            </ul>
+
+            <h4>Phase 2: Local Testing (1 Day)</h4>
+            <ul>
+                <li>Set up <code>ngrok</code> or similar tunneling for local webhook testing</li>
+                <li>Register test webhook URL in PayMongo test mode</li>
+                <li>Simulate payment events and verify order status updates</li>
+                <li>Test edge cases (duplicate events, out-of-order delivery, failed payments)</li>
+            </ul>
+
+            <h4>Phase 3: Production Deployment (1-2 Days)</h4>
+            <ul>
+                <li>Deploy webhook endpoint to production</li>
+                <li>Register production webhook URL in PayMongo dashboard</li>
+                <li>Monitor initial webhook deliveries for errors</li>
+                <li>Gradually phase out client-side status updates in favor of webhooks</li>
+                <li>Document webhook behavior and monitoring procedures</li>
+            </ul>
+        </div>
+
+        <h2>7. Benefits</h2>
+        <ul>
+            <li><strong>100% Reliability:</strong> Orders are marked paid even if the user's battery dies or internet
+                fails immediately after paying.</li>
+            <li><strong>Better UX:</strong> No need to force users to wait for a redirect; the system updates
+                asynchronously.</li>
+            <li><strong>Audit Trail:</strong> Webhook logs provide a clear history of payment events from the provider.
+            </li>
+        </ul>
+    </div>
+</body>
+
+</html>

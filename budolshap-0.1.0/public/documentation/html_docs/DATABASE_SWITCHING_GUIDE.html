@@ -1,0 +1,124 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Database Switching Guide</title>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, 'Open Sans', 'Helvetica Neue', sans-serif;
+            line-height: 1.6;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+            color: #333;
+        }
+
+        h1 {
+            color: #2563eb;
+            border-bottom: 2px solid #e5e7eb;
+            padding-bottom: 10px;
+        }
+
+        h2 {
+            color: #1e40af;
+            margin-top: 30px;
+        }
+
+        code {
+            background: #f3f4f6;
+            padding: 2px 5px;
+            border-radius: 4px;
+            font-family: 'Courier New', Courier, monospace;
+        }
+
+        pre {
+            background: #1f2937;
+            color: #f9fafb;
+            padding: 15px;
+            border-radius: 8px;
+            overflow-x: auto;
+        }
+
+        .alert {
+            background: #eff6ff;
+            border-left: 4px solid #3b82f6;
+            padding: 15px;
+            margin: 20px 0;
+            border-radius: 0 4px 4px 0;
+        }
+
+        .step {
+            margin-bottom: 20px;
+        }
+
+        .command {
+            font-weight: bold;
+            color: #059669;
+        }
+    </style>
+</head>
+
+<body>
+    <h1>Database Switching Guide</h1>
+    <p>This guide explains how to switch between your <strong>Local PostgreSQL Database</strong> and the
+        <strong>Production Database</strong>.
+    </p>
+
+    <div class="alert">
+        <strong>Note:</strong> Both environments are configured to use PostgreSQL. The switch only changes the
+        connection strings in your <code>.env.local</code> file.
+    </div>
+
+    <h2>How to Switch</h2>
+
+    <div class="step">
+        <h3>1. Switch to Local Database</h3>
+        <p>Use this when developing features or testing locally.</p>
+        <pre>npm run db:local</pre>
+        <p>This copies configuration from <code>.env.connection.local</code> to <code>.env.local</code>.</p>
+        <p><strong>Default Connection:</strong> <code>postgresql://postgres:password@localhost:5432/budolshap_v3</code>
+        </p>
+    </div>
+
+    <div class="step">
+        <h3>2. Switch to Production Database</h3>
+        <p>Use this when you need to inspect real data or debug production issues.</p>
+        <pre>npm run db:prod</pre>
+        <p>This copies configuration from <code>.env.connection.prod</code> to <code>.env.local</code>.</p>
+    </div>
+
+    <h2>Configuration Files</h2>
+    <ul>
+        <li><code>.env.connection.local</code>: Stores your Local DB credentials. Edit this file if your local password
+            changes.</li>
+        <li><code>.env.connection.prod</code>: Stores your Production DB credentials.</li>
+        <li><code>scripts/env-manager.js</code>: The script that handles the file copying.</li>
+    </ul>
+
+    <h2>Workflow Example</h2>
+    <ol>
+        <li>Start work: <span class="command">npm run db:local</span></li>
+        <li>Run app: <span class="command">npm run dev</span></li>
+        <li>Need to check prod data? Stop server.</li>
+        <li>Switch: <span class="command">npm run db:prod</span></li>
+        <li>Run app: <span class="command">npm run dev</span></li>
+    </ol>
+
+    <h2>Troubleshooting Vercel Deployment</h2>
+    <div class="alert">
+        <strong>Deployment Failed?</strong>
+        <p>If your Vercel deployment fails with database errors, ensure you have added <strong>DIRECT_URL</strong> to
+            your Vercel Environment Variables.</p>
+        <p>Go to <strong>Vercel Dashboard > Settings > Environment Variables</strong> and add:</p>
+        <ul>
+            <li><strong>Key:</strong> <code>DIRECT_URL</code></li>
+            <li><strong>Value:</strong> Same as your <code>POSTGRES_URL</code> (or <code>POSTGRES_URL_NON_POOLING</code>
+                if available).</li>
+        </ul>
+    </div>
+
+</body>
+
+</html>

@@ -1,0 +1,207 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Implementation Plan: Collapsible Order Details Modal</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            line-height: 1.6;
+            color: #333;
+            max-width: 1000px;
+            margin: 0 auto;
+            padding: 20px;
+            background-color: #f4f7f6;
+        }
+        header {
+            background-color: #2c3e50;
+            color: white;
+            padding: 20px;
+            text-align: center;
+            border-radius: 8px 8px 0 0;
+            margin-bottom: 20px;
+        }
+        nav {
+            background-color: #fff;
+            padding: 10px;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            margin-bottom: 20px;
+        }
+        nav a {
+            margin-right: 15px;
+            text-decoration: none;
+            color: #2980b9;
+            font-weight: bold;
+        }
+        section {
+            background-color: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            margin-bottom: 20px;
+        }
+        h2 {
+            color: #2c3e50;
+            border-bottom: 2px solid #2c3e50;
+            padding-bottom: 10px;
+        }
+        .phase-badge {
+            display: inline-block;
+            padding: 5px 10px;
+            background-color: #e67e22;
+            color: white;
+            border-radius: 4px;
+            font-size: 0.8em;
+            margin-bottom: 10px;
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 20px 0;
+        }
+        th, td {
+            text-align: left;
+            padding: 12px;
+            border-bottom: 1px solid #ddd;
+        }
+        th {
+            background-color: #f2f2f2;
+        }
+        code {
+            background-color: #f8f9fa;
+            padding: 2px 4px;
+            border-radius: 4px;
+            font-family: 'Courier New', Courier, monospace;
+        }
+        pre {
+            background-color: #f8f9fa;
+            padding: 15px;
+            border-radius: 8px;
+            overflow-x: auto;
+            border: 1px solid #ddd;
+        }
+        .success-criteria {
+            background-color: #d4edda;
+            border-left: 5px solid #28a745;
+            padding: 10px 15px;
+            margin: 10px 0;
+        }
+    </style>
+</head>
+<body>
+    <header>
+        <h1>Collapsible Order Details Modal</h1>
+        <p>Technical Implementation Plan & Documentation</p>
+    </header>
+
+    <nav>
+        <a href="#overview">Overview</a>
+        <a href="#phase-1">Phase 1: Setup</a>
+        <a href="#phase-2">Phase 2: UI/UX</a>
+        <a href="#phase-3">Phase 3: Validation</a>
+        <a href="#summary">Summary</a>
+    </nav>
+
+    <section id="overview">
+        <h2>Executive Summary</h2>
+        <p>This plan outlines the technical steps to enhance the Order Details modal in the Store Orders page. The primary goal is to improve UI/UX by making non-critical sections collapsible, allowing users to focus on primary information like product lists and order totals.</p>
+        <h3>Key Objectives</h3>
+        <ul>
+            <li>Implement collapsible sections for Customer Details and Payment & Status.</li>
+            <li>Maintain visibility for Products and Order Summary.</li>
+            <li>Add interactive toggles with clear visual indicators.</li>
+            <li>Ensure consistent styling with the existing application theme.</li>
+        </ul>
+    </section>
+
+    <section id="phase-1">
+        <span class="phase-badge">Phase 1</span>
+        <h2>State Management & Structural Setup</h2>
+        <p>Define the necessary state variables to track the visibility of modal sections.</p>
+        <h3>Technical Specifications</h3>
+        <ul>
+            <li><strong>File:</strong> <code>app/store/orders/page.jsx</code></li>
+            <li><strong>New States:</strong> 
+                <ul>
+                    <li><code>isCustomerCollapsed</code> (boolean, default: false)</li>
+                    <li><code>isPaymentCollapsed</code> (boolean, default: false)</li>
+                    <li><code>isShippingCollapsed</code> (boolean, default: false)</li>
+                </ul>
+            </li>
+        </ul>
+        <pre><code>const [collapsedSections, setCollapsedSections] = useState({
+    customer: false,
+    payment: false,
+    shipping: false
+});
+
+const toggleSection = (section) => {
+    setCollapsedSections(prev => ({
+        ...prev,
+        [section]: !prev[section]
+    }));
+};</code></pre>
+    </section>
+
+    <section id="phase-2">
+        <span class="phase-badge">Phase 2</span>
+        <h2>UI/UX Implementation</h2>
+        <p>Modify the modal JSX to include toggle buttons and conditional rendering for collapsible content.</p>
+        <h3>Implementation Details</h3>
+        <table>
+            <tr>
+                <th>Section</th>
+                <th>Status</th>
+                <th>UI Element</th>
+            </tr>
+            <tr>
+                <td>Customer Details</td>
+                <td>Collapsible</td>
+                <td>Chevron Toggle Icon</td>
+            </tr>
+            <tr>
+                <td>Products</td>
+                <td>Always Visible</td>
+                <td>Static List</td>
+            </tr>
+            <tr>
+                <td>Order Summary</td>
+                <td>Always Visible</td>
+                <td>Static Breakdown</td>
+            </tr>
+            <tr>
+                <td>Payment & Status</td>
+                <td>Collapsible</td>
+                <td>Chevron Toggle Icon</td>
+            </tr>
+        </table>
+        <div class="success-criteria">
+            <strong>Success Criteria:</strong> Sections animate smoothly or toggle instantly between visible and hidden states without breaking the modal layout.
+        </div>
+    </section>
+
+    <section id="phase-3">
+        <span class="phase-badge">Phase 3</span>
+        <h2>Testing & Validation</h2>
+        <p>Comprehensive testing protocols to ensure functionality and stability.</p>
+        <h3>Test Cases</h3>
+        <ul>
+            <li>Verify toggle functionality for each collapsible section.</li>
+            <li>Ensure primary sections (Products, Summary) remain visible at all times.</li>
+            <li>Check modal responsiveness on different screen sizes.</li>
+            <li>Validate that manual/auto booking actions still work when sections are collapsed/expanded.</li>
+        </ul>
+    </section>
+
+    <section id="summary">
+        <h2>Implementation Summary</h2>
+        <p>This enhancement will significantly improve the usability of the Order Details view by reducing visual clutter while keeping essential information accessible.</p>
+    </section>
+
+    <footer style="text-align: center; margin-top: 20px; color: #7f8c8d;">
+        <p>&copy; 2025 BudolShap Implementation Team</p>
+    </footer>
+</body>
+</html>

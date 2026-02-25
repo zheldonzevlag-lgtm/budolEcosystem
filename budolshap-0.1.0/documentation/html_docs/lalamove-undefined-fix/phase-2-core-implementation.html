@@ -1,0 +1,125 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Phase 2: Core Service Implementation - Lalamove Undefined Fix</title>
+    <style>
+        :root {
+            --primary-color: #e52d27;
+            --secondary-color: #b31217;
+            --bg-color: #f4f7f6;
+            --text-color: #333;
+            --code-bg: #2d2d2d;
+            --code-text: #f8f8f2;
+        }
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            line-height: 1.6;
+            color: var(--text-color);
+            background-color: var(--bg-color);
+            margin: 0;
+            padding: 0;
+        }
+        .container {
+            max-width: 1000px;
+            margin: 40px auto;
+            padding: 30px;
+            background: #fff;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+            border-radius: 8px;
+        }
+        nav {
+            margin-bottom: 20px;
+        }
+        nav a {
+            color: var(--primary-color);
+            text-decoration: none;
+            font-weight: bold;
+        }
+        h1, h2 {
+            color: var(--secondary-color);
+            border-bottom: 1px solid #ddd;
+            padding-bottom: 10px;
+        }
+        pre {
+            background-color: var(--code-bg);
+            color: var(--code-text);
+            padding: 15px;
+            border-radius: 6px;
+            overflow-x: auto;
+            font-size: 0.9em;
+        }
+        code {
+            font-family: 'Consolas', 'Monaco', 'Courier New', monospace;
+        }
+        .highlight {
+            color: #ffcc00;
+            font-weight: bold;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <nav>
+            <a href="index.html">&larr; Back to Index</a>
+        </nav>
+        <h1>Phase 2: Core Service Implementation</h1>
+        
+        <section>
+            <h2>Shipping Service Fixes</h2>
+            <p>Modified <code>lib/services/shippingService.js</code> to include null fallbacks for all Lalamove-related metadata.</p>
+            <h3>Return Booking Fix:</h3>
+            <pre><code>// Before
+customerOrderId: booking.customerOrderId,
+shareLink: booking.shareLink
+
+// After
+customerOrderId: booking.customerOrderId <span class="highlight">|| null</span>,
+shareLink: booking.shareLink <span class="highlight">|| null</span></code></pre>
+
+            <h3>Standard Booking Fix:</h3>
+            <pre><code>// Before
+trackingUrl: booking.trackingUrl,
+shareLink: booking.shareLink
+
+// After
+trackingUrl: booking.trackingUrl <span class="highlight">|| null</span>,
+shareLink: booking.shareLink <span class="highlight">|| null</span></code></pre>
+
+            <h3>Tracking Info Fix:</h3>
+            <pre><code>// Before
+driver: trackingInfo.driver,
+location: trackingInfo.location
+
+// After
+driver: trackingInfo.driverInfo <span class="highlight">|| null</span>,
+location: trackingInfo.location <span class="highlight">|| null</span></code></pre>
+        </section>
+
+        <section>
+            <h2>Background Updater Fixes</h2>
+            <p>Modified <code>services/shippingOrderUpdater.js</code> to handle <code>driverInfo</code> and <code>location</code> correctly during automated syncs.</p>
+            <pre><code>if (trackingResult.driverInfo) {
+    updateData.shipping.driverInfo = {
+        name: trackingResult.driverInfo.name <span class="highlight">|| null</span>,
+        phone: trackingResult.driverInfo.phone <span class="highlight">|| null</span>,
+        plateNumber: trackingResult.driverInfo.plateNumber <span class="highlight">|| null</span>,
+        photo: trackingResult.driverInfo.photo <span class="highlight">|| null</span>,
+        vehicleType: trackingResult.driverInfo.vehicleType <span class="highlight">|| null</span>,
+        rating: trackingResult.driverInfo.rating <span class="highlight">|| null</span>
+    };
+}</code></pre>
+        </section>
+
+        <section>
+            <h2>Key Changes</h2>
+            <ul>
+                <li>Ensured all <code>undefined</code> values from Lalamove API are converted to <code>null</code>.</li>
+                <li>Fixed property name mismatch (<code>driver</code> vs <code>driverInfo</code>).</li>
+                <li>Updated <code>location</code> object to explicitly map <code>lat</code> and <code>lng</code> with null fallbacks.</li>
+            </ul>
+        </section>
+    </div>
+</body>
+</html>

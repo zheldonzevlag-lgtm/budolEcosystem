@@ -1,0 +1,220 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Phase 1: Analysis - Prisma Schema Synchronization</title>
+    <style>
+        :root {
+            --primary-color: #2563eb;
+            --secondary-color: #1e40af;
+            --text-color: #1f2937;
+            --bg-color: #f3f4f6;
+            --card-bg: #ffffff;
+            --border-color: #e5e7eb;
+        }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            line-height: 1.6;
+            color: var(--text-color);
+            background-color: var(--bg-color);
+            margin: 0;
+            padding: 0;
+        }
+        header {
+            background-color: var(--primary-color);
+            color: white;
+            padding: 2rem 1rem;
+            text-align: center;
+        }
+        nav {
+            background-color: white;
+            padding: 1rem;
+            border-bottom: 1px solid var(--border-color);
+            position: sticky;
+            top: 0;
+            z-index: 100;
+        }
+        nav ul {
+            list-style: none;
+            padding: 0;
+            margin: 0;
+            display: flex;
+            justify-content: center;
+            gap: 2rem;
+        }
+        nav a {
+            text-decoration: none;
+            color: var(--text-color);
+            font-weight: 600;
+        }
+        nav a:hover {
+            color: var(--primary-color);
+        }
+        main {
+            max-width: 1000px;
+            margin: 2rem auto;
+            padding: 0 1rem;
+        }
+        .card {
+            background: var(--card-bg);
+            padding: 2rem;
+            border-radius: 0.5rem;
+            box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.1);
+            margin-bottom: 2rem;
+        }
+        h1, h2, h3 {
+            color: var(--primary-color);
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 1rem 0;
+        }
+        th, td {
+            text-align: left;
+            padding: 0.75rem;
+            border-bottom: 1px solid var(--border-color);
+        }
+        th {
+            background-color: #f9fafb;
+        }
+        .diff-added { color: #059669; font-weight: bold; }
+        .diff-removed { color: #dc2626; text-decoration: line-through; }
+    </style>
+</head>
+<body>
+    <header>
+        <h1>Phase 1: Analysis</h1>
+        <p>Schema Inconsistency Report</p>
+    </header>
+    <nav>
+        <ul>
+            <li><a href="index.html">Overview</a></li>
+            <li><a href="phase-1-analysis.html">Phase 1: Analysis</a></li>
+            <li><a href="phase-2-synchronization.html">Phase 2: Synchronization</a></li>
+            <li><a href="phase-3-deployment.html">Phase 3: Deployment</a></li>
+            <li><a href="phase-4-verification.html">Phase 4: Verification</a></li>
+        </ul>
+    </nav>
+    <main>
+        <section class="card">
+            <h2>Discovered Inconsistencies</h2>
+            <p>The following models and fields are present in <code>schema.prisma</code> but missing or different in <code>schema.local.prisma</code> and <code>schema.mysql.prisma</code>.</p>
+            
+            <h3>Return Model</h3>
+            <table>
+                <thead>
+                    <tr>
+                        <th>Field</th>
+                        <th>Status in Local Schema</th>
+                        <th>Action</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td><code>type</code></td>
+                        <td>Missing</td>
+                        <td>Add <code>type ReturnType @default(REFUND_ONLY)</code></td>
+                    </tr>
+                    <tr>
+                        <td><code>refundAmount</code></td>
+                        <td>Missing</td>
+                        <td>Add <code>refundAmount Float @default(0)</code></td>
+                    </tr>
+                    <tr>
+                        <td><code>sellerAction</code></td>
+                        <td>Missing</td>
+                        <td>Add <code>sellerAction ReturnSellerAction?</code></td>
+                    </tr>
+                    <tr>
+                        <td><code>sellerReason</code></td>
+                        <td>Missing</td>
+                        <td>Add <code>sellerReason String?</code></td>
+                    </tr>
+                    <tr>
+                        <td><code>trackingNumber</code></td>
+                        <td>Missing</td>
+                        <td>Add <code>trackingNumber String?</code></td>
+                    </tr>
+                    <tr>
+                        <td><code>deadline</code></td>
+                        <td>Missing</td>
+                        <td>Add <code>deadline DateTime?</code></td>
+                    </tr>
+                    <tr>
+                        <td><code>isEscrowLocked</code></td>
+                        <td>Missing</td>
+                        <td>Add <code>isEscrowLocked Boolean @default(false)</code></td>
+                    </tr>
+                    <tr>
+                        <td><code>arbitrationNotes</code></td>
+                        <td>Missing</td>
+                        <td>Add <code>arbitrationNotes String?</code></td>
+                    </tr>
+                </tbody>
+            </table>
+
+            <h3>Other Models</h3>
+            <table>
+                <thead>
+                    <tr>
+                        <th>Model</th>
+                        <th>Field</th>
+                        <th>Action</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td><code>Order</code></td>
+                        <td><code>isGuaranteeExtended</code></td>
+                        <td>Add <code>Boolean @default(false)</code></td>
+                    </tr>
+                    <tr>
+                        <td><code>Order</code></td>
+                        <td><code>paymentProof</code></td>
+                        <td>Add relation to <code>PaymentProof</code></td>
+                    </tr>
+                    <tr>
+                        <td><code>User</code></td>
+                        <td><code>buyerReturnRate</code></td>
+                        <td>Add <code>Float? @default(0.0)</code></td>
+                    </tr>
+                    <tr>
+                        <td><code>User</code></td>
+                        <td><code>codUnpaidCount</code></td>
+                        <td>Add <code>Int? @default(0)</code></td>
+                    </tr>
+                    <tr>
+                        <td><code>Store</code></td>
+                        <td><code>nonFulfilmentRate</code></td>
+                        <td>Add <code>Float? @default(0.0)</code></td>
+                    </tr>
+                    <tr>
+                        <td><code>Store</code></td>
+                        <td><code>penaltyPoints</code></td>
+                        <td>Add <code>Int? @default(0)</code></td>
+                    </tr>
+                    <tr>
+                        <td><code>Wallet</code></td>
+                        <td><code>lockedBalance</code></td>
+                        <td>Add <code>Float @default(0)</code></td>
+                    </tr>
+                </tbody>
+            </table>
+
+            <h3>Enums</h3>
+            <p>The following enums need to be checked and synchronized:</p>
+            <ul>
+                <li><code>ReturnType</code></li>
+                <li><code>ReturnSellerAction</code></li>
+            </ul>
+        </section>
+
+        <section class="card">
+            <h2>Root Cause</h2>
+            <p>The development workflow likely involved adding features that required schema changes, which were only applied to the main <code>schema.prisma</code>. Since the local development environment is configured to use <code>schema.local.prisma</code> (as indicated by the "Using Database (Local Development)" log), the generated Prisma client does not recognize the new fields.</p>
+        </section>
+    </main>
+</body>
+</html>

@@ -1,0 +1,125 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Developer Manual - Geocoding API</title>
+    <style>
+        body { font-family: sans-serif; line-height: 1.6; max-width: 1000px; margin: 0 auto; padding: 20px; }
+        code { background: #f4f4f4; padding: 2px 5px; border-radius: 3px; }
+        pre { background: #f4f4f4; padding: 15px; border-radius: 5px; overflow-x: auto; }
+        .code-link { color: #0366d6; text-decoration: none; font-family: monospace; }
+        .code-block { background: #1e1e1e; color: #d4d4d4; padding: 20px; border-radius: 5px; margin: 15px 0; overflow-x: auto; }
+    </style>
+</head>
+<body>
+    <h1>Developer Manual: Geocoding System</h1>
+    <p>Version 3.3.23 introduces expanded Geocoding API support for Google Maps and Radar.</p>
+
+    <h2>New API Endpoint: /api/system/geocode</h2>
+    <p>This endpoint abstracts the underlying map provider (Nominatim, Geoapify, Google Maps, Radar) and handles necessary headers and API keys.</p>
+
+    <h3>Usage</h3>
+    <pre>
+// Reverse Geocoding (Coordinates to Address)
+GET /api/system/geocode?lat=14.5995&lng=120.9842
+// Returns: Single Object
+
+// Forward Geocoding (Address to Coordinates)
+GET /api/system/geocode?q=Makati%2C+Philippines
+// Returns: Array of Objects
+    </pre>
+
+    <h3>Response Format (Single Object)</h3>
+    <pre>
+{
+  "display": "Formatted Address String",
+  "main": "Primary Name (e.g., Street, Building)",
+  "secondary": "Secondary Name (e.g., City, Region)",
+  "raw": { ... }, // Raw provider response
+  "coordinates": [lat, lng]
+}
+    </pre>
+
+    <h2>Code References</h2>
+
+    <h3>1. API Route Implementation</h3>
+    <p>The backend logic that switches between providers and handles the request.</p>
+    <div class="code-block">
+        <a href="file:///d:/IT Projects/budolEcosystem/budolshap-0.1.0/app/api/system/geocode/route.js" class="code-link">app/api/system/geocode/route.js</a>
+        <pre>
+export async function GET(request) {
+    // ... logic to check settings and call provider ...
+}
+        </pre>
+    </div>
+
+    <h3>2. MapPicker Component Update</h3>
+    <p>The frontend component updated to use the internal API for reverse geocoding.</p>
+    <div class="code-block">
+        <a href="file:///d:/IT Projects/budolEcosystem/budolshap-0.1.0/components/address/MapPicker.jsx" class="code-link">components/address/MapPicker.jsx</a>
+        <pre>
+// New implementation using internal API
+const url = `/api/system/geocode?lat=${coords[0]}&lng=${coords[1]}`;
+const res = await fetch(url, { ... });
+        </pre>
+    </div>
+
+    <h3>3. AddressAutocomplete Component Update</h3>
+    <p>The frontend component updated to use the internal API for forward geocoding (search).</p>
+    <div class="code-block">
+        <a href="file:///d:/IT Projects/budolEcosystem/budolshap-0.1.0/components/address/AddressAutocomplete.jsx" class="code-link">components/address/AddressAutocomplete.jsx</a>
+        <pre>
+// New implementation using internal API
+const response = await fetch(`/api/system/geocode?q=${encodeURIComponent(searchText)}`, {
+    headers: { 'Accept-Language': 'en' },
+    signal: AbortSignal.timeout(10000)
+});
+        </pre>
+    </div>
+
+    <h3>4. Test Script</h3>
+    <p>Script to verify the API functionality.</p>
+    <div class="code-block">
+        <a href="file:///d:/IT Projects/budolEcosystem/budolshap-0.1.0/scripts/test_scripts/test_geocode_api.js" class="code-link">scripts/test_scripts/test_geocode_api.js</a>
+    </div>
+
+    <h3>5. AddressModal UX Improvements</h3>
+    <p>Updated the save behavior to prevent page reloads and keep the modal open for better user experience.</p>
+    <div class="code-block">
+        <a href="file:///d:/IT Projects/budolEcosystem/budolshap-0.1.0/components/AddressModal.jsx" class="code-link">components/AddressModal.jsx</a>
+        <pre>
+// Before:
+// window.location.reload();
+// setShowAddressModal(false);
+
+// After:
+// Update local state (userMeta) to reflect changes immediately
+setUserMeta(prev => ({ ...prev, ...newData }));
+// Modal remains open, no reload
+        </pre>
+    </div>
+
+    <h3>6. Tile Layer Implementation (MapPicker)</h3>
+    <p>Implementation details for tile layers across different providers.</p>
+    <div class="code-block">
+        <a href="file:///d:/IT Projects/budolEcosystem/budolshap-0.1.0/components/address/MapPicker.jsx" class="code-link">components/address/MapPicker.jsx</a>
+        <pre>
+// Determine Tile Layer URL
+const getTileLayer = () => {
+    if (mapProvider === 'GEOAPIFY' && geoapifyApiKey) {
+        return `https://maps.geoapify.com/v1/tile/osm-bright/{z}/{x}/{y}.png?apiKey=${geoapifyApiKey}`;
+    }
+    if (mapProvider === 'RADAR' && radarApiKey) {
+        return `https://api.radar.io/maps/styles/radar-default-v1/{z}/{x}/{y}.png?publishableKey=${radarApiKey}`;
+    }
+    if (mapProvider === 'GOOGLE_MAPS' && googleMapsApiKey) {
+        // Fallback to OSM as Google Maps requires JS API integration
+        return "https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png";
+    }
+    return "https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png";
+};
+        </pre>
+    </div>
+
+</body>
+</html>

@@ -1,0 +1,501 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Strategic Implementation Roadmap | Shopee Standard</title>
+    <style>
+        :root {
+            --primary: #ee4d2d;
+            /* Shopee Orange */
+            --secondary: #2673dd;
+            --background: #f8f9fa;
+            --surface: #ffffff;
+            --text: #212121;
+            --text-light: #757575;
+            --border: #e0e0e0;
+            --vercel-black: #000;
+            --success: #28a745;
+            --warning: #ffc107;
+            --free-tier: #0070f3;
+            --pro-tier: #7928ca;
+            /* Vercel Purple */
+        }
+
+        body {
+            font-family: 'Roboto', 'Helvetica Neue', Arial, sans-serif;
+            background-color: var(--background);
+            color: var(--text);
+            line-height: 1.6;
+            margin: 0;
+            padding: 0;
+        }
+
+        .container {
+            max-width: 1100px;
+            margin: 0 auto;
+            padding: 2rem;
+            background: var(--surface);
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.05);
+            min-height: 100vh;
+        }
+
+        /* Navigation Bar */
+        .nav-bar {
+            background: #f0f0f0;
+            padding: 1rem;
+            border-radius: 8px;
+            margin-bottom: 2rem;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            border: 1px solid #ddd;
+        }
+
+        .nav-title {
+            font-weight: bold;
+            color: #555;
+        }
+
+        .nav-links {
+            display: flex;
+            gap: 10px;
+        }
+
+        .nav-btn {
+            text-decoration: none;
+            padding: 8px 16px;
+            border-radius: 4px;
+            font-size: 0.9rem;
+            font-weight: 600;
+        }
+
+        .nav-btn.active {
+            background: var(--primary);
+            color: white;
+            cursor: default;
+        }
+
+        .nav-btn.inactive {
+            background: white;
+            color: var(--secondary);
+            border: 1px solid var(--border);
+            transition: all 0.2s;
+        }
+
+        .nav-btn.inactive:hover {
+            background: #eef;
+            border-color: var(--secondary);
+        }
+
+        header {
+            text-align: center;
+            padding-bottom: 2rem;
+            border-bottom: 2px solid var(--primary);
+            margin-bottom: 3rem;
+        }
+
+        header h1 {
+            color: var(--primary);
+            font-size: 2.5rem;
+            margin-bottom: 0.5rem;
+        }
+
+        header p {
+            color: var(--text-light);
+            font-size: 1.2rem;
+        }
+
+        .phase-timeline {
+            position: relative;
+            padding-left: 2rem;
+            border-left: 4px solid var(--border);
+            margin-left: 1rem;
+        }
+
+        .phase {
+            position: relative;
+            margin-bottom: 3rem;
+        }
+
+        .phase::before {
+            content: '';
+            position: absolute;
+            left: -2.35rem;
+            /* Adjust based on border + padding */
+            top: 0;
+            width: 20px;
+            height: 20px;
+            background: var(--primary);
+            border: 4px solid var(--surface);
+            border-radius: 50%;
+            box-shadow: 0 0 0 2px var(--border);
+        }
+
+        .phase-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            margin-bottom: 1rem;
+        }
+
+        .phase-title {
+            margin: 0;
+            font-size: 1.8rem;
+            color: var(--text);
+        }
+
+        .phase-duration {
+            background: var(--primary);
+            color: white;
+            padding: 0.3rem 0.8rem;
+            border-radius: 20px;
+            font-weight: bold;
+            font-size: 0.9rem;
+        }
+
+        .objective {
+            font-style: italic;
+            color: var(--text-light);
+            margin-bottom: 1.5rem;
+            background: #fff5f2;
+            /* Light orange tint */
+            padding: 1rem;
+            border-radius: 6px;
+            border-left: 4px solid var(--primary);
+        }
+
+        .strategy-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 20px;
+            margin-bottom: 20px;
+        }
+
+        .strategy-box {
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            padding: 1.5rem;
+        }
+
+        .strategy-free {
+            border-top: 4px solid var(--free-tier);
+            background: #f0f7ff;
+        }
+
+        .strategy-pro {
+            border-top: 4px solid var(--pro-tier);
+            background: #fbf5ff;
+        }
+
+        .strategy-title {
+            font-weight: bold;
+            text-transform: uppercase;
+            font-size: 0.9rem;
+            margin-bottom: 1rem;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .free-text {
+            color: var(--free-tier);
+        }
+
+        .pro-text {
+            color: var(--pro-tier);
+        }
+
+        .split-view {
+            display: grid;
+            grid-template-columns: 1.2fr 0.8fr;
+            gap: 20px;
+            margin-bottom: 20px;
+        }
+
+        .vercel-box {
+            background: #fafafa;
+            border: 1px solid #333;
+            border-radius: 6px;
+            padding: 15px;
+        }
+
+        .vercel-header {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            border-bottom: 1px solid #e0e0e0;
+            padding-bottom: 10px;
+            margin-bottom: 10px;
+            font-weight: bold;
+            color: var(--vercel-black);
+        }
+
+        .vercel-logo {
+            width: 16px;
+            height: 16px;
+            background-color: black;
+            clip-path: polygon(50% 0%, 0% 100%, 100% 100%);
+        }
+
+        .step-item {
+            background: var(--background);
+            padding: 1rem;
+            margin-bottom: 0.8rem;
+            border-radius: 6px;
+            border: 1px solid var(--border);
+            display: flex;
+            align-items: flex-start;
+        }
+
+        .step-number {
+            background: var(--text);
+            color: white;
+            width: 24px;
+            height: 24px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 0.8rem;
+            margin-right: 1rem;
+            flex-shrink: 0;
+            margin-top: 0.2rem;
+        }
+
+        .step-content strong {
+            display: block;
+            margin-bottom: 0.3rem;
+            color: var(--primary);
+        }
+
+        code {
+            display: block;
+            background: #222;
+            color: #4af626;
+            padding: 8px;
+            border-radius: 4px;
+            font-family: monospace;
+            font-size: 0.8rem;
+            margin-top: 5px;
+            white-space: pre-wrap;
+            word-break: break-all;
+        }
+
+        .action-list {
+            list-style: none;
+            padding: 0;
+            font-size: 0.9rem;
+        }
+
+        .action-list li {
+            position: relative;
+            padding-left: 1.2rem;
+            margin-bottom: 0.5rem;
+        }
+
+        .action-list li::before {
+            content: "›";
+            position: absolute;
+            left: 0;
+            font-weight: bold;
+            color: var(--vercel-black);
+        }
+
+        .comparison-badge {
+            display: inline-block;
+            padding: 2px 6px;
+            border-radius: 4px;
+            font-size: 0.7rem;
+            font-weight: bold;
+            margin-left: 5px;
+            vertical-align: middle;
+        }
+
+        .badge-pro {
+            background: var(--pro-tier);
+            color: white;
+        }
+
+        .badge-free {
+            background: var(--free-tier);
+            color: white;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="container">
+        <!-- Navigation Bar -->
+        <div class="nav-bar">
+            <span class="nav-title">Document View:</span>
+            <div class="nav-links">
+                <span class="nav-btn active">Strategic Roadmap (High Level)</span>
+                <a href="MICROSERVICES_IMPLEMENTATION_PLAN.html" class="nav-btn inactive">Technical Manual (Deep
+                    Dive)</a>
+            </div>
+        </div>
+
+        <header>
+            <h1>Shopee-Scale Strategic Plan</h1>
+            <p>Phased Migration Roadmap: Free Tier vs. Pro Tier</p>
+        </header>
+
+        <div class="phase-timeline">
+            <!-- Phase 1 -->
+            <div class="phase">
+                <div class="phase-header">
+                    <h2 class="phase-title">Phase 1: Foundation & Gateway</h2>
+                    <span class="phase-duration">Weeks 1-2</span>
+                </div>
+                <div class="objective">
+                    <strong>Goal:</strong> Establish the "Front Door". Smart routing before splitting services.
+                </div>
+
+                <div class="split-view">
+                    <div class="steps-box">
+                        <div class="step-item">
+                            <span class="step-number">1</span>
+                            <div class="step-content">
+                                <strong>Setup Central API Gateway (Days 1-3)</strong>
+                                Configure `middleware.js` to act as ingress. Implement Request ID tagging.
+                            </div>
+                        </div>
+                        <div class="step-item">
+                            <span class="step-number">2</span>
+                            <div class="step-content">
+                                <strong>Logging & Tracing (Days 4-10)</strong>
+                                Setup centralized logs.
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="vercel-box">
+                        <div class="vercel-header">
+                            <div class="vercel-logo"></div>
+                            Vercel Execution
+                        </div>
+                        <code>vercel env add GATEWAY_SECRET
+vercel redeploy</code>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Phase 2 -->
+            <div class="phase">
+                <div class="phase-header">
+                    <h2 class="phase-title">Phase 2: Identity & Auth Decoupling</h2>
+                    <span class="phase-duration">Weeks 3-4</span>
+                </div>
+                <div class="objective">
+                    <strong>Goal:</strong> Isolate Identity. If Catalog fails, Auth must survive.
+                </div>
+
+                <div class="strategy-grid">
+                    <div class="strategy-box strategy-free">
+                        <div class="strategy-title free-text">Free Strategy (Schema Split)</div>
+                        <p>Use 1 Postgres DB, split logical data into `schemas`. Free, but resources are shared.</p>
+                        <code>datasource db {
+  provider = "postgresql"
+  schemas  = ["public", "identity"]
+}</code>
+                    </div>
+                    <div class="strategy-box strategy-pro">
+                        <div class="strategy-title pro-text">Pro Strategy (Physical Split)</div>
+                        <p>Create a **New Vercel Project** (`auth-service`) + **New Store** (`auth-db`). True isolation.
+                        </p>
+                        <ul class="action-list">
+                            <li>Create `auth.budolshap.com` project.</li>
+                            <li>Link dedicated Postgres Store.</li>
+                            <li>Enable "Password Protection" (Pro) for staging.</li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Phase 3 -->
+            <div class="phase">
+                <div class="phase-header">
+                    <h2 class="phase-title">Phase 3: Catalog & Caching</h2>
+                    <span class="phase-duration">Weeks 5-6</span>
+                </div>
+
+                <div class="strategy-grid">
+                    <div class="strategy-box strategy-free">
+                        <div class="strategy-title free-text">Free Strategy (Aggressive Edge)</div>
+                        <p>Rely heavily on Vercel Data Cache (shared bandwidth). Use standard ISR.</p>
+                    </div>
+                    <div class="strategy-box strategy-pro">
+                        <div class="strategy-title pro-text">Pro Strategy (High Performance)</div>
+                        <p>Use **Vercel Secure Compute** for private DB access. Higher Bandwidth (1TB) for product
+                            images.</p>
+                        <ul class="action-list">
+                            <li>Enable **Concurrent Builds** for faster iterations.</li>
+                            <li>Use **Preview Comments** for team review.</li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Phase 4 -->
+            <div class="phase">
+                <div class="phase-header">
+                    <h2 class="phase-title">Phase 4: Orders & Transactions</h2>
+                    <span class="phase-duration">Weeks 7-9</span>
+                </div>
+                <div class="objective">
+                    <strong>Goal:</strong> Complex checkout flows with high reliability.
+                </div>
+
+                <div class="strategy-grid">
+                    <div class="strategy-box strategy-free">
+                        <div class="strategy-title free-text">Free Strategy (Queue Dependent)</div>
+                        <p><strong>Warning:</strong> Max timeout is 10s. You MUST use queues (QStash) for email/shipping
+                            calc, or the request will time out.</p>
+                    </div>
+                    <div class="strategy-box strategy-pro">
+                        <div class="strategy-title pro-text">Pro Strategy (Long-Running)</div>
+                        <p>Relaxed Constraints. Increase functions to 60s (or 900s). Handle complex synchronous shipping
+                            calculations without queues if needed.</p>
+                        <code>// functions/checkout.js
+export const maxDuration = 60; // Pro Only</code>
+                    </div>
+                </div>
+
+                <div class="vercel-box">
+                    <div class="vercel-header">
+                        <div class="vercel-logo"></div> Execution
+                    </div>
+                    <p>Integrate shipping providers. On Pro, enable **Firewall Rules** to block non-PH traffic from
+                        hitting checkout endpoint.</p>
+                </div>
+            </div>
+
+            <!-- Phase 5 & 6 summarized -->
+            <div class="phase">
+                <div class="phase-header">
+                    <h2 class="phase-title">Phase 5-6: Payments & Security</h2>
+                    <span class="phase-duration">Weeks 10-14</span>
+                </div>
+                <div class="strategy-grid">
+                    <div class="strategy-box strategy-free">
+                        <div class="strategy-title free-text">Free Strategy</div>
+                        <p>Basic DDoS protection. Public Git interaction.</p>
+                    </div>
+                    <div class="strategy-box strategy-pro">
+                        <div class="strategy-title pro-text">Pro Strategy (Enterprise Grade)</div>
+                        <ul class="action-list">
+                            <li><strong>WAF:</strong> Custom Firewall Rules to block bots.</li>
+                            <li><strong>SAML SSO:</strong> For your Admin Dashboard login (optional).</li>
+                            <li><strong>Code Owners:</strong> Enforce review on payment files on GitHub.</li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+
+        </div>
+    </div>
+</body>
+
+</html>

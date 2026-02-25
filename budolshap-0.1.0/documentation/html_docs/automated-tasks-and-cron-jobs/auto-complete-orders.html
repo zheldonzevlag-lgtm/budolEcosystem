@@ -1,0 +1,85 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Auto-Complete Orders - Budolshap Cron Jobs</title>
+    <style>
+        :root {
+            --primary-color: #ee4d2d;
+            --secondary-color: #2673dd;
+            --bg-color: #f5f5f5;
+            --card-bg: #ffffff;
+            --text-color: #333;
+        }
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            line-height: 1.6;
+            color: var(--text-color);
+            background-color: var(--bg-color);
+            margin: 0;
+            padding: 20px;
+        }
+        .container {
+            max-width: 900px;
+            margin: 0 auto;
+            background: var(--card-bg);
+            padding: 40px;
+            border-radius: 8px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        .nav { margin-bottom: 20px; }
+        .nav a { text-decoration: none; color: var(--secondary-color); font-weight: bold; }
+        h1, h2, h3 { color: var(--primary-color); }
+        .config-box { background: #f8f9fa; border-left: 4px solid var(--primary-color); padding: 20px; margin: 20px 0; }
+        code { background: #eee; padding: 2px 5px; border-radius: 4px; font-family: monospace; }
+        pre { background: #2d2d2d; color: #f8f8f2; padding: 15px; border-radius: 5px; overflow-x: auto; font-size: 0.9em; }
+        .step { margin-bottom: 30px; }
+        .badge { display: inline-block; padding: 3px 10px; border-radius: 20px; font-size: 0.85em; font-weight: bold; }
+        .badge-endpoint { background: #e7f3ff; color: #007bff; }
+        .badge-frequency { background: #fff3cd; color: #856404; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="nav"><a href="index.html">← Back to Jobs</a></div>
+        
+        <h1>Auto-Complete Orders</h1>
+        <p>This job automatically transitions orders from <code>DELIVERED</code> to <code>COMPLETED</code> status after the buyer confirmation period expires.</p>
+
+        <div class="config-box">
+            <h3>Configuration Details</h3>
+            <ul>
+                <li><strong>Endpoint:</strong> <span class="badge badge-endpoint">GET /api/cron/auto-complete-orders</span></li>
+                <li><strong>Schedule:</strong> <span class="badge badge-frequency">0 16 * * *</span> (Daily at 4 PM UTC)</li>
+                <li><strong>Source:</strong> <code>/app/api/cron/auto-complete-orders/route.js</code></li>
+                <li><strong>Utility:</strong> <code>/lib/orderAutoComplete.js</code></li>
+            </ul>
+        </div>
+
+        <section class="step">
+            <h2>Process Flow</h2>
+            <ol>
+                <li><strong>Identification:</strong> Scans for orders with status <code>DELIVERED</code> and <code>autoCompleteAt</code> date in the past.</li>
+                <li><strong>Escrow Release:</strong> For each order, it calculates the net earnings (Total - 5% platform fee) and moves funds from <code>pendingBalance</code> to <code>availableBalance</code> in the seller's wallet.</li>
+                <li><strong>Status Update:</strong> Updates the order status to <code>COMPLETED</code> and sets the <code>completedAt</code> timestamp.</li>
+                <li><strong>Notifications:</strong> Sends a completion email to the customer and triggers real-time updates for the store dashboard.</li>
+            </ol>
+        </section>
+
+        <section class="step">
+            <h2>Manual Trigger (Admin Only)</h2>
+            <p>Admins can manually trigger this process via the dashboard or a POST request for testing purposes.</p>
+            <pre>POST /api/cron/auto-complete-orders
+{
+  "days": 7
+}</pre>
+        </section>
+
+        <section class="step">
+            <h2>Technical Implementation</h2>
+            <p>The core logic is implemented in <code>processAutoCompletions()</code> inside <code>/lib/orderAutoComplete.js</code>. It handles self-healing for legacy orders that might be missing initial escrow records.</p>
+        </section>
+    </div>
+</body>
+</html>

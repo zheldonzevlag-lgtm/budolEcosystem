@@ -1,0 +1,105 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>PayMongo Local Redirect Fix Plan</title>
+    <style>
+        body {
+            font-family: sans-serif;
+            line-height: 1.6;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+            color: #333;
+        }
+
+        h1,
+        h2,
+        h3 {
+            color: #2c3e50;
+            border-bottom: 2px solid #eee;
+            padding-bottom: 10px;
+        }
+
+        code {
+            background: #f4f4f4;
+            padding: 2px 4px;
+            border-radius: 4px;
+            font-family: monospace;
+        }
+
+        pre {
+            background: #f4f4f4;
+            padding: 15px;
+            border-radius: 5px;
+            overflow-x: auto;
+        }
+
+        ul {
+            margin-bottom: 20px;
+        }
+
+        li {
+            margin-bottom: 10px;
+        }
+
+        .badge {
+            display: inline-block;
+            padding: 2px 8px;
+            border-radius: 12px;
+            font-size: 0.85em;
+            font-weight: bold;
+            color: white;
+        }
+
+        .badge-modify {
+            background-color: #f39c12;
+        }
+    </style>
+</head>
+
+<body>
+
+    <h1>PayMongo Local Redirect Fix</h1>
+
+    <h2>Goal</h2>
+    <p>Ensure PayMongo redirects to <code>localhost:3000</code> (or the configured local URL) when running locally,
+        instead of the production Vercel URL. This fixes issues with Maya, GrabPay, and GCash payments in development
+        environments.</p>
+
+    <h2>Proposed Changes</h2>
+
+    <h3>Backend</h3>
+
+    <h4><span class="badge badge-modify">MODIFY</span> app/api/payment/checkout/route.js</h4>
+    <ul>
+        <li>Modify the <code>baseUrl</code> determination logic.</li>
+        <li>Explicitly check if <code>request.headers.get('host')</code> contains 'localhost' or '127.0.0.1'.</li>
+        <li>If it does, use <code>http://${host}</code> as the <code>baseUrl</code>, IGNORING
+            <code>process.env.NEXT_PUBLIC_BASE_URL</code>. This guards against cases where production env vars are
+            loaded locally.</li>
+        <li>Keep the fallback to <code>NEXT_PUBLIC_BASE_URL</code> or <code>VERCEL_URL</code> for non-local
+            environments.</li>
+    </ul>
+
+    <h4><span class="badge badge-modify">MODIFY</span> app/api/paymongo/create-intent/route.js</h4>
+    <ul>
+        <li>Apply the same logic: Prioritize <code>host</code> header check for localhost over <code>NODE_ENV</code> or
+            <code>NEXT_PUBLIC_BASE_URL</code>.</li>
+    </ul>
+
+    <h2>Verification Plan</h2>
+
+    <h3>Manual Verification</h3>
+    <ul>
+        <li>User to initiate a payment (GCash, Maya, or GrabPay) locally.</li>
+        <li>Verify that <code>successUrl</code> passed to PayMongo (visible in logs) is
+            <code>http://localhost:3000/payment/return</code>.</li>
+        <li>User validates the actual redirect after payment works correctly and leads to the local application.</li>
+    </ul>
+
+</body>
+
+</html>

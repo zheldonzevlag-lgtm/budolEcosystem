@@ -1,0 +1,90 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Phase 3: Testing Protocol - Lalamove Shipping Fee Fix</title>
+    <style>
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; line-height: 1.6; color: #333; max-width: 1000px; margin: 0 auto; padding: 20px; background-color: #f4f7f6; }
+        header { background-color: #17a2b8; color: white; padding: 20px; text-align: center; border-radius: 8px 8px 0 0; }
+        nav { background: #343a40; padding: 10px; border-radius: 0 0 8px 8px; margin-bottom: 20px; }
+        nav a { color: white; text-decoration: none; margin-right: 15px; font-weight: bold; }
+        section { background: white; padding: 20px; margin-bottom: 20px; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
+        h2 { color: #17a2b8; border-bottom: 2px solid #17a2b8; padding-bottom: 10px; }
+        h3 { color: #555; }
+        .test-case { border: 1px solid #ddd; padding: 15px; margin-bottom: 15px; border-left: 5px solid #17a2b8; }
+        .test-case h4 { margin-top: 0; color: #17a2b8; }
+        .status-badge { display: inline-block; padding: 3px 8px; border-radius: 3px; font-size: 0.8em; font-weight: bold; text-transform: uppercase; }
+        .status-pending { background: #ffc107; color: #000; }
+        .expected { font-weight: bold; color: #28a745; }
+    </style>
+</head>
+<body>
+    <header>
+        <h1>Lalamove Shipping Fee Discrepancy Fix</h1>
+        <p>Implementation Plan - Phase 3: Testing Protocol & Validation</p>
+    </header>
+    <nav>
+        <a href="index.html">Summary</a>
+        <a href="phase-1-investigation.html">Phase 1: Investigation</a>
+        <a href="phase-2-implementation.html">Phase 2: Implementation</a>
+        <a href="phase-3-testing.html">Phase 3: Testing</a>
+    </nav>
+
+    <section>
+        <h2>Testing Strategy</h2>
+        <p>The testing phase ensures that the fixes implemented in Phase 2 are robust and correctly handle all Lalamove pricing scenarios, specifically targeting the identified discrepancy root causes.</p>
+    </section>
+
+    <section>
+        <h2>Manual Test Cases</h2>
+
+        <div class="test-case">
+            <h4>TC-01: Price Consistency (Standard Flow)</h4>
+            <p><strong>Scenario:</strong> Place an order with a standard address during non-peak hours.</p>
+            <p><strong>Steps:</strong> Select delivery address -> View quote in widget -> Proceed to checkout -> Complete order.</p>
+            <p class="expected">Expected Outcome: The price shown in the Widget (e.g., 73.00) matches the price in the Order Confirmation and the final Lalamove dashboard booking exactly.</p>
+        </div>
+
+        <div class="test-case">
+            <h4>TC-02: Peak Hour Surcharges</h4>
+            <p><strong>Scenario:</strong> Place an order during a high-demand period (e.g., heavy rain or rush hour).</p>
+            <p><strong>Steps:</strong> Trigger a quote when surcharges are active -> Verify "Total Include Tax" is displayed.</p>
+            <p class="expected">Expected Outcome: The UI explicitly includes the surcharge in the total shipping fee (e.g., 102.00 instead of 73.00).</p>
+        </div>
+
+        <div class="test-case">
+            <h4>TC-03: Quote Expiration & Refresh</h4>
+            <p><strong>Scenario:</strong> Simulate a long checkout session (>30 minutes).</p>
+            <p><strong>Steps:</strong> Get a quote -> Wait 31 minutes -> Click "Place Order".</p>
+            <p class="expected">Expected Outcome: Backend successfully refreshes the quote; if the price has changed significantly, the system should either update the order or notify the user before finalizing payment.</p>
+        </div>
+
+        <div class="test-case">
+            <h4>TC-04: Coordinate Precision</h4>
+            <p><strong>Scenario:</strong> Verify coordinates stored in the database.</p>
+            <p><strong>Steps:</strong> Inspect the <code>Order</code> record in Prisma Studio after placement.</p>
+            <p class="expected">Expected Outcome: Coordinates are stored with 6 decimal places and match the coordinates sent in the initial quote request.</p>
+        </div>
+    </section>
+
+    <section>
+        <h2>Automated Validation</h2>
+        <p>Run the existing test scripts to ensure no regressions in the Lalamove API communication:</p>
+        <ul>
+            <li><code>node test-quote.js</code></li>
+            <li><code>node test-quote-stops.js</code></li>
+        </ul>
+    </section>
+
+    <section>
+        <h2>Rollback Procedures</h2>
+        <p>In case of critical failure (e.g., 500 errors on all bookings):</p>
+        <ol>
+            <li>Revert changes to <code>lib/services/shippingService.js</code>.</li>
+            <li>Revert <code>services/lalamove.js</code> to the previous price extraction logic.</li>
+            <li>Flush the system settings cache to restore default behavior.</li>
+        </ol>
+    </section>
+</body>
+</html>

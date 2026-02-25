@@ -1,0 +1,156 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Phase 1: Analysis & Overview - Lalamove Sync Implementation</title>
+    <style>
+        :root {
+            --primary: #2563eb;
+            --secondary: #64748b;
+            --success: #10b981;
+            --warning: #f59e0b;
+            --danger: #ef4444;
+            --bg: #f8fafc;
+            --text: #1e293b;
+            --card-bg: #ffffff;
+        }
+        body {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            line-height: 1.6;
+            color: var(--text);
+            background-color: var(--bg);
+            margin: 0;
+            padding: 0;
+        }
+        .container {
+            max-width: 1000px;
+            margin: 2rem auto;
+            padding: 0 1.5rem;
+        }
+        header {
+            background: var(--card-bg);
+            padding: 2rem;
+            border-radius: 1rem;
+            box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1);
+            margin-bottom: 2rem;
+        }
+        h1 { margin: 0; color: var(--primary); font-size: 2.25rem; }
+        h2 { color: var(--primary); border-bottom: 2px solid #e2e8f0; padding-bottom: 0.5rem; margin-top: 2rem; }
+        .nav {
+            display: flex;
+            gap: 1rem;
+            margin-bottom: 2rem;
+        }
+        .nav a {
+            text-decoration: none;
+            color: var(--secondary);
+            font-weight: 500;
+            padding: 0.5rem 1rem;
+            border-radius: 0.5rem;
+            transition: all 0.2s;
+        }
+        .nav a:hover { background: #e2e8f0; }
+        .nav a.active { background: var(--primary); color: white; }
+        .card {
+            background: var(--card-bg);
+            padding: 2rem;
+            border-radius: 1rem;
+            box-shadow: 0 1px 3px 0 rgb(0 0 0 / 0.1);
+            margin-bottom: 2rem;
+        }
+        code {
+            background: #f1f5f9;
+            padding: 0.2rem 0.4rem;
+            border-radius: 0.25rem;
+            font-family: 'Fira Code', monospace;
+            font-size: 0.9em;
+        }
+        pre {
+            background: #1e293b;
+            color: #f8fafc;
+            padding: 1.5rem;
+            border-radius: 0.75rem;
+            overflow-x: auto;
+            font-family: 'Fira Code', monospace;
+            font-size: 0.9em;
+        }
+        .badge {
+            display: inline-block;
+            padding: 0.25rem 0.75rem;
+            border-radius: 9999px;
+            font-size: 0.875rem;
+            font-weight: 600;
+        }
+        .badge-success { background: #dcfce7; color: #166534; }
+        .badge-info { background: #dbeafe; color: #1e40af; }
+        ul { padding-left: 1.5rem; }
+        li { margin-bottom: 0.75rem; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <nav class="nav">
+            <a href="index.html">Index</a>
+            <a href="phase-1-analysis.html" class="active">Phase 1: Analysis</a>
+            <a href="phase-2-mapping.html">Phase 2: Mapping</a>
+            <a href="phase-3-realtime.html">Phase 3: Real-time</a>
+            <a href="implementation-summary.html">Summary</a>
+        </nav>
+
+        <header>
+            <h1>Phase 1: Analysis & Overview</h1>
+            <p>Comprehensive review of the existing Lalamove integration and synchronization architecture.</p>
+        </header>
+
+        <section class="card">
+            <h2>System Architecture</h2>
+            <p>The Lalamove integration follows a modular architecture consisting of three primary components:</p>
+            <ul>
+                <li><strong>Service Layer:</strong> <code>services/lalamove.js</code> - Handles direct communication with Lalamove API (v3), HMAC authentication, and payload verification.</li>
+                <li><strong>Webhook Endpoint:</strong> <code>app/api/webhooks/lalamove/route.js</code> - Receives asynchronous events from Lalamove (Driver Assigned, Status Changed, etc.).</li>
+                <li><strong>Manual Sync Endpoint:</strong> <code>app/api/orders/[orderId]/sync-lalamove/route.js</code> - Provides a polling fallback to fetch latest data on-demand.</li>
+            </ul>
+        </section>
+
+        <section class="card">
+            <h2>Current Implementation State</h2>
+            <p>Analysis of existing code reveals a robust implementation with several key features:</p>
+            <ul>
+                <li><span class="badge badge-success">HMAC-SHA256</span> Authentication for all API requests and webhook verification.</li>
+                <li><span class="badge badge-success">State Machine</span> Logic that maps complex Lalamove status codes to simplified Budolshap order statuses.</li>
+                <li><span class="badge badge-success">Real-time Triggers</span> using Pusher/Socket.io to notify both Seller and Buyer UIs immediately upon status changes.</li>
+                <li><span class="badge badge-success">Robust Error Handling</span> with webhook logging in the database for troubleshooting.</li>
+            </ul>
+        </section>
+
+        <section class="card">
+            <h2>Key Files & Responsibilities</h2>
+            <pre>
+/services/lalamove.js
+- class Lalamove implements ShippingProvider
+- trackOrder(orderId): Fetches status and driver info
+- verifyWebhookSignature(body, signature, timestamp)
+
+/app/api/webhooks/lalamove/route.js
+- POST handler for Lalamove events
+- Logs events to WebhookEvent table
+- Updates Order status and triggers real-time events
+
+/app/api/orders/[orderId]/sync-lalamove/route.js
+- Manual refresh triggered by the UI
+- Ensures status is up-to-date even if webhooks are delayed
+            </pre>
+        </section>
+
+        <section class="card">
+            <h2>Technical Constraints & Risks</h2>
+            <ul>
+                <li><strong>Webhook Reliability:</strong> Lalamove webhooks may occasionally fail or arrive out of order. The system handles this via manual sync polling.</li>
+                <li><strong>Sandbox Limitations:</strong> In the sandbox environment, driver location data may be mocked (0,0), which the system correctly ignores.</li>
+                <li><strong>Rate Limiting:</strong> Aggressive polling (every 10s) in the Buyer UI should be monitored for API rate limit issues.</li>
+            </ul>
+        </section>
+    </div>
+</body>
+</html>

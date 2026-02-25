@@ -1,0 +1,252 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Escrow System Complete Documentation</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', system-ui, sans-serif;
+            line-height: 1.6;
+            color: #333;
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+            background: #f8f9fa;
+        }
+
+        .container {
+            background: white;
+            padding: 40px;
+            border-radius: 12px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.05);
+        }
+
+        h1 {
+            color: #2c3e50;
+            border-bottom: 3px solid #3498db;
+            padding-bottom: 15px;
+        }
+
+        h2 {
+            color: #34495e;
+            margin-top: 40px;
+            border-left: 5px solid #3498db;
+            padding-left: 15px;
+        }
+
+        h3 {
+            color: #2980b9;
+            margin-top: 25px;
+        }
+
+        .badge {
+            display: inline-block;
+            padding: 4px 8px;
+            border-radius: 4px;
+            font-weight: bold;
+            font-size: 0.8em;
+        }
+
+        .badge-success {
+            background: #d4edda;
+            color: #155724;
+        }
+
+        .badge-warning {
+            background: #fff3cd;
+            color: #856404;
+        }
+
+        .badge-error {
+            background: #f8d7da;
+            color: #721c24;
+        }
+
+        code {
+            background: #f1f2f6;
+            padding: 2px 6px;
+            border-radius: 4px;
+            font-family: monospace;
+            color: #e74c3c;
+        }
+
+        .card {
+            background: #fff;
+            border: 1px solid #e1e4e8;
+            border-radius: 8px;
+            padding: 20px;
+            margin-bottom: 20px;
+        }
+
+        .timeline {
+            border-left: 2px solid #e1e4e8;
+            padding-left: 20px;
+            margin-left: 10px;
+        }
+
+        .timeline-item {
+            position: relative;
+            margin-bottom: 20px;
+        }
+
+        .timeline-item::before {
+            content: '';
+            position: absolute;
+            left: -26px;
+            top: 5px;
+            width: 10px;
+            height: 10px;
+            border-radius: 50%;
+            background: #3498db;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 20px 0;
+        }
+
+        th,
+        td {
+            padding: 12px;
+            border: 1px solid #ddd;
+            text-align: left;
+        }
+
+        th {
+            background: #f4f6f7;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="container">
+        <h1>Escrow System & Seller Payouts: Complete Documentation</h1>
+        <p><strong>Date:</strong> December 9, 2025</p>
+        <p><strong>Status:</strong> <span class="badge badge-success">COMPLETED</span></p>
+        <p><strong>Scope:</strong> Phase 1, Phase 2, Phase 3 (End-to-End Implementation)</p>
+
+        <h2>1. Executive Summary</h2>
+        <p>The Escrow System separates buyer funds into a "Pending" state until order delivery is confirmed + 7 days.
+            This protects buyers from fraud and ensures sellers are paid only for successful deliveries. The system
+            includes an Admin Dashboard for monitoring escrow funds, a Seller Wallet for viewing balances, and a Payout
+            Request workflow.</p>
+
+        <h2>2. Processes Implemented</h2>
+
+        <div class="timeline">
+            <div class="timeline-item">
+                <h3>Phase 1: Core Logic & Database</h3>
+                <p>Designed and implemented the core database schema changes:</p>
+                <ul>
+                    <li><strong>Wallet Model:</strong> Tracks <code>balance</code> (Available) and
+                        <code>pendingBalance</code> (Escrow).</li>
+                    <li><strong>PayoutRequest Model:</strong> Handles withdrawal requests states (PENDING, APPROVED,
+                        REJECTED).</li>
+                    <li><strong>Separation of Funds Logic:</strong> Money enters Escrow on payment, moves to Wallet on
+                        release.</li>
+                </ul>
+            </div>
+
+            <div class="timeline-item">
+                <h3>Phase 2: Admin Dashboard & Controls</h3>
+                <p>Enhanced the Admin interface to manage the financial flow:</p>
+                <ul>
+                    <li><strong>Escrow Stats:</strong> Visual cards showing Total Pending, Ready for Payout, and Queue.
+                    </li>
+                    <li><strong>Payout Management:</strong> Dedicated page <code>/admin/payouts</code> to Approve/Reject
+                        requests.</li>
+                    <li><strong>UI Polish:</strong> Added hover tooltips (`cursor-help`) for better UX.</li>
+                </ul>
+            </div>
+
+            <div class="timeline-item">
+                <h3>Phase 3: Seller Wallet & Integration</h3>
+                <p>Completed the loop with Seller-side features:</p>
+                <ul>
+                    <li><strong>Wallet Page:</strong> <code>/store/wallet</code> showing real-time balances.</li>
+                    <li><strong>Withdrawal:</strong> Mechanics for sellers to request payouts from Available Balance.
+                    </li>
+                    <li><strong>Transaction History:</strong> Logs of all credits, debits, and requests.</li>
+                </ul>
+            </div>
+        </div>
+
+        <h2>3. Issues Encountered & Fixes</h2>
+        <table>
+            <thead>
+                <tr>
+                    <th>Issue</th>
+                    <th>Root Cause</th>
+                    <th>Resolution</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td><span class="badge badge-error">API Error</span> <code>Failed to load payouts</code></td>
+                    <td>Missing relation in <code>prisma/schema.prisma</code> between <code>Store</code> and
+                        <code>PayoutRequest</code> models.</td>
+                    <td>Updated Schema to include bidirectional relations (<code>Store.payoutRequests</code> and
+                        <code>PayoutRequest.store</code>). Ran <code>prisma generate</code>.</td>
+                </tr>
+                <tr>
+                    <td><span class="badge badge-error">Auth Error</span> <code>Invalid or expired token</code> (403)
+                    </td>
+                    <td>Token payload mismatch. Login generated token with <code>userId</code>, but Admin/Store
+                        middleware checked for <code>id</code>.</td>
+                    <td>Updated <code>lib/adminAuth.js</code> and API routes to check
+                        <code>decoded.userId || decoded.id</code>. Added detailed error logging to identify the
+                        mismatch.</td>
+                </tr>
+                <tr>
+                    <td><span class="badge badge-warning">Script Error</span> Backup Crash</td>
+                    <td>Legacy backup script had fragile timestamp logic and undefined variable handling.</td>
+                    <td>Created robust <code>scripts/backup-v2.js</code> with safe checks and better error handling.
+                    </td>
+                </tr>
+            </tbody>
+        </table>
+
+        <h2>4. Technical Details</h2>
+        <div class="card">
+            <h3>Authentication Architecture</h3>
+            <p><strong>Token Payload:</strong> <code>{ userId, email, name, role }</code></p>
+            <p><strong>Verification:</strong>
+                <code>lib/adminAuth.js</code> uses <code>verifyToken</code> then queries DB to confirm
+                <code>isAdmin</code> or `accountType === 'ADMIN'`.
+                <strong>Seller Auth:</strong> Checks <code>userId</code> against <code>Store.userId</code> relation.
+            </p>
+
+            <h3>Atomic Transactions</h3>
+            <p>Payout requests use <code>prisma.$transaction</code> to ensure data integrity:</p>
+            <ol>
+                <li>Check Wallet Balance (Must be > Amount).</li>
+                <li>Decrement Wallet Balance.</li>
+                <li>Create Transaction Record (DEBIT).</li>
+                <li>Create PayoutRequest Record (PENDING).</li>
+            </ol>
+            <p>If any step fails, the entire operation rolls back, preventing money loss.</p>
+        </div>
+
+        <h2>5. Recommendations for Future Enhancement</h2>
+        <ul>
+            <li><strong>Automated Cron Payouts:</strong> Implement a nightly cron job to automatically release "Ready
+                for Payout" funds (orders > 7 days old) from Pending to Available.</li>
+            <li><strong>Payment Gateway Integration:</strong> Connect Payouts (Xendit/PayMongo/Stripe) to physically
+                transfer funds when Admin clicks "Approve", removing manual bank work.</li>
+            <li><strong>Email Notifications:</strong> Send emails to Sellers when:
+                <ul>
+                    <li>Funds are released from Escrow.</li>
+                    <li>Payout Request is Approved/Rejected.</li>
+                </ul>
+            </li>
+            <li><strong>Audit Logs:</strong> Create a separate Admin Audit Log for sensitive financial actions (who
+                approved what payout).</li>
+        </ul>
+
+    </div>
+</body>
+
+</html>

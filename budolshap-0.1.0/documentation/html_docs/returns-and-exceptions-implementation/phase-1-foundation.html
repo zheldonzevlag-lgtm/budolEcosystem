@@ -1,0 +1,162 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Phase 1: Foundation - Shopee-Style Returns & Escrow</title>
+    <style>
+        :root {
+            --primary-color: #ee4d2d; /* Shopee Orange */
+            --secondary-color: #2673dd;
+            --bg-color: #f5f5f5;
+            --card-bg: #ffffff;
+            --text-color: #333;
+            --code-bg: #2d2d2d;
+            --code-text: #f8f8f2;
+        }
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            line-height: 1.6;
+            color: var(--text-color);
+            background-color: var(--bg-color);
+            margin: 0;
+            padding: 20px;
+        }
+        .container {
+            max-width: 1000px;
+            margin: 0 auto;
+            background: var(--card-bg);
+            padding: 40px;
+            border-radius: 8px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        h1, h2, h3 {
+            color: var(--primary-color);
+        }
+        .nav {
+            margin-bottom: 30px;
+            padding: 10px;
+            background: #eee;
+            border-radius: 4px;
+        }
+        .nav a {
+            margin-right: 15px;
+            text-decoration: none;
+            color: var(--secondary-color);
+            font-weight: bold;
+        }
+        pre {
+            background: var(--code-bg);
+            color: var(--code-text);
+            padding: 15px;
+            border-radius: 5px;
+            overflow-x: auto;
+        }
+        code {
+            font-family: 'Courier New', Courier, monospace;
+        }
+        .status-badge {
+            display: inline-block;
+            padding: 5px 12px;
+            border-radius: 20px;
+            font-size: 0.9em;
+            font-weight: bold;
+            text-transform: uppercase;
+        }
+        .status-completed { background: #d4edda; color: #155724; }
+        .status-in-progress { background: #fff3cd; color: #856404; }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 20px 0;
+        }
+        th, td {
+            text-align: left;
+            padding: 12px;
+            border-bottom: 1px solid #ddd;
+        }
+        th { background-color: #f8f9fa; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="nav">
+            <a href="index.html">← Back to Index</a>
+            <a href="phase-2-logistics-exceptions.html">Next: Phase 2 →</a>
+        </div>
+
+        <h1>Phase 1: Foundation & Core Escrow Integration</h1>
+        <p><span class="status-badge status-completed">Status: Completed</span></p>
+
+        <section>
+            <h2>Executive Summary</h2>
+            <p>This phase established the technical foundation for a secure, Shopee-style return system. The primary focus was on integrating financial escrow safeguards to prevent fraud (e.g., double refunds) and extending the database schema to track marketplace performance metrics.</p>
+        </section>
+
+        <section>
+            <h2>Key Implementation Details</h2>
+            
+            <h3>1. Database Schema Extensions</h3>
+            <p>Updated <code>prisma/schema.prisma</code> to include fields for performance tracking and escrow state:</p>
+            <ul>
+                <li><code>User.buyerReturnRate</code>: Tracks the frequency of returns initiated by the buyer.</li>
+                <li><code>User.codUnpaidCount</code>: Tracks failed COD deliveries to identify high-risk buyers.</li>
+                <li><code>Store.nonFulfilmentRate</code>: Measures the store's ability to fulfill orders correctly.</li>
+                <li><code>Return.isEscrowLocked</code>: Boolean flag to prevent multiple financial operations on a single return.</li>
+            </ul>
+
+            <h3>2. Atomic Escrow Operations</h3>
+            <p>Implemented robust financial logic in <code>lib/escrow.js</code> using Prisma transactions:</p>
+            <pre><code>// Example: Atomic fund locking
+export async function lockFunds({ orderId, amount }) {
+    return await prisma.$transaction(async (tx) => {
+        // Deduct from pending, move to locked
+        await tx.wallet.update({ ... });
+        await tx.transaction.create({ ... });
+    });
+}</code></pre>
+
+            <h3>3. Return Lifecycle Hooking</h3>
+            <p>Modified <code>lib/services/returnsService.js</code> to trigger escrow locks automatically upon return request creation. This ensures that the refund amount is "frozen" and cannot be withdrawn by the seller while a dispute is active.</p>
+        </section>
+
+        <section>
+            <h2>Testing & Validation</h2>
+            <table>
+                <thead>
+                    <tr>
+                        <th>Test Case</th>
+                        <th>Outcome</th>
+                        <th>Validation Method</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td>Escrow Lock on Return Request</td>
+                        <td>Success</td>
+                        <td>Manual DB Inspection</td>
+                    </tr>
+                    <tr>
+                        <td>Atomic Transaction Rollback</td>
+                        <td>Success</td>
+                        <td>Simulated Error in Transaction</td>
+                    </tr>
+                    <tr>
+                        <td>Performance Metric Calculation</td>
+                        <td>Success</td>
+                        <td>Unit Test (Simulation)</td>
+                    </tr>
+                </tbody>
+            </table>
+        </section>
+
+        <section>
+            <h2>Risks & Mitigations</h2>
+            <ul>
+                <li><strong>Risk:</strong> Database lock contention during high-volume transactions.</li>
+                <li><strong>Mitigation:</strong> Used fine-grained <code>$transaction</code> blocks with optimized indexes on <code>orderId</code> and <code>userId</code>.</li>
+            </ul>
+        </section>
+    </div>
+</body>
+</html>

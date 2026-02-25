@@ -1,0 +1,177 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Phase 2: Implementation - Address Modal UX Fixes</title>
+    <style>
+        :root {
+            --primary: #10b981;
+            --primary-dark: #059669;
+            --secondary: #64748b;
+            --bg: #f8fafc;
+            --card-bg: #ffffff;
+            --text: #1e293b;
+            --border: #e2e8f0;
+        }
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: var(--bg);
+            color: var(--text);
+            line-height: 1.6;
+            margin: 0;
+            padding: 0;
+        }
+        .container {
+            max-width: 900px;
+            margin: 2rem auto;
+            padding: 2rem;
+            background: var(--card-bg);
+            border-radius: 1rem;
+            shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1);
+        }
+        h1, h2, h3 { color: var(--text); }
+        h1 { border-bottom: 2px solid var(--primary); padding-bottom: 0.5rem; }
+        .nav { margin-bottom: 2rem; }
+        .nav a { color: var(--primary); text-decoration: none; font-weight: 600; }
+        .nav a:hover { text-decoration: underline; }
+        .code-block {
+            background: #1e293b;
+            color: #f8fafc;
+            padding: 1rem;
+            border-radius: 0.5rem;
+            font-family: 'Consolas', 'Monaco', monospace;
+            font-size: 0.9rem;
+            overflow-x: auto;
+            margin: 1rem 0;
+        }
+        .fix-section {
+            margin-bottom: 2.5rem;
+            border-left: 4px solid var(--primary);
+            padding-left: 1rem;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="nav">
+            <a href="index.html">← Back to Index</a>
+        </div>
+        <h1>Phase 2: Implementation</h1>
+        
+        <div class="fix-section">
+            <h2>1. Z-Index and Scrolling Behavior</h2>
+            <p>Modified <code>AddressFormManager.jsx</code> to change the sticky footer to a standard scrolling footer and resolve z-index issues.</p>
+            <div class="code-block">
+// Before: Sticky and low z-index
+&lt;div className="sticky bottom-0 -mx-4 md:-mx-6 -mb-4 md:-mb-6 p-4 md:p-6 bg-white/90 backdrop-blur-md border-t border-slate-100 flex gap-3 lg:col-span-2 z-10"&gt;
+
+// After: Scrollable with form
+&lt;div className="flex gap-3 lg:col-span-2 mt-4 pb-2"&gt;
+            </div>
+            <p><strong>Rationale:</strong> Removing <code>sticky</code> allows the buttons to follow the form flow. Removing <code>z-10</code> and negative margins cleans up the layout for better responsiveness.</p>
+        </div>
+
+        <div class="fix-section">
+            <h2>2. Map Mouse Wheel Zoom</h2>
+            <p>Enabled interactive zooming in <code>MapPicker.jsx</code>.</p>
+            <div class="code-block">
+&lt;MapContainer 
+    center={center} 
+    zoom={15} 
+    style={{ height: '100%', width: '100%' }}
+    zoomControl={false}
+    scrollWheelZoom={true} // Enabled here
+    ref={setMap}
+&gt;
+            </div>
+            <p><strong>Rationale:</strong> Enhances user experience by allowing intuitive map navigation.</p>
+        </div>
+
+        <div class="fix-section">
+            <h2>3. Autocomplete Dropdown Visibility</h2>
+            <p>Ensured the address suggestions are always visible by increasing their z-index in <code>AddressAutocomplete.jsx</code>.</p>
+            <div class="code-block">
+&lt;div className="absolute z-[4000] w-full mt-2 bg-white rounded-xl shadow-xl ..."&gt;
+            </div>
+            <p><strong>Rationale:</strong> <code>z-[4000]</code> ensures the dropdown stays above all map elements (max ~2000) and other UI components.</p>
+        </div>
+        <div class="fix-section">
+            <h2>4. Balanced Button Layout</h2>
+            <p>Updated the action buttons in <code>AddressFormManager.jsx</code> to have equal width for a more balanced UI.</p>
+            <div class="code-block">
+// Both buttons now use flex-1
+&lt;button className="flex-1 ..."&gt;Cancel&lt;/button&gt;
+&lt;button className="flex-1 ..."&gt;Save Address&lt;/button&gt;
+            </div>
+            <p><strong>Rationale:</strong> Provides a more consistent and professional appearance in the form footer.</p>
+        </div>
+        <div class="fix-section">
+            <h2>5. Form Validation & Button State</h2>
+            <p>Implemented real-time validation to disable the "Save Address" button until all required fields are correctly filled.</p>
+            <div class="code-block">
+// Real-time validation logic
+const isFormValid = () => {
+    return (
+        formData.name?.trim() !== '' &&
+        numberPart.length === 10 &&
+        formData.city?.trim() !== '' &&
+        formData.barangay?.trim() !== '' &&
+        formData.detailedAddress?.trim() !== ''
+    );
+};
+
+// Button disabled state
+&lt;button disabled={isLoading || !isFormValid()} 
+    className="... disabled:bg-green-300 disabled:shadow-none ..." &gt;
+            </div>
+            <p><strong>Rationale:</strong> Prevents accidental submissions of incomplete data and improves user guidance by providing visual feedback (green 300 background) when the form is invalid.</p>
+        </div>
+        <div class="fix-section">
+            <h2>6. Real-time Field Validation</h2>
+            <p>Added <code>useEffect</code> hooks to monitor form state changes and provide immediate visual feedback (error messages and red borders) as the user types.</p>
+            <div class="code-block">
+// Real-time validation effect
+useEffect(() => {
+    const newErrors = { ...errors };
+    
+    // Example: Phone validation
+    const code = COUNTRY_CODES.find(c => formData.phone.startsWith(c.code))?.code || '+63';
+    const numberPart = formData.phone.slice(code.length).replace(/\D/g, '');
+    if (numberPart.length > 0) {
+        if (numberPart.length !== 10) {
+            newErrors.phone = "Phone number must be exactly 10 digits";
+        } else {
+            delete newErrors.phone;
+        }
+    }
+    
+    setErrors(newErrors);
+}, [formData]);
+            </div>
+            <p><strong>Rationale:</strong> Improves UX by allowing users to correct mistakes immediately rather than waiting for form submission.</p>
+        </div>
+        <div class="fix-section">
+            <h2>7. Mobile-First Collapsible Sections</h2>
+            <p>Optimized the mobile user experience by ensuring all form sections are collapsed by default on smaller screens (below 1024px).</p>
+            <div class="code-block">
+// Handle mobile default state for sections
+useEffect(() => {
+    const checkMobile = () => {
+        if (window.innerWidth < 1024) {
+            setOpenSections({
+                contact: false,
+                map: false,
+                address: false,
+                settings: false
+            });
+        }
+    };
+    checkMobile();
+}, []);
+            </div>
+            <p><strong>Rationale:</strong> Reduces vertical scrolling on mobile devices and allows users to focus on specific sections of the form one at a time.</p>
+        </div>
+    </div>
+</body>
+</html>

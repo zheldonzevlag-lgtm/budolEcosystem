@@ -1,0 +1,1853 @@
+'use client'
+import { useEffect, useState } from "react"
+import Image from "next/image"
+import Loading from "@/components/Loading"
+import { useAuth } from "@/context/AuthContext"
+import { useSearch } from "@/context/SearchContext"
+import toast from "react-hot-toast"
+import { UNIVERSAL_STATUS } from "@/lib/shipping/statusMapper"
+import { formatManilaTime, getManilaDateString } from "@/lib/dateUtils"
+
+import { useRealtimeOrders } from "@/hooks/useRealtimeOrders"
+import { useBudolShapShipping } from "@/hooks/useBudolShapShipping"
+import BudolShapShippingModal from "@/components/BudolShapShippingModal"
+import BudolPayText from "@/components/payment/BudolPayText"
+
+export default function StoreOrders() {
+    const { user, isLoading: authLoading } = useAuth()
+    const { searchQuery } = useSearch()
+    const currency = process.env.NEXT_PUBLIC_CURRENCY_SYMBOL || '$'
+    const [storeId, setStoreId] = useState(null)
+    const [searchTerm, setSearchTerm] = useState('')
+    const [selectedOrder, setSelectedOrder] = useState(null)
+    const [isModalOpen, setIsModalOpen] = useState(false)
+    const [isBudolShapModalOpen, setIsBudolShapModalOpen] = useState(false)
+    const [page, setPage] = useState(1)
+    const [isBooking, setIsBooking] = useState(false)
+    const [isSyncing, setIsSyncing] = useState(false)
+    const [deliveryFilter, setDeliveryFilter] = useState('all') // all, needs_booking, booked, in_transit, delivered
+    const [dateRange, setDateRange] = useState({ start: '', end: '' })
+    const [priceRange, setPriceRange] = useState({ min: '', max: '' })
+    const [selectedProducts, setSelectedProducts] = useState([])
+    const [showAdvancedFilters, setShowAdvancedFilters] = useState(false)
+    const [selectedOrders, setSelectedOrders] = useState([])
+    const [bulkAction, setBulkAction] = useState('')
+    const [isProcessingBulk, setIsProcessingBulk] = useState(false)
+    const [collapsedSections, setCollapsedSections] = useState({
+        customer: true,
+        payment: true,
+        shipping: false
+    })
+
+    const toggleSection = (section) => {
+        setCollapsedSections(prev => ({
+            ...prev,
+            [section]: !prev[section]
+        }))
+    }
+
+    // BudolShap Shipping
+    const { settings: budolShapSettings, loading: budolShapLoading } = useBudolShapShipping()
+
+    // Manual Booking State
+    const [bookingType, setBookingType] = useState('lalamove') // 'lalamove' | 'manual'
+    const [manualDetails, setManualDetails] = useState({
+        provider: '',
+        trackingNumber: '',
+        trackingUrl: ''
+    })
+
+    // Initial Store Fetch
+    useEffect(() => {
+        const initStore = async () => {
+            if (authLoading) return
+            
+            console.log("[StoreOrders] Current user from auth context:", user?.id);
+
+            if (!user) {
+                console.warn("[StoreOrders] No user found in auth context");
+                return
+            }
+            try {
+                console.log("[StoreOrders] Fetching store for user:", user.id);
+                const res = await fetch(`/api/stores/user/${user.id}`)
+                if (res.ok) {
+                    const store = await res.json()
+                    console.log("[StoreOrders] Store API result:", store ? `Found: ${store.id}` : "Null");
+                    if (store) {
+                        setStoreId(store.id)
+                    } else {
+                        toast.error("Store not found")
+                    }
+                } else {
+                    console.error("[StoreOrders] Store API error:", res.status);
+                }
+            } catch (err) {
+                console.error("[StoreOrders] Failed to load store", err)
+            }
+        }
+        initStore()
+    }, [user, authLoading])
+
+    // Realtime Hook
+    const {
+        orders,
+        pagination,
+        isLoading: loading,
+        error: ordersError,
+        mutate
+    } = useRealtimeOrders({ storeId, page, search: searchQuery })
+
+    useEffect(() => {
+        console.log("[StoreOrders] Orders data received:", orders?.length, orders);
+        if (ordersError) {
+            console.error("[StoreOrders] SWR Error details:", ordersError);
+            toast.error("Failed to load orders. Please refresh.");
+        }
+    }, [orders, ordersError])
+
+    // Auto-sync Lalamove orders (Fallback for when webhooks are delayed)
+    useEffect(() => {
+        if (!orders || orders.length === 0) return
+
+        // Find active Lalamove orders that need syncing
+        const activeLalamoveOrders = orders.filter(order =>
+            order.shipping?.provider === 'lalamove' &&
+            order.shipping?.bookingId &&
+            ['ORDER_PLACED', 'PROCESSING', UNIVERSAL_STATUS.TO_SHIP, UNIVERSAL_STATUS.SHIPPING].includes(order.status)
+        )
+
+        if (activeLalamoveOrders.length === 0) return
+
+        const syncAll = async () => {
+            // Bandwidth Optimization: Skip if tab is hidden
+            if (document.visibilityState === 'hidden') return
+
+            console.log(`[Auto-Sync] Syncing ${activeLalamoveOrders.length} active Lalamove orders...`)
+            for (const order of activeLalamoveOrders) {
+                try {
+                    // This triggers a server-side sync and broadcasts a realtime event
+                    await fetch(`/api/orders/${order.id}/sync-lalamove`, { method: 'POST' })
+                } catch (err) {
+                    console.error(`Failed to auto-sync order ${order.id}:`, err)
+                }
+            }
+            // Note: We removed mutate() here because the sync endpoint triggers 
+            // a realtime event which RealtimeProvider handles via patchOrderCache.
+        }
+
+        // Increase interval to 30s to reduce bandwidth/cost on AWS/Vercel
+        const interval = setInterval(syncAll, 30000) 
+
+        return () => clearInterval(interval)
+    }, [orders])
+
+    // Enhanced status display helper
+    const getStatusDisplay = (order) => {
+        const status = order.status
+        const deliveryStatus = getDeliveryStatus(order)
+
+        const statusConfig = {
+            [UNIVERSAL_STATUS.DELIVERED]: { color: 'green', icon: '✅', label: 'Delivered', description: 'Order has been delivered successfully' },
+            [UNIVERSAL_STATUS.CANCELLED]: { color: 'red', icon: '❌', label: 'Cancelled', description: 'Order has been cancelled' },
+            [UNIVERSAL_STATUS.TO_SHIP]: { color: 'blue', icon: '📦', label: 'To Ship', description: 'Courier booked, waiting for pickup' },
+            [UNIVERSAL_STATUS.SHIPPING]: { color: 'purple', icon: '🚚', label: 'Shipping', description: 'Package picked up, in transit' },
+            [UNIVERSAL_STATUS.PROCESSING]: { color: 'blue', icon: '⚙️', label: 'Processing', description: 'Order is being processed' },
+            [UNIVERSAL_STATUS.ORDER_PLACED]: { color: 'orange', icon: '📋', label: 'Order Placed', description: 'Order has been placed' },
+            [UNIVERSAL_STATUS.PAID]: { color: 'green', icon: '💳', label: 'Paid', description: 'Payment has been confirmed' },
+            [UNIVERSAL_STATUS.COMPLETED]: { color: 'teal', icon: '✨', label: 'Completed', description: 'Order completed and finalized' },
+        }
+
+        // Handle return/refund statuses
+        if (['RETURN_REQUESTED', 'RETURN_APPROVED', 'RETURN_DISPUTED', 'REFUNDED'].includes(status)) {
+            return {
+                color: 'rose',
+                icon: '🔄',
+                label: status.replace('_', ' '),
+                description: getReturnStatusDescription(status)
+            }
+        }
+
+        // Handle BudolShap shipping statuses
+        if (deliveryStatus === 'budolShap_arranged') {
+            return {
+                color: 'indigo',
+                icon: '📋',
+                label: 'BudolShap Arranged',
+                description: 'BudolShap shipment has been arranged'
+            }
+        }
+        if (deliveryStatus === 'budolShap_docs_ready') {
+            return {
+                color: 'emerald',
+                icon: '📄',
+                label: 'BudolShap Docs Ready',
+                description: 'BudolShap shipping documents are ready'
+            }
+        }
+        if (deliveryStatus === 'budolShap_picked_up') {
+            return {
+                color: 'teal',
+                icon: '🚚',
+                label: 'BudolShap Picked Up',
+                description: 'BudolShap package has been picked up'
+            }
+        }
+
+        return statusConfig[status] || { color: 'gray', icon: '❓', label: status, description: 'Unknown status' }
+    }
+
+    const getReturnStatusDescription = (status) => {
+        const descriptions = {
+            'RETURN_REQUESTED': 'Customer has requested a return',
+            'RETURN_APPROVED': 'Return request has been approved',
+            'RETURN_DISPUTED': 'Return is under dispute',
+            'REFUNDED': 'Refund has been processed'
+        }
+        return descriptions[status] || 'Return/Refund status'
+    }
+
+    // Helper function to determine delivery status based on UNIVERSAL_STATUS
+    const getDeliveryStatus = (order) => {
+        // 1. Prioritize Return/Refund statuses
+        const returnStatuses = [
+            UNIVERSAL_STATUS.RETURN_REQUESTED,
+            UNIVERSAL_STATUS.RETURN_APPROVED,
+            UNIVERSAL_STATUS.RETURN_DISPUTED,
+            UNIVERSAL_STATUS.REFUNDED
+        ];
+        if (returnStatuses.includes(order.status)) return 'RETURN';
+
+        // 2. BudolShap Shipping Flow Statuses (Provider Specific)
+        if (budolShapSettings?.enabled && order.shipping?.provider === 'budolShap') {
+            if (order.shipping?.status === 'ARRANGED') return 'BUDOLSHAP_ARRANGED'
+            if (order.shipping?.status === 'DOCUMENTS_GENERATED') return 'BUDOLSHAP_DOCS_READY'
+            if (order.shipping?.status === 'PICKED_UP') return 'BUDOLSHAP_PICKED_UP'
+        }
+
+        // 3. Generic Delivery Statuses (Courier Agnostic)
+        if (order.status === UNIVERSAL_STATUS.DELIVERED || order.status === UNIVERSAL_STATUS.COMPLETED) {
+            return UNIVERSAL_STATUS.DELIVERED;
+        }
+
+        if (order.status === UNIVERSAL_STATUS.CANCELLED ||
+            ((order.status === 'PROCESSING' || order.status === 'ORDER_PLACED' || order.status === 'PAID') && order.shipping?.failureReason)) {
+            return UNIVERSAL_STATUS.CANCELLED;
+        }
+
+        // Check if booked
+        if (order.shipping?.bookingId) {
+            const courierStatus = order.shipping?.status;
+            if (courierStatus) {
+                if (['PICKED_UP', 'IN_TRANSIT', 'ON_THE_WAY', 'SHIPPED', 'OUT_FOR_DELIVERY'].includes(courierStatus)) {
+                    return UNIVERSAL_STATUS.SHIPPING;
+                }
+                if (['DELIVERED', 'COMPLETED', 'SUCCEEDED'].includes(courierStatus)) {
+                    return UNIVERSAL_STATUS.DELIVERED;
+                }
+                if (['CANCELLED', 'CANCELED', 'EXPIRED', 'REJECTED'].includes(courierStatus)) {
+                    return UNIVERSAL_STATUS.CANCELLED;
+                }
+            }
+
+            // If main status says shipping
+            if (order.status === UNIVERSAL_STATUS.SHIPPING) {
+                return UNIVERSAL_STATUS.SHIPPING;
+            }
+
+            // Default for any booked order that isn't shipping/delivered yet
+            return UNIVERSAL_STATUS.TO_SHIP;
+        }
+
+        // Needs booking if no bookingId yet
+        if (!order.shipping?.bookingId) {
+            // Only consider it "NEEDS_BOOKING" if it's actually paid or processing
+            if (order.status === 'PAID' || order.status === 'PROCESSING') {
+                return 'NEEDS_BOOKING';
+            }
+            return order.status;
+        }
+
+        return order.status;
+    }
+
+    const updateOrderStatus = async (orderId, status) => {
+        try {
+            console.log('Attempting to update order:', orderId, 'to status:', status)
+
+            const response = await fetch(`/api/orders/${orderId}`, {
+                method: 'PUT',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({ status })
+            })
+
+            const data = await response.json()
+
+            if (response.ok) {
+                // Refresh data via SWR
+                mutate()
+                toast.success("Order status updated successfully!")
+            } else {
+                toast.error(data.error || `Failed to update status`)
+            }
+        } catch (error) {
+            console.error("Error updating order status:", error)
+            toast.error(`Failed to update order status: ${error.message}`)
+        }
+    }
+
+    const handleBookLalamove = async (order) => {
+        if (!order || !order.id) {
+            console.error("Invalid order object:", order);
+            toast.error("Invalid order data. Please refresh and try again.");
+            return;
+        }
+
+        console.log("Booking Lalamove for order:", order.id);
+        setIsBooking(true);
+
+        try {
+            const response = await fetch('/api/shipping/lalamove/book', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ orderId: order.id })
+            });
+
+            if (!response) {
+                throw new Error("No response received from server");
+            }
+
+            let data = {};
+            let responseText = '';
+            try {
+                responseText = await response.text();
+                if (responseText) {
+                    try {
+                        data = JSON.parse(responseText);
+                    } catch (parseError) {
+                        console.error("Failed to parse JSON:", parseError, "Response text:", responseText);
+                        data = {
+                            error: 'Invalid JSON response',
+                            message: `Server returned invalid JSON: ${responseText.substring(0, 100)}`
+                        };
+                    }
+                }
+            } catch (textError) {
+                // If we can't even get the text
+                console.error("Failed to read response text:", textError);
+                data = {
+                    error: `Server error (${response?.status || 'unknown'})`,
+                    message: `Server returned invalid response: ${response?.statusText || 'Unknown error'}`
+                };
+            }
+
+            if (!response.ok) {
+                // Extract error message from various possible fields
+                const status = response?.status || 'unknown';
+                const statusText = response?.statusText || 'Unknown error';
+
+                // Safely extract error message, ensuring it's always a string
+                let errorMessage = `Failed to book (${status}: ${statusText})`;
+
+                if (data && typeof data === 'object' && data !== null) {
+                    try {
+                        const message = data.message || data.error || data.details;
+                        if (message !== undefined && message !== null) {
+                            // Convert to string safely
+                            if (typeof message === 'string' && message.trim()) {
+                                errorMessage = message.trim();
+                            } else if (typeof message === 'object' && message !== null) {
+                                // If it's an object, try to get a meaningful property
+                                const objMessage = message.message || message.error || message.details || message.toString();
+                                if (typeof objMessage === 'string' && objMessage.trim()) {
+                                    errorMessage = objMessage.trim();
+                                } else {
+                                    // Fallback to JSON stringify
+                                    try {
+                                        errorMessage = JSON.stringify(message);
+                                    } catch (stringifyError) {
+                                        errorMessage = String(message);
+                                    }
+                                }
+                            } else {
+                                // Convert other types to string
+                                errorMessage = String(message);
+                            }
+                        }
+                    } catch (extractError) {
+                        console.error("Error extracting error message:", extractError);
+                        // Keep default errorMessage
+                    }
+                }
+
+                // Final safety check - ensure errorMessage is always a valid string
+                let finalErrorMessage;
+                try {
+                    if (typeof errorMessage === 'string' && errorMessage.trim()) {
+                        finalErrorMessage = errorMessage.trim();
+                    } else {
+                        finalErrorMessage = `Failed to book (${status}: ${statusText})`;
+                    }
+                } catch (safetyError) {
+                    console.error("Error in safety check:", safetyError);
+                    finalErrorMessage = `Failed to book (${status}: ${statusText})`;
+                }
+
+                // Ensure it's definitely a string
+                finalErrorMessage = String(finalErrorMessage || `Failed to book (${status}: ${statusText})`);
+
+                // Capture a short snippet of the raw response for debugging
+                const responseSnippet = (responseText || '').slice(0, 200) || '(empty)';
+
+                console.error("Booking API error:", {
+                    status: status,
+                    statusText: statusText,
+                    data: data,
+                    responseText: responseSnippet,
+                    errorMessage: finalErrorMessage,
+                    errorMessageType: typeof errorMessage,
+                    errorMessageValue: errorMessage
+                });
+
+                // Surface error to user without throwing to avoid downstream undefined access
+                toast.error(`Booking failed (${status}): ${finalErrorMessage}`);
+                return;
+            }
+
+            // Validate response data
+            if (!data || typeof data !== 'object' || !data.booking) {
+                console.error("Invalid booking response:", data);
+                throw new Error("Invalid response from server: missing booking data");
+            }
+
+            toast.success("Lalamove delivery booked!");
+            mutate(); // Refresh realtime
+
+            // Optimistic update for modal - ensure all properties are preserved
+            const updatedOrder = {
+                ...order,
+                shipping: {
+                    ...(order.shipping || {}),
+                    provider: 'lalamove',
+                    ...(data.booking || {}),
+                    // Clear failure flags
+                    failureReason: null,
+                    failedAt: null
+                },
+                status: 'PROCESSING',
+                // Ensure nested objects exist
+                user: order.user || null,
+                address: order.address || null,
+                orderItems: order.orderItems || []
+            };
+            setSelectedOrder(updatedOrder);
+
+        } catch (err) {
+            console.error("Booking error:", err);
+            const errorMessage = err?.message || err?.toString() || "An unknown error occurred";
+            toast.error(`Booking failed: ${errorMessage}`);
+        } finally {
+            setIsBooking(false);
+        }
+    }
+
+    const handleManualBook = async (order) => {
+        if (!manualDetails.provider || !manualDetails.trackingNumber) {
+            toast.error("Provider and Tracking Number are required")
+            return
+        }
+
+        setIsBooking(true)
+        try {
+            const response = await fetch('/api/shipping/manual/book', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    orderId: order.id,
+                    ...manualDetails
+                })
+            })
+
+            const data = await response.json()
+
+            if (!response.ok) throw new Error(data.message || data.error || "Failed to save booking")
+
+            toast.success("Manual booking saved!")
+            mutate() // Refresh realtime
+
+            // Optimistic update
+            const updatedOrder = {
+                ...order,
+                shipping: {
+                    ...order.shipping,
+                    ...data.booking,
+                    // Clear failure flags
+                    failureReason: null,
+                    failedAt: null
+                },
+                status: 'PROCESSING'
+            }
+            setSelectedOrder(updatedOrder)
+            // Reset form
+            setManualDetails({ provider: '', trackingNumber: '', trackingUrl: '' })
+            setBookingType('lalamove') // Reset to default
+
+        } catch (err) {
+            console.error("Manual booking error:", err)
+            toast.error(`Failed: ${err.message}`)
+        } finally {
+            setIsBooking(false)
+        }
+    }
+
+    const handleSyncStatus = async (order) => {
+        setIsSyncing(true)
+        try {
+            const res = await fetch(`/api/orders/${order.id}/sync`, { method: 'POST' })
+            const data = await res.json()
+
+            if (res.ok) {
+                if (data.statusChanged) {
+                    toast.success(`Status info updated: ${data.newStatus}`)
+                    mutate() // Refresh data
+                    // Update the selectedOrder locally to show immediate changes in modal
+                    setSelectedOrder(prev => ({
+                        ...prev,
+                        status: data.data.status,
+                        shipping: {
+                            ...prev.shipping,
+                            ...data.data.shipping
+                        }
+                    }))
+                } else {
+                    toast.success('Status is up to date')
+                }
+            } else {
+                toast.error(data.error || 'Failed to sync')
+            }
+        } catch (error) {
+            console.error('Sync failed:', error)
+            toast.error('Sync failed')
+        } finally {
+            setIsSyncing(false)
+        }
+    }
+
+    const openModal = (order) => {
+        setSelectedOrder(order)
+
+        // Auto-select booking type if provider suggests Lalamove or Manual
+        if (order.shipping?.provider === 'lalamove') {
+            setBookingType('lalamove')
+        } else if (order.shipping?.provider) {
+            setBookingType('manual')
+            setManualDetails(prev => ({
+                ...prev,
+                provider: order.shipping.provider
+            }))
+        } else {
+            // Default to Lalamove if no provider specified
+            setBookingType('lalamove')
+        }
+
+        setIsModalOpen(true)
+    }
+
+    const openBudolShapModal = (order) => {
+        setSelectedOrder(order)
+        setIsBudolShapModalOpen(true)
+    }
+
+    const closeModal = () => {
+        setSelectedOrder(null)
+        setIsModalOpen(false)
+        setIsBudolShapModalOpen(false)
+        setBookingType('lalamove')
+        setManualDetails({ provider: '', trackingNumber: '', trackingUrl: '' })
+    }
+
+    // BudolShap Shipping Functions
+    const handleBudolShapArrangeShipment = async (orderId, shipmentModel) => {
+        try {
+            setIsBooking(true)
+            const response = await fetch('/api/shipping/arrange', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ orderId, shipmentModel })
+            })
+
+            const data = await response.json()
+
+            if (!response.ok) {
+                const message = data?.error || data?.message || 'Failed to arrange shipment'
+                throw new Error(message)
+            }
+
+            toast.success('Shipment arranged successfully!')
+            mutate()
+            closeModal()
+            return data
+        } catch (error) {
+            toast.error(`Failed to arrange shipment: ${error.message}`)
+            throw error
+        } finally {
+            setIsBooking(false)
+        }
+    }
+
+    const handleBudolShapGenerateDocuments = async (orderId) => {
+        try {
+            const response = await fetch('/api/shipping/documents', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ orderId })
+            })
+
+            const data = await response.json()
+
+            if (!response.ok) {
+                const message = data?.error || data?.message || 'Failed to generate documents'
+                throw new Error(message)
+            }
+
+            return data
+        } catch (error) {
+            toast.error(`Failed to generate documents: ${error.message}`)
+            throw error
+        }
+    }
+
+    // Bulk Actions
+    const handleSelectOrder = (orderId) => {
+        setSelectedOrders(prev =>
+            prev.includes(orderId)
+                ? prev.filter(id => id !== orderId)
+                : [...prev, orderId]
+        )
+    }
+
+    const handleSelectAll = () => {
+        if (selectedOrders.length === filteredOrders.length) {
+            setSelectedOrders([])
+        } else {
+            setSelectedOrders(filteredOrders.map(order => order.id))
+        }
+    }
+
+    const executeBulkAction = async () => {
+        if (!bulkAction || selectedOrders.length === 0) return
+
+        setIsProcessingBulk(true)
+        try {
+            let successCount = 0
+            let errorCount = 0
+
+            for (const orderId of selectedOrders) {
+                try {
+                    switch (bulkAction) {
+                        case 'mark_shipped':
+                            await updateOrderStatus(orderId, 'SHIPPED')
+                            break
+                        case 'mark_delivered':
+                            await updateOrderStatus(orderId, 'DELIVERED')
+                            break
+                        case 'cancel':
+                            await updateOrderStatus(orderId, 'CANCELLED')
+                            break
+                        case 'mark_returned':
+                            await updateOrderStatus(orderId, 'RETURNED')
+                            break
+                        default:
+                            throw new Error(`Unknown action: ${bulkAction}`)
+                    }
+                    successCount++
+                } catch (error) {
+                    console.error(`Failed to ${bulkAction} order ${orderId}:`, error)
+                    errorCount++
+                }
+            }
+
+            if (successCount > 0) {
+                toast.success(`Successfully processed ${successCount} orders`)
+            }
+            if (errorCount > 0) {
+                toast.error(`Failed to process ${errorCount} orders`)
+            }
+
+            // Reset selection and action
+            setSelectedOrders([])
+            setBulkAction('')
+
+            // Refresh orders
+            await mutate()
+
+        } catch (error) {
+            toast.error(`Bulk action failed: ${error.message}`)
+        } finally {
+            setIsProcessingBulk(false)
+        }
+    }
+
+    if (loading && !orders.length) return <Loading />
+
+    // Filter orders based on delivery status and advanced filters
+    const filteredOrders = orders.filter(order => {
+        // Delivery status filter
+        if (deliveryFilter !== 'all' && getDeliveryStatus(order) !== deliveryFilter) return false
+
+        // Search term filter (customer name, email, order ID, product name)
+        if (searchTerm) {
+            const searchLower = searchTerm.toLowerCase()
+            const matchesOrderId = order.id.toLowerCase().includes(searchLower)
+            const matchesCustomer = order.user?.name?.toLowerCase().includes(searchLower) ||
+                order.user?.email?.toLowerCase().includes(searchLower)
+            const matchesProduct = order.items?.some(item =>
+                item.product?.name?.toLowerCase().includes(searchLower)
+            )
+            if (!matchesOrderId && !matchesCustomer && !matchesProduct) return false
+        }
+
+        // Date range filter
+        if (dateRange.start || dateRange.end) {
+            const orderDate = new Date(order.createdAt)
+            if (dateRange.start && orderDate < new Date(dateRange.start)) return false
+            if (dateRange.end && orderDate > new Date(dateRange.end)) return false
+        }
+
+        // Price range filter
+        if (priceRange.min || priceRange.max) {
+            const orderTotal = order.total || 0
+            if (priceRange.min && orderTotal < parseFloat(priceRange.min)) return false
+            if (priceRange.max && orderTotal > parseFloat(priceRange.max)) return false
+        }
+
+        // Product filter
+        if (selectedProducts.length > 0) {
+            const hasSelectedProduct = order.items?.some(item =>
+                selectedProducts.includes(item.product?.id)
+            )
+            if (!hasSelectedProduct) return false
+        }
+
+        return true
+    })
+
+    // Calculate statistics using aligned statuses
+    const stats = {
+        needsBooking: orders.filter(o => getDeliveryStatus(o) === 'NEEDS_BOOKING').length,
+        booked: orders.filter(o => getDeliveryStatus(o) === UNIVERSAL_STATUS.TO_SHIP).length,
+        inTransit: orders.filter(o => getDeliveryStatus(o) === UNIVERSAL_STATUS.SHIPPING).length,
+        delivered: orders.filter(o => getDeliveryStatus(o) === UNIVERSAL_STATUS.DELIVERED).length,
+        cancelled: orders.filter(o => getDeliveryStatus(o) === UNIVERSAL_STATUS.CANCELLED).length,
+        returnRefund: orders.filter(o => getDeliveryStatus(o) === 'RETURN').length,
+        budolShapArranged: budolShapSettings?.enabled ? orders.filter(o => getDeliveryStatus(o) === 'BUDOLSHAP_ARRANGED').length : 0,
+        budolShapDocsReady: budolShapSettings?.enabled ? orders.filter(o => getDeliveryStatus(o) === 'BUDOLSHAP_DOCS_READY').length : 0,
+        budolShapPickedUp: budolShapSettings?.enabled ? orders.filter(o => getDeliveryStatus(o) === 'BUDOLSHAP_PICKED_UP').length : 0,
+    }
+
+    const productOptions = (() => {
+        const map = {}
+        orders.forEach(order => {
+            order.items?.forEach(item => {
+                const product = item.product
+                if (product?.id && !map[product.id]) {
+                    map[product.id] = {
+                        id: product.id,
+                        name: product.name || `Product ${product.id.slice(0, 6)}`
+                    }
+                }
+            })
+        })
+        return Object.values(map)
+    })()
+
+    const toggleProductSelection = (productId) => {
+        setSelectedProducts(prev =>
+            prev.includes(productId)
+                ? prev.filter(id => id !== productId)
+                : [...prev, productId]
+        )
+    }
+
+    return (
+        <>
+            <div className="flex justify-between items-center mb-5">
+                <h1 className="text-2xl text-slate-500">Store <span className="text-slate-800 font-medium">Orders</span></h1>
+                <div className="flex gap-2">
+                    {/* Export Button */}
+                    <button
+                        onClick={() => {
+                            const exportData = filteredOrders.map(order => ({
+                                'Order ID': order.id,
+                                'Customer': order.user?.name || 'N/A',
+                                'Email': order.user?.email || 'N/A',
+                                'Total': order.total,
+                                'Status': order.status,
+                                'Delivery Status': getDeliveryStatus(order),
+                                'Payment Method': order.paymentMethod,
+                                'Date': formatManilaTime(order.createdAt, { dateStyle: 'short' }),
+                                'Items': order.items?.map(item => `${item.quantity}x ${item.product?.name}`).join(', ')
+                            }))
+
+                            const csv = [
+                                Object.keys(exportData[0]).join(','),
+                                ...exportData.map(row => Object.values(row).map(field =>
+                                    typeof field === 'string' && field.includes(',') ? `"${field}"` : field
+                                ).join(','))
+                            ].join('\n')
+
+                            const blob = new Blob([csv], { type: 'text/csv' })
+                            const url = window.URL.createObjectURL(blob)
+                            const a = document.createElement('a')
+                            a.href = url
+                            a.download = `orders_${getManilaDateString()}.csv`
+                            a.click()
+                            window.URL.revokeObjectURL(url)
+                            toast.success('Orders exported successfully!')
+                        }}
+                        className="px-4 py-2 bg-emerald-600 text-white rounded-md hover:bg-emerald-700 transition-colors flex items-center gap-2"
+                    >
+                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                        </svg>
+                        Export CSV
+                    </button>
+
+                    {/* Refresh Button */}
+                    <button
+                        onClick={() => mutate()}
+                        disabled={loading}
+                        className="px-4 py-2 bg-slate-600 text-white rounded-md hover:bg-slate-700 disabled:bg-slate-400 transition-colors flex items-center gap-2"
+                    >
+                        <svg className={`w-4 h-4 ${loading ? 'animate-spin' : ''}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                        </svg>
+                        {loading ? 'Refreshing...' : 'Refresh'}
+                    </button>
+                </div>
+            </div>
+
+            {/* Statistics Dashboard */}
+            <div className={`grid grid-cols-1 gap-4 mb-6 ${budolShapSettings?.enabled
+                ? 'md:grid-cols-8'
+                : 'md:grid-cols-5'
+                }`}>
+                <div className="bg-orange-50 border border-orange-200 rounded-lg p-4">
+                    <div className="flex items-center justify-between">
+                        <div>
+                            <p className="text-xs text-orange-600 font-medium uppercase tracking-wide">To Ship (Pending)</p>
+                            <p className="text-2xl font-bold text-orange-700 mt-1">{stats.needsBooking}</p>
+                        </div>
+                        <div className="bg-orange-200 rounded-full p-3">
+                            <svg className="w-6 h-6 text-orange-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                            </svg>
+                        </div>
+                    </div>
+                </div>
+
+                <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+                    <div className="flex items-center justify-between">
+                        <div>
+                            <p className="text-xs text-blue-600 font-medium uppercase tracking-wide">To Ship (Booked)</p>
+                            <p className="text-2xl font-bold text-blue-700 mt-1">{stats.booked}</p>
+                        </div>
+                        <div className="bg-blue-200 rounded-full p-3">
+                            <svg className="w-6 h-6 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                            </svg>
+                        </div>
+                    </div>
+                </div>
+
+                <div className="bg-purple-50 border border-purple-200 rounded-lg p-4">
+                    <div className="flex items-center justify-between">
+                        <div>
+                            <p className="text-xs text-purple-600 font-medium uppercase tracking-wide">In Transit</p>
+                            <p className="text-2xl font-bold text-purple-700 mt-1">{stats.inTransit}</p>
+                        </div>
+                        <div className="bg-purple-200 rounded-full p-3">
+                            <svg className="w-6 h-6 text-purple-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
+                            </svg>
+                        </div>
+                    </div>
+                </div>
+
+                <div className="bg-green-50 border border-green-200 rounded-lg p-4">
+                    <div className="flex items-center justify-between">
+                        <div>
+                            <p className="text-xs text-green-600 font-medium uppercase tracking-wide">Delivered</p>
+                            <p className="text-2xl font-bold text-green-700 mt-1">{stats.delivered}</p>
+                        </div>
+                        <div className="bg-green-200 rounded-full p-3">
+                            <svg className="w-6 h-6 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                            </svg>
+                        </div>
+                    </div>
+                </div>
+
+                <div className="bg-red-50 border border-red-200 rounded-lg p-4">
+                    <div className="flex items-center justify-between">
+                        <div>
+                            <p className="text-xs text-red-600 font-medium uppercase tracking-wide">Cancelled</p>
+                            <p className="text-2xl font-bold text-red-700 mt-1">{stats.cancelled}</p>
+                        </div>
+                        <div className="bg-red-200 rounded-full p-3">
+                            <svg className="w-6 h-6 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                            </svg>
+                        </div>
+                    </div>
+                </div>
+
+                <div className="bg-rose-50 border border-rose-200 rounded-lg p-4">
+                    <div className="flex items-center justify-between">
+                        <div>
+                            <p className="text-xs text-rose-600 font-medium uppercase tracking-wide">Return / Refund</p>
+                            <p className="text-2xl font-bold text-rose-700 mt-1">{stats.returnRefund}</p>
+                        </div>
+                        <div className="bg-rose-200 rounded-full p-3 text-rose-600">
+                            <span className="font-bold">R&R</span>
+                        </div>
+                    </div>
+                </div>
+
+                {/* BudolShap Shipping Status Cards - Only show when enabled */}
+                {budolShapSettings?.enabled && (
+                    <>
+                        <div className="bg-indigo-50 border border-indigo-200 rounded-lg p-4">
+                            <div className="flex items-center justify-between">
+                                <div>
+                                    <p className="text-xs text-indigo-600 font-medium uppercase tracking-wide">BudolShap Arranged</p>
+                                    <p className="text-2xl font-bold text-indigo-700 mt-1">{stats.budolShapArranged}</p>
+                                </div>
+                                <div className="bg-indigo-200 rounded-full p-3">
+                                    <svg className="w-6 h-6 text-indigo-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                                    </svg>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div className="bg-emerald-50 border border-emerald-200 rounded-lg p-4">
+                            <div className="flex items-center justify-between">
+                                <div>
+                                    <p className="text-xs text-emerald-600 font-medium uppercase tracking-wide">Docs Ready</p>
+                                    <p className="text-2xl font-bold text-emerald-700 mt-1">{stats.budolShapDocsReady}</p>
+                                </div>
+                                <div className="bg-emerald-200 rounded-full p-3">
+                                    <svg className="w-6 h-6 text-emerald-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                                    </svg>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div className="bg-teal-50 border border-teal-200 rounded-lg p-4">
+                            <div className="flex items-center justify-between">
+                                <div>
+                                    <p className="text-xs text-teal-600 font-medium uppercase tracking-wide">Picked Up</p>
+                                    <p className="text-2xl font-bold text-teal-700 mt-1">{stats.budolShapPickedUp}</p>
+                                </div>
+                                <div className="bg-teal-200 rounded-full p-3">
+                                    <svg className="w-6 h-6 text-teal-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                                    </svg>
+                                </div>
+                            </div>
+                        </div>
+                    </>
+                )}
+            </div>
+
+            {/* Filter Controls */}
+            <div className="mb-4 flex gap-2 flex-wrap items-center">
+                {/* Search Input */}
+                <div className="flex-1 min-w-[300px]">
+                    <input
+                        type="text"
+                        placeholder="Search orders, customers, or products..."
+                        value={searchTerm}
+                        onChange={(e) => setSearchTerm(e.target.value)}
+                        className="w-full px-4 py-2 border border-slate-300 rounded-md focus:ring-2 focus:ring-slate-500 focus:border-slate-500"
+                    />
+                </div>
+
+                {/* Advanced Filters Toggle */}
+                <button
+                    onClick={() => setShowAdvancedFilters(!showAdvancedFilters)}
+                    className="px-4 py-2 bg-slate-600 text-white rounded-md hover:bg-slate-700 transition-colors flex items-center gap-2"
+                >
+                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 4a1 1 0 011-1h16a1 1 0 011 1v2.586a1 1 0 01-.293.707l-6.414 6.414a1 1 0 00-.293.707V17l-4 4v-6.586a1 1 0 00-.293-.707L3.293 7.293A1 1 0 013 6.586V4z" />
+                    </svg>
+                    Advanced Filters
+                </button>
+
+                {/* Clear Filters */}
+                {(searchTerm || dateRange.start || dateRange.end || priceRange.min || priceRange.max || selectedProducts.length > 0) && (
+                    <button
+                        onClick={() => {
+                            setSearchTerm('')
+                            setDateRange({ start: '', end: '' })
+                            setPriceRange({ min: '', max: '' })
+                            setSelectedProducts([])
+                        }}
+                        className="px-4 py-2 bg-red-600 text-white rounded-md hover:bg-red-700 transition-colors"
+                    >
+                        Clear All
+                    </button>
+                )}
+            </div>
+
+            {/* Advanced Filters Panel */}
+            {showAdvancedFilters && (
+                <div className="mb-4 p-4 bg-slate-50 border border-slate-200 rounded-lg">
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                        {/* Date Range Filter */}
+                        <div>
+                            <label className="block text-sm font-medium text-slate-700 mb-2">Date Range</label>
+                            <div className="flex gap-2">
+                                <input
+                                    type="date"
+                                    value={dateRange.start}
+                                    onChange={(e) => setDateRange({ ...dateRange, start: e.target.value })}
+                                    className="flex-1 px-3 py-2 border border-slate-300 rounded-md focus:ring-2 focus:ring-slate-500 focus:border-slate-500"
+                                />
+                                <span className="self-center text-slate-500">to</span>
+                                <input
+                                    type="date"
+                                    value={dateRange.end}
+                                    onChange={(e) => setDateRange({ ...dateRange, end: e.target.value })}
+                                    className="flex-1 px-3 py-2 border border-slate-300 rounded-md focus:ring-2 focus:ring-slate-500 focus:border-slate-500"
+                                />
+                            </div>
+                        </div>
+
+                        {/* Price Range Filter */}
+                        <div>
+                            <label className="block text-sm font-medium text-slate-700 mb-2">Price Range</label>
+                            <div className="flex gap-2">
+                                <input
+                                    type="number"
+                                    placeholder="Min"
+                                    value={priceRange.min}
+                                    onChange={(e) => setPriceRange({ ...priceRange, min: e.target.value })}
+                                    className="flex-1 px-3 py-2 border border-slate-300 rounded-md focus:ring-2 focus:ring-slate-500 focus:border-slate-500"
+                                />
+                                <span className="self-center text-slate-500">to</span>
+                                <input
+                                    type="number"
+                                    placeholder="Max"
+                                    value={priceRange.max}
+                                    onChange={(e) => setPriceRange({ ...priceRange, max: e.target.value })}
+                                    className="flex-1 px-3 py-2 border border-slate-300 rounded-md focus:ring-2 focus:ring-slate-500 focus:border-slate-500"
+                                />
+                            </div>
+                        </div>
+
+                        <div>
+                            <label className="block text-sm font-medium text-slate-700 mb-2">Products</label>
+                            <div className="mt-1 max-h-40 overflow-y-auto border border-slate-200 rounded-md bg-white px-3 py-2">
+                                {productOptions.length === 0 ? (
+                                    <div className="text-xs text-slate-400">
+                                        No products available in current orders
+                                    </div>
+                                ) : (
+                                    productOptions.map(product => (
+                                        <label
+                                            key={product.id}
+                                            className="flex items-center gap-2 text-sm text-slate-700 py-1"
+                                        >
+                                            <input
+                                                type="checkbox"
+                                                checked={selectedProducts.includes(product.id)}
+                                                onChange={() => toggleProductSelection(product.id)}
+                                                className="rounded border-slate-300 text-slate-600 focus:ring-slate-500"
+                                            />
+                                            <span className="truncate">
+                                                {product.name}
+                                            </span>
+                                        </label>
+                                    ))
+                                )}
+                            </div>
+                        </div>
+                    </div>
+                    <div className="mt-3 text-sm text-slate-600">
+                        Showing <span className="font-semibold">{filteredOrders.length}</span> of <span className="font-semibold">{orders.length}</span> orders
+                    </div>
+                </div>
+            )}
+
+            {/* Status Filter Controls */}
+            <div className="mb-4 flex gap-2 flex-wrap">
+                <button
+                    onClick={() => setDeliveryFilter('all')}
+                    className={`px-4 py-2 rounded-md text-sm font-medium transition-colors ${deliveryFilter === 'all'
+                        ? 'bg-slate-700 text-white'
+                        : 'bg-slate-100 text-slate-700 hover:bg-slate-200'
+                        }`}
+                >
+                    All Orders ({orders.length})
+                </button>
+                <button
+                    onClick={() => setDeliveryFilter('NEEDS_BOOKING')}
+                    className={`px-4 py-2 rounded-md text-sm font-medium transition-colors ${deliveryFilter === 'NEEDS_BOOKING'
+                        ? 'bg-orange-600 text-white'
+                        : 'bg-orange-100 text-orange-700 hover:bg-orange-200'
+                        }`}
+                >
+                    ⚠️ To Ship (Pending) ({stats.needsBooking})
+                </button>
+                <button
+                    onClick={() => setDeliveryFilter(UNIVERSAL_STATUS.TO_SHIP)}
+                    className={`px-4 py-2 rounded-md text-sm font-medium transition-colors ${deliveryFilter === UNIVERSAL_STATUS.TO_SHIP
+                        ? 'bg-blue-600 text-white'
+                        : 'bg-blue-100 text-blue-700 hover:bg-blue-200'
+                        }`}
+                >
+                    📦 To Ship (Booked) ({stats.booked})
+                </button>
+                <button
+                    onClick={() => setDeliveryFilter(UNIVERSAL_STATUS.SHIPPING)}
+                    className={`px-4 py-2 rounded-md text-sm font-medium transition-colors ${deliveryFilter === UNIVERSAL_STATUS.SHIPPING
+                        ? 'bg-purple-600 text-white'
+                        : 'bg-purple-100 text-purple-700 hover:bg-purple-200'
+                        }`}
+                >
+                    🚚 In Transit ({stats.inTransit})
+                </button>
+                <button
+                    onClick={() => setDeliveryFilter(UNIVERSAL_STATUS.DELIVERED)}
+                    className={`px-4 py-2 rounded-md text-sm font-medium transition-colors ${deliveryFilter === UNIVERSAL_STATUS.DELIVERED
+                        ? 'bg-green-600 text-white'
+                        : 'bg-green-100 text-green-700 hover:bg-green-200'
+                        }`}
+                >
+                    ✅ Delivered ({stats.delivered})
+                </button>
+                <button
+                    onClick={() => setDeliveryFilter(UNIVERSAL_STATUS.CANCELLED)}
+                    className={`px-4 py-2 rounded-md text-sm font-medium transition-colors ${deliveryFilter === UNIVERSAL_STATUS.CANCELLED
+                        ? 'bg-red-600 text-white'
+                        : 'bg-red-100 text-red-700 hover:bg-red-200'
+                        }`}
+                >
+                    ❌ Cancelled ({stats.cancelled})
+                </button>
+                <button
+                    onClick={() => setDeliveryFilter('RETURN')}
+                    className={`px-4 py-2 rounded-md text-sm font-medium transition-colors ${deliveryFilter === 'RETURN'
+                        ? 'bg-rose-600 text-white'
+                        : 'bg-rose-100 text-rose-700 hover:bg-rose-200'
+                        }`}
+                >
+                    🔄 Return / Refund ({stats.returnRefund})
+                </button>
+
+                {/* BudolShap Shipping Filter Buttons - Only show when enabled */}
+                {budolShapSettings?.enabled && (
+                    <>
+                        <button
+                            onClick={() => setDeliveryFilter('BUDOLSHAP_ARRANGED')}
+                            className={`px-4 py-2 rounded-md text-sm font-medium transition-colors ${deliveryFilter === 'BUDOLSHAP_ARRANGED'
+                                ? 'bg-indigo-600 text-white'
+                                : 'bg-indigo-100 text-indigo-700 hover:bg-indigo-200'
+                                }`}
+                        >
+                            📋 BudolShap Arranged ({stats.budolShapArranged})
+                        </button>
+                        <button
+                            onClick={() => setDeliveryFilter('BUDOLSHAP_DOCS_READY')}
+                            className={`px-4 py-2 rounded-md text-sm font-medium transition-colors ${deliveryFilter === 'BUDOLSHAP_DOCS_READY'
+                                ? 'bg-emerald-600 text-white'
+                                : 'bg-emerald-100 text-emerald-700 hover:bg-emerald-200'
+                                }`}
+                        >
+                            📄 Docs Ready ({stats.budolShapDocsReady})
+                        </button>
+                        <button
+                            onClick={() => setDeliveryFilter('BUDOLSHAP_PICKED_UP')}
+                            className={`px-4 py-2 rounded-md text-sm font-medium transition-colors ${deliveryFilter === 'BUDOLSHAP_PICKED_UP'
+                                ? 'bg-teal-600 text-white'
+                                : 'bg-teal-100 text-teal-700 hover:bg-teal-200'
+                                }`}
+                        >
+                            🚚 Picked Up ({stats.budolShapPickedUp})
+                        </button>
+                    </>
+                )}
+            </div>
+
+            {/* Bulk Actions Controls */}
+            {selectedOrders.length > 0 && (
+                <div className="mb-4 p-4 bg-blue-50 border border-blue-200 rounded-lg">
+                    <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-4">
+                            <span className="text-sm font-medium text-blue-700">
+                                {selectedOrders.length} orders selected
+                            </span>
+                            <select
+                                value={bulkAction}
+                                onChange={(e) => setBulkAction(e.target.value)}
+                                className="px-3 py-2 border border-blue-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                            >
+                                <option value="">Select Action</option>
+                                <option value="mark_shipped">Mark as Shipped</option>
+                                <option value="mark_delivered">Mark as Delivered</option>
+                                <option value="cancel">Cancel Orders</option>
+                                <option value="mark_returned">Mark as Returned</option>
+                            </select>
+                            <button
+                                onClick={executeBulkAction}
+                                disabled={!bulkAction || isProcessingBulk}
+                                className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 disabled:bg-blue-300 disabled:cursor-not-allowed transition-colors"
+                            >
+                                {isProcessingBulk ? 'Processing...' : 'Apply'}
+                            </button>
+                        </div>
+                        <button
+                            onClick={() => setSelectedOrders([])}
+                            className="text-sm text-blue-600 hover:text-blue-700 underline"
+                        >
+                            Clear Selection
+                        </button>
+                    </div>
+                </div>
+            )}
+
+            {filteredOrders.length === 0 ? (
+                <div className="text-center py-12 bg-slate-50 rounded-lg border border-slate-200">
+                    <p className="text-slate-500 text-lg">No orders found</p>
+                    {deliveryFilter !== 'all' && (
+                        <button
+                            onClick={() => setDeliveryFilter('all')}
+                            className="mt-4 text-blue-600 hover:text-blue-700 underline"
+                        >
+                            View all orders
+                        </button>
+                    )}
+                </div>
+            ) : (
+                <div className="overflow-x-auto rounded-md shadow border border-gray-200">
+                    <table className="w-full text-sm text-left text-gray-600">
+                        <thead className="bg-gray-50 text-gray-700 text-xs uppercase tracking-wider">
+                            <tr>
+                                <th className="px-4 py-3">
+                                    <input
+                                        type="checkbox"
+                                        checked={selectedOrders.length === filteredOrders.length && filteredOrders.length > 0}
+                                        onChange={handleSelectAll}
+                                        className="rounded border-slate-300 text-slate-600 focus:ring-slate-500"
+                                    />
+                                </th>
+                                {["Sr. No.", "Customer", "Total", "Payment", "Status", "Delivery", "Date"].map((heading, i) => (
+                                    <th key={i} className="px-4 py-3">{heading}</th>
+                                ))}
+                            </tr>
+                        </thead>
+                        <tbody className="divide-y divide-gray-100">
+                            {filteredOrders.map((order, index) => (
+                                <tr
+                                    key={order.id}
+                                    className="hover:bg-gray-50 transition-colors duration-150 cursor-pointer"
+                                    onClick={() => openModal(order)}
+                                >
+                                    <td className="pl-4 py-3" onClick={(e) => e.stopPropagation()}>
+                                        <input
+                                            type="checkbox"
+                                            checked={selectedOrders.includes(order.id)}
+                                            onChange={() => handleSelectOrder(order.id)}
+                                            className="rounded border-slate-300 text-slate-600 focus:ring-slate-500"
+                                        />
+                                    </td>
+                                    <td className="pl-6 text-green-600 font-medium" >
+                                        {(page - 1) * 20 + index + 1}
+                                    </td>
+                                    <td className="px-4 py-3 whitespace-nowrap">
+                                        <div className="font-medium text-slate-800">{order.user?.name}</div>
+                                        <div className="text-xs text-slate-500">#<BudolPayText text={order.id} /></div>
+                                    </td>
+                                    <td className="px-4 py-3 font-semibold text-slate-800">{currency}{order.total.toLocaleString()}</td>
+                                    <td className="px-4 py-3">
+                                        <span className={`text-sm font-medium px-2 py-1 rounded ${order.paymentMethod === 'GCASH' ? 'bg-blue-50 text-blue-600' : 'bg-slate-100 text-slate-600'
+                                            }`}>
+                                            {order.paymentMethod === 'BUDOL_PAY'
+                                                ? <BudolPayText text="budolPay" />
+                                                : order.paymentMethod}
+                                        </span>
+                                    </td>
+                                    <td className="px-4 py-3" onClick={(e) => { e.stopPropagation() }}>
+                                        {/* Enhanced Status Display */}
+                                        {(() => {
+                                            const statusDisplay = getStatusDisplay(order)
+                                            const isEditable = ![UNIVERSAL_STATUS.DELIVERED, UNIVERSAL_STATUS.COMPLETED, UNIVERSAL_STATUS.CANCELLED, UNIVERSAL_STATUS.REFUNDED].includes(order.status) &&
+                                                ![UNIVERSAL_STATUS.RETURN_REQUESTED, UNIVERSAL_STATUS.RETURN_APPROVED, UNIVERSAL_STATUS.RETURN_DISPUTED].includes(order.status)
+
+                                            if (isEditable && [UNIVERSAL_STATUS.ORDER_PLACED, UNIVERSAL_STATUS.PAID, UNIVERSAL_STATUS.PROCESSING, UNIVERSAL_STATUS.TO_SHIP, UNIVERSAL_STATUS.SHIPPING].includes(order.status)) {
+                                                return (
+                                                    <div className="relative group">
+                                                        <select
+                                                            value={order.status}
+                                                            onChange={e => updateOrderStatus(order.id, e.target.value)}
+                                                            className="border-gray-200 bg-white rounded-md text-xs focus:ring focus:ring-blue-200 px-2 py-1 cursor-pointer hover:border-blue-300 transition-colors shadow-sm"
+                                                            title={statusDisplay.description}
+                                                        >
+                                                            <option value={order.status} disabled>Current: {statusDisplay.label}</option>
+                                                            {[UNIVERSAL_STATUS.ORDER_PLACED, UNIVERSAL_STATUS.PAID].includes(order.status) && <option value={UNIVERSAL_STATUS.PROCESSING}>→ Mark Processing</option>}
+                                                            {order.status === UNIVERSAL_STATUS.PROCESSING && <option value={UNIVERSAL_STATUS.TO_SHIP}>→ Mark Ready for Pickup</option>}
+                                                            {[UNIVERSAL_STATUS.TO_SHIP, UNIVERSAL_STATUS.SHIPPING].includes(order.status) && <option value={UNIVERSAL_STATUS.DELIVERED}>→ Mark Delivered</option>}
+                                                        </select>
+                                                        <div className="absolute bottom-full left-0 mb-2 hidden group-hover:block bg-slate-800 text-white text-xs rounded px-2 py-1 whitespace-nowrap z-10">
+                                                            {statusDisplay.description}
+                                                        </div>
+                                                    </div>
+                                                )
+                                            }
+
+                                            return (
+                                                <div className="relative group">
+                                                    <span
+                                                        className={`px-2 py-1 bg-${statusDisplay.color}-100 text-${statusDisplay.color}-800 rounded-full text-xs font-medium inline-flex items-center gap-1 cursor-help`}
+                                                        title={statusDisplay.description}
+                                                    >
+                                                        <span>{statusDisplay.icon}</span>
+                                                        {statusDisplay.label}
+                                                    </span>
+                                                    <div className="absolute bottom-full left-0 mb-2 hidden group-hover:block bg-slate-800 text-white text-xs rounded px-2 py-1 whitespace-nowrap z-10">
+                                                        {statusDisplay.description}
+                                                    </div>
+                                                </div>
+                                            )
+                                        })()}
+                                    </td>
+
+                                    {/* Action Column for Delivery */}
+                                    <td className="px-4 py-3" onClick={(e) => e.stopPropagation()}>
+                                        {getDeliveryStatus(order) === UNIVERSAL_STATUS.CANCELLED && order.shipping?.failureReason ? (
+                                            <div className="flex flex-col gap-1">
+                                                <span className="text-xs font-medium text-red-700 flex items-center gap-1">
+                                                    <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg>
+                                                    {order.shipping?.failureReason || 'Failed'}
+                                                </span>
+                                                <button
+                                                    onClick={() => openModal(order)}
+                                                    className="text-xs text-blue-600 hover:text-blue-800 hover:underline font-medium text-left flex items-center gap-1"
+                                                >
+                                                    <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" /></svg>
+                                                    Rebook Delivery
+                                                </button>
+                                            </div>
+                                        ) : getDeliveryStatus(order) === 'NEEDS_BOOKING' ? (
+                                            <button
+                                                onClick={() => {
+                                                    if (budolShapSettings?.enabled) {
+                                                        openBudolShapModal(order)
+                                                    } else {
+                                                        openModal(order)
+                                                    }
+                                                }}
+                                                disabled={isBooking}
+                                                className={`group flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium rounded-md transition-all shadow-sm disabled:opacity-50 disabled:cursor-not-allowed transform hover:translate-y-[-1px] ${budolShapSettings?.enabled
+                                                    ? 'bg-indigo-600 text-white hover:bg-indigo-700 shadow-indigo-200'
+                                                    : 'bg-blue-600 text-white hover:bg-blue-700 shadow-blue-200'
+                                                    }`}
+                                            >
+                                                <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+                                                </svg>
+                                                {budolShapSettings?.enabled ? 'Arrange BudolShap Shipment' : 'Review & Book'}
+                                            </button>
+                                        ) : getDeliveryStatus(order) === UNIVERSAL_STATUS.TO_SHIP ? (
+                                            <div className="flex flex-col">
+                                                <span className="flex items-center gap-1 text-xs font-medium text-blue-700">
+                                                    <span className="w-1.5 h-1.5 bg-blue-500 rounded-full animate-pulse"></span>
+                                                    Booked
+                                                </span>
+                                            </div>
+                                        ) : getDeliveryStatus(order) === UNIVERSAL_STATUS.SHIPPING ? (
+                                            <span className="flex items-center gap-1 text-xs font-medium text-purple-700">
+                                                <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" /></svg>
+                                                In Transit
+                                            </span>
+                                        ) : getDeliveryStatus(order) === UNIVERSAL_STATUS.DELIVERED ? (
+                                            <span className="flex items-center gap-1 text-xs font-medium text-green-700">
+                                                <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" /></svg>
+                                                Delivered
+                                            </span>
+                                        ) : getDeliveryStatus(order) === 'BUDOLSHAP_ARRANGED' ? (
+                                            <div className="flex flex-col gap-1">
+                                                <span className="flex items-center gap-1 text-xs font-medium text-indigo-700">
+                                                    <span className="w-1.5 h-1.5 bg-indigo-500 rounded-full animate-pulse"></span>
+                                                    BudolShap Arranged
+                                                </span>
+                                                {order.shipping?.shipBy && (
+                                                    <span className="text-xs text-indigo-600">
+                                                        Ship by: {formatManilaTime(order.shipping.shipBy, { dateStyle: 'medium' })}
+                                                    </span>
+                                                )}
+                                                <button
+                                                    onClick={() => openBudolShapModal(order)}
+                                                    className="text-xs text-indigo-600 hover:text-indigo-800 hover:underline font-medium text-left flex items-center gap-1"
+                                                >
+                                                    <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" /></svg>
+                                                    Generate BudolShap Documents
+                                                </button>
+                                            </div>
+                                        ) : getDeliveryStatus(order) === 'BUDOLSHAP_DOCS_READY' ? (
+                                            <div className="flex flex-col gap-1">
+                                                <span className="flex items-center gap-1 text-xs font-medium text-emerald-700">
+                                                    <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" /></svg>
+                                                    Docs Ready
+                                                </span>
+                                                {order.shipping?.documents?.waybillUrl && (
+                                                    <a
+                                                        href={order.shipping.documents.waybillUrl}
+                                                        target="_blank"
+                                                        rel="noopener noreferrer"
+                                                        className="text-xs text-emerald-600 hover:text-emerald-800 hover:underline font-medium flex items-center gap-1"
+                                                    >
+                                                        <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" /></svg>
+                                                        View Waybill
+                                                    </a>
+                                                )}
+                                                {order.shipping?.documents?.packingListUrl && (
+                                                    <a
+                                                        href={order.shipping.documents.packingListUrl}
+                                                        target="_blank"
+                                                        rel="noopener noreferrer"
+                                                        className="text-xs text-emerald-600 hover:text-emerald-800 hover:underline font-medium flex items-center gap-1"
+                                                    >
+                                                        <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" /></svg>
+                                                        View Packing List
+                                                    </a>
+                                                )}
+                                            </div>
+                                        ) : getDeliveryStatus(order) === 'BUDOLSHAP_PICKED_UP' ? (
+                                            <span className="flex items-center gap-1 text-xs font-medium text-teal-700">
+                                                <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" /></svg>
+                                                Picked Up
+                                            </span>
+                                        ) : (
+                                            <span className="text-xs text-slate-400">—</span>
+                                        )}
+                                    </td>
+
+                                    <td className="px-4 py-3 text-gray-500 whitespace-nowrap text-xs">
+                                        <div className="font-medium">{formatManilaTime(order.createdAt, { dateStyle: 'short' })}</div>
+                                    <div className="text-[10px] text-slate-400">
+                                        {formatManilaTime(order.createdAt, { timeStyle: 'short' })}
+                                    </div>
+                                    </td>
+                                </tr>
+                            ))}
+                        </tbody>
+                    </table>
+                </div>
+            )}
+
+            {pagination && pagination.totalPages > 1 && (
+                <div className="flex justify-center gap-4 mt-8">
+                    <button
+                        onClick={() => setPage(p => Math.max(1, p - 1))}
+                        disabled={page === 1}
+                        className="px-4 py-2 border rounded disabled:opacity-50 hover:bg-slate-50"
+                    >
+                        Previous
+                    </button>
+                    <span className="flex items-center text-slate-600">
+                        Page {page} of {pagination.totalPages}
+                    </span>
+                    <button
+                        onClick={() => setPage(p => Math.min(pagination.totalPages, p + 1))}
+                        disabled={page === pagination.totalPages}
+                        className="px-4 py-2 border rounded disabled:opacity-50 hover:bg-slate-50"
+                    >
+                        Next
+                    </button>
+                </div>
+            )}
+
+            {/* Modal */}
+            {isModalOpen && selectedOrder && (
+                <div onClick={closeModal} className="fixed inset-0 flex items-center justify-center bg-black/50 text-slate-700 text-sm backdrop-blur-xs z-50" >
+                    <div onClick={e => e.stopPropagation()} className="bg-white rounded-lg shadow-lg max-w-2xl w-full p-6 relative max-h-[90vh] overflow-y-auto">
+                        {/* Close Button */}
+                        <button
+                            onClick={closeModal}
+                            className="absolute top-4 right-4 p-2 text-slate-400 hover:text-slate-600 hover:bg-slate-100 rounded-full transition-all z-10"
+                            aria-label="Close modal"
+                        >
+                            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                            </svg>
+                        </button>
+
+                        <h2 className="text-xl font-semibold text-slate-900 mb-4 text-center">
+                            Order Details #<BudolPayText text={selectedOrder.id} />
+                        </h2>
+
+                        {/* Customer Details */}
+                        <div className="mb-4 border-b border-slate-100 pb-2">
+                            <button
+                                onClick={() => toggleSection('customer')}
+                                className="w-full flex items-center justify-between font-semibold mb-2 text-slate-800 hover:text-blue-600 transition-colors"
+                            >
+                                <span>Customer Details</span>
+                                <svg
+                                    className={`w-5 h-5 transition-transform ${collapsedSections.customer ? '' : 'rotate-180'}`}
+                                    fill="none"
+                                    stroke="currentColor"
+                                    viewBox="0 0 24 24"
+                                >
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                                </svg>
+                            </button>
+                            {!collapsedSections.customer && (
+                                <div className="space-y-1 mt-2 animate-in fade-in slide-in-from-top-1 duration-200">
+                                    <p><span className="text-green-700 font-medium">Name:</span> {selectedOrder.user?.name}</p>
+                                    <p><span className="text-green-700 font-medium">Email:</span> {selectedOrder.user?.email}</p>
+                                    <p><span className="text-green-700 font-medium">Phone:</span> {selectedOrder.address?.phone}</p>
+                                    <p><span className="text-green-700 font-medium">Address:</span> {`${selectedOrder.address?.street}, ${selectedOrder.address?.city}, ${selectedOrder.address?.state}, ${selectedOrder.address?.zip}, ${selectedOrder.address?.country}`}</p>
+                                </div>
+                            )}
+                        </div>
+
+                        {/* Products */}
+                        <div className="mb-4">
+                            <h3 className="font-semibold mb-2">Products</h3>
+                            <div className="space-y-2">
+                                {selectedOrder.orderItems.map((item, i) => {
+                                    const productImage = Array.isArray(item.product.images)
+                                        ? item.product.images[0]
+                                        : (item.product.images?.src || item.product.images || '/placeholder.png')
+                                    return (
+                                        <div key={i} className="flex items-center gap-4 border border-slate-100 shadow rounded p-2">
+                                            <img
+                                                src={productImage}
+                                                alt={item.product?.name || 'Product'}
+                                                className="w-16 h-16 object-cover rounded"
+                                            />
+                                            <div className="flex-1">
+                                                <p className="text-slate-800">{item.product?.name || 'Unknown Product'}</p>
+                                                <p>Qty: {item.quantity}</p>
+                                                <p>Price: {currency}{Number(item.price).toLocaleString()}</p>
+                                            </div>
+                                        </div>
+                                    )
+                                })}
+                            </div>
+                        </div>
+
+                        {/* Order Summary Breakdown */}
+                        <div className="mb-6 p-4 bg-slate-50 rounded-lg border border-slate-100">
+                            <div className="flex justify-between text-slate-600 mb-1">
+                                <span>Subtotal</span>
+                                <span>{currency}{Number(selectedOrder.total - (selectedOrder.shippingCost || 0)).toLocaleString()}</span>
+                            </div>
+                            <div className="flex justify-between text-slate-600 mb-1">
+                                <span>Shipping Fee</span>
+                                <span className="text-slate-600 font-medium">
+                                    {currency}{Number(selectedOrder.shipping?.cost || selectedOrder.shippingCost || 0).toLocaleString()}
+                                </span>
+                            </div>
+                            {selectedOrder.shipping?.shippingDiscount > 0 && (
+                                <div className="flex justify-between text-xs mb-1">
+                                    <span className="text-green-600 ml-4">↳ Seller Subsidy</span>
+                                    <span className="text-green-600 font-medium">-{currency}{Number(selectedOrder.shipping.shippingDiscount).toLocaleString()}</span>
+                                </div>
+                            )}
+                            {selectedOrder.shipping?.voucherAmount > 0 && (
+                                <div className="flex justify-between text-xs mb-1">
+                                    <span className="text-blue-600 ml-4">↳ Shipping Voucher</span>
+                                    <span className="text-blue-600 font-medium">-{currency}{Number(selectedOrder.shipping.voucherAmount).toLocaleString()}</span>
+                                </div>
+                            )}
+                            {selectedOrder.isCouponUsed && (
+                                <div className="flex justify-between text-slate-600 mb-1">
+                                    <span>Voucher</span>
+                                    <span className="text-green-600 font-medium">-{currency}{(selectedOrder.coupon?.discount || 0).toLocaleString()}</span>
+                                </div>
+                            )}
+                            <div className="flex justify-between text-slate-900 font-bold text-lg mt-2 pt-2 border-t border-slate-200">
+                                <span>Order Total</span>
+                                <span>{currency}{Number(selectedOrder.total).toLocaleString()}</span>
+                            </div>
+                        </div>
+
+                        {/* Payment & Status */}
+                        <div className="mb-4 border-b border-slate-100 pb-2">
+                            <button
+                                onClick={() => toggleSection('payment')}
+                                className="w-full flex items-center justify-between font-semibold mb-2 text-slate-800 hover:text-blue-600 transition-colors"
+                            >
+                                <span>Payment & Order Info</span>
+                                <svg
+                                    className={`w-5 h-5 transition-transform ${collapsedSections.payment ? '' : 'rotate-180'}`}
+                                    fill="none"
+                                    stroke="currentColor"
+                                    viewBox="0 0 24 24"
+                                >
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                                </svg>
+                            </button>
+                            {!collapsedSections.payment && (
+                                <div className="space-y-1 mt-2 animate-in fade-in slide-in-from-top-1 duration-200">
+                                    <p><span className="text-green-700 font-medium">Order ID:</span> <BudolPayText text={selectedOrder.id} /></p>
+                                    <p className="flex items-center gap-1">
+                                        <span className="text-green-700 font-medium">Payment Method:</span>
+                                        {selectedOrder.paymentMethod === 'BUDOL_PAY' ? (
+                                            <BudolPayText text="budolPay" />
+                                        ) : selectedOrder.paymentMethod === 'BUDOL_CARE' ? (
+                                            <BudolPayText text="budolCare" />
+                                        ) : (
+                                            selectedOrder.paymentMethod
+                                        )}
+                                    </p>
+                                    <p><span className="text-green-700 font-medium">Paid:</span> {selectedOrder.isPaid ? "Yes" : "No"}</p>
+                                    {selectedOrder.isCouponUsed && (
+                                        <p><span className="text-green-700 font-medium">Coupon:</span> {selectedOrder.coupon.code} ({selectedOrder.coupon.discount}% off)</p>
+                                    )}
+                                    <p><span className="text-green-700 font-medium">Status:</span> {selectedOrder.status}</p>
+                                    <p><span className="text-green-700 font-medium">Order Date:</span> {formatManilaTime(selectedOrder.createdAt)}</p>
+                                </div>
+                            )}
+                        </div>
+
+                        {/* Shipping / Booking Section */}
+                        {(!selectedOrder.shipping?.bookingId || selectedOrder.shipping?.failureReason) && (
+                            <div className="mb-4 border-b border-slate-100 pb-2">
+                                <button
+                                    onClick={() => toggleSection('shipping')}
+                                    className="w-full flex items-center justify-between font-semibold mb-2 text-slate-800 hover:text-blue-600 transition-colors"
+                                >
+                                    <div className="flex items-center gap-2">
+                                        <span>Arrange Delivery</span>
+                                        {selectedOrder.shipping?.failureReason && (
+                                            <span className="text-[10px] bg-red-100 text-red-700 px-2 py-0.5 rounded-full font-medium">Rebooking needed</span>
+                                        )}
+                                    </div>
+                                    <svg
+                                        className={`w-5 h-5 transition-transform ${collapsedSections.shipping ? '' : 'rotate-180'}`}
+                                        fill="none"
+                                        stroke="currentColor"
+                                        viewBox="0 0 24 24"
+                                    >
+                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                                    </svg>
+                                </button>
+                                {!collapsedSections.shipping && (
+                                    <div className="p-4 bg-slate-50 rounded-lg border border-slate-200 mt-2 animate-in fade-in slide-in-from-top-1 duration-200">
+                                        {/* Payment Pending Warning */}
+                                        {!['COD', 'BUDOL_PAY'].includes(selectedOrder.paymentMethod) && !selectedOrder.isPaid && (
+                                            <div className="mb-4 p-2 bg-orange-50 text-orange-700 text-xs border border-orange-200 rounded flex items-center gap-2">
+                                                <span>⚠️</span>
+                                                <strong>Payment Pending:</strong> You cannot book delivery until payment is confirmed.
+                                            </div>
+                                        )}
+
+                                        {/* Toggle Booking Type */}
+                                        <div className="flex gap-2 mb-4 p-1 bg-slate-200/50 rounded-lg inline-flex">
+                                            <button
+                                                onClick={() => setBookingType('lalamove')}
+                                                className={`px-3 py-1.5 text-xs font-medium rounded-md transition-all ${bookingType === 'lalamove' ? 'bg-white text-blue-600 shadow-sm' : 'text-slate-600 hover:bg-slate-200'
+                                                    }`}
+                                            >
+                                                🚀 Auto (Lalamove)
+                                            </button>
+                                            <button
+                                                onClick={() => setBookingType('manual')}
+                                                className={`px-3 py-1.5 text-xs font-medium rounded-md transition-all ${bookingType === 'manual' ? 'bg-white text-blue-600 shadow-sm' : 'text-slate-600 hover:bg-slate-200'
+                                                    }`}
+                                            >
+                                                ✍️ Manual / Other
+                                            </button>
+                                        </div>
+
+                                        {bookingType === 'lalamove' ? (
+                                            <div className="bg-blue-50/50 p-3 rounded border border-blue-100">
+                                                <div className="flex items-center gap-3 mb-3">
+                                                    <div className="bg-white p-1 rounded border border-blue-100">
+                                                        <Image src="/lalamove-logo.png" alt="Lalamove" width={24} height={24} className="object-contain" />
+                                                    </div>
+                                                    <div>
+                                                        <p className="text-sm font-medium text-slate-800">Lalamove Express</p>
+                                                        <p className="text-xs text-slate-500">Automatic booking & tracking</p>
+                                                    </div>
+                                                </div>
+                                                <button
+                                                    onClick={() => handleBookLalamove(selectedOrder)}
+                                                    disabled={isBooking || (!['COD', 'BUDOL_PAY'].includes(selectedOrder.paymentMethod) && !selectedOrder.isPaid)}
+                                                    className="w-full bg-blue-600 text-white px-4 py-2 rounded text-sm hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed flex justify-center items-center gap-2 font-medium shadow-sm shadow-blue-200 transition-all"
+                                                >
+                                                    {isBooking
+                                                        ? 'Processing...'
+                                                        : (!['COD', 'BUDOL_PAY'].includes(selectedOrder.paymentMethod) && !selectedOrder.isPaid)
+                                                            ? 'Waiting for Payment...'
+                                                            : 'Book Lalamove Now'
+                                                    }
+                                                </button>
+                                            </div>
+                                        ) : (
+                                            <div className="space-y-3 bg-white p-3 rounded border border-slate-200">
+                                                <div>
+                                                    <label className="block text-xs font-medium text-slate-700 mb-1">Provider Name</label>
+                                                    <input
+                                                        type="text"
+                                                        placeholder="e.g. J&T, Grab, LBC"
+                                                        className="w-full px-3 py-2 border border-slate-300 rounded text-sm focus:ring-1 focus:ring-blue-500 outline-none"
+                                                        value={manualDetails.provider}
+                                                        onChange={e => setManualDetails(prev => ({ ...prev, provider: e.target.value }))}
+                                                    />
+                                                </div>
+                                                <div>
+                                                    <label className="block text-xs font-medium text-slate-700 mb-1">Tracking Number (Tracking ID)</label>
+                                                    <input
+                                                        type="text"
+                                                        placeholder="Enter tracking number"
+                                                        className="w-full px-3 py-2 border border-slate-300 rounded text-sm focus:ring-1 focus:ring-blue-500 outline-none"
+                                                        value={manualDetails.trackingNumber}
+                                                        onChange={e => setManualDetails(prev => ({ ...prev, trackingNumber: e.target.value }))}
+                                                    />
+                                                </div>
+                                                <div>
+                                                    <label className="block text-xs font-medium text-slate-700 mb-1">Tracking Link (Optional)</label>
+                                                    <input
+                                                        type="text"
+                                                        placeholder="https://tracker.com/..."
+                                                        className="w-full px-3 py-2 border border-slate-300 rounded text-sm focus:ring-1 focus:ring-blue-500 outline-none"
+                                                        value={manualDetails.trackingUrl}
+                                                        onChange={e => setManualDetails(prev => ({ ...prev, trackingUrl: e.target.value }))}
+                                                    />
+                                                </div>
+                                                <button
+                                                    onClick={() => handleManualBook(selectedOrder)}
+                                                    disabled={isBooking || !manualDetails.provider || !manualDetails.trackingNumber || (selectedOrder.paymentMethod !== 'COD' && !selectedOrder.isPaid)}
+                                                    className="w-full bg-slate-800 text-white px-4 py-2 rounded text-sm hover:bg-slate-900 disabled:opacity-50 disabled:cursor-not-allowed flex justify-center items-center gap-2 font-medium shadow-sm transition-all"
+                                                >
+                                                    {isBooking ? 'Saving...' : 'Save Manual Booking'}
+                                                </button>
+                                            </div>
+                                        )}
+                                    </div>
+                                )}
+                            </div>
+                        )}
+
+                        {/* Existing Active Booking Details */}
+                        {selectedOrder.shipping && selectedOrder.shipping.bookingId && !selectedOrder.shipping.failureReason && (
+                            <div className="mb-4 border-b border-slate-100 pb-2">
+                                <button
+                                    onClick={() => toggleSection('shipping')}
+                                    className="w-full flex items-center justify-between font-semibold mb-2 text-slate-800 hover:text-blue-600 transition-colors"
+                                >
+                                    <span>Shipping Details</span>
+                                    <svg
+                                        className={`w-5 h-5 transition-transform ${collapsedSections.shipping ? '' : 'rotate-180'}`}
+                                        fill="none"
+                                        stroke="currentColor"
+                                        viewBox="0 0 24 24"
+                                    >
+                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                                    </svg>
+                                </button>
+                                {!collapsedSections.shipping && (
+                                    <div className="p-3 bg-blue-50 rounded border border-blue-100 mt-2 animate-in fade-in slide-in-from-top-1 duration-200">
+                                        <h3 className="font-semibold mb-2 text-blue-800 flex items-center gap-2 capitalize">
+                                            {selectedOrder.shipping.provider === 'lalamove' ? (
+                                                <Image src="/lalamove-logo.png" alt="Lalamove" width={24} height={24} className="object-contain" />
+                                            ) : (
+                                                <span className="text-xl">📦</span>
+                                            )}
+                                            <span>{selectedOrder.shipping.provider} Delivery</span>
+                                        </h3>
+
+                                        {selectedOrder.shipping.bookingId && (
+                                            <div className="bg-white/50 p-2 rounded mb-2">
+                                                <p className="text-xs text-blue-600 font-medium">Tracking Number</p>
+                                                <p className="font-mono font-bold text-blue-800 text-lg tracking-wider">
+                                                    <BudolPayText text={selectedOrder.shipping.bookingId} />
+                                                </p>
+                                            </div>
+                                        )}
+
+                                        {selectedOrder.shipping.shareLink && (
+                                            <a href={selectedOrder.shipping.shareLink} target="_blank" className="block text-center w-full py-2 bg-blue-600 text-white rounded text-sm font-medium hover:bg-blue-700 transition-colors mb-2">
+                                                Track Order
+                                            </a>
+                                        )}
+
+                                        <div className="flex justify-end mt-2">
+                                            <button
+                                                onClick={() => handleSyncStatus(selectedOrder)}
+                                                disabled={isSyncing}
+                                                className="text-xs text-blue-600 hover:underline flex items-center gap-1 disabled:opacity-50"
+                                            >
+                                                <svg className={`w-3 h-3 ${isSyncing ? 'animate-spin' : ''}`} fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" /></svg>
+                                                Sync Status
+                                            </button>
+                                        </div>
+                                    </div>
+                                )}
+                            </div>
+                        )}
+
+                        {/* Previous Attempts History (If any) */}
+                        {selectedOrder.shipping?.previousAttempts?.length > 0 && (
+                            <div className="mb-4 p-3 bg-slate-50 rounded border border-slate-200">
+                                <p className="text-xs font-semibold text-slate-500 mb-2">History & Previous Attempts</p>
+                                <div className="space-y-2">
+                                    {selectedOrder.shipping.previousAttempts.map((attempt, idx) => (
+                                        <div key={idx} className="text-xs flex flex-col border-b border-slate-100 pb-2 last:border-0 last:pb-0">
+                                            <div className="flex justify-between items-start w-full">
+                                                <div>
+                                                    <span className="font-medium text-slate-700">
+                                                        <BudolPayText text={attempt.bookingId} />
+                                                    </span>
+                                                    <span className="mx-2 text-slate-300">|</span>
+                                                    <span className="text-red-500 font-semibold">{attempt.failureReason || 'Failed'}</span>
+                                                </div>
+                                                <div className="text-slate-400">
+                                                    {formatManilaTime(attempt.failedAt, { dateStyle: 'short', timeStyle: 'short' })}
+                                                </div>
+                                            </div>
+                                            {attempt.reason && attempt.reason !== attempt.failureReason && (
+                                                <div className="mt-1 text-slate-500 italic">
+                                                    Reason: {attempt.reason}
+                                                </div>
+                                            )}
+                                        </div>
+                                    ))}
+                                </div>
+                            </div>
+                        )}
+
+                        {/* Actions */}
+                        <div className="flex justify-end pt-4 border-t border-slate-100">
+                            <button onClick={closeModal} className="px-4 py-2 bg-slate-100 text-slate-600 font-medium rounded hover:bg-slate-200 transition-colors" >
+                                Close Details
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
+
+            {/* BudolShap Shipping Modal */}
+            <BudolShapShippingModal
+                order={selectedOrder}
+                isOpen={isBudolShapModalOpen}
+                onClose={() => setIsBudolShapModalOpen(false)}
+                onArrangeShipment={handleBudolShapArrangeShipment}
+                onGenerateDocuments={handleBudolShapGenerateDocuments}
+                slaDays={budolShapSettings?.slaDays || 3}
+                isLoading={isBooking}
+            />
+        </>
+    )
+}

@@ -1,0 +1,64 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Phase 2: Map Functionality - Address Form Enhancement</title>
+    <style>
+        :root {
+            --primary: #10b981;
+            --bg: #f8fafc;
+            --text: #1e293b;
+        }
+        body { font-family: system-ui, -apple-system, sans-serif; line-height: 1.6; color: var(--text); background: var(--bg); margin: 0; padding: 20px; }
+        .container { max-width: 900px; margin: 0 auto; background: white; padding: 40px; border-radius: 16px; box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1); }
+        h1, h2 { color: var(--primary); }
+        .back-link { margin-bottom: 20px; display: inline-block; text-decoration: none; color: var(--primary); font-weight: 600; }
+        .diagram { background: #f1f5f9; padding: 20px; border-radius: 8px; text-align: center; margin: 20px 0; font-family: monospace; border: 1px dashed #cbd5e1; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <a href="index.html" class="back-link">← Back to Index</a>
+        <h1>Phase 2: Map Rendering & Location Pinning</h1>
+        
+        <section>
+            <h2>Problem Analysis</h2>
+            <p>Users reported three major issues with the map implementation:</p>
+            <ul>
+                <li><strong>Grey Area:</strong> Occurs when the Leaflet map container is resized or initially hidden.</li>
+                <li><strong>Missing Pin:</strong> The central location pin was either hidden or not properly positioned.</li>
+                <li><strong>UI Overlap:</strong> Map controls and overlays were clashing with the map container.</li>
+            </ul>
+        </section>
+
+        <section>
+            <h2>Technical Solutions</h2>
+            <h3>1. Resolving the Grey Area</h3>
+            <p>Implemented a robust <code>invalidateSize</code> strategy in the <code>MapCenterUpdater</code> component. The map now triggers multiple invalidation checks to ensure tiles are correctly loaded when the section expands.</p>
+
+            <h3>2. Enhanced Location Pin</h3>
+            <p>Redesigned the central pin overlay using high-visibility SVG icons with glow effects and shadows. The pin is now fixed at the container's center with a higher <code>z-index</code> (2000).</p>
+
+            <h3>3. UI Controls Optimization</h3>
+            <p>Relocated and restyled the zoom and geolocation controls. They now feature a modern, rounded design with better contrast and higher z-indexing to prevent overlap issues.</p>
+        </section>
+
+        <section>
+            <h2>Data Flow</h2>
+            <div class="diagram">
+                User Moves Map → onMoveEnd Triggered → reverseGeocode API Call → Update FormData → Coordinates Verified Badge Shown
+            </div>
+        </section>
+
+        <section>
+            <h2>Map Specifications</h2>
+            <ul>
+                <li><strong>Container Height:</strong> Increased from 200px to 350px.</li>
+                <li><strong>Z-Index Strategy:</strong> Controls and Pin at 2000, Overlays at 1001, Map at 0.</li>
+                <li><strong>Rate Limiting:</strong> 1.5s delay for Nominatim geocoding to prevent API blocks.</li>
+            </ul>
+        </section>
+    </div>
+</body>
+</html>

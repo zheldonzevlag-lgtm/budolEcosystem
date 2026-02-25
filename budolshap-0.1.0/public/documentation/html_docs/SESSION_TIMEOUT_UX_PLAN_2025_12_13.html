@@ -1,0 +1,285 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Session Timeout UX/UI Improvements Plan</title>
+    <style>
+        :root {
+            --primary-color: #2563eb;
+            --secondary-color: #1e293b;
+            --accent-color: #3b82f6;
+            --background-color: #f8fafc;
+            --text-color: #334155;
+            --border-color: #e2e8f0;
+            --code-bg: #f1f5f9;
+        }
+
+        body {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            line-height: 1.6;
+            color: var(--text-color);
+            background-color: var(--background-color);
+            margin: 0;
+            padding: 0;
+        }
+
+        .container {
+            max-width: 1000px;
+            margin: 0 auto;
+            padding: 40px 20px;
+        }
+
+        header {
+            background: white;
+            padding: 40px;
+            border-radius: 12px;
+            box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1);
+            margin-bottom: 40px;
+            border-left: 6px solid var(--primary-color);
+        }
+
+        h1 {
+            color: var(--secondary-color);
+            margin: 0 0 10px 0;
+            font-size: 2.5rem;
+            letter-spacing: -0.025em;
+        }
+
+        .meta {
+            color: #64748b;
+            font-size: 0.95rem;
+        }
+
+        .section {
+            background: white;
+            padding: 30px;
+            border-radius: 12px;
+            box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1);
+            margin-bottom: 30px;
+        }
+
+        h2 {
+            color: var(--secondary-color);
+            border-bottom: 2px solid var(--border-color);
+            padding-bottom: 10px;
+            margin-top: 0;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        h3 {
+            color: var(--primary-color);
+            margin-top: 25px;
+            font-size: 1.25rem;
+        }
+
+        h4 {
+            color: var(--secondary-color);
+            font-size: 1.1rem;
+            margin-bottom: 10px;
+            background: var(--code-bg);
+            padding: 10px;
+            border-radius: 6px;
+            border-left: 4px solid var(--accent-color);
+        }
+
+        p {
+            margin-bottom: 15px;
+        }
+
+        ul {
+            list-style-type: none;
+            padding-left: 0;
+        }
+
+        li {
+            position: relative;
+            padding-left: 24px;
+            margin-bottom: 10px;
+        }
+
+        li::before {
+            content: "•";
+            color: var(--primary-color);
+            font-weight: bold;
+            position: absolute;
+            left: 5px;
+            font-size: 1.2em;
+        }
+
+        code {
+            font-family: 'Fira Code', monospace;
+            background: var(--code-bg);
+            padding: 2px 6px;
+            border-radius: 4px;
+            color: #ef4444;
+            font-size: 0.9em;
+        }
+
+        .alert {
+            background: #eff6ff;
+            border: 1px solid #bfdbfe;
+            color: #1e40af;
+            padding: 16px;
+            border-radius: 8px;
+            margin: 20px 0;
+            display: flex;
+            gap: 12px;
+            align-items: start;
+        }
+
+        .alert-icon {
+            font-size: 1.25rem;
+        }
+
+        .badge {
+            display: inline-block;
+            padding: 4px 12px;
+            border-radius: 9999px;
+            font-size: 0.75rem;
+            font-weight: 600;
+            text-transform: uppercase;
+        }
+
+        .badge-modify {
+            background-color: #dbeafe;
+            color: #1e40af;
+        }
+
+        .badge-new {
+            background-color: #dcfce7;
+            color: #166534;
+        }
+
+        .file-path {
+            font-family: monospace;
+            color: #64748b;
+            font-size: 0.9em;
+            margin-left: 10px;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="container">
+        <header>
+            <h1>Session Timeout UX/UI Improvements</h1>
+            <div class="meta">Implementation Plan • December 13, 2025</div>
+        </header>
+
+        <div class="section">
+            <h2>Goal Description</h2>
+            <p>Improve the user experience during session timeouts and subsequent logins.</p>
+            <ul>
+                <li><strong>Session Timeout:</strong> Provide a more distinct and clear "Session Expired" modal state
+                    instead of just a banner inside the generic login modal.</li>
+                <li><strong>Login Success:</strong> Prevent the "Unauthorized" page from flashing briefly after a
+                    successful re-login by maintaining the loading state until the page reloads.</li>
+            </ul>
+        </div>
+
+        <div class="section">
+            <h2>User Review Items</h2>
+            <div class="alert">
+                <span class="alert-icon">ℹ️</span>
+                <div>
+                    <strong>UI Update Note:</strong> The "Session Expired" state will now look cleaner and more
+                    intentional, replacing the "Welcome Back" header with "Session Expired".
+                </div>
+            </div>
+        </div>
+
+        <div class="section">
+            <h2>Proposed Changes</h2>
+
+            <h3>Context</h3>
+            <h4>
+                <span class="badge badge-modify">MODIFY</span> AuthUIContext.jsx
+                <span class="file-path">context/AuthUIContext.jsx</span>
+            </h4>
+            <ul>
+                <li>Update <code>showLogin</code> function to accept a <code>type</code> argument (e.g.,
+                    <code>'session_expired'</code>).</li>
+                <li>Add <code>loginType</code> to the context state to track why the login modal is shown.</li>
+            </ul>
+
+            <h3>Components</h3>
+            <h4>
+                <span class="badge badge-modify">MODIFY</span> LoginModal.jsx
+                <span class="file-path">components/LoginModal.jsx</span>
+            </h4>
+            <ul>
+                <li><strong>Session Expired UI:</strong>
+                    <ul>
+                        <li>If <code>loginType</code> is <code>'session_expired'</code>, change the header to "Session
+                            Expired".</li>
+                        <li>Update the subtext to clarify why the user needs to log in again.</li>
+                        <li>Hide the "Create Account" link in this mode to reduce clutter.</li>
+                    </ul>
+                </li>
+                <li><strong>Success State Fix:</strong>
+                    <ul>
+                        <li>In <code>handleLoginSuccess</code>, introduce a local <code>isSuccess</code> state.</li>
+                        <li>When <code>isSuccess</code> is true, show a "Redirecting..." loading spinner inside the
+                            modal instead of closing it immediately.</li>
+                        <li>Do not call <code>hideLogin()</code> if a full page reload or redirect is imminent.</li>
+                    </ul>
+                </li>
+            </ul>
+
+            <h4>
+                <span class="badge badge-modify">MODIFY</span> AdminLayout.jsx
+                <span class="file-path">components/admin/AdminLayout.jsx</span>
+            </h4>
+            <ul>
+                <li>Update <code>handleLogout</code> to call
+                    <code>showLogin(null, 'You have been logged out due to inactivity.', 'session_expired')</code>.</li>
+            </ul>
+
+            <h4>
+                <span class="badge badge-modify">MODIFY</span> StoreLayout.jsx
+                <span class="file-path">components/store/StoreLayout.jsx</span>
+            </h4>
+            <ul>
+                <li>Update <code>handleLogout</code> to call
+                    <code>showLogin(null, 'You have been logged out due to inactivity.', 'session_expired')</code>.</li>
+            </ul>
+        </div>
+
+        <div class="section">
+            <h2>Verification Plan</h2>
+
+            <h3>Manual Verification</h3>
+
+            <h4>1. Test Session Timeout</h4>
+            <ul>
+                <li>Log in as an Admin or Seller.</li>
+                <li>Manually trigger the timeout (or wait for it).</li>
+                <li><strong>Expectation:</strong> The "Session Expired" modal appears with the new specific UI (Title:
+                    "Session Expired").</li>
+            </ul>
+
+            <h4>2. Test Re-login</h4>
+            <ul>
+                <li>In the "Session Expired" modal, enter valid credentials.</li>
+                <li>Click "Sign In".</li>
+                <li><strong>Expectation:</strong> The modal should show a loading/redirecting state and stay open until
+                    the page reloads.</li>
+                <li><strong>Expectation:</strong> The underlying "You are not authorized" screen should
+                    <strong>NOT</strong> be visible during this transition.</li>
+            </ul>
+
+            <h4>3. Test Normal Login</h4>
+            <ul>
+                <li>Log out manually.
+                <li>Click "Login".</li>
+                <li><strong>Expectation:</strong> The standard "Welcome Back" modal appears.</li>
+            </ul>
+        </div>
+    </div>
+</body>
+
+</html>

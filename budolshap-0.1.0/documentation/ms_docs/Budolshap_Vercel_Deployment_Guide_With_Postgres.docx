@@ -1,0 +1,98 @@
+Vercel Deployment Guide – Free Tier (PostgreSQL)
+
+Project: budolshap (Next.js – App Router)
+Date: 2025‑11‑23
+
+---
+
+1. Prerequisites
+   • Git installed on Windows.
+   • Node.js (v18+) and npm (or Yarn).
+   • A GitHub/GitLab/Bitbucket account (Vercel pulls code from a Git repo).
+   • A Vercel account (free tier).
+   • A free PostgreSQL instance (Neon, Supabase, or Railway).
+
+2. Create a free PostgreSQL instance (Neon example)
+   1. Sign‑up at https://neon.tech.
+   2. Click “New Project” → “Create a new PostgreSQL instance”.
+   3. Name it (e.g., budolshap‑dev) and create.
+   4. Copy the connection string, e.g.:
+      postgresql://USER:PASS@HOST:5432/DB?sslmode=require
+
+3. Wire the DB into the Next.js app (Prisma)
+   • Add the connection string to .env.local (do NOT commit):
+        DATABASE_URL="postgresql://USER:PASS@HOST:5432/DB?sslmode=require"
+   • Verify locally:
+        npm install
+        npx prisma migrate dev --name init
+   • Ensure prisma/schema.prisma contains:
+        datasource db { provider = "postgresql" url = env("DATABASE_URL") }
+
+4. Prepare the repository for Vercel
+   • git init (if not already)
+   • Create .gitignore (node_modules/, .next/, .env.local, .DS_Store)
+   • git add . ; git commit -m "Initial commit – ready for Vercel with Postgres"
+   • Push to GitHub (or other):
+        git remote add origin https://github.com/<USER>/budolshap.git
+        git branch -M main
+        git push -u origin main
+   • Ensure package.json scripts include:
+        "dev": "next dev",
+        "build": "next build",
+        "start": "next start",
+        "postinstall": "prisma generate && prisma migrate deploy"
+   • Commit the change.
+
+5. Create the Vercel project
+   1. Log in to https://vercel.com.
+   2. New Project → Import Git Repository → select the repo.
+   3. Vercel auto‑detects Next.js (Framework Preset: Next.js, Build Command: npm run build, Output Directory: .next).
+   4. Deploy (first deploy will fail until env var is added).
+
+6. Add DATABASE_URL env var on Vercel
+   • Project Settings → Environment Variables → Add:
+        Key: DATABASE_URL
+        Value: (paste the Neon connection string)
+        Environment: Production (and optionally Preview)
+   • Save – Vercel will redeploy.
+
+7. Prisma migrations on Vercel
+   • Because of the postinstall script, every deployment runs:
+        prisma generate && prisma migrate deploy
+   • If you prefer a manual one‑off migration, use Vercel CLI:
+        npm i -g vercel
+        vercel login
+        vercel exec -- npx prisma migrate deploy
+
+8. Verify the live deployment
+   • Open https://<project>.vercel.app
+   • Test a feature that hits the DB (e.g., view products, place an order).
+   • If data persists, the DB connection works.
+
+9. Troubleshooting
+   • 404 on API routes – check DATABASE_URL is correct and includes ?sslmode=require.
+   • Build fails – missing module – clear Vercel build cache and redeploy.
+   • Prisma migration pending – ensure postinstall script is present or run manual migration.
+   • Env var not found – add it to Production environment.
+
+10. Optional: Custom domain
+    • Project Settings → Domains → Add your domain (e.g., www.myshop.com).
+    • Follow DNS instructions (CNAME to cname.vercel-dns.com or A record to Vercel IPs).
+    • After propagation, the domain points to your Vercel deployment.
+
+11. Monitor free‑tier limits (Vercel)
+    • Build minutes: 100 hrs/month
+    • Serverless execution: 125 k GB‑seconds/month
+    • Bandwidth: 100 GB/month
+    • Concurrent builds: 1
+    • Custom domains: Unlimited
+
+12. Next steps
+    • Enable Vercel Analytics.
+    • Set up Preview Deployments for PR testing.
+    • Explore Edge Functions for ultra‑low‑latency APIs.
+    • Add a read‑only replica if you need heavy read scaling.
+
+---
+
+End of guide

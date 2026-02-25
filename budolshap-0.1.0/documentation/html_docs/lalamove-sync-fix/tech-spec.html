@@ -1,0 +1,114 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Technical Specification: Lalamove Status Synchronization</title>
+    <style>
+        :root {
+            --primary: #1a56db;
+            --bg: #f9fafb;
+            --card-bg: #ffffff;
+            --text: #111827;
+            --code-bg: #1e293b;
+        }
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: var(--bg);
+            color: var(--text);
+            line-height: 1.6;
+            margin: 0;
+            padding: 2rem;
+        }
+        .container { max-width: 900px; margin: 0 auto; }
+        .card { background: var(--card-bg); padding: 2rem; border-radius: 0.75rem; box-shadow: 0 4px 6px rgba(0,0,0,0.05); margin-bottom: 2rem; }
+        h1 { color: var(--primary); border-bottom: 2px solid var(--primary); padding-bottom: 0.5rem; }
+        h2 { color: var(--primary); margin-top: 2rem; }
+        pre { background: var(--code-bg); color: #f8f8f2; padding: 1.5rem; border-radius: 0.5rem; overflow-x: auto; font-size: 0.9rem; }
+        code { font-family: 'Fira Code', monospace; }
+        .back-link { display: inline-block; margin-bottom: 1rem; color: var(--primary); text-decoration: none; font-weight: 500; }
+        .spec-table { width: 100%; border-collapse: collapse; margin: 1.5rem 0; }
+        .spec-table th, .spec-table td { padding: 1rem; border: 1px solid #e5e7eb; text-align: left; }
+        .spec-table th { background: #f3f4f6; font-weight: 600; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <a href="index.html" class="back-link">← Back to Index</a>
+        <div class="card">
+            <h1>Technical Specification: Lalamove Status Synchronization</h1>
+            
+            <h2>Overview</h2>
+            <p>
+                This document specifies the synchronization logic between Lalamove (external provider) and Budolshap (internal system). 
+                The goal is to maintain high consistency across the Seller UI, Buyer UI, and backend database.
+            </p>
+
+            <h2>System Architecture</h2>
+            <p>
+                The synchronization relies on three primary components:
+            </p>
+            <ol>
+                <li><strong>Push (Webhook):</strong> Lalamove sends real-time updates to <code>/api/webhooks/lalamove</code>.</li>
+                <li><strong>Pull (Auto-Sync):</strong> Seller and Buyer UIs poll <code>/api/orders/[id]/sync-lalamove</code> every 15 seconds for active orders.</li>
+                <li><strong>Realtime (Pusher):</strong> Server triggers Pusher events to update the UI immediately upon status change.</li>
+            </ol>
+
+            <h2>Status State Machine</h2>
+            <p>The following mapping is enforced during synchronization:</p>
+            <table class="spec-table">
+                <thead>
+                    <tr>
+                        <th>Lalamove Status</th>
+                        <th>Budolshap Order Status</th>
+                        <th>Realtime Channel Triggered</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td><code>ASSIGNING_DRIVER</code></td>
+                        <td><code>PROCESSING</code></td>
+                        <td><code>store-{id}</code>, <code>user-{id}</code></td>
+                    </tr>
+                    <tr>
+                        <td><code>PICKED_UP</code></td>
+                        <td><code>IN_TRANSIT</code></td>
+                        <td><code>store-{id}</code>, <code>user-{id}</code></td>
+                    </tr>
+                    <tr>
+                        <td><code>COMPLETED</code></td>
+                        <td><code>DELIVERED</code></td>
+                        <td><code>store-{id}</code>, <code>user-{id}</code></td>
+                    </tr>
+                    <tr>
+                        <td><code>CANCELED</code></td>
+                        <td><code>PROCESSING</code> (Reset)</td>
+                        <td><code>store-{id}</code>, <code>user-{id}</code></td>
+                    </tr>
+                </tbody>
+            </table>
+
+            <h2>Data Persistence</h2>
+            <p>
+                Synchronization updates the <code>shipping</code> JSON column in the <code>Order</code> table. 
+                The <code>shipping</code> object structure:
+            </p>
+            <pre><code>{
+  "provider": "lalamove",
+  "bookingId": "...",
+  "status": "PICKED_UP",
+  "driverInfo": {
+    "name": "...",
+    "phone": "...",
+    "plateNumber": "..."
+  },
+  "location": {
+    "lat": 14.5995,
+    "lng": 120.9842
+  },
+  "updatedAt": "2025-12-27T..."
+}</code></pre>
+        </div>
+    </div>
+</body>
+</html>

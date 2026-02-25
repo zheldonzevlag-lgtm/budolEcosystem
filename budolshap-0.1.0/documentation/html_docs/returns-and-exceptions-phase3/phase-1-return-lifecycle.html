@@ -1,0 +1,134 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Phase 1: Return Lifecycle - BudolShap</title>
+    <style>
+        :root { --primary: #ee4d2d; --bg: #f5f5f5; --text: #333; }
+        body { font-family: -apple-system, system-ui, sans-serif; line-height: 1.6; color: var(--text); background: var(--bg); margin: 0; padding: 20px; }
+        .container { max-width: 900px; margin: 0 auto; background: white; padding: 40px; border-radius: 12px; box-shadow: 0 4px 20px rgba(0,0,0,0.08); }
+        h1, h2, h3 { color: var(--primary); }
+        pre { background: #f8f9fa; padding: 15px; border-radius: 6px; border-left: 4px solid var(--primary); overflow-x: auto; }
+        code { font-family: 'Fira Code', monospace; font-size: 0.9em; }
+        .back-link { display: inline-block; margin-bottom: 20px; color: var(--primary); text-decoration: none; font-weight: bold; }
+        .spec-table { width: 100%; border-collapse: collapse; margin: 20px 0; }
+        .spec-table th, .spec-table td { border: 1px solid #eee; padding: 12px; text-align: left; }
+        .spec-table th { background: #fafafa; }
+        .nav-footer { margin-top: 50px; padding-top: 20px; border-top: 1px solid #eee; display: flex; justify-content: space-between; align-items: center; }
+        .nav-link { color: var(--primary); text-decoration: none; font-weight: bold; }
+        .nav-link:hover { text-decoration: underline; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div style="margin-bottom: 20px;">
+            <a href="index.html" style="color: var(--primary); text-decoration: none; font-weight: bold;">← Back to Phase Index</a>
+        </div>
+        <h1>Phase 1: Return Lifecycle Integration</h1>
+        
+        <h2>Implementation Status: <span style="color: #2e7d32;">COMPLETED</span></h2>
+        <p>The return lifecycle is now fully integrated into the <code>OrderProgressTracker.jsx</code> component and the backend <code>returnsService.js</code>.</p>
+
+        <h3>1. Status Mapping Logic</h3>
+        <p>When an order enters a return state, the 5-stage tracking bar pivots from the "Shipping" lifecycle to the "Return" lifecycle.</p>
+        
+        <table class="spec-table">
+            <thead>
+                <tr>
+                    <th>Order Status</th>
+                    <th>UI Stage Label</th>
+                    <th>Icon</th>
+                    <th>Description</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td><code>RETURN_REQUESTED</code></td>
+                    <td>Return Requested</td>
+                    <td>↩️</td>
+                    <td>Waiting for seller review</td>
+                </tr>
+                <tr>
+                    <td><code>RETURN_APPROVED</code></td>
+                    <td>Return Approved</td>
+                    <td>✅</td>
+                    <td>Seller accepted; waiting for parcel return</td>
+                </tr>
+                <tr>
+                    <td><code>RETURN_DISPUTED</code></td>
+                    <td>Under Dispute</td>
+                    <td>⚠️</td>
+                    <td>Seller declined; Admin intervention needed</td>
+                </tr>
+                <tr>
+                    <td><code>REFUNDED</code></td>
+                    <td>Refunded</td>
+                    <td>💰</td>
+                    <td>Funds returned to Buyer wallet / Deducted from Seller</td>
+                </tr>
+            </tbody>
+        </table>
+
+        <h3>2. Technical Implementation & Shopee-Standard Business Rules</h3>
+        <p>The system distinguishes between <strong>Refund Only</strong> (e.g., item damaged, no return needed) and <strong>Return & Refund</strong> (item must be shipped back). This logic is modeled directly after Shopee's standard operating procedures:</p>
+        
+        <div style="background: #f8fafc; padding: 20px; border-radius: 8px; margin-bottom: 20px; border: 1px solid #e2e8f0;">
+            <h4 style="margin-top: 0; color: #1e293b;">Rule 1: The 72-Hour Response Window</h4>
+            <p style="font-size: 0.9em;">Per Shopee standards, sellers have a <strong>3-day (72-hour) deadline</strong> to respond to a return request. If the seller fails to respond, the system is designed to favor the buyer (Escrow Protection).</p>
+            <p style="font-size: 0.85em; color: #64748b; font-family: monospace;">Logic: <code>deadline: new Date(Date.now() + (3 * 24 * 60 * 60 * 1000))</code></p>
+
+            <h4 style="margin-top: 20px; color: #1e293b;">Rule 2: Path A - Refund Only (Immediate Escrow Release)</h4>
+            <p style="font-size: 0.9em;">If the buyer requests "Refund Only" and the seller clicks <strong>Accept</strong>, the escrow funds are <strong>immediately debited</strong> from the seller's wallet and returned to the buyer. This bypasses return shipping to save costs for both parties.</p>
+            
+            <h4 style="margin-top: 20px; color: #1e293b;">Rule 3: Path B - Return & Refund (The "Parcel-First" Release)</h4>
+            <p style="font-size: 0.9em;">If "Return & Refund" is selected, the refund is <strong>locked</strong> until the seller confirms receipt of the physical item. Once the seller clicks <strong>Parcel Received</strong>, the system triggers the wallet debit and finalizes the refund.</p>
+            
+            <h4 style="margin-top: 20px; color: #1e293b;">Rule 4: The Shopee Guarantee Extension</h4>
+            <p style="font-size: 0.9em;">Buyers can click <strong>"Extend Shopee Guarantee"</strong> once per order, which adds 3 additional days to the return request window. This is used when a buyer hasn't had time to test the product yet.</p>
+
+            <h4 style="margin-top: 20px; color: #1e293b;">Rule 5: Return Shipping Fee (RSF) Responsibility</h4>
+            <p style="font-size: 0.9em;">In a standard Shopee-style flow, if a return is approved due to "Seller Fault" (Damaged/Wrong Item), the <strong>Seller pays for return shipping</strong>. If the return is "Change of Mind" (if allowed), the Buyer pays.</p>
+
+            <h4 style="margin-top: 20px; color: #1e293b;">Rule 6: NFR (Non-Fulfilment Rate) Impact</h4>
+            <p style="font-size: 0.9em;">Any return approved under "Seller Fault" automatically contributes to the seller's <strong>NFR</strong>. High NFR leads to penalty points, mirroring Shopee's seller performance management.</p>
+        </div>
+
+        <p>The <code>OrderProgressTracker.jsx</code> dynamically switches <code>activeStages</code> based on the order status and path:</p>
+        <pre><code>// From OrderProgressTracker.jsx
+const isReturnRelated = ['RETURN_REQUESTED', 'RETURN_APPROVED', 'RETURN_DISPUTED', 'REFUNDED'].includes(order.status);
+
+const returnStages = [
+    { status: 'ORDER_PLACED', label: 'Order Placed', icon: '📝' },
+    { status: 'DELIVERED', label: 'Delivered', icon: '📦' },
+    { status: 'RETURN_REQUESTED', label: 'Requested', icon: '↩️' },
+    { status: 'RETURN_APPROVED', label: 'Review', icon: '⏳' },
+    { status: 'REFUNDED', label: 'Refunded', icon: '💰' }
+];
+
+const activeStages = isReturnRelated ? returnStages : stages;</code></pre>
+
+        <h3>3. Backend Service</h3>
+        <p>The <code>lib/services/returnsService.js</code> handles the state transitions and wallet transactions:</p>
+        <ul>
+            <li><code>createReturnRequest</code>: Initiates the return and sets status to <code>RETURN_REQUESTED</code>.</li>
+            <li><code>respondToReturn</code>: Allows sellers to <code>ACCEPT</code>, <code>REJECT</code>, or <code>REQUEST_RETURN</code>.</li>
+            <li><code>receiveReturn</code>: Finalizes the process and triggers the <code>REFUNDED</code> status.</li>
+        </ul>
+
+        <h3>4. Success Criteria Validation</h3>
+        <ul>
+            <li>✅ Shopee-style tracking bar successfully switches to Return icons when <code>RETURN_REQUESTED</code> is triggered.</li>
+            <li>✅ Seller dashboard shows a "Return & Refund" tab for managing requests.</li>
+            <li>✅ Buyer order details show "Return Progress" via the 5-stage tracker.</li>
+            <li>✅ Wallet deductions are automatically processed upon refund approval.</li>
+        </ul>
+
+        <div class="nav-footer">
+            <a href="ui-comparison-detailed.html" class="nav-link">← Previous: UI Comparison</a>
+            <a href="index.html" class="nav-link">Back to Index</a>
+            <a href="phase-2-exception-management.html" class="nav-link">Next: 2. Exception Management →</a>
+        </div>
+    </div>
+</body>
+</html>

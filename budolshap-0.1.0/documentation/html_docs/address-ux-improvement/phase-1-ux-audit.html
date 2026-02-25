@@ -1,0 +1,146 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Phase 1: UX Audit & Shopee UI/UX Design - Address Form Improvement</title>
+    <style>
+        :root {
+            --shopee-orange: #ee4d2d;
+            --shopee-bg: #f5f5f5;
+            --text-main: #222;
+            --text-sub: #666;
+            --border-color: #e8e8e8;
+        }
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            line-height: 1.6;
+            color: var(--text-main);
+            background-color: var(--shopee-bg);
+            margin: 0;
+            padding: 20px;
+        }
+        .container {
+            max-width: 1000px;
+            margin: 0 auto;
+            background: white;
+            padding: 40px;
+            border-radius: 4px;
+            box-shadow: 0 1px 1px rgba(0,0,0,0.05);
+        }
+        h1, h2, h3 { color: var(--shopee-orange); }
+        .audit-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 20px 0;
+        }
+        .audit-table th, .audit-table td {
+            padding: 12px;
+            border: 1px solid var(--border-color);
+            text-align: left;
+        }
+        .audit-table th { background-color: #fafafa; }
+        .status-badge {
+            padding: 4px 8px;
+            border-radius: 12px;
+            font-size: 0.85em;
+            font-weight: bold;
+        }
+        .status-gap { background-color: #ffebee; color: #c62828; }
+        .status-ok { background-color: #e8f5e9; color: #2e7d32; }
+        .feature-card {
+            border: 1px solid var(--border-color);
+            padding: 20px;
+            margin-bottom: 20px;
+            border-radius: 4px;
+        }
+        .nav { margin-bottom: 20px; }
+        .nav a { color: var(--shopee-orange); text-decoration: none; margin-right: 15px; font-weight: bold; }
+        code { background: #f4f4f4; padding: 2px 4px; border-radius: 4px; }
+    </style>
+</head>
+<body>
+    <div class="nav">
+        <a href="index.html">← Back to Index</a>
+        <span>Phase 1: UX Audit</span>
+    </div>
+    <div class="container">
+        <h1>Phase 1: UX Audit & Design Specification</h1>
+        <p>This document analyzes the current address form implementation and outlines the transition to a Shopee-like UI/UX to improve shipping accuracy and user experience.</p>
+
+        <h2>1. Current Implementation Audit</h2>
+        <table class="audit-table">
+            <thead>
+                <tr>
+                    <th>Feature</th>
+                    <th>Current State</th>
+                    <th>Shopee Standard</th>
+                    <th>Impact</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td><strong>Selection Flow</strong></td>
+                    <td>Manual text input or limited hardcoded dropdowns.</td>
+                    <td>Cascading Selection (Region > Province > City > Barangay).</td>
+                    <td><span class="status-badge status-gap">HIGH GAP</span></td>
+                </tr>
+                <tr>
+                    <td><strong>Map Integration</strong></td>
+                    <td>None (Visual) / Post-submission geocoding (Background).</td>
+                    <td>Interactive Map Picker with Geoapify Autocomplete.</td>
+                    <td><span class="status-badge status-gap">CRITICAL GAP</span></td>
+                </tr>
+                <tr>
+                    <td><strong>Data Source</strong></td>
+                    <td>Hardcoded <code>CITY_BARANGAY_MAP</code> in frontend.</td>
+                    <td>Geoapify Address Autocomplete + PSGC fallback.</td>
+                    <td><span class="status-badge status-gap">HIGH GAP</span></td>
+                </tr>
+                <tr>
+                    <td><strong>Coordinate Accuracy</strong></td>
+                    <td>Estimated via Nominatim API on submission.</td>
+                    <td>Precise pin-drop + Geoapify Reverse Geocoding.</td>
+                    <td><span class="status-badge status-gap">HIGH GAP</span></td>
+                </tr>
+            </tbody>
+        </table>
+
+        <h2>2. Proposed Shopee-like UI/UX Design</h2>
+        <div class="feature-card">
+            <h3>2.1 Cascading Address Selector</h3>
+            <ul>
+                <li><strong>Step 1:</strong> Select Region/Province (Dropdown)</li>
+                <li><strong>Step 2:</strong> Select City/Municipality (Dropdown - Filtered by Step 1)</li>
+                <li><strong>Step 3:</strong> Select Barangay (Dropdown - Filtered by Step 2)</li>
+                <li><strong>Validation:</strong> Ensures only valid combinations of address parts are submitted.</li>
+            </ul>
+        </div>
+
+        <div class="feature-card">
+            <h3>2.2 Interactive Map Picker</h3>
+            <ul>
+                <li><strong>Visual Confirmation:</strong> A map widget (React Leaflet/OSM) that updates as the user selects the address.</li>
+                <li><strong>Manual Pinning:</strong> Allows the user to move the pin to their exact doorstep.</li>
+                <li><strong>Reverse Geocoding:</strong> Moving the pin can suggest the nearest address components.</li>
+                <li><strong>Lalamove Compatibility:</strong> Directly captures <code>lat</code> and <code>lng</code> for precise shipping fee calculation.</li>
+            </ul>
+        </div>
+
+        <h2>3. Technical Strategy</h2>
+        <p>To implement this, we will move away from fragmented logic in <code>AddressModal.jsx</code> and <code>StoreAddressModal.jsx</code> towards a <strong>Unified Address Component</strong>.</p>
+        <ul>
+            <li><strong>Component A:</strong> <code>AddressSelector.jsx</code> - Handles the cascading logic and data fetching.</li>
+            <li><strong>Component B:</strong> <code>MapPicker.jsx</code> - Handles the Leaflet map and coordinate state.</li>
+            <li><strong>Data Layer:</strong> Integrate a standardized JSON or API for PH addresses (Region/Province/City/Barangay).</li>
+        </ul>
+
+        <h2>4. Success Criteria</h2>
+        <ul>
+            <li>Users can select their exact barangay from a standardized list.</li>
+            <li>The <code>latitude</code> and <code>longitude</code> fields in the database are populated with 100% accuracy.</li>
+            <li>Shipping fee discrepancies (e.g., 73 vs 102 PHP) are eliminated by providing Lalamove with precise coordinates.</li>
+        </ul>
+    </div>
+</body>
+</html>

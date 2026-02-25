@@ -1,0 +1,191 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Lalamove Phase 5: Geocoding & Fixes Report</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            line-height: 1.6;
+            color: #333;
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+            background-color: #f0f2f5;
+        }
+
+        .header {
+            background: linear-gradient(135deg, #2c3e50, #3498db);
+            color: white;
+            padding: 40px;
+            border-radius: 8px 8px 0 0;
+            margin-bottom: 0;
+        }
+
+        .content {
+            background-color: white;
+            padding: 40px;
+            border-radius: 0 0 8px 8px;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+        }
+
+        h1 {
+            margin: 0;
+            font-size: 2.5em;
+        }
+
+        h2 {
+            color: #2c3e50;
+            border-bottom: 2px solid #ecf0f1;
+            padding-bottom: 10px;
+            margin-top: 40px;
+        }
+
+        h3 {
+            color: #34495e;
+            margin-top: 25px;
+        }
+
+        .card {
+            background-color: #f8f9fa;
+            border: 1px solid #e9ecef;
+            border-radius: 6px;
+            padding: 20px;
+            margin-bottom: 20px;
+        }
+
+        .card-title {
+            font-weight: bold;
+            font-size: 1.1em;
+            margin-bottom: 10px;
+            color: #2980b9;
+        }
+
+        .badge {
+            display: inline-block;
+            padding: 4px 8px;
+            border-radius: 4px;
+            font-size: 0.85em;
+            font-weight: bold;
+            color: white;
+            margin-right: 5px;
+        }
+
+        .badge-process {
+            background-color: #3498db;
+        }
+
+        .badge-issue {
+            background-color: #e74c3c;
+        }
+
+        .badge-fix {
+            background-color: #27ae60;
+        }
+
+        code {
+            background-color: #e8f6f3;
+            padding: 2px 5px;
+            border-radius: 3px;
+            font-family: 'Consolas', monospace;
+            color: #c0392b;
+        }
+
+        pre {
+            background-color: #2c3e50;
+            color: #ecf0f1;
+            padding: 15px;
+            border-radius: 5px;
+            overflow-x: auto;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 20px 0;
+        }
+
+        th,
+        td {
+            border: 1px solid #ddd;
+            padding: 12px;
+            text-align: left;
+        }
+
+        th {
+            background-color: #f2f2f2;
+            color: #333;
+        }
+
+        .success-icon {
+            color: #27ae60;
+            font-weight: bold;
+        }
+
+        .failure-icon {
+            color: #e74c3c;
+            font-weight: bold;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="header">
+        <h1>Lalamove Phase 5 Report</h1>
+        <p>Comprehensive documentation of Geocoding Implementation, Issues, and Fixes</p>
+    </div>
+
+    <div class="content">
+
+        <h2>1. Processes Implemented</h2>
+        <p>The following core processes were implemented to enable accurate store location tracking for deliveries:</p>
+
+        <div class="card">
+            <div class="card-title"><span class="badge badge-process">PROCESS</span> Store Geocoding Workflow</div>
+            <p><strong>Goal:</strong> Replace hardcoded pickup coordinates with actual store locations.</p>
+            <ol>
+                <li><strong>Schema Update:</strong> Added <code>latitude</code> and <code>longitude</code> columns to
+                    the <code>Store</code> table.</li>
+                <li><strong>Coordinate Retrieval:</strong> When a user requests a quote, the system checks if the store
+                    has cached coordinates.</li>
+                <li><strong>On-Demand Geocoding:</strong> If no coordinates exist, the system calls the Nominatim API
+                    via <code>/api/stores/[storeId]/geocode</code>.</li>
+                <li><strong>Caching:</strong> The result is saved to the database to prevent future API calls.</li>
+                <li><strong>Quote Generation:</strong> The Lalamove API is called with the specific store coordinates as
+                    the pickup point.</li>
+            </ol>
+        </div>
+
+        <div class="card">
+            <div class="card-title"><span class="badge badge-process">PROCESS</span> Production Deployment & Migration
+            </div>
+            <p><strong>Goal:</strong> Apply changes to the live Vercel/Postgres environment.</p>
+            <ol>
+                <li><strong>Code Commit:</strong> Changes committed to local git repository.</li>
+                <li><strong>Database Migration:</strong> SQL commands executed directly against the production database
+                <li><span class="failure-icon">!</span> <strong>Existing Data:</strong> 3/3 stores failed geocoding due
+                    to
+                    bad addresses.</li>
+                <li><span class="success-icon">✓</span> <strong>New Data:</strong> Any new store created with a valid
+                    address will be geocoded automatically.</li>
+                </ul>
+
+                <h2>5. Next Steps</h2>
+                <ol>
+                    <li><strong>Deploy Code:</strong> Run <code>vercel deploy --prod</code> to push the application
+                        changes.
+                    </li>
+                    <li><strong>Clean Data:</strong> Manually update the addresses of the 3 existing stores in the
+                        database to
+                        be complete (Street, City, Region).</li>
+                    <li><strong>Re-run Geocoding:</strong> Execute <code>node scripts/geocode-stores.js</code> again
+                        after
+                        fixing addresses.</li>
+                </ol>
+
+        </div>
+</body>
+
+</html>

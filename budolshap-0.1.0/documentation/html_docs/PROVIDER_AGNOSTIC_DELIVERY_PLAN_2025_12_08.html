@@ -1,0 +1,221 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Provider-Agnostic Delivery Implementation Plan</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            line-height: 1.6;
+            color: #333;
+            max-width: 900px;
+            margin: 0 auto;
+            padding: 20px;
+            background-color: #f9f9f9;
+        }
+
+        h1 {
+            color: #2c3e50;
+            border-bottom: 3px solid #3498db;
+            padding-bottom: 15px;
+            margin-bottom: 30px;
+        }
+
+        h2 {
+            color: #2980b9;
+            margin-top: 40px;
+            border-left: 5px solid #3498db;
+            padding-left: 15px;
+        }
+
+        h3 {
+            color: #34495e;
+            margin-top: 25px;
+        }
+
+        .card {
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 5px rgba(0, 0, 0, 0.05);
+            margin-bottom: 20px;
+            border: 1px solid #e1e4e8;
+        }
+
+        .code-block {
+            background-color: #282c34;
+            color: #abb2bf;
+            padding: 15px;
+            border-radius: 5px;
+            font-family: 'Consolas', 'Monaco', monospace;
+            overflow-x: auto;
+            margin: 15px 0;
+        }
+
+        .keyword {
+            color: #c678dd;
+        }
+
+        .string {
+            color: #98c379;
+        }
+
+        .comment {
+            color: #5c6370;
+            font-style: italic;
+        }
+
+        .function {
+            color: #61afef;
+        }
+
+        .badge {
+            display: inline-block;
+            padding: 4px 8px;
+            border-radius: 4px;
+            font-size: 0.85em;
+            font-weight: bold;
+            margin-left: 10px;
+        }
+
+        .badge-current {
+            background-color: #ffeaa7;
+            color: #d63031;
+        }
+
+        .badge-proposed {
+            background-color: #55efc4;
+            color: #00b894;
+        }
+
+        .step-number {
+            background-color: #3498db;
+            color: white;
+            width: 30px;
+            height: 30px;
+            border-radius: 50%;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: bold;
+            margin-right: 10px;
+        }
+
+        ul {
+            list-style-type: none;
+            padding-left: 0;
+        }
+
+        li {
+            margin-bottom: 10px;
+            position: relative;
+            padding-left: 20px;
+        }
+
+        li:before {
+            content: "•";
+            color: #3498db;
+            font-weight: bold;
+            position: absolute;
+            left: 0;
+        }
+    </style>
+</head>
+
+<body>
+    <h1>Implementation Plan: Provider-Agnostic Delivery Logic</h1>
+
+    <div class="card">
+        <h3>Overview</h3>
+        <p>This plan outlines the steps to refactor the frontend delivery status logic. The goal is to make the
+            "Booked", "In Transit", and "Delivered" tabs robust enough to handle any third-party delivery provider
+            (e.g., Lalamove, J&T, Grab), not just Lalamove.</p>
+    </div>
+
+    <h2>1. Current Limitation <span class="badge badge-current">CURRENT</span></h2>
+    <div class="card">
+        <p>The current <code>getDeliveryStatus</code> function explicitly checks for the string <code>'lalamove'</code>.
+            If a new provider is added, the system will treat it as <code>'other'</code> or <code>'needs_booking'</code>
+            even if it is valid.</p>
+        <div class="code-block">
+            <span class="keyword">const</span> <span class="function">getDeliveryStatus</span> = (order) => {
+            <span class="comment">// ... checks for paid, delivered, cancelled ...</span>
+
+            <span class="comment">// ❌ Hardcoded Dependency</span>
+            <span class="keyword">if</span> (order.shipping?.provider === <span class="string">'lalamove'</span>) {
+            <span class="keyword">if</span> (order.shipping?.bookingId) { <span class="comment">/* ... */</span> }
+            }
+            <span class="comment">// ...</span>
+            }
+        </div>
+    </div>
+
+    <h2>2. Proposed Solution <span class="badge badge-proposed">PROPOSED</span></h2>
+    <div class="card">
+        <p>We will abstract the logic to check for the <strong>presence of shipping details</strong> rather than a
+            specific provider name. This makes the system "Provider Agnostic".</p>
+        <div class="code-block">
+            <span class="keyword">const</span> <span class="function">getDeliveryStatus</span> = (order) => {
+            <span class="keyword">if</span> (!order.isPaid) <span class="keyword">return</span> <span
+                class="string">'unpaid'</span>;
+            <span class="keyword">if</span> (order.status === <span class="string">'DELIVERED'</span>) <span
+                class="keyword">return</span> <span class="string">'delivered'</span>;
+
+            <span class="comment">// ✅ GENERIC CHECK: Does it have a valid provider and booking?</span>
+            <span class="keyword">if</span> (order.shipping?.provider && order.shipping?.bookingId) {
+            <span class="keyword">if</span> (order.status === <span class="string">'SHIPPED'</span>) <span
+                class="keyword">return</span> <span class="string">'in_transit'</span>;
+            <span class="keyword">return</span> <span class="string">'booked'</span>;
+            }
+
+            <span class="comment">// Needs booking if paid but no shipping info</span>
+            <span class="keyword">if</span> (order.isPaid && !order.shipping?.bookingId) <span
+                class="keyword">return</span> <span class="string">'needs_booking'</span>;
+
+            <span class="keyword">return</span> <span class="string">'other'</span>;
+            }
+        </div>
+    </div>
+
+    <h2>3. Implementation Steps</h2>
+
+    <div class="card">
+        <h3><span class="step-number">1</span> Refactor `getDeliveryStatus`</h3>
+        <p>Modify <code>app/store/orders/page.jsx</code> to remove the `lalamove` specific check unless necessary for
+            provider-specific API calls. All status determination will be based on data structure (existence of
+            `bookingId`).</p>
+    </div>
+
+    <div class="card">
+        <h3><span class="step-number">2</span> Dynamic UI Labels</h3>
+        <p>Update the "Review & Book" modal and button labels. Instead of hardcoding "Lalamove", we will display the
+            provider name dynamically if available, or default to "Delivery".</p>
+        <ul>
+            <li>Change: "Book Lalamove Delivery" &rarr; "Book {Provider} Delivery"</li>
+            <li>Change: "Lalamove Details" &rarr; "Delivery Details"</li>
+        </ul>
+    </div>
+
+    <div class="card">
+        <h3><span class="step-number">3</span> Verify Backend Compatibility</h3>
+        <p>Ensure that any new provider we add (in the backend factory) writes the <code>provider</code> and
+            <code>bookingId</code> fields to the <code>shipping</code> JSON column in the database. <strong>No backend
+                code changes are needed right now</strong>, as the current structure already supports this.</p>
+    </div>
+
+    <h2>4. Benefits</h2>
+    <div class="card">
+        <ul>
+            <li><strong>Future Proof:</strong> Add J&T, Grab, or generic "Rider" later without touching the frontend
+                logic.</li>
+            <li><strong>Consistency:</strong> "Booked", "In Transit", and "Delivered" tabs will work automatically for
+                any provider that updates the order status.</li>
+            <li><strong>Scalability:</strong> Reduce maintenance overhead when expanding shipping options.</li>
+        </ul>
+    </div>
+
+</body>
+
+</html>

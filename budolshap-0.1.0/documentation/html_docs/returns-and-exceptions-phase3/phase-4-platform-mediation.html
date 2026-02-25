@@ -1,0 +1,129 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Phase 4: Platform Mediation & Risk Assessment - BudolShap</title>
+    <style>
+        :root { --primary: #ee4d2d; --bg: #f5f5f5; --text: #333; --warning: #f59e0b; --danger: #ef4444; --success: #22c55e; }
+        body { font-family: -apple-system, system-ui, sans-serif; line-height: 1.6; color: var(--text); background: var(--bg); margin: 0; padding: 20px; }
+        .container { max-width: 900px; margin: 0 auto; background: white; padding: 40px; border-radius: 12px; box-shadow: 0 4px 20px rgba(0,0,0,0.08); }
+        h1, h2, h3 { color: var(--primary); }
+        .risk-table { width: 100%; border-collapse: collapse; margin: 20px 0; font-size: 0.9em; }
+        .risk-table th, .risk-table td { border: 1px solid #eee; padding: 12px; text-align: left; }
+        .risk-table th { background: #fafafa; color: #64748b; text-transform: uppercase; font-size: 0.8em; }
+        .level { padding: 2px 8px; border-radius: 4px; font-weight: bold; font-size: 0.8em; }
+        .level-high { background: #fee2e2; color: var(--danger); }
+        .level-med { background: #fffbeb; color: var(--warning); }
+        .card { padding: 20px; border: 1px solid #e2e8f0; border-radius: 8px; background: #f8fafc; margin-bottom: 20px; }
+        .card-title { font-weight: bold; color: #1e293b; display: block; margin-bottom: 10px; }
+        .nav-footer { margin-top: 50px; padding-top: 20px; border-top: 1px solid #eee; display: flex; justify-content: space-between; align-items: center; }
+        .nav-link { color: var(--primary); text-decoration: none; font-weight: bold; }
+        .nav-link:hover { text-decoration: underline; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div style="margin-bottom: 20px;">
+            <a href="index.html" style="color: var(--primary); text-decoration: none; font-weight: bold;">← Back to Phase Index</a>
+        </div>
+        <h1>Phase 4: Platform Mediation & Risk Assessment</h1>
+        
+        <p>Beyond the buyer-seller interaction, the platform (BudolShap Admin) acts as the ultimate authority in the "Shopee Guarantee" model. This phase documents the arbitration logic, risk mitigation strategies, and the technical safeguards protecting the marketplace's financial integrity.</p>
+
+        <h2>1. Platform Approval (Admin Mediation)</h2>
+        <div class="card">
+            <span class="card-title">Dispute Arbitration Flow</span>
+            <p>When an order enters the <code>RETURN_DISPUTED</code> state, it is flagged for manual platform review. The Admin Mediation process follows these steps:</p>
+            <ul>
+                <li><strong>Evidence Audit:</strong> Admin reviews Buyer's photos (damaged item) vs. Seller's counter-evidence (packing video/proof of shipping).</li>
+                <li><strong>Chat History Review:</strong> Accessing internal buyer-seller chat logs to identify verbal agreements or admissions.</li>
+                <li><strong>Final Verdict:</strong> Admin triggers <code>respondToReturn</code> with a platform-override status (either <code>REFUNDED</code> or <code>REJECTED</code>).</li>
+            </ul>
+        </div>
+
+        <h2>2. Risk Assessment Matrix (Marketplace Grade)</h2>
+        <table class="risk-table">
+            <thead>
+                <tr>
+                    <th>Risk Scenario</th>
+                    <th>Impact</th>
+                    <th>Shopee-Aligned Mitigation Strategy</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td><strong>Double Refund Fraud</strong><br>Buyer gets refund + keeps item</td>
+                    <td><span class="level level-high">HIGH</span></td>
+                    <td><strong>Escrow Locking:</strong> Refund is only triggered <em>after</em> seller confirms "Parcel Received" or 24h after tracking shows delivery.</td>
+                </tr>
+                <tr>
+                    <td><strong>Seller Non-Response</strong><br>Seller ignores return request</td>
+                    <td><span class="level level-med">MED</span></td>
+                    <td><strong>72-Hour Auto-Approval:</strong> System auto-accepts the refund to protect buyer trust if seller fails to respond within the window.</td>
+                </tr>
+                <tr>
+                    <td><strong>Empty Box Return</strong><br>Buyer ships back trash/empty box</td>
+                    <td><span class="level level-high">HIGH</span></td>
+                    <td><strong>Seller Dispute Window:</strong> Seller has a 24-hour buffer after receiving return to "Open Dispute" before escrow is finalized.</td>
+                </tr>
+                <tr>
+                    <td><strong>Voucher/Promotion Abuse</strong><br>Returning items to keep discounts</td>
+                    <td><span class="level level-med">MED</span></td>
+                    <td><strong>Pro-rata Refunds:</strong> System calculates refund based on <em>actual amount paid</em> after vouchers, not the original list price.</td>
+                </tr>
+                <tr>
+                    <td><strong>Malicious Buyer (Serial Returner)</strong><br>Abusing the return policy</td>
+                    <td><span class="level level-high">HIGH</span></td>
+                    <td><strong>Buyer Return Rate (BRR):</strong> System flags accounts with >30% return rate for manual review on future high-value orders.</td>
+                </tr>
+            </tbody>
+        </table>
+
+        <h2>3. Performance Mitigation (Seller & Buyer Performance)</h2>
+        <div class="card">
+            <span class="card-title">A. Seller: Non-Fulfilment Rate (NFR)</span>
+            <p>To mitigate seller-side risk, BudolShap tracks:</p>
+            <ul>
+                <li><strong>NFR Impact:</strong> Returns due to seller error (Wrong Item, Damaged) increase NFR.</li>
+                <li><strong>Penalty Points:</strong> Exceeding NFR thresholds triggers visibility restrictions.</li>
+            </ul>
+        </div>
+
+        <div class="card">
+            <span class="card-title">B. Buyer: Buyer Return Rate (BRR) & Fraud Score</span>
+            <p>To prevent marketplace abuse by buyers, the system tracks performance metrics similar to Shopee's "Fraud Prevention" suite:</p>
+            <ul>
+                <li><strong>Buyer Return Rate (BRR):</strong> Calculated as <code>(Approved Returns / Total Orders)</code> over 90 days. Users with >20% BRR are flagged as "Serial Returners".</li>
+                <li><strong>COD Unpaid Rate:</strong> Tracks how often a buyer refuses COD parcels. High rates lead to <strong>COD Payment Restriction</strong>.</li>
+                <li><strong>Abuse Categories:</strong>
+                    <ul>
+                        <li><em>False Evidence:</em> Submitting doctored photos to claim damages.</li>
+                        <li><em>Voucher Farming:</em> Creating multiple accounts to abuse return-and-rebuy discounts.</li>
+                    </ul>
+                </li>
+                <li><strong>Sanctions:</strong> Repeat offenders may have their <em>Shopee Guarantee</em> window shortened or be permanently banned from the "Refund Only" path.</li>
+            </ul>
+        </div>
+
+        <h2>4. Mitigation Safeguards (Technical)</h2>
+        <h3>A. The Escrow Safety Net</h3>
+        <p>BudolShap implements a <strong>Deferred Payout</strong> model. Funds from a completed sale are held in a <code>PENDING</code> state for 7 days (the "Shopee Guarantee" period). This ensures that if a return is requested, the funds are still available for refunding without needing to "claw back" money from a seller's bank account.</p>
+
+        <h3>B. Evidence Immutability</h3>
+        <p>Once a return request is submitted, images are stored with a timestamped link to the <code>Return</code> record. Neither party can delete or alter evidence once a dispute is officially raised, ensuring the Admin has a clean audit trail.</p>
+
+        <h3>C. Automated State Guards</h3>
+        <pre><code>// Safety check in returnsService.js
+if (returnRequest.status === 'REFUNDED') {
+    throw new Error('Refund already processed for this request.');
+}</code></pre>
+
+        <div class="nav-footer">
+            <a href="phase-3-delivery-proof.html" class="nav-link">← Previous: 3. Delivery Proof</a>
+            <a href="index.html" class="nav-link">Back to Index</a>
+            <a href="phase-4-ui-mockups.html" class="nav-link">Next: Phase 4 UI Mockups →</a>
+        </div>
+    </div>
+</body>
+</html>

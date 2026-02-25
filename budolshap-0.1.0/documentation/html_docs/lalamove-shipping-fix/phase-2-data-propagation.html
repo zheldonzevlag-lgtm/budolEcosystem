@@ -1,0 +1,53 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Phase 2: Data Propagation Fix - Lalamove Shipping Fee Fix</title>
+    <style>
+        body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; line-height: 1.6; color: #333; max-width: 1000px; margin: 0 auto; padding: 20px; background: #f5f7fa; }
+        .card { background: white; padding: 30px; border-radius: 8px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); margin-bottom: 30px; }
+        h1 { color: #1e293b; }
+        h2 { color: #1e293b; border-bottom: 2px solid #e2e8f0; padding-bottom: 10px; margin-top: 30px; }
+        pre { background: #1e293b; color: #f8fafc; padding: 15px; border-radius: 6px; overflow-x: auto; }
+        .highlight { color: #38bdf8; font-weight: bold; }
+        .nav-links { margin-bottom: 20px; }
+        .nav-links a { color: #3b82f6; text-decoration: none; }
+    </style>
+</head>
+<body>
+    <div class="nav-links">
+        <a href="index.html">← Back to Index</a>
+    </div>
+
+    <div class="card">
+        <h1>Phase 2: Data Propagation Fix</h1>
+        <p>The core fix involved ensuring that the <code>stops</code> data (containing <code>stopIds</code>) is preserved throughout the entire quote-to-order lifecycle.</p>
+
+        <h2>1. Updating Shipping Service</h2>
+        <p>Modified <code>lib/services/shippingService.js</code> to include the <code>stops</code> array in the returned quote object.</p>
+        <pre><code>// lib/services/shippingService.js
+return {
+    success: true,
+    quote: {
+        quoteId: quote.quotationId,
+        price: { ... },
+        <span class="highlight">stops: quote.stops</span> // Added this line
+    }
+};</code></pre>
+
+        <h2>2. Frontend Payload Update</h2>
+        <p>Updated <code>components/OrderSummary.jsx</code> to capture the stops from the quote and include them in the order creation payload.</p>
+        <pre><code>// components/OrderSummary.jsx
+shipping: shippingMethod === 'LALAMOVE' && lalamoveQuote ? {
+    provider: 'lalamove',
+    cost: shippingCost,
+    quotationId: lalamoveQuote.quoteId,
+    <span class="highlight">stops: lalamoveQuote.stops</span> // Ensured propagation
+} : ...</code></pre>
+
+        <h2>3. Database Schema Verification</h2>
+        <p>Confirmed that the Prisma schema for the <code>Order</code> model uses a <code>Json?</code> field for <code>shipping</code>, which allows storing the entire Lalamove metadata including the stops array for later retrieval during the booking phase.</p>
+    </div>
+</body>
+</html>

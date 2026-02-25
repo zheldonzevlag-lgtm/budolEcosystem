@@ -1,0 +1,244 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Phased Payment Integration Plan: QRPh, Maya, Grab</title>
+    <style>
+        /* Light Theme for Readability */
+        :root {
+            --bg: #f8fafc;
+            --text: #0f172a;
+            --card-bg: #ffffff;
+            --accent: #4f46e5;
+            --success: #16a34a;
+            --warning: #d97706;
+            --code-bg: #e2e8f0;
+            --code-text: #ef4444;
+            --border: #cbd5e1;
+        }
+
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: var(--bg);
+            color: var(--text);
+            line-height: 1.6;
+            padding: 2rem;
+            max-width: 900px;
+            margin: 0 auto;
+        }
+
+        h1,
+        h2,
+        h3 {
+            color: var(--accent);
+        }
+
+        .card {
+            background-color: var(--card-bg);
+            padding: 1.5rem;
+            border-radius: 0.5rem;
+            margin-bottom: 1.5rem;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.05);
+            border: 1px solid var(--border);
+        }
+
+        code {
+            background-color: var(--code-bg);
+            padding: 0.2rem 0.4rem;
+            border-radius: 0.25rem;
+            font-family: monospace;
+            color: var(--code-text);
+        }
+
+        .tag {
+            display: inline-block;
+            padding: 0.25rem 0.75rem;
+            border-radius: 9999px;
+            font-size: 0.75rem;
+            font-weight: 700;
+            text-transform: uppercase;
+            margin-right: 0.5rem;
+        }
+
+        .tag-new {
+            background-color: var(--success);
+            color: #fff;
+        }
+
+        .tag-safety {
+            background-color: var(--warning);
+            color: #fff;
+        }
+
+        .tag-time {
+            background-color: var(--accent);
+            color: #fff;
+        }
+
+        .mermaid {
+            background: #f1f5f9;
+            padding: 1rem;
+            border-radius: 0.5rem;
+            margin: 1rem 0;
+            overflow-x: auto;
+            border: 1px solid var(--border);
+        }
+
+        .timeline {
+            border-left: 2px solid var(--accent);
+            padding-left: 1.5rem;
+            margin-left: 1rem;
+        }
+
+        .timeline-item {
+            position: relative;
+            margin-bottom: 2rem;
+        }
+
+        .timeline-item::before {
+            content: '';
+            position: absolute;
+            left: -2.1rem;
+            top: 0.25rem;
+            width: 1rem;
+            height: 1rem;
+            background: var(--accent);
+            border-radius: 50%;
+            border: 2px solid white;
+        }
+
+        .duration-badge {
+            background: #e0e7ff;
+            color: #4338ca;
+            padding: 0.5rem 1rem;
+            border-radius: 0.5rem;
+            font-weight: 600;
+            display: inline-block;
+            margin-bottom: 1rem;
+            border: 1px solid #c7d2fe;
+        }
+    </style>
+</head>
+
+<body>
+
+    <h1>🚀 PayMongo Integration Plan: QRPh, Maya, Grab</h1>
+    <div class="duration-badge">⏱️ Total Estimated Duration: 3-4 Days</div>
+
+    <p>This plan updates the previous strategy to use a <strong>Gateway Agnostic Architecture</strong> (Adapter
+        Pattern). It is broken down into safe, testable phases to ensure the <strong>existing GCash integration remains
+            100% functional</strong> throughout the process.</p>
+
+    <div class="card">
+        <h2>🛡️ Safety First Strategy</h2>
+        <p><span class="tag tag-safety">CRITICAL</span> <strong>Protecting Existing GCash Flow</strong></p>
+        <p>To guarantee no downtime for the current GCash payment method:</p>
+        <ul>
+            <li><strong>No modifications</strong> will be made to <code>app/api/payment/gcash/create/route.js</code>
+                initially. It will continue to use the legacy <code>lib/paymongo.js</code>.</li>
+            <li>The new <strong>Unified API</strong> (<code>/api/payment/checkout</code>) will be built
+                <em>alongside</em> the existing one.
+            </li>
+            <li>We will first implement the new methods (Maya, Grab, QRPh) using the new architecture.</li>
+            <li>Only after the new architecture is battle-tested will we (optionally) migrate the GCash flow to use it,
+                or simply leave the working legacy flow as is.</li>
+        </ul>
+    </div>
+
+    <div class="card">
+        <h2>🏗️ Architecture: The Adapter Pattern</h2>
+
+        <div class="mermaid">
+            graph TD
+            subgraph Legacy Flow [Safe Zone]
+            OldClient[Existing GCash Button] -->|POST /api/payment/gcash/create| OldAPI[Old API Route]
+            OldAPI -->|Direct Call| OldLib[lib/paymongo.js]
+            OldLib --> PayMongo
+            end
+
+            subgraph New Flow [Expansion Phase]
+            NewClient[Universal Payment Selector] -->|POST /api/payment/checkout| UnifiedAPI
+            UnifiedAPI[Unified API Route] -->|initiatePayment| PaymentService
+            PaymentService -->|Select Provider| AdapterFactory
+            AdapterFactory --> PayMongoAdapter[PayMongo Adapter]
+            PayMongoAdapter --> PayMongo
+            end
+        </div>
+        <script type="module">
+            import mermaid from 'https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.esm.min.mjs';
+            mermaid.initialize({ startOnLoad: true, theme: 'neutral', securityLevel: 'loose' });
+        </script>
+    </div>
+
+    <div class="card">
+        <h2>📅 Phased Implementation Timeline</h2>
+
+        <div class="timeline">
+            <!-- PHASE 1 -->
+            <div class="timeline-item">
+                <h3>Phase 1: Foundation & Adapter Core</h3>
+                <p><span class="tag tag-time">1 Day</span></p>
+                <p><strong>Goal:</strong> set up the generic payment structure without touching existing code.</p>
+                <ul>
+                    <li>Create <code>lib/payment/adapters/base-adapter.js</code> (Interface).</li>
+                    <li>Create <code>lib/payment/adapters/paymongo-adapter.js</code> (New Logic).</li>
+                    <li>Create <code>lib/payment/service.js</code> (Service Layer).</li>
+                    <li>Create <code>app/api/payment/checkout/route.js</code> (New Endpoint).</li>
+                </ul>
+            </div>
+
+            <!-- PHASE 2 -->
+            <div class="timeline-item">
+                <h3>Phase 2: Frontend Integration (Maya, Grab, QRPh)</h3>
+                <p><span class="tag tag-time">1-2 Days</span></p>
+                <p><strong>Goal:</strong> Allow users to select new payment methods.</p>
+                <ul>
+                    <li>Create <code>components/payment/PaymentMethodSelector.jsx</code>.</li>
+                    <li>Implement UI for selecting methods (Card/Radio style).</li>
+                    <li>Connect this component to the <strong>New Endpoint</strong> (Plan 1).</li>
+                    <li><strong>Test:</strong> Verify Maya/Grab/QRPh redirects work correctly.</li>
+                </ul>
+            </div>
+
+            <!-- PHASE 3 -->
+            <div class="timeline-item">
+                <h3>Phase 3: Verification & Polish</h3>
+                <p><span class="tag tag-time">1 Day</span></p>
+                <p><strong>Goal:</strong> Ensure seamless UX and verify webhooks.</p>
+                <ul>
+                    <li>Ensure <code>payment/success</code> and <code>payment/failed</code> pages handle the new source
+                        types correctly.</li>
+                    <li>Verify <code>/api/webhooks/paymongo</code> can handle events from these new methods (PayMongo
+                        events are generally consistent).</li>
+                    <li><strong>Deliverable:</strong> Fully functional QRPh, Maya, and Grab payment options alongside
+                        the existing GCash button.</li>
+                </ul>
+            </div>
+        </div>
+    </div>
+
+    <div class="card">
+        <h2>✅ Deliverables</h2>
+        <ul>
+            <li><strong>New Files:</strong> <code>lib/payment/*</code>,
+                <code>components/payment/PaymentMethodSelector.jsx</code>
+            </li>
+            <li><strong>Unchanged Files (Safety):</strong> <code>lib/paymongo.js</code>,
+                <code>app/api/payment/gcash/create/route.js</code>
+            </li>
+            <li><strong>Outcome:</strong> A robust, extensible payment system that adds 3 new payment methods without
+                risking the stability of the primary revenue channel (GCash).</li>
+        </ul>
+    </div>
+
+    <div>
+        <p class="flex justify-center items-center">Budolshap V3 copyright © 2025 -
+            <script>{ new Date().getFullYear() }</script>
+        </p>
+    </div>
+
+</body>
+
+</html>

@@ -1,0 +1,98 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Phase 1: API Updates - Escrow Dynamic Period Implementation</title>
+    <style>
+        body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; line-height: 1.6; color: #333; max-width: 1000px; margin: 0 auto; padding: 2rem; background-color: #f8f9fa; }
+        h1 { color: #1a202c; border-bottom: 2px solid #e2e8f0; padding-bottom: 0.5rem; }
+        h2 { color: #2d3748; margin-top: 2rem; }
+        .card { background: white; border-radius: 8px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); padding: 1.5rem; margin-bottom: 1.5rem; border: 1px solid #e2e8f0; }
+        code { background-color: #edf2f7; padding: 0.2rem 0.4rem; border-radius: 4px; font-family: "SFMono-Regular", Consolas, "Liberation Mono", Menlo, monospace; font-size: 0.9em; }
+        pre { background-color: #1a202c; color: #fff; padding: 1rem; border-radius: 8px; overflow-x: auto; font-family: "SFMono-Regular", Consolas, "Liberation Mono", Menlo, monospace; font-size: 0.9em; }
+        .badge { display: inline-block; padding: 0.25rem 0.5rem; border-radius: 9999px; font-size: 0.75rem; font-weight: 600; text-transform: uppercase; }
+        .badge-success { background-color: #c6f6d5; color: #22543d; }
+        .nav { margin-bottom: 2rem; }
+        .nav a { color: #4299e1; text-decoration: none; margin-right: 1rem; }
+        .nav a:hover { text-decoration: underline; }
+        table { width: 100%; border-collapse: collapse; margin: 1rem 0; }
+        th, td { text-align: left; padding: 0.75rem; border-bottom: 1px solid #e2e8f0; }
+        th { background-color: #edf2f7; }
+    </style>
+</head>
+<body>
+    <div class="nav">
+        <a href="index.html">← Back to Index</a>
+    </div>
+
+    <h1>Phase 1: API Updates</h1>
+    <p>The first phase focused on extending existing API endpoints to include the dynamic <code>protectionWindowDays</code> value from the centralized system settings.</p>
+
+    <div class="card">
+        <h2>Overview</h2>
+        <p>Previously, many UI components had hardcoded escrow holding periods (typically 7 days). This phase ensures that the backend provides the actual configured value to all relevant frontend interfaces.</p>
+    </div>
+
+    <div class="card">
+        <h2>Modified API Endpoints</h2>
+        <table>
+            <thead>
+                <tr>
+                    <th>Endpoint</th>
+                    <th>Service Used</th>
+                    <th>Purpose</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td><code>GET /api/dashboard/store</code></td>
+                    <td><code>systemSettingsService</code></td>
+                    <td>Provide <code>protectionWindowDays</code> to the Seller Dashboard.</td>
+                </tr>
+                <tr>
+                    <td><code>GET /api/store/wallet</code></td>
+                    <td><code>systemSettingsService</code></td>
+                    <td>Provide <code>protectionWindowDays</code> to the Seller Wallet page.</td>
+                </tr>
+                <tr>
+                    <td><code>GET /api/orders/[orderId]</code></td>
+                    <td><code>systemSettingsService</code></td>
+                    <td>Provide <code>protectionWindowDays</code> to the Public Order Detail page.</td>
+                </tr>
+                <tr>
+                    <td><code>GET /api/dashboard/admin/escrow</code></td>
+                    <td><code>systemSettingsService</code></td>
+                    <td>Provide <code>protectionWindowDays</code> to the Admin Dashboard stats.</td>
+                </tr>
+            </tbody>
+        </table>
+    </div>
+
+    <div class="card">
+        <h2>Technical Implementation Details</h2>
+        <p>Each API was updated to import <code>getSystemSettings</code> and inject the value into the JSON response:</p>
+        <pre><code>
+import { getSystemSettings } from '@/lib/services/systemSettingsService';
+
+// Inside GET handler
+const settings = await getSystemSettings();
+const protectionWindowDays = settings?.protectionWindowDays || 7;
+
+return NextResponse.json({
+    // ... other data
+    protectionWindowDays
+});
+        </code></pre>
+    </div>
+
+    <div class="card">
+        <h2>Validation & Testing</h2>
+        <ul>
+            <li>Verified that <code>getSystemSettings()</code> correctly falls back to <code>7</code> if settings are missing.</li>
+            <li>Confirmed that the <code>protectionWindowDays</code> property is present in all updated API responses.</li>
+            <li>Ensured no breaking changes were introduced to existing data structures.</li>
+        </ul>
+    </div>
+</body>
+</html>

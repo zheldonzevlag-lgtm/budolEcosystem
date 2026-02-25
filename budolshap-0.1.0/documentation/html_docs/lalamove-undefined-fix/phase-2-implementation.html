@@ -1,0 +1,76 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Phase 2: Implementation - Lalamove Undefined Values Fix</title>
+    <style>
+        body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; line-height: 1.6; color: #333; max-width: 800px; margin: 0 auto; padding: 20px; }
+        h1 { color: #2c3e50; border-bottom: 2px solid #eee; padding-bottom: 10px; }
+        h2 { color: #34495e; margin-top: 30px; }
+        code { background-color: #f8f9fa; border: 1px solid #e9ecef; border-radius: 4px; padding: 2px 4px; font-family: "SFMono-Regular", Consolas, "Liberation Mono", Menlo, monospace; }
+        pre { background-color: #f8f9fa; border: 1px solid #e9ecef; border-radius: 4px; padding: 15px; overflow-x: auto; }
+        .success { color: #27ae60; font-weight: bold; }
+        nav { margin-bottom: 20px; background: #f8f9fa; padding: 10px; border-radius: 4px; }
+        nav a { margin-right: 15px; text-decoration: none; color: #3498db; }
+    </style>
+</head>
+<body>
+    <nav>
+        <a href="index.html">Index</a>
+        <a href="phase-1-analysis.html">Phase 1: Analysis</a>
+        <a href="phase-2-implementation.html">Phase 2: Implementation</a>
+        <a href="phase-3-verification.html">Phase 3: Verification</a>
+        <a href="implementation-summary.html">Summary</a>
+    </nav>
+
+    <h1>Phase 2: Implementation</h1>
+
+    <section>
+        <h2>Overview</h2>
+        <p>The implementation involved identifying every instance where Lalamove API data was used in a Prisma <code>update</code> call and ensuring that no field could be <code>undefined</code>.</p>
+    </section>
+
+    <section>
+        <h2>Key Changes</h2>
+        
+        <h3>1. Shipping Service (Core Logic)</h3>
+        <p>Modified <code>lib/services/shippingService.js</code> to fix return booking and tracking updates.</p>
+        <pre><code>// Fixed returnShipping update
+customerOrderId: booking.customerOrderId || null,
+shareLink: booking.shareLink || null,
+
+// Fixed order shipping update
+trackingUrl: booking.trackingUrl || null,
+shareLink: booking.shareLink || null,
+
+// Fixed driver info property mismatch
+driver: trackingInfo.driverInfo || null,</code></pre>
+
+        <h3>2. Webhook Handlers</h3>
+        <p>Modified <code>app/api/shipping/lalamove/webhook/route.js</code> and <code>app/api/webhooks/lalamove/route.js</code> to handle driver and location data safely.</p>
+        <pre><code>driverInfo = {
+    name: driverData.name || driverInfo.name || null,
+    phone: driverData.phone || driverInfo.phone || null,
+    plateNumber: driverData.plateNumber || driverInfo.plateNumber || null,
+    photo: driverData.photoUrl || driverData.photo || driverInfo.photo || null,
+    vehicleType: driverData.vehicleType || driverInfo.vehicleType || null,
+    rating: driverData.rating || driverInfo.rating || null
+};</code></pre>
+
+        <h3>3. Manual Sync & Background Updaters</h3>
+        <p>Updated <code>app/api/orders/[orderId]/sync-lalamove/route.js</code> and <code>services/shippingOrderUpdater.js</code> to ensure consistent behavior across all sync methods.</p>
+    </section>
+
+    <section>
+        <h2>Technical Decisions</h2>
+        <ul>
+            <li><strong>Null Coalescing:</strong> Used <code>|| null</code> instead of <code>?? null</code> because Lalamove sometimes returns empty strings which we also want to treat as <code>null</code> for database consistency in these specific JSON fields.</li>
+            <li><strong>JSON Field Preservation:</strong> When updating partial JSON data, we now consistently spread existing data (<code>...currentShipping</code>) and then overwrite with sanitized new values.</li>
+            <li><strong>Driver Info Mapping:</strong> Fixed a property name mismatch where some code expected <code>driver</code> and others <code>driverInfo</code>. Standardized on <code>driverInfo</code> while maintaining <code>driver</code> as a fallback for legacy support.</li>
+        </ul>
+    </section>
+
+    <p class="success">Implementation complete across 5 critical files.</p>
+</body>
+</html>

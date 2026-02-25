@@ -1,0 +1,135 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Implementation Plan: Fix Order Display on Payment Success</title>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, 'Open Sans', 'Helvetica Neue', sans-serif;
+            line-height: 1.6;
+            color: #333;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+
+        h1 {
+            border-bottom: 2px solid #eaeaea;
+            padding-bottom: 10px;
+            color: #0f172a;
+        }
+
+        h2 {
+            margin-top: 30px;
+            color: #1e293b;
+            border-bottom: 1px solid #f1f5f9;
+            padding-bottom: 5px;
+        }
+
+        h3 {
+            margin-top: 20px;
+            color: #334155;
+        }
+
+        ul {
+            padding-left: 20px;
+        }
+
+        li {
+            margin-bottom: 5px;
+        }
+
+        code {
+            background-color: #f1f5f9;
+            padding: 2px 4px;
+            border-radius: 4px;
+            font-family: source-code-pro, Menlo, Monaco, Consolas, "Courier New", monospace;
+            font-size: 0.9em;
+            color: #db2777;
+        }
+
+        .section-box {
+            background: #f8fafc;
+            border: 1px solid #e2e8f0;
+            border-radius: 8px;
+            padding: 20px;
+            margin-bottom: 20px;
+        }
+
+        .status-badge {
+            display: inline-block;
+            padding: 4px 8px;
+            border-radius: 9999px;
+            font-size: 0.75rem;
+            font-weight: 600;
+            text-transform: uppercase;
+            background-color: #dbeafe;
+            color: #1e40af;
+            margin-left: 10px;
+        }
+    </style>
+</head>
+
+<body>
+
+    <h1>Implementation Plan: Fix Order Display on Payment Success <span class="status-badge">Planned</span></h1>
+
+    <div class="section-box">
+        <h2>Goal</h2>
+        <p>Ensure the correct <strong>Order ID</strong>, <strong>Amount</strong>, and <strong>Status</strong> are
+            displayed on the payment success page (<code>/payment/return</code>) for all payment methods (Maya, GrabPay,
+            QRPh), which currently fail due to mismatched description parsing.</p>
+    </div>
+
+    <h2>User Review Required</h2>
+    <p>None. This is a fix for broken internal logic.</p>
+
+    <h2>Proposed Changes</h2>
+
+    <h3>Backend Logic</h3>
+    <ul>
+        <li><strong>Modify <code>app/api/orders/update-status/route.js</code></strong>:
+            <ul>
+                <li>Change logic to lookup Order by <code>paymentId</code> (Intent ID) first, as this is reliably stored
+                    by <code>checkout/route.js</code>.</li>
+                <li>Update regex for description parsing as a fallback to handle formatting like "Order #12345 - MAYA".
+                </li>
+                <li>Ensure the updated Order object is returned correctly.</li>
+            </ul>
+        </li>
+    </ul>
+
+    <h3>Frontend</h3>
+    <ul>
+        <li><strong>Verify <code>app/payment/return/page.jsx</code></strong>:
+            <ul>
+                <li>(No changes expected, as it correctly displays whatever order object is returned by the API).</li>
+            </ul>
+        </li>
+    </ul>
+
+    <h2>Verification Plan</h2>
+
+    <h3>Manual Verification</h3>
+    <ul>
+        <li><strong>Simulate Payment Success API Call (Mock)</strong>
+            <ul>
+                <li>We cannot process real payments, but we can call the <code>update-status</code> API with a valid
+                    Intent ID from a recent test order (if available in logs) or by creating a mock order in DB.</li>
+                <li>Since we don't have direct DB access to create mock orders easily without UI, we will rely on code
+                    correctness and existing logs that showed successful Intent ID storage.</li>
+            </ul>
+        </li>
+    </ul>
+
+    <h3>Automated Test</h3>
+    <ul>
+        <li><strong>N/A</strong> - This is a hotfix for a specific production issue involving external API callbacks.
+        </li>
+    </ul>
+
+</body>
+
+</html>

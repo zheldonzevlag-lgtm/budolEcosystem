@@ -1,0 +1,188 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Developer Manual - BudolEcosystem v1.0</title>
+    <style>
+        :root {
+            --primary-color: #0052CC;
+            --code-bg: #F4F5F7;
+            --border-color: #DFE1E6;
+        }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            line-height: 1.6;
+            color: #172B4D;
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 40px;
+        }
+        h1, h2, h3 { color: var(--primary-color); }
+        h1 { border-bottom: 2px solid var(--border-color); padding-bottom: 15px; }
+        
+        .section {
+            margin-bottom: 40px;
+            padding: 20px;
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+        }
+        
+        .code-ref {
+            display: inline-block;
+            background-color: var(--code-bg);
+            padding: 2px 6px;
+            border-radius: 4px;
+            font-family: 'SFMono-Regular', Consolas, 'Liberation Mono', Menlo, monospace;
+            font-size: 0.9em;
+            color: #D04437;
+        }
+        
+        .code-block {
+            background-color: #1B2631;
+            color: #F8F9F9;
+            padding: 20px;
+            border-radius: 8px;
+            overflow-x: auto;
+            font-family: 'SFMono-Regular', Consolas, monospace;
+            margin: 15px 0;
+            position: relative;
+        }
+        
+        .file-link {
+            position: absolute;
+            top: 10px;
+            right: 10px;
+            background: #0052CC;
+            color: white;
+            text-decoration: none;
+            padding: 4px 10px;
+            border-radius: 4px;
+            font-size: 0.8em;
+        }
+        .file-link:hover { background: #0065FF; }
+
+        .diagram {
+            background: #EAECEF;
+            padding: 20px;
+            border-radius: 8px;
+            text-align: center;
+            font-family: monospace;
+            white-space: pre;
+            overflow-x: auto;
+        }
+    </style>
+</head>
+<body>
+    <h1>Developer Manual</h1>
+    <p><strong>Version:</strong> 1.0 | <strong>Date:</strong> 2026-02-16</p>
+    <p><a href="index.html">&larr; Back to Index</a></p>
+
+    <div class="section">
+        <h2>1. Architecture Overview</h2>
+        <p>The BudolEcosystem is built on a modern stack leveraging <strong>Next.js 14 (App Router)</strong>, <strong>Redux Toolkit</strong> for state management, and <strong>Prisma ORM</strong> for database interactions.</p>
+        <ul>
+            <li><strong>Frontend:</strong> React, Tailwind CSS, Redux Toolkit</li>
+            <li><strong>Backend:</strong> Next.js API Routes, Prisma (SQLite/PostgreSQL)</li>
+            <li><strong>Authentication:</strong> Custom JWT-based auth with HTTP-only cookies</li>
+        </ul>
+    </div>
+
+    <div class="section">
+        <h2>2. Cart System Implementation</h2>
+        <p>The shopping cart uses a <strong>Hybrid Persistence Strategy</strong> to ensure seamless user experience across guest and logged-in states.</p>
+        
+        <h3>Core Components</h3>
+        <ul>
+            <li><span class="code-ref">cartSlice.js</span>: Redux logic for cart operations.</li>
+            <li><span class="code-ref">PublicLayout.jsx</span>: Orchestrates cart syncing and merging.</li>
+            <li><span class="code-ref">/api/cart/route.js</span>: Backend endpoint for atomic cart updates.</li>
+        </ul>
+
+        <h3>Synchronization Logic</h3>
+        <p>When a user logs in, the local (guest) cart is merged with the server cart. The larger quantity for any given item is preserved.</p>
+        
+        <div class="code-block">
+            <a href="file:///d:/IT Projects/budolEcosystem/budolshap-0.1.0/app/(public)/layout.jsx" class="file-link">Open PublicLayout.jsx</a>
+// Merge Logic in PublicLayout.jsx
+const localCart = cartItemsRef.current || {};
+const mergedCart = { ...serverCart };
+
+Object.keys(localCart).forEach(itemKey => {
+    if (mergedCart[itemKey]) {
+        // Use the larger quantity to prevent data loss
+        mergedCart[itemKey] = Math.max(Number(mergedCart[itemKey] || 0), Number(localCart[itemKey] || 0));
+    } else {
+        mergedCart[itemKey] = localCart[itemKey];
+    }
+});
+        </div>
+    </div>
+
+    <div class="section">
+        <h2>3. Authentication & Logout Flow</h2>
+        <p>A critical race condition was identified where logging out would trigger a sync of an empty cart, wiping the user's data. This has been resolved by checking <code>userId</code> transitions.</p>
+
+        <h3>The Fix</h3>
+        <p>We use a <code>prevUserIdRef</code> to detect the exact moment a user logs out (transition from ID to null) and clear the local state <em>without</em> triggering a server sync.</p>
+
+        <div class="code-block">
+            <a href="file:///d:/IT Projects/budolEcosystem/budolshap-0.1.0/app/(public)/layout.jsx" class="file-link">Open PublicLayout.jsx</a>
+// Handle cart clearing on logout
+useEffect(() => {
+    // If we had a user ID before, but now we don't, it means we logged out
+    if (prevUserIdRef.current && !userId) {
+        console.log('[Layout] User logged out, clearing cart state');
+        dispatch(clearCart());
+        localStorage.removeItem('budolshap_cart');
+    }
+    prevUserIdRef.current = userId;
+}, [userId, dispatch]);
+        </div>
+    </div>
+
+    <div class="section">
+        <h2>4. Database Schema (Prisma)</h2>
+        <p>The cart system uses a composite key of <code>productId</code> and <code>variationId</code> to handle product variants correctly.</p>
+        
+        <div class="code-block">
+            <a href="file:///d:/IT Projects/budolEcosystem/budolshap-0.1.0/prisma/schema.prisma" class="file-link">Open schema.prisma</a>
+model CartItem {
+  id          String  @id @default(cuid())
+  cartId      String
+  productId   String
+  variationId String? // Nullable for products without variations
+  quantity    Int
+  
+  cart        Cart    @relation(fields: [cartId], references: [id], onDelete: Cascade)
+  product     Product @relation(fields: [productId], references: [id])
+
+  @@unique([cartId, productId, variationId]) // Composite unique constraint
+}
+        </div>
+    </div>
+
+    <div class="section">
+        <h2>5. Image Handling</h2>
+        <p>To prevent layout shifts and broken images, we implemented a robust fallback mechanism using conditional rendering.</p>
+        
+        <div class="code-block">
+            <a href="file:///d:/IT Projects/budolEcosystem/budolshap-0.1.0/components/ProductCard.jsx" class="file-link">Open ProductCard.jsx</a>
+{/* Image Rendering Logic */}
+{product.images && product.images[0] ? (
+    <Image
+        src={product.images[0]}
+        alt={product.name}
+        fill
+        className="object-cover group-hover:scale-105 transition-transform duration-300"
+    />
+) : (
+    <div className="w-full h-full bg-gray-200 flex items-center justify-center text-gray-400">
+        No Image
+    </div>
+)}
+        </div>
+    </div>
+
+</body>
+</html>

@@ -1,0 +1,322 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Return & Refund System Implementation - BudolShap V3</title>
+    <style>
+        :root {
+            --primary: #16a34a;
+            --primary-dark: #15803d;
+            --secondary: #e2e8f0;
+            --text-main: #1e293b;
+            --text-light: #64748b;
+            --bg-light: #f8fafc;
+        }
+
+        body {
+            font-family: 'Inter', system-ui, -apple-system, sans-serif;
+            line-height: 1.6;
+            color: var(--text-main);
+            background: var(--bg-light);
+            margin: 0;
+            padding: 0;
+        }
+
+        .container {
+            max-width: 1000px;
+            margin: 0 auto;
+            padding: 40px 20px;
+        }
+
+        header {
+            background: white;
+            padding: 40px 0;
+            border-bottom: 1px solid var(--secondary);
+            margin-bottom: 40px;
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05);
+        }
+
+        header .container {
+            padding-top: 0;
+            padding-bottom: 0;
+        }
+
+        h1 {
+            color: var(--primary-dark);
+            font-size: 2.5rem;
+            margin: 0 0 10px 0;
+        }
+
+        h2 {
+            border-bottom: 2px solid var(--primary);
+            padding-bottom: 10px;
+            margin-top: 40px;
+            color: var(--text-main);
+        }
+
+        h3 {
+            color: var(--primary);
+            margin-top: 30px;
+        }
+
+        .meta {
+            color: var(--text-light);
+            font-size: 0.9rem;
+        }
+
+        .card {
+            background: white;
+            border-radius: 12px;
+            padding: 24px;
+            margin-bottom: 24px;
+            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+            border: 1px solid var(--secondary);
+        }
+
+        .status-badge {
+            display: inline-block;
+            padding: 4px 12px;
+            border-radius: 20px;
+            font-size: 0.8rem;
+            font-weight: 600;
+        }
+
+        .status-success {
+            background: #dcfce7;
+            color: #166534;
+        }
+
+        .status-warning {
+            background: #fef9c3;
+            color: #854d0e;
+        }
+
+        .status-error {
+            background: #fee2e2;
+            color: #991b1b;
+        }
+
+        ul {
+            padding-left: 20px;
+        }
+
+        li {
+            margin-bottom: 8px;
+        }
+
+        code {
+            background: #f1f5f9;
+            padding: 2px 6px;
+            border-radius: 4px;
+            font-family: monospace;
+            color: #ec4899;
+        }
+
+        pre {
+            background: #1e293b;
+            color: #f8fafc;
+            padding: 20px;
+            border-radius: 8px;
+            overflow-x: auto;
+        }
+
+        .flow-step {
+            display: flex;
+            align-items: flex-start;
+            gap: 15px;
+            margin-bottom: 20px;
+        }
+
+        .step-number {
+            background: var(--primary);
+            color: white;
+            width: 30px;
+            height: 30px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: bold;
+            flex-shrink: 0;
+        }
+
+        .img-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 20px;
+            margin: 20px 0;
+        }
+
+        .img-placeholder {
+            background: #cbd5e1;
+            height: 150px;
+            border-radius: 8px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: #64748b;
+        }
+    </style>
+</head>
+
+<body>
+
+    <header>
+        <div class="container">
+            <h1>Return & Refund System</h1>
+            <p class="meta">Implementation Summary | Date: December 20, 2025 | Phase: 3</p>
+        </div>
+    </header>
+
+    <div class="container">
+
+        <div class="card">
+            <h2>🚀 Executive Summary</h2>
+            <p>
+                The <strong>Return & Refund System</strong> has been fully implemented, aligning BudolShap's order
+                management flow with Shopee's best practices.
+                This update introduces a new lifecycle for disputed orders, giving buyers a way to request refunds for
+                missing or damaged items,
+                and providing sellers with a dedicated dashboard to manage these requests.
+            </p>
+            <p>
+                Additionally, the default order status display has been refined to show <strong>"PROCESSING"</strong>
+                for active orders, cleaner and more professional than "Order Placed".
+            </p>
+        </div>
+
+        <h2>🛠️ Processes Implemented</h2>
+
+        <h3>1. Buyer: Requesting a Return</h3>
+        <div class="flow-step">
+            <div class="step-number">1</div>
+            <div>
+                <strong>Initiation</strong>: Buyers can click the "Return / Refund" button on any eligible order
+                (Pending/Delivered).
+            </div>
+        </div>
+        <div class="flow-step">
+            <div class="step-number">2</div>
+            <div>
+                <strong>Evidence Submission</strong>: A new <span class="status-badge status-success">Modal UI</span>
+                allows buyers to:
+                <ul>
+                    <li>Select a Reason (e.g., "Did not receive order", "Damaged item").</li>
+                    <li>Choose Type: "Refund Only" or "Return & Refund".</li>
+                    <li><strong>Upload Photo Evidence</strong>: Supports up to 5 images with live previews.</li>
+                </ul>
+            </div>
+        </div>
+        <div class="flow-step">
+            <div class="step-number">3</div>
+            <div>
+                <strong>Status Update</strong>: The order status updates to <code>RETURN_REQUESTED</code>, and the
+                tracking flow pauses.
+            </div>
+        </div>
+
+        <h3>2. Seller: Managing Returns</h3>
+        <div class="flow-step">
+            <div class="step-number">1</div>
+            <div>
+                <strong>New Dashboard Tab</strong>: Added a dedicated <strong>"Return & Refund"</strong> tab in the
+                Seller Center.
+            </div>
+        </div>
+        <div class="flow-step">
+            <div class="step-number">2</div>
+            <div>
+                <strong>Review Process</strong>: Sellers can view details of the request, including the buyer's reason
+                and uploaded proof.
+                <br><em>New Feature:</em> Clickable image previews with a large-screen modal for detailed inspection.
+            </div>
+        </div>
+        <div class="flow-step">
+            <div class="step-number">3</div>
+            <div>
+                <strong>Action</strong>:
+                <ul>
+                    <li><strong>Accept & Refund</strong>: Immediately processes the refund. Deducts from Seller Wallet.
+                    </li>
+                    <li><strong>Decline</strong>: Sets status to <code>DISPUTED</code> (for Admin intervention in future
+                        phases).</li>
+                </ul>
+            </div>
+        </div>
+
+        <h3>3. System: Status & Wallet Logic</h3>
+        <div class="flow-step">
+            <div class="step-number">1</div>
+            <div>
+                <strong>Automated Wallet Deduction</strong>: When <code>RETURN_APPROVED</code> or <code>REFUNDED</code>
+                occurs, the system automatically creates a <code>DEBIT</code> transaction in the seller's wallet.
+            </div>
+        </div>
+        <div class="flow-step">
+            <div class="step-number">2</div>
+            <div>
+                <strong>Order Status Refinement</strong>:
+                <ul>
+                    <li><code>ORDER_PLACED</code> & <code>PAID</code> → Displayed as <span
+                            class="status-badge status-warning">PROCESSING</span></li>
+                    <li><code>RETURN_REQUESTED</code> → Displayed as <span class="status-badge status-warning">RETURN
+                            REQUESTED</span></li>
+                    <li><code>REFUNDED</code> → Displayed as <span class="status-badge status-error">REFUNDED</span>
+                    </li>
+                </ul>
+            </div>
+        </div>
+
+        <h2>🐛 Issues Encountered & Fixes</h2>
+
+        <div class="card">
+            <h3>1. "Unique Key" Prop Warning</h3>
+            <p><strong>Issue:</strong> React warning <code>Each child in a list should have a unique "key" prop</code>
+                in the Return Request card.</p>
+            <p><strong>Cause:</strong> The code was using <code>item.id</code>, but <code>OrderItem</code> uses a
+                composite key (OrderId + ProductId) and has no single ID field.</p>
+            <p><strong>Fix:</strong> Updated the loop to use <code>item.productId</code> as the key.</p>
+        </div>
+
+        <div class="card">
+            <h3>2. Build Error: Syntax in JSX</h3>
+            <p><strong>Issue:</strong> <code>Parsing ecmascript source code failed. Expected ',' got '{'</code></p>
+            <p><strong>Cause:</strong> A premature closing <code>&lt;/div&gt;</code> tag broke the nesting of the new
+                Image Modal component.</p>
+            <p><strong>Fix:</strong> Removed the extra closing tag and properly nested the Modal conditional rendering.
+            </p>
+        </div>
+
+        <div class="card">
+            <h3>3. Browser Automation Rate Limiting</h3>
+            <p><strong>Issue:</strong> The E2E browser test failed with <code>429 Too Many Requests</code>.</p>
+            <p><strong>Mitigation:</strong> Verified the backend logic using a custom simulation script
+                (<code>scripts/simulate-return-flow.js</code>) which successfully proved the "Accept & Refund" button
+                updates the database and wallet correctly.</p>
+        </div>
+
+        <h2>🌟 Recommendations for Future Enhancements</h2>
+
+        <h3>1. Admin Dispute Portal</h3>
+        <p>Currently, if a seller declines a return, it goes to <code>DISPUTED</code>. An Admin interface is needed to
+            review these cases and make a final ruling.</p>
+
+        <h3>2. Logistics Integration for Returns</h3>
+        <p>For "Return & Refund" (where item is shipped back), integrate with Lalamove/J&T to generate a return waybill
+            automatically.</p>
+
+        <h3>3. Email/SMS Notifications</h3>
+        <p>Trigger alerts to the buyer when a refund is approved, and to the seller when a new return request is filed.
+        </p>
+
+        <h3>4. Partial Refunds</h3>
+        <p>Allow sellers to offer a partial refund (e.g., "Keep the item, here's 50% back") to resolve disputes faster.
+        </p>
+
+    </div>
+
+</body>
+
+</html>

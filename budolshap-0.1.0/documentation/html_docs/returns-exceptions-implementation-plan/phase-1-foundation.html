@@ -1,0 +1,86 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Phase 1: Foundation - Implementation Plan</title>
+    <style>
+        :root { --primary: #ee4d2d; --secondary: #1e293b; --bg: #f8fafc; --text: #334155; --success: #22c55e; --warning: #f59e0b; --danger: #ef4444; }
+        body { font-family: -apple-system, system-ui, sans-serif; line-height: 1.6; color: var(--text); background: var(--bg); margin: 0; padding: 20px; }
+        .container { max-width: 900px; margin: 0 auto; background: white; padding: 40px; border-radius: 12px; box-shadow: 0 4px 20px rgba(0,0,0,0.05); }
+        h1, h2 { color: var(--secondary); border-bottom: 2px solid var(--primary); padding-bottom: 8px; }
+        .spec-box { background: #f1f5f9; padding: 20px; border-radius: 8px; margin: 20px 0; border-left: 4px solid var(--primary); }
+        .task-list { list-style: none; padding: 0; }
+        .task-item { display: flex; align-items: flex-start; gap: 10px; margin-bottom: 15px; padding: 10px; border: 1px solid #e2e8f0; border-radius: 6px; }
+        .task-status { font-weight: bold; font-size: 0.8em; text-transform: uppercase; padding: 2px 6px; border-radius: 4px; }
+        .status-todo { background: #fee2e2; color: #991b1b; }
+        .status-done { background: #dcfce7; color: #166534; }
+        .code-block { background: #1e293b; color: #e2e8f0; padding: 15px; border-radius: 6px; font-family: monospace; overflow-x: auto; font-size: 0.9em; margin: 10px 0; }
+        .nav-link { color: var(--primary); text-decoration: none; font-weight: bold; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <a href="index.html" class="nav-link">← Back to Master Plan</a>
+        <h1>Phase 1: Foundation & Core Lifecycle</h1>
+        
+        <div class="spec-box">
+            <strong>Estimated Timeframe:</strong> 1-2 Days<br>
+            <strong>Primary Goal:</strong> Establish the database schema and backend logic for Shopee-style escrow and performance tracking.
+        </div>
+
+        <h2>1. Technical Specifications</h2>
+        <ul>
+            <li><strong>Database Update:</strong> Add <code>buyerReturnRate</code>, <code>codUnpaidCount</code> to User model. Add <code>nonFulfilmentRate</code>, <code>penaltyPoints</code> to Store model.</li>
+            <li><strong>Escrow Logic:</strong> Refactor <code>returnsService.js</code> to ensure funds are locked in <code>PENDING</code> status during the 72-hour seller response window.</li>
+            <li><strong>Performance Calculation:</strong> Implement utility functions to recalculate BRR/NFR after every completed return.</li>
+        </ul>
+
+        <h2>2. Backup & Safety Protocol</h2>
+        <p>Before proceeding, the following files must be backed up to <code>/backups/phase1/</code>:</p>
+        <ul>
+            <li><code>prisma/schema.prisma</code></li>
+            <li><code>lib/services/returnsService.js</code></li>
+            <li><code>components/OrderProgressTracker.jsx</code></li>
+        </ul>
+
+        <h2>3. Implementation Steps</h2>
+        <ul class="task-list">
+            <li class="task-item">
+                <div>
+                    <span class="task-status status-todo">Task 1</span>
+                    <strong>Schema Enhancement</strong>
+                    <p>Update <code>prisma/schema.prisma</code> and run <code>npx prisma generate</code>.</p>
+                </div>
+            </li>
+            <li class="task-item">
+                <div>
+                    <span class="task-status status-todo">Task 2</span>
+                    <strong>Refine returnsService.js</strong>
+                    <p>Implement the 72-hour response deadline and escrow locking logic in <code>createReturnRequest</code>.</p>
+                </div>
+            </li>
+            <li class="task-item">
+                <div>
+                    <span class="task-status status-todo">Task 3</span>
+                    <strong>Performance Tracking Hook</strong>
+                    <p>Add logic to <code>receiveReturn</code> to increment NFR for sellers and BRR for buyers upon resolution.</p>
+                </div>
+            </li>
+        </ul>
+
+        <h2>4. Testing Protocol</h2>
+        <div class="spec-box" style="background: #fffbeb; border-color: var(--warning);">
+            <strong>Test Case 1: Escrow Lockup</strong><br>
+            Trigger a return request. Verify that the order status is <code>RETURN_REQUESTED</code> and the wallet's <code>pendingBalance</code> remains unchanged until resolution.
+            <br><br>
+            <strong>Test Case 2: Deadline Enforcement</strong><br>
+            Simulate a 72-hour lapse. Verify that the system auto-approves the refund and debits the seller wallet correctly.
+        </div>
+
+        <div style="margin-top: 40px; padding-top: 20px; border-top: 1px solid #eee;">
+            <a href="phase-2-logistics-exceptions.html" class="nav-link">Proceed to Phase 2: Logistics →</a>
+        </div>
+    </div>
+</body>
+</html>

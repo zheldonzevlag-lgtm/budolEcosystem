@@ -1,0 +1,280 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Deploying Budolshap to Vercel</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+        }
+
+        pre {
+            background-color: #1e293b;
+            color: #e2e8f0;
+            padding: 1rem;
+            border-radius: 0.5rem;
+            overflow-x: auto;
+        }
+
+        code {
+            font-family: 'Courier New', Courier, monospace;
+        }
+    </style>
+</head>
+
+<body class="bg-slate-50 text-slate-900 leading-relaxed">
+
+    <div class="max-w-4xl mx-auto px-6 py-12">
+
+        <!-- Header -->
+        <header class="mb-12 text-center">
+            <h1 class="text-4xl font-bold text-slate-900 mb-4">Deploying Budolshap to Vercel</h1>
+            <p class="text-lg text-slate-600">A step-by-step guide to deploying your Next.js e-commerce platform with
+                Vercel Postgres.</p>
+        </header>
+
+        <!-- Prerequisites -->
+        <section class="mb-12 bg-white p-8 rounded-2xl shadow-sm border border-slate-200">
+            <div class="flex items-center gap-4 mb-6">
+                <div
+                    class="bg-blue-600 text-white w-10 h-10 rounded-full flex items-center justify-center font-bold text-xl">
+                    0</div>
+                <h2 class="text-2xl font-bold text-slate-800">Prerequisites</h2>
+            </div>
+            <p class="mb-4 text-slate-600">Before deploying, make sure you have the following ready:</p>
+            <ul class="list-disc list-inside space-y-2 text-slate-600">
+                <li><strong>Node.js (v18+)</strong> and <strong>npm</strong> installed.</li>
+                <li><strong>Git</strong> for version control.</li>
+                <li>A <strong>Vercel account</strong> (free tier works fine).</li>
+                <li><strong>Vercel CLI</strong> installed globally: <code
+                        class="bg-slate-100 px-1">npm i -g vercel</code></li>
+                <li>A <strong>PayMongo account</strong> with API keys (Secret and Public).</li>
+                <li>Access to the <strong>.env</strong> file (or copy from <code
+                        class="bg-slate-100 px-1">.env.paymongo.example</code>) and fill in the required variables.</li>
+                <li>Basic knowledge of <strong>Prisma</strong> and the ability to run migrations.</li>
+            </ul>
+        </section>
+
+        <!-- Step 1 -->
+        <section class="mb-12 bg-white p-8 rounded-2xl shadow-sm border border-slate-200">
+            <div class="flex items-center gap-4 mb-6">
+                <div
+                    class="bg-blue-600 text-white w-10 h-10 rounded-full flex items-center justify-center font-bold text-xl">
+                    1</div>
+                <h2 class="text-2xl font-bold text-slate-800">Prepare Codebase for Vercel Postgres</h2>
+            </div>
+            <p class="mb-4 text-slate-600">Since Vercel works best with its native Postgres database, we need to switch
+                your Prisma schema from MySQL to PostgreSQL.</p>
+
+            <div class="space-y-6">
+                <div>
+                    <h3 class="font-semibold text-slate-900 mb-2">1. Update <code
+                            class="bg-slate-100 px-2 py-1 rounded text-sm">prisma/schema.prisma</code></h3>
+                    <p class="mb-2 text-sm text-slate-600">Replace the datasource block and fix data types:</p>
+                    <pre><code class="language-prisma">// 1. Change provider to postgresql and add directUrl
+datasource db {
+  provider  = "postgresql"
+  url       = env("POSTGRES_PRISMA_URL") // Uses connection pooling
+  directUrl = env("POSTGRES_URL_NON_POOLING") // Uses direct connection
+}
+
+// 2. Find and Replace all @db.LongText with @db.Text
+// Example in User model:
+model User {
+  ...
+  image String @db.Text // Changed from @db.LongText
+  ...
+}
+
+// Example in Store model:
+model Store {
+  ...
+  logo String @db.Text // Changed from @db.LongText
+  ...
+}</code></pre>
+                </div>
+
+                <div>
+                    <h3 class="font-semibold text-slate-900 mb-2">2. Update <code
+                            class="bg-slate-100 px-2 py-1 rounded text-sm">package.json</code></h3>
+                    <p class="mb-2 text-sm text-slate-600">Update the build script to generate the Prisma client before
+                        building:</p>
+                    <pre><code class="language-json">"scripts": {
+  ...
+  "build": "prisma generate && next build",
+  ...
+}</code></pre>
+                </div>
+            </div>
+        </section>
+
+        <!-- Step 2 -->
+        <section class="mb-12 bg-white p-8 rounded-2xl shadow-sm border border-slate-200">
+            <div class="flex items-center gap-4 mb-6">
+                <div
+                    class="bg-blue-600 text-white w-10 h-10 rounded-full flex items-center justify-center font-bold text-xl">
+                    2</div>
+                <h2 class="text-2xl font-bold text-slate-800">Push to GitHub</h2>
+            </div>
+            <p class="mb-4 text-slate-600">Ensure your latest changes (including the Prisma updates) are pushed to a
+                GitHub repository.</p>
+            <pre><code class="language-bash">git add .
+git commit -m "Prepare for Vercel deployment"
+git push origin main</code></pre>
+        </section>
+
+        <!-- Step 3 -->
+        <section class="mb-12 bg-white p-8 rounded-2xl shadow-sm border border-slate-200">
+            <div class="flex items-center gap-4 mb-6">
+                <div
+                    class="bg-blue-600 text-white w-10 h-10 rounded-full flex items-center justify-center font-bold text-xl">
+                    3</div>
+                <h2 class="text-2xl font-bold text-slate-800">Create Vercel Project</h2>
+            </div>
+            <ol class="list-decimal list-inside space-y-3 text-slate-700">
+                <li>Log in to your <a href="https://vercel.com" target="_blank"
+                        class="text-blue-600 hover:underline">Vercel Dashboard</a>.</li>
+                <li>Click <strong>"Add New..."</strong> -> <strong>"Project"</strong>.</li>
+                <li>Import your <strong>budolshap</strong> repository from GitHub.</li>
+                <li>In the <strong>Configure Project</strong> screen, <strong>DO NOT</strong> deploy yet. We need to set
+                    up the database first.</li>
+            </ol>
+        </section>
+
+        <!-- Step 4 -->
+        <section class="mb-12 bg-white p-8 rounded-2xl shadow-sm border border-slate-200">
+            <div class="flex items-center gap-4 mb-6">
+                <div
+                    class="bg-blue-600 text-white w-10 h-10 rounded-full flex items-center justify-center font-bold text-xl">
+                    4</div>
+                <h2 class="text-2xl font-bold text-slate-800">Setup Vercel Postgres</h2>
+            </div>
+            <p class="mb-4 text-slate-600">While still on the project configuration page (or in the Storage tab if you
+                already created the project):</p>
+            <ol class="list-decimal list-inside space-y-3 text-slate-700">
+                <li>Go to the <strong>Storage</strong> tab in your Vercel project dashboard (you might need to create
+                    the project first without deploying, or just add it during creation if available).</li>
+                <li>Click <strong>"Create Database"</strong> and select <strong>Postgres</strong>.</li>
+                <li>Accept the terms and create the database.</li>
+                <li>Once created, Vercel will automatically add the necessary environment variables (<code
+                        class="text-sm bg-slate-100 px-1">POSTGRES_PRISMA_URL</code>, <code
+                        class="text-sm bg-slate-100 px-1">POSTGRES_URL_NON_POOLING</code>, etc.) to your project.</li>
+                <li><strong>Important:</strong> Go to <strong>Settings</strong> -> <strong>Environment
+                        Variables</strong> and ensure these variables are present.</li>
+            </ol>
+        </section>
+
+        <!-- Step 5 -->
+        <section class="mb-12 bg-white p-8 rounded-2xl shadow-sm border border-slate-200">
+            <div class="flex items-center gap-4 mb-6">
+                <div
+                    class="bg-blue-600 text-white w-10 h-10 rounded-full flex items-center justify-center font-bold text-xl">
+                    5</div>
+                <h2 class="text-2xl font-bold text-slate-800">Configure Environment Variables</h2>
+            </div>
+            <p class="mb-4 text-slate-600">Add the remaining environment variables in <strong>Settings</strong> ->
+                <strong>Environment Variables</strong>:
+            </p>
+
+            <div class="overflow-x-auto">
+                <table class="w-full text-left text-sm text-slate-600">
+                    <thead class="bg-slate-50 text-slate-900 font-semibold border-b">
+                        <tr>
+                            <th class="py-3 px-4">Variable Name</th>
+                            <th class="py-3 px-4">Value / Description</th>
+                        </tr>
+                    </thead>
+                    <tbody class="divide-y divide-slate-100">
+                        <tr>
+                            <td class="py-3 px-4 font-mono text-blue-600">JWT_SECRET</td>
+                            <td class="py-3 px-4">Your secret key (generate a long random string)</td>
+                        </tr>
+                        <tr>
+                            <td class="py-3 px-4 font-mono text-blue-600">NEXT_PUBLIC_APP_URL</td>
+                            <td class="py-3 px-4">Your Vercel domain (e.g., https://budolshap.vercel.app)</td>
+                        </tr>
+                        <tr>
+                            <td class="py-3 px-4 font-mono text-blue-600">NEXT_PUBLIC_SITE_URL</td>
+                            <td class="py-3 px-4">Same as above (e.g., https://budolshap.vercel.app)</td>
+                        </tr>
+                        <tr>
+                            <td class="py-3 px-4 font-mono text-blue-600">PAYMONGO_SECRET_KEY</td>
+                            <td class="py-3 px-4">Your PayMongo Secret Key (Live or Test)</td>
+                        </tr>
+                        <tr>
+                            <td class="py-3 px-4 font-mono text-blue-600">PAYMONGO_PUBLIC_KEY</td>
+                            <td class="py-3 px-4">Your PayMongo Public Key</td>
+                        </tr>
+                        <tr>
+                            <td class="py-3 px-4 font-mono text-blue-600">SMTP_HOST</td>
+                            <td class="py-3 px-4">smtp.gmail.com (or your provider)</td>
+                        </tr>
+                        <tr>
+                            <td class="py-3 px-4 font-mono text-blue-600">SMTP_USER</td>
+                            <td class="py-3 px-4">Your email address</td>
+                        </tr>
+                        <tr>
+                            <td class="py-3 px-4 font-mono text-blue-600">SMTP_PASS</td>
+                            <td class="py-3 px-4">Your email app password</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </section>
+
+        <!-- Step 6 -->
+        <section class="mb-12 bg-white p-8 rounded-2xl shadow-sm border border-slate-200">
+            <div class="flex items-center gap-4 mb-6">
+                <div
+                    class="bg-blue-600 text-white w-10 h-10 rounded-full flex items-center justify-center font-bold text-xl">
+                    6</div>
+                <h2 class="text-2xl font-bold text-slate-800">Deploy & Migrate</h2>
+            </div>
+
+            <div class="space-y-6">
+                <div>
+                    <h3 class="font-semibold text-slate-900 mb-2">1. Deploy</h3>
+                    <p class="mb-2 text-sm text-slate-600">Click <strong>Deploy</strong> in Vercel. Wait for the build
+                        to complete. It might show a "500 Error" initially because the database tables don't exist yet.
+                    </p>
+                </div>
+
+                <div>
+                    <h3 class="font-semibold text-slate-900 mb-2">2. Run Migrations</h3>
+                    <p class="mb-2 text-sm text-slate-600">We need to push the schema to the Vercel database. The
+                        easiest way is to connect your local machine to the Vercel DB.</p>
+                    <ol class="list-decimal list-inside space-y-2 text-sm text-slate-700 ml-4">
+                        <li>Install Vercel CLI: <code class="bg-slate-100 px-1">npm i -g vercel</code></li>
+                        <li>Login: <code class="bg-slate-100 px-1">vercel login</code></li>
+                        <li>Link project: <code class="bg-slate-100 px-1">vercel link</code></li>
+                        <li>Pull env vars: <code class="bg-slate-100 px-1">vercel env pull .env.production.local</code>
+                        </li>
+                        <li>Run migration: <code
+                                class="bg-slate-100 px-1">npx dotenv -e .env.production.local -- prisma migrate deploy</code>
+                        </li>
+                    </ol>
+                </div>
+
+                <div class="bg-yellow-50 border-l-4 border-yellow-400 p-4">
+                    <p class="text-sm text-yellow-700">
+                        <strong>Note:</strong> Since you switched from MySQL to Postgres, this will create a fresh
+                        database. You will need to create a new Admin user and seed data again.
+                    </p>
+                </div>
+            </div>
+        </section>
+
+        <!-- Footer -->
+        <footer class="text-center text-slate-500 text-sm pb-12">
+            <p>Generated by Antigravity for Budolshap</p>
+        </footer>
+
+    </div>
+
+</body>
+
+</html>

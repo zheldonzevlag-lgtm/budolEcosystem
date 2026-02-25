@@ -1,0 +1,83 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Phase 1: Analysis & Status Mapping</title>
+    <style>
+        :root {
+            --primary: #1a56db;
+            --bg: #f9fafb;
+            --card-bg: #ffffff;
+            --text: #111827;
+        }
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: var(--bg);
+            color: var(--text);
+            line-height: 1.6;
+            margin: 0;
+            padding: 2rem;
+        }
+        .container { max-width: 800px; margin: 0 auto; }
+        .card { background: var(--card-bg); padding: 2rem; border-radius: 0.75rem; box-shadow: 0 1px 3px rgba(0,0,0,0.1); margin-bottom: 2rem; }
+        h1 { color: var(--primary); }
+        table { width: 100%; border-collapse: collapse; margin: 1rem 0; }
+        th, td { padding: 0.75rem; border: 1px solid #e5e7eb; text-align: left; }
+        th { background: #f3f4f6; }
+        .back-link { display: inline-block; margin-bottom: 1rem; color: var(--primary); text-decoration: none; font-weight: 500; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <a href="index.html" class="back-link">← Back to Index</a>
+        <div class="card">
+            <h1>Phase 1: Analysis & Status Mapping</h1>
+            <p>
+                The first phase involved analyzing how Lalamove statuses correspond to Budolshap's internal order statuses.
+                We identified that the "stuck" UI was caused by a lack of synchronization triggers on the Seller side.
+            </p>
+
+            <h2>Status Mapping Table</h2>
+            <table>
+                <thead>
+                    <tr>
+                        <th>Lalamove Event/Status</th>
+                        <th>Budolshap Order Status</th>
+                        <th>Description</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td><code>DRIVER_ASSIGNED</code> / <code>ON_GOING</code></td>
+                        <td><code>PROCESSING</code></td>
+                        <td>Driver has been assigned to the order.</td>
+                    </tr>
+                    <tr>
+                        <td><code>PICKED_UP</code></td>
+                        <td><code>IN_TRANSIT</code></td>
+                        <td>Package is with the driver.</td>
+                    </tr>
+                    <tr>
+                        <td><code>COMPLETED</code></td>
+                        <td><code>DELIVERED</code></td>
+                        <td>Order successfully delivered.</td>
+                    </tr>
+                    <tr>
+                        <td><code>CANCELLED</code> / <code>EXPIRED</code></td>
+                        <td><code>PROCESSING</code></td>
+                        <td>Booking failed; order returns to processing for re-booking.</td>
+                    </tr>
+                </tbody>
+            </table>
+
+            <h2>Root Cause Identification</h2>
+            <ul>
+                <li><strong>Webhook Reliability:</strong> Lack of signature verification made webhooks potentially insecure or ignored.</li>
+                <li><strong>UI Dependency:</strong> Seller UI was passive and only updated if a manual sync was triggered or the Buyer UI detail page was open.</li>
+                <li><strong>Realtime Propagation:</strong> While Pusher was implemented, it required a database update to trigger.</li>
+            </ul>
+        </div>
+    </div>
+</body>
+</html>

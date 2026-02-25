@@ -1,0 +1,663 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Phase 2 - Lalamove Backend API Implementation</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 2rem;
+        }
+
+        .container {
+            max-width: 1000px;
+            margin: 0 auto;
+            background: #fff;
+            border-radius: 12px;
+            box-shadow: 0 10px 40px rgba(0, 0, 0, 0.2);
+            overflow: hidden;
+        }
+
+        .header {
+            background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+            color: #fff;
+            padding: 3rem 2rem;
+            text-align: center;
+        }
+
+        .header h1 {
+            font-size: 2.5rem;
+            margin-bottom: 0.5rem;
+        }
+
+        .header .subtitle {
+            font-size: 1.2rem;
+            opacity: 0.95;
+            margin-top: 0.5rem;
+        }
+
+        .header .badge {
+            display: inline-block;
+            background: rgba(255, 255, 255, 0.25);
+            padding: 0.5rem 1.5rem;
+            border-radius: 20px;
+            margin-top: 1rem;
+            font-size: 1rem;
+            backdrop-filter: blur(10px);
+        }
+
+        .content {
+            padding: 2.5rem;
+        }
+
+        .progress-section {
+            background: linear-gradient(135deg, #e0f2fe 0%, #dbeafe 100%);
+            padding: 1.5rem;
+            border-radius: 10px;
+            margin-bottom: 2rem;
+        }
+
+        .progress-text {
+            text-align: center;
+            color: #0c4a6e;
+            font-size: 1.1rem;
+            margin-bottom: 1rem;
+            font-weight: 600;
+        }
+
+        .progress-bar {
+            background: #fff;
+            height: 12px;
+            border-radius: 6px;
+            overflow: hidden;
+            box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.1);
+        }
+
+        .progress-fill {
+            background: linear-gradient(90deg, #f093fb 0%, #f5576c 100%);
+            height: 100%;
+            width: 0%;
+            transition: width 0.5s ease;
+            box-shadow: 0 0 10px rgba(245, 87, 108, 0.5);
+        }
+
+        .task-section {
+            margin-bottom: 2.5rem;
+        }
+
+        .section-header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: #fff;
+            padding: 1rem 1.5rem;
+            border-radius: 8px;
+            margin-bottom: 1.5rem;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+
+        .section-title {
+            font-size: 1.5rem;
+            font-weight: 600;
+        }
+
+        .section-count {
+            background: rgba(255, 255, 255, 0.2);
+            padding: 0.3rem 0.8rem;
+            border-radius: 15px;
+            font-size: 0.9rem;
+        }
+
+        .task-list {
+            list-style: none;
+        }
+
+        .task-item {
+            background: #f8f9fa;
+            margin-bottom: 1rem;
+            padding: 1.5rem;
+            border-radius: 8px;
+            border-left: 5px solid #667eea;
+            transition: all 0.3s ease;
+            cursor: pointer;
+        }
+
+        .task-item:hover {
+            background: #e9ecef;
+            transform: translateX(5px);
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+        }
+
+        .task-item.completed {
+            background: #f0fdf4;
+            border-left-color: #10b981;
+            opacity: 0.8;
+        }
+
+        .task-header {
+            display: flex;
+            align-items: flex-start;
+            gap: 1rem;
+        }
+
+        .task-checkbox {
+            width: 24px;
+            height: 24px;
+            min-width: 24px;
+            border: 3px solid #667eea;
+            border-radius: 6px;
+            cursor: pointer;
+            position: relative;
+            margin-top: 2px;
+            transition: all 0.3s ease;
+        }
+
+        .task-checkbox:hover {
+            background: #f0f0ff;
+            transform: scale(1.1);
+        }
+
+        .task-checkbox.checked {
+            background: #10b981;
+            border-color: #10b981;
+        }
+
+        .task-checkbox.checked::after {
+            content: '✓';
+            color: #fff;
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            font-size: 16px;
+            font-weight: bold;
+        }
+
+        .task-content {
+            flex: 1;
+        }
+
+        .task-title {
+            font-size: 1.2rem;
+            font-weight: 600;
+            color: #1a1a1a;
+            margin-bottom: 0.5rem;
+        }
+
+        .task-desc {
+            color: #4a5568;
+            line-height: 1.6;
+            margin-bottom: 0.8rem;
+        }
+
+        .task-details {
+            margin-top: 1rem;
+            padding-top: 1rem;
+            border-top: 1px solid #e2e8f0;
+        }
+
+        .detail-row {
+            display: flex;
+            gap: 1rem;
+            margin-bottom: 0.5rem;
+            font-size: 0.9rem;
+        }
+
+        .detail-label {
+            font-weight: 600;
+            color: #2d3748;
+            min-width: 100px;
+        }
+
+        .detail-value {
+            color: #4a5568;
+        }
+
+        .code-inline {
+            background: #2d2d2d;
+            color: #10b981;
+            padding: 3px 8px;
+            border-radius: 4px;
+            font-family: 'Courier New', monospace;
+            font-size: 0.9rem;
+            font-weight: 600;
+        }
+
+        .code-block {
+            background: #2d2d2d;
+            color: #fff;
+            padding: 1rem;
+            border-radius: 6px;
+            margin: 0.8rem 0;
+            font-family: 'Courier New', monospace;
+            font-size: 0.85rem;
+            overflow-x: auto;
+            line-height: 1.5;
+        }
+
+        .implementation-notes {
+            background: #fff3cd;
+            border-left: 4px solid #f59e0b;
+            padding: 1rem;
+            border-radius: 6px;
+            margin-top: 1rem;
+        }
+
+        .notes-title {
+            font-weight: 600;
+            color: #92400e;
+            margin-bottom: 0.5rem;
+        }
+
+        .notes-content {
+            color: #92400e;
+            font-size: 0.9rem;
+            line-height: 1.6;
+        }
+
+        .footer {
+            background: #f8f9fa;
+            padding: 2rem;
+            text-align: center;
+            color: #718096;
+            border-top: 1px solid #e2e8f0;
+        }
+
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+            gap: 1rem;
+            margin-top: 1.5rem;
+        }
+
+        .stat-card {
+            background: #fff;
+            padding: 1rem;
+            border-radius: 8px;
+            text-align: center;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+        }
+
+        .stat-number {
+            font-size: 2rem;
+            font-weight: bold;
+            color: #f5576c;
+            margin-bottom: 0.3rem;
+        }
+
+        .stat-label {
+            color: #718096;
+            font-size: 0.85rem;
+        }
+
+        .priority-badge {
+            display: inline-block;
+            padding: 4px 10px;
+            border-radius: 12px;
+            font-size: 0.75rem;
+            font-weight: 600;
+            margin-left: 0.5rem;
+        }
+
+        .priority-critical {
+            background: #fee;
+            color: #e74c3c;
+        }
+
+        .priority-high {
+            background: #fef5e7;
+            color: #f39c12;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🚀 Phase 2: Backend API</h1>
+            <p class="subtitle">Lalamove Integration - API Endpoints Implementation</p>
+            <div class="badge">📦 Building the Backend Infrastructure</div>
+        </div>
+
+        <div class="content">
+            <!-- Progress Section -->
+            <div class="progress-section">
+                <div class="progress-text">
+                    Phase 2 Progress: <strong><span id="progress-percent">0</span>%</strong> Complete
+                    (<span id="completed-count">0</span>/<span id="total-count">5</span> Tasks)
+                </div>
+                <div class="progress-bar">
+                    <div class="progress-fill" id="progress-fill"></div>
+                </div>
+                <div class="stats-grid">
+                    <div class="stat-card">
+                        <div class="stat-number" id="endpoints-count">5</div>
+                        <div class="stat-label">API Endpoints</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-number" id="files-count">5</div>
+                        <div class="stat-label">Files to Create</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-number">~45</div>
+                        <div class="stat-label">Est. Minutes</div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Task 1: Quote Endpoint -->
+            <div class="task-section">
+                <div class="section-header">
+                    <div class="section-title">📋 API Endpoints</div>
+                    <div class="section-count">5 Endpoints</div>
+                </div>
+
+                <ul class="task-list">
+                    <!-- Task 1 -->
+                    <li class="task-item" onclick="toggleTask(this)">
+                        <div class="task-header">
+                            <div class="task-checkbox"></div>
+                            <div class="task-content">
+                                <div class="task-title">
+                                    1. Quote Endpoint
+                                    <span class="priority-badge priority-critical">Critical</span>
+                                </div>
+                                <div class="task-desc">
+                                    Create API endpoint to get shipping quotes from Lalamove based on pickup/delivery
+                                    locations and package details.
+                                </div>
+                                <div class="task-details">
+                                    <div class="detail-row">
+                                        <div class="detail-label">File:</div>
+                                        <div class="detail-value"><span
+                                                class="code-inline">app/api/shipping/lalamove/quote/route.js</span>
+                                        </div>
+                                    </div>
+                                    <div class="detail-row">
+                                        <div class="detail-label">Method:</div>
+                                        <div class="detail-value">POST</div>
+                                    </div>
+                                    <div class="detail-row">
+                                        <div class="detail-label">Input:</div>
+                                        <div class="detail-value">pickup address, delivery address, package details
+                                        </div>
+                                    </div>
+                                    <div class="detail-row">
+                                        <div class="detail-label">Output:</div>
+                                        <div class="detail-value">price, ETA, distance, quoteId</div>
+                                    </div>
+                                </div>
+                                <div class="implementation-notes">
+                                    <div class="notes-title">💡 Implementation Notes:</div>
+                                    <div class="notes-content">
+                                        • Use the <span class="code-inline">getQuote()</span> method from
+                                        services/lalamove.js<br>
+                                        • Validate input addresses and package dimensions<br>
+                                        • Return formatted quote with pricing breakdown<br>
+                                        • Handle "no drivers available" scenarios
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </li>
+
+                    <!-- Task 2 -->
+                    <li class="task-item" onclick="toggleTask(this)">
+                        <div class="task-header">
+                            <div class="task-checkbox"></div>
+                            <div class="task-content">
+                                <div class="task-title">
+                                    2. Booking Endpoint
+                                    <span class="priority-badge priority-critical">Critical</span>
+                                </div>
+                                <div class="task-desc">
+                                    Create API endpoint to book a Lalamove delivery and store the booking details in the
+                                    database.
+                                </div>
+                                <div class="task-details">
+                                    <div class="detail-row">
+                                        <div class="detail-label">File:</div>
+                                        <div class="detail-value"><span
+                                                class="code-inline">app/api/shipping/lalamove/book/route.js</span></div>
+                                    </div>
+                                    <div class="detail-row">
+                                        <div class="detail-label">Method:</div>
+                                        <div class="detail-value">POST</div>
+                                    </div>
+                                    <div class="detail-row">
+                                        <div class="detail-label">Input:</div>
+                                        <div class="detail-value">orderId, quoteId, pickup/delivery details, contact
+                                            info</div>
+                                    </div>
+                                    <div class="detail-row">
+                                        <div class="detail-label">Output:</div>
+                                        <div class="detail-value">bookingId, status, trackingUrl</div>
+                                    </div>
+                                </div>
+                                <div class="implementation-notes">
+                                    <div class="notes-title">💡 Implementation Notes:</div>
+                                    <div class="notes-content">
+                                        • Use the <span class="code-inline">createOrder()</span> method from
+                                        services/lalamove.js<br>
+                                        • Update Order.shipping field in database with booking details<br>
+                                        • Generate unique client_reference_id for idempotency<br>
+                                        • Return tracking URL for customer
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </li>
+
+                    <!-- Task 3 -->
+                    <li class="task-item" onclick="toggleTask(this)">
+                        <div class="task-header">
+                            <div class="task-checkbox"></div>
+                            <div class="task-content">
+                                <div class="task-title">
+                                    3. Tracking Endpoint
+                                    <span class="priority-badge priority-high">High</span>
+                                </div>
+                                <div class="task-desc">
+                                    Create API endpoint to retrieve real-time delivery status and driver information.
+                                </div>
+                                <div class="task-details">
+                                    <div class="detail-row">
+                                        <div class="detail-label">File:</div>
+                                        <div class="detail-value"><span
+                                                class="code-inline">app/api/shipping/lalamove/track/[orderId]/route.js</span>
+                                        </div>
+                                    </div>
+                                    <div class="detail-row">
+                                        <div class="detail-label">Method:</div>
+                                        <div class="detail-value">GET</div>
+                                    </div>
+                                    <div class="detail-row">
+                                        <div class="detail-label">Input:</div>
+                                        <div class="detail-value">orderId (from URL params)</div>
+                                    </div>
+                                    <div class="detail-row">
+                                        <div class="detail-label">Output:</div>
+                                        <div class="detail-value">status, driver info, location, ETA</div>
+                                    </div>
+                                </div>
+                                <div class="implementation-notes">
+                                    <div class="notes-title">💡 Implementation Notes:</div>
+                                    <div class="notes-content">
+                                        • Use the <span class="code-inline">trackOrder()</span> method from
+                                        services/lalamove.js<br>
+                                        • Fetch bookingId from Order.shipping field<br>
+                                        • Return formatted status timeline<br>
+                                        • Include driver name, phone, and vehicle details if assigned
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </li>
+
+                    <!-- Task 4 -->
+                    <li class="task-item" onclick="toggleTask(this)">
+                        <div class="task-header">
+                            <div class="task-checkbox"></div>
+                            <div class="task-content">
+                                <div class="task-title">
+                                    4. Cancel Endpoint
+                                    <span class="priority-badge priority-high">High</span>
+                                </div>
+                                <div class="task-desc">
+                                    Create API endpoint to cancel a pending Lalamove delivery order.
+                                </div>
+                                <div class="task-details">
+                                    <div class="detail-row">
+                                        <div class="detail-label">File:</div>
+                                        <div class="detail-value"><span
+                                                class="code-inline">app/api/shipping/lalamove/cancel/[orderId]/route.js</span>
+                                        </div>
+                                    </div>
+                                    <div class="detail-row">
+                                        <div class="detail-label">Method:</div>
+                                        <div class="detail-value">POST</div>
+                                    </div>
+                                    <div class="detail-row">
+                                        <div class="detail-label">Input:</div>
+                                        <div class="detail-value">orderId (from URL params)</div>
+                                    </div>
+                                    <div class="detail-row">
+                                        <div class="detail-label">Output:</div>
+                                        <div class="detail-value">success status, cancellation confirmation</div>
+                                    </div>
+                                </div>
+                                <div class="implementation-notes">
+                                    <div class="notes-title">💡 Implementation Notes:</div>
+                                    <div class="notes-content">
+                                        • Use the <span class="code-inline">cancelOrder()</span> method from
+                                        services/lalamove.js<br>
+                                        • Check if order is within cancellation window<br>
+                                        • Update Order.shipping.status to "cancelled"<br>
+                                        • Handle "cannot cancel" errors gracefully
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </li>
+
+                    <!-- Task 5 -->
+                    <li class="task-item" onclick="toggleTask(this)">
+                        <div class="task-header">
+                            <div class="task-checkbox"></div>
+                            <div class="task-content">
+                                <div class="task-title">
+                                    5. Webhook Receiver
+                                    <span class="priority-badge priority-critical">Critical</span>
+                                </div>
+                                <div class="task-desc">
+                                    Create webhook endpoint to receive real-time delivery status updates from Lalamove.
+                                </div>
+                                <div class="task-details">
+                                    <div class="detail-row">
+                                        <div class="detail-label">File:</div>
+                                        <div class="detail-value"><span
+                                                class="code-inline">app/api/webhooks/lalamove/route.js</span></div>
+                                    </div>
+                                    <div class="detail-row">
+                                        <div class="detail-label">Method:</div>
+                                        <div class="detail-value">POST</div>
+                                    </div>
+                                    <div class="detail-row">
+                                        <div class="detail-label">Input:</div>
+                                        <div class="detail-value">webhook payload with signature header</div>
+                                    </div>
+                                    <div class="detail-row">
+                                        <div class="detail-label">Events:</div>
+                                        <div class="detail-value">ASSIGNING, PICKED_UP, IN_TRANSIT, COMPLETED, CANCELLED
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="implementation-notes">
+                                    <div class="notes-title">💡 Implementation Notes:</div>
+                                    <div class="notes-content">
+                                        • Use the <span class="code-inline">verifyWebhookSignature()</span> method from
+                                        services/lalamove.js<br>
+                                        • Verify HMAC signature before processing<br>
+                                        • Update Order.shipping field with new status and driver info<br>
+                                        • Return 200 OK immediately to acknowledge receipt<br>
+                                        • Log all webhook events for debugging
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </li>
+                </ul>
+            </div>
+
+            <!-- Implementation Checklist -->
+            <div class="task-section">
+                <div class="section-header">
+                    <div class="section-title">✅ Implementation Checklist</div>
+                </div>
+                <div class="implementation-notes" style="border-left-color: #10b981; background: #f0fdf4;">
+                    <div class="notes-title" style="color: #065f46;">Before You Start:</div>
+                    <div class="notes-content" style="color: #065f46;">
+                        ✓ Phase 1 Complete - Core architecture in place<br>
+                        ✓ services/lalamove.js - All methods implemented<br>
+                        ✓ Database schema updated with shipping field<br>
+                        ✓ Environment variables configured<br>
+                        ✓ API authentication tested and working
+                    </div>
+                </div>
+                <div class="implementation-notes" style="margin-top: 1rem;">
+                    <div class="notes-title">📝 Testing Strategy:</div>
+                    <div class="notes-content">
+                        1. Test each endpoint individually using Postman or curl<br>
+                        2. Verify database updates after each operation<br>
+                        3. Test webhook with Lalamove sandbox environment<br>
+                        4. Simulate error scenarios (invalid addresses, no drivers, etc.)<br>
+                        5. Check logs for any authentication or API errors
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="footer">
+            <p><strong>Budolshap</strong> - Lalamove Integration Phase 2</p>
+            <p>Backend API Endpoints Implementation Guide</p>
+            <p style="margin-top: 1rem; color: #f5576c; font-weight: 600;">🚀 Let's Build the Backend!</p>
+        </div>
+    </div>
+
+    <script>
+        function toggleTask(taskItem) {
+            const checkbox = taskItem.querySelector('.task-checkbox');
+            checkbox.classList.toggle('checked');
+            taskItem.classList.toggle('completed');
+            updateProgress();
+        }
+
+        function updateProgress() {
+            const checkboxes = document.querySelectorAll('.task-checkbox');
+            const checked = document.querySelectorAll('.task-checkbox.checked');
+            const total = checkboxes.length;
+            const completed = checked.length;
+            const percent = Math.round((completed / total) * 100);
+
+            document.getElementById('progress-percent').textContent = percent;
+            document.getElementById('progress-fill').style.width = percent + '%';
+            document.getElementById('completed-count').textContent = completed;
+            document.getElementById('total-count').textContent = total;
+        }
+
+        // Initialize
+        updateProgress();
+    </script>
+</body>
+
+</html>

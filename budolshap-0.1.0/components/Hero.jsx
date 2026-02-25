@@ -1,0 +1,109 @@
+'use client'
+import { assets } from '@/assets/assets'
+import { ArrowRightIcon, ChevronRightIcon } from 'lucide-react'
+import Image from 'next/image'
+import React, { useState, useEffect } from 'react'
+import CategoriesSection from './CategoriesSection'
+
+import Link from 'next/link'
+import { useSelector } from 'react-redux'
+
+const Hero = () => {
+    const [mounted, setMounted] = useState(false)
+    const [currency, setCurrency] = useState('$')
+    const products = useSelector(state => state.product?.list) || []
+    const isLoading = useSelector(state => state.product?.isLoading)
+
+    const [bestSellingProduct, setBestSellingProduct] = useState(null)
+    const [maxDiscountProduct, setMaxDiscountProduct] = useState(null)
+    const [maxDiscountPercentage, setMaxDiscountPercentage] = useState(0)
+    const [minPrice, setMinPrice] = useState(0)
+
+    useEffect(() => {
+        setMounted(true)
+        setCurrency(process.env.NEXT_PUBLIC_CURRENCY_SYMBOL || '$')
+    }, [])
+
+    useEffect(() => {
+        if (mounted && products.length > 0) {
+            // Calculate best selling product
+            const bestProduct = [...products].sort((a, b) => (b.sold || 0) - (a.sold || 0))[0]
+            setBestSellingProduct(bestProduct)
+
+            // Calculate max discount product
+            const maxDiscount = [...products].sort((a, b) => {
+                const discountA = ((a.mrp - a.price) / a.mrp) * 100
+                const discountB = ((b.mrp - b.price) / b.mrp) * 100
+                return discountB - discountA
+            })[0]
+            setMaxDiscountProduct(maxDiscount)
+
+            // Calculate max discount percentage
+            if (maxDiscount) {
+                const percentage = Math.round(((maxDiscount.mrp - maxDiscount.price) / maxDiscount.mrp) * 100)
+                setMaxDiscountPercentage(percentage)
+            }
+
+            // Calculate min price
+            const min = Math.min(...products.map(product => product.price))
+            setMinPrice(min)
+        }
+    }, [mounted, products])
+
+    return (
+        <div className='mx-6'>
+            <div className='flex max-xl:flex-col gap-8 max-w-7xl mx-auto my-10'>
+                <div className='relative flex-1 flex flex-col bg-green-400 rounded-3xl xl:min-h-100 group'>
+                    <div className='p-5 sm:p-16'>
+                        <div className='inline-flex items-center gap-3 bg-green-300 text-green-600 pr-4 p-1 rounded-full text-xs sm:text-sm'>
+                            <span className='bg-green-600 px-3 py-1 max-sm:ml-1 rounded-full text-white text-xs'>NEWS</span> Free Shipping within Metro Manila for Standard shipping! <ChevronRightIcon className='group-hover:ml-2 transition-all' size={16} />
+                        </div>
+                        <h2 className='text-2xl sm:text-4xl xl:text-5xl leading-[1.2] my-5 font-medium bg-gradient-to-r from-slate-800 to-[#A0FF] bg-clip-text text-transparent max-w-xs  sm:max-w-md '>
+                            Products you'll love. Prices you'll trust. <span className='text-green-600 text-2xl sm:text-4xl bg-gradient-to-r from-slate-800 to-[#A0FF] bg-clip-text text-transparent max-w-xs  sm:max-w-md '>Shipping you'll rely on.</span>
+                        </h2>
+                        <div className='text-slate-800 text-sm font-medium mt-4 sm:mt-8'>
+                            <p>Starts from</p>
+                            {isLoading && minPrice === 0 ? (
+                                <div className="h-7 w-24 bg-green-200 animate-pulse rounded mt-1"></div>
+                            ) : mounted ? (
+                                <p className='text-xl'>{currency}{minPrice.toFixed(2)}</p>
+                            ) : (
+                                <p className='text-xl'>$0.00</p>
+                            )}
+                        </div>
+                        <button suppressHydrationWarning className='bg-slate-800 text-white text-sm py-2 px-7 sm:py-3 sm:px-12 mt-4 sm:mt-10 rounded-md hover:bg-slate-900 hover:scale-103 active:scale-95 transition'>LEARN MORE</button>
+                    </div>
+                    <Image className='sm:absolute bottom-0 right-0 md:right-10 w-full sm:max-w-sm' src={assets.electronics_gadget} alt="" />
+                </div>
+                <div className='flex flex-col md:flex-row xl:flex-col gap-5 w-full xl:max-w-sm text-sm text-slate-600'>
+                    <Link href={mounted && bestSellingProduct ? `/product/${bestSellingProduct.id}` : '/shop'} className='flex-1 flex items-center justify-between w-full bg-orange-200 rounded-3xl p-6 px-8 group cursor-pointer'>
+                        <div>
+                            <p className='text-xl sm:text-2xl font-medium bg-gradient-to-r from-slate-800 to-[#FFAD51] bg-clip-text text-transparent max-w-40'>Best    products</p>
+                            <p className='flex items-center gap-1 mt-4'>View more <ArrowRightIcon className='group-hover:ml-2 transition-all' size={18} /> </p>
+                        </div>
+                        {isLoading && !bestSellingProduct ? (
+                            <div className='w-35 h-35 bg-orange-100/50 animate-pulse rounded-full'></div>
+                        ) : (
+                            <Image className='w-35' width={140} height={140} src={mounted && bestSellingProduct && ((Array.isArray(bestSellingProduct.images) && bestSellingProduct.images[0]) || (typeof bestSellingProduct.images === 'string' && bestSellingProduct.images)) ? (Array.isArray(bestSellingProduct.images) ? bestSellingProduct.images[0] : bestSellingProduct.images) : assets.hero_product_img1} alt="" />
+                        )}
+                    </Link>
+                    <Link href={mounted && maxDiscountProduct ? `/product/${maxDiscountProduct.id}` : '/shop'} className='flex-1 flex items-center justify-between w-full bg-blue-200 rounded-3xl p-6 px-8 group cursor-pointer'>
+                        <div>
+                            <p className='text-xl sm:text-2xl font-medium bg-gradient-to-r from-slate-800 to-[#78B2FF] bg-clip-text text-transparent max-w-40'>{mounted ? maxDiscountPercentage : 0}% discounts</p>
+                            <p className='flex items-center gap-1 mt-4'>View more <ArrowRightIcon className='group-hover:ml-2 transition-all' size={18} /> </p>
+                        </div>
+                        {isLoading && !maxDiscountProduct ? (
+                            <div className='w-35 h-35 bg-blue-100/50 animate-pulse rounded-full'></div>
+                        ) : (
+                            <Image className='w-35' width={140} height={140} src={mounted && maxDiscountProduct && ((Array.isArray(maxDiscountProduct.images) && maxDiscountProduct.images[0]) || (typeof maxDiscountProduct.images === 'string' && maxDiscountProduct.images)) ? (Array.isArray(maxDiscountProduct.images) ? maxDiscountProduct.images[0] : maxDiscountProduct.images) : assets.hero_product_img2} alt="" />
+                        )}
+                    </Link>
+                </div>
+            </div>
+            <CategoriesSection />
+        </div>
+
+    )
+}
+
+export default Hero

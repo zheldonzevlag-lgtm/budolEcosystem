@@ -1,0 +1,950 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Canceled Delivery Workflow - Phased Implementation Plan</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            line-height: 1.6;
+            color: #333;
+            max-width: 1100px;
+            margin: 0 auto;
+            padding: 20px;
+            background-color: #f9f9f9;
+        }
+
+        h1 {
+            color: #2c3e50;
+            border-bottom: 3px solid #3498db;
+            padding-bottom: 15px;
+            margin-bottom: 30px;
+        }
+
+        h2 {
+            color: #2980b9;
+            margin-top: 40px;
+            border-left: 5px solid #3498db;
+            padding-left: 15px;
+        }
+
+        h3 {
+            color: #34495e;
+            margin-top: 25px;
+        }
+
+        .card {
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 5px rgba(0, 0, 0, 0.05);
+            margin-bottom: 20px;
+            border: 1px solid #e1e4e8;
+        }
+
+        .phase-card {
+            border-left: 5px solid;
+            margin-bottom: 30px;
+        }
+
+        .phase-1 {
+            border-left-color: #e74c3c;
+        }
+
+        .phase-2 {
+            border-left-color: #f39c12;
+        }
+
+        .phase-3 {
+            border-left-color: #27ae60;
+        }
+
+        .alert {
+            padding: 15px;
+            border-radius: 5px;
+            margin: 20px 0;
+            border-left: 5px solid;
+        }
+
+        .alert-important {
+            background-color: #fff3cd;
+            border-color: #ffc107;
+            color: #856404;
+        }
+
+        .alert-info {
+            background-color: #d1ecf1;
+            border-color: #17a2b8;
+            color: #0c5460;
+        }
+
+        .alert-success {
+            background-color: #d4edda;
+            border-color: #28a745;
+            color: #155724;
+        }
+
+        .timeline {
+            position: relative;
+            padding-left: 40px;
+            margin: 20px 0;
+        }
+
+        .timeline::before {
+            content: '';
+            position: absolute;
+            left: 15px;
+            top: 0;
+            bottom: 0;
+            width: 3px;
+            background: #3498db;
+        }
+
+        .timeline-item {
+            position: relative;
+            margin-bottom: 30px;
+        }
+
+        .timeline-item::before {
+            content: '';
+            position: absolute;
+            left: -32px;
+            top: 5px;
+            width: 15px;
+            height: 15px;
+            border-radius: 50%;
+            background: #3498db;
+            border: 3px solid white;
+            box-shadow: 0 0 0 2px #3498db;
+        }
+
+        .code-block {
+            background-color: #282c34;
+            color: #abb2bf;
+            padding: 15px;
+            border-radius: 5px;
+            font-family: 'Consolas', 'Monaco', monospace;
+            overflow-x: auto;
+            margin: 15px 0;
+            font-size: 13px;
+        }
+
+        .keyword {
+            color: #c678dd;
+        }
+
+        .string {
+            color: #98c379;
+        }
+
+        .comment {
+            color: #5c6370;
+            font-style: italic;
+        }
+
+        .function {
+            color: #61afef;
+        }
+
+        .badge {
+            display: inline-block;
+            padding: 4px 8px;
+            border-radius: 4px;
+            font-size: 0.85em;
+            font-weight: bold;
+            margin-left: 10px;
+        }
+
+        .badge-critical {
+            background-color: #e74c3c;
+            color: white;
+        }
+
+        .badge-high {
+            background-color: #f39c12;
+            color: white;
+        }
+
+        .badge-medium {
+            background-color: #3498db;
+            color: white;
+        }
+
+        .badge-old {
+            background-color: #ffeaa7;
+            color: #d63031;
+        }
+
+        .badge-new {
+            background-color: #55efc4;
+            color: #00b894;
+        }
+
+        .badge-modify {
+            background-color: #74b9ff;
+            color: #0984e3;
+        }
+
+        .step-number {
+            background-color: #3498db;
+            color: white;
+            width: 30px;
+            height: 30px;
+            border-radius: 50%;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: bold;
+            margin-right: 10px;
+        }
+
+        ul {
+            list-style-type: none;
+            padding-left: 0;
+        }
+
+        li {
+            margin-bottom: 10px;
+            position: relative;
+            padding-left: 20px;
+        }
+
+        li:before {
+            content: "•";
+            color: #3498db;
+            font-weight: bold;
+            position: absolute;
+            left: 0;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 15px 0;
+            font-size: 14px;
+        }
+
+        th,
+        td {
+            padding: 12px;
+            text-align: left;
+            border-bottom: 1px solid #ddd;
+        }
+
+        th {
+            background-color: #3498db;
+            color: white;
+            font-weight: bold;
+        }
+
+        tr:hover {
+            background-color: #f5f5f5;
+        }
+
+        code {
+            background-color: #f4f4f4;
+            padding: 2px 6px;
+            border-radius: 3px;
+            font-family: 'Consolas', 'Monaco', monospace;
+            color: #e74c3c;
+            font-size: 0.9em;
+        }
+
+        .file-path {
+            color: #2980b9;
+            font-weight: bold;
+        }
+
+        .scenario-icon {
+            font-size: 1.3em;
+            margin-right: 8px;
+        }
+
+        .feature-list {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 15px;
+            margin: 20px 0;
+        }
+
+        .feature-item {
+            background: #f8f9fa;
+            padding: 15px;
+            border-radius: 5px;
+            border-left: 4px solid #3498db;
+        }
+    </style>
+    <script src="https://cdn.jsdelivr.net/npm/mermaid/dist/mermaid.min.js"></script>
+    <script>mermaid.initialize({ startOnLoad: true });</script>
+</head>
+
+<body>
+    <h1>Canceled Delivery Workflow - Phased Implementation Plan</h1>
+
+    <div class="card">
+        <h3>📋 Goal Description</h3>
+        <p>Implement a robust canceled delivery handling system aligned with <strong>industry best practices from
+                Lazada, Shopee, Zalora, and TikTok Shop</strong>. Allow sellers to re-book deliveries when couriers
+            cancel, without requiring buyers to re-order.</p>
+        <p><strong>Date:</strong> December 8, 2025</p>
+        <p><strong>Alignment:</strong> Follows standard e-commerce platform practices for 3PL cancellation handling</p>
+    </div>
+
+    <h2>🎯 Industry Best Practices (Lazada/Shopee Standard)</h2>
+
+    <div class="card">
+        <h3>✅ What Major Platforms Do When Courier Cancels</h3>
+        <div class="feature-list">
+            <div class="feature-item">
+                <strong>1. Auto-Revert to "To Ship"</strong>
+                <p>Order automatically returns to shippable state. Previous tracking becomes invalid.</p>
+            </div>
+            <div class="feature-item">
+                <strong>2. Seller Re-Arranges Pickup</strong>
+                <p>Seller books new pickup/drop-off with same or different courier.</p>
+            </div>
+            <div class="feature-item">
+                <strong>3. New Shipping Label</strong>
+                <p>System generates new AWB/tracking number. Old label cannot be reused.</p>
+            </div>
+            <div class="feature-item">
+                <strong>4. Buyer Notification</strong>
+                <p>Automated message: "Courier canceled, new delivery arranged. Updated tracking: XXX"</p>
+            </div>
+            <div class="feature-item">
+                <strong>5. Dispute System</strong>
+                <p>If rider picked up but system shows canceled, seller can file dispute with evidence.</p>
+            </div>
+            <div class="feature-item">
+                <strong>6. Courier Switching</strong>
+                <p>Seller can choose different 3PL provider if repeated cancellations occur.</p>
+            </div>
+        </div>
+    </div>
+
+    <h2>📅 Phased Implementation Timeline</h2>
+
+    <div class="card phase-card phase-1">
+        <h3>🔴 Phase 1: Core Functionality <span class="badge badge-critical">CRITICAL</span></h3>
+        <p><strong>Timeline:</strong> Week 1 (5-7 days) | <strong>Priority:</strong> Must Have</p>
+
+        <h4>Features:</h4>
+        <table>
+            <thead>
+                <tr>
+                    <th>Feature</th>
+                    <th>Description</th>
+                    <th>Effort</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td>✅ Revert to "To Ship"</td>
+                    <td>Order status → <code>PROCESSING</code> when delivery cancelled</td>
+                    <td>2 hours</td>
+                </tr>
+                <tr>
+                    <td>✅ Webhook Handler</td>
+                    <td>Handle CANCELLED/EXPIRED/REJECTED events</td>
+                    <td>3 hours</td>
+                </tr>
+                <tr>
+                    <td>✅ Rebook UI</td>
+                    <td>"🔄 Rebook Delivery" button in orders page</td>
+                    <td>4 hours</td>
+                </tr>
+                <tr>
+                    <td>✅ Failure Tracking</td>
+                    <td>Store <code>failureReason</code> and <code>failedAt</code></td>
+                    <td>1 hour</td>
+                </tr>
+                <tr>
+                    <td>✅ Timeline History</td>
+                    <td>Track all delivery attempts in timeline</td>
+                    <td>2 hours</td>
+                </tr>
+            </tbody>
+        </table>
+
+        <p><strong>Total Effort:</strong> 12 hours (1.5 days)</p>
+        <p><strong>Deliverables:</strong> Basic rebook functionality working for Lalamove</p>
+    </div>
+
+    <div class="card phase-card phase-2">
+        <h3>🟡 Phase 2: Industry Standard Features <span class="badge badge-high">HIGH PRIORITY</span></h3>
+        <p><strong>Timeline:</strong> Week 2 (5-7 days) | <strong>Priority:</strong> Should Have</p>
+
+        <h4>Features:</h4>
+        <table>
+            <thead>
+                <tr>
+                    <th>Feature</th>
+                    <th>Description</th>
+                    <th>Effort</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr class="completed">
+                    <td>✅ Buyer Notification</td>
+                    <td>Auto-email buyer when delivery cancelled + new tracking</td>
+                    <td>Done</td>
+                </tr>
+                <tr class="completed">
+                    <td>✅ Seller Notification</td>
+                    <td>Alert seller to rebook when courier cancels</td>
+                    <td>Done</td>
+                </tr>
+                <tr class="completed">
+                    <td>✅ Webhook Polling</td>
+                    <td>Cron job to sync status every 10 min (fallback)</td>
+                    <td>Done</td>
+                </tr>
+                <tr class="completed">
+                    <td>✅ Webhook Logging</td>
+                    <td>Log all webhook events for debugging</td>
+                    <td>Done</td>
+                </tr>
+                <tr class="completed">
+                    <td>✅ Courier Switching</td>
+                    <td>Manual booking fallback (Input any provider & tracking #)</td>
+                    <td>Done</td>
+                </tr>
+                <tr class="completed">
+                    <td>✅ Manual Sync Button</td>
+                    <td>"Sync Status" button for sellers</td>
+                    <td>Done</td>
+                </tr>
+            </tbody>
+        </table>
+
+        <p><strong>Total Effort:</strong> 22 hours (2.5-3 days)</p>
+        <p><strong>Deliverables:</strong> Full Lazada/Shopee-style workflow with notifications</p>
+    </div>
+
+    <div class="card phase-card phase-3">
+        <h3>🟢 Phase 3: Advanced Features <span class="badge badge-medium">NICE TO HAVE</span></h3>
+        <p><strong>Timeline:</strong> Week 3-4 (7-10 days) | <strong>Priority:</strong> Could Have</p>
+
+        <h4>Features:</h4>
+        <table>
+            <thead>
+                <tr>
+                    <th>Feature</th>
+                    <th>Description</th>
+                    <th>Effort</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td>🎫 Dispute System</td>
+                    <td>File dispute if rider picked up but marked cancelled</td>
+                    <td>8 hours</td>
+                </tr>
+                <tr>
+                    <td>📊 Analytics Dashboard</td>
+                    <td>Track cancellation rates by courier</td>
+                    <td>6 hours</td>
+                </tr>
+                <tr>
+                    <td>🤖 Auto-Courier Switch</td>
+                    <td>Suggest different courier after 3 cancellations</td>
+                    <td>4 hours</td>
+                </tr>
+                <tr>
+                    <td>📸 Evidence Upload</td>
+                    <td>Upload pickup photos/CCTV for disputes</td>
+                    <td>5 hours</td>
+                </tr>
+                <tr>
+                    <td>💬 In-App Messaging</td>
+                    <td>Notify buyer via in-app notification</td>
+                    <td>6 hours</td>
+                </tr>
+            </tbody>
+        </table>
+
+        <p><strong>Total Effort:</strong> 29 hours (3.5-4 days)</p>
+        <p><strong>Deliverables:</strong> Enterprise-grade delivery management system</p>
+    </div>
+
+    <div class="alert alert-info">
+        <h3>📊 Total Project Timeline</h3>
+        <div class="timeline">
+            <div class="timeline-item">
+                <strong>Week 1 (Days 1-7):</strong> Phase 1 - Core rebook functionality
+            </div>
+            <div class="timeline-item">
+                <strong>Week 2 (Days 8-14):</strong> Phase 2 - Notifications + webhook resilience
+            </div>
+            <div class="timeline-item">
+                <strong>Week 3-4 (Days 15-28):</strong> Phase 3 - Advanced features (optional)
+            </div>
+        </div>
+        <p><strong>Minimum Viable Product (MVP):</strong> Phase 1 + Phase 2 = 2 weeks</p>
+        <p><strong>Full Implementation:</strong> All 3 phases = 3-4 weeks</p>
+    </div>
+
+    <h2>🏗️ Future-Proofing: Multi-Provider Architecture (J&T, Grab, Gogo)</h2>
+    <div class="card">
+        <h3>✅ Loosely Coupled Design Strategy</h3>
+        <p>The system is designed to be <strong>provider-agnostic</strong>. Core logic does not know or care which
+            courier is used.</p>
+
+        <table style="margin-top: 15px;">
+            <thead>
+                <tr>
+                    <th>Layer</th>
+                    <th>Strategy</th>
+                    <th>Benefit</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td><strong>Database</strong></td>
+                    <td>Using generic <code>shipping</code> JSON field for all provider data.</td>
+                    <td><strong>Zero Schema Changes:</strong> Adding J&T or Grab requires NO database migration.</td>
+                </tr>
+                <tr>
+                    <td><strong>Frontend UI</strong></td>
+                    <td>Status checks look for generic flags: <code>order.shipping?.failureReason</code>.</td>
+                    <td><strong>Zero UI Changes:</strong> The "Rebook" button appears automatically for ANY provider
+                        that reports a failure.</td>
+                </tr>
+                <tr>
+                    <td><strong>Backend Logic</strong></td>
+                    <td>Standardized "Contract": All failures revert status to <code>PROCESSING</code>.</td>
+                    <td><strong>Plug-and-Play:</strong> To add J&T, you only write one file (the webhook handler) that
+                        adheres to this standard.</td>
+                </tr>
+            </tbody>
+        </table>
+
+        <div class="code-block">
+            <span class="comment">// Example: How easy it is to add J&T Express Webhook (Future)</span>
+            <span class="comment">// app/api/webhooks/jnt/route.js</span>
+
+            <span class="comment">// 1. Receive J&T specific status</span>
+            <span class="keyword">const</span> { status_code } = jntPayload;
+
+            <span class="comment">// 2. Map to OUR generic system states (The only "Coupled" part)</span>
+            <span class="keyword">if</span> (status_code === <span class="string">'DELIVERY_FAILED'</span>) {
+            <span class="comment">// 3. System automatically handles the rest (Rebook UI, Notifications)</span>
+            <span class="keyword">await</span> updateOrderState(orderId, {
+            status: <span class="string">'PROCESSING'</span>,
+            shipping: { failureReason: <span class="string">'DELIVERY_FAILED'</span> }
+            });
+            }
+        </div>
+    </div>
+
+    <h2>🔀 Cancellation Workflow Process</h2>
+    <div class="card" style="overflow-x: auto; text-align: center;">
+        <div class="mermaid">
+            graph TD
+            A([Delivery Initiated]) --> B{Cancellation Event?}
+            B -->|System/Courier| C{Event Type?}
+            B -->|Manual Action| D{Action Type?}
+
+            C -->|EXPIRED| E[Mark Shipping: EXPIRED]
+            C -->|REJECTED| F[Mark Shipping: REJECTED]
+            C -->|CANCELLED by Rider| G[Mark Shipping: CANCELLED]
+
+            E --> H[Revert Order to: PROCESSING]
+            F --> H
+            G --> H
+
+            D -->|Cancel Delivery Only| I[Mark Shipping: CANCELLED]
+            D -->|Cancel Order| J[Mark Order: CANCELLED]
+
+            I --> H
+            J --> K([End - Order Void])
+
+            H --> L{Action Required}
+            L -->|Seller| M[Rebook Delivery]
+            M --> N[New Tracking/AWB Generated]
+            N --> O[Archive Old Tracking]
+            O --> A
+        </div>
+        <p style="margin-top: 10px; font-style: italic; color: #666;">Figure 1: Decision logic for handling
+            cancellations vs delivery failures</p>
+    </div>
+
+    <h2>🔍 Comprehensive Cancellation Scenarios Analysis</h2>
+
+    <div class="card">
+        <h3><span class="scenario-icon">🤖</span>1. System-Triggered Cancellations</h3>
+        <table>
+            <thead>
+                <tr>
+                    <th>Event</th>
+                    <th>Trigger Condition</th>
+                    <th>Solution</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td><code>EXPIRED</code></td>
+                    <td>No driver accepted within time limit</td>
+                    <td>✅ Revert to PROCESSING, allow rebook</td>
+                </tr>
+                <tr>
+                    <td><code>REJECTED</code></td>
+                    <td>Multiple drivers rejected (hit limit)</td>
+                    <td>✅ Revert to PROCESSING, suggest address fix</td>
+                </tr>
+            </tbody>
+        </table>
+    </div>
+
+    <div class="card">
+        <h3><span class="scenario-icon">🏍️</span>2. Rider-Initiated Cancellations</h3>
+        <table>
+            <thead>
+                <tr>
+                    <th>Event</th>
+                    <th>Trigger Condition</th>
+                    <th>Solution</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td><code>CANCELLED</code></td>
+                    <td>Driver cancels within 5-min window</td>
+                    <td>✅ Revert to PROCESSING, notify seller</td>
+                </tr>
+                <tr>
+                    <td><code>ORDER_REPLACED</code></td>
+                    <td>Cancel-and-Clone (waiting fees)</td>
+                    <td>🔄 Auto-handled by Lalamove</td>
+                </tr>
+            </tbody>
+        </table>
+    </div>
+
+    <div class="card">
+        <h3><span class="scenario-icon">🏪</span>3. Seller-Initiated Cancellations</h3>
+        <table>
+            <thead>
+                <tr>
+                    <th>Action</th>
+                    <th>Trigger</th>
+                    <th>Solution</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td>Cancel Delivery Only</td>
+                    <td>Seller clicks "Cancel Delivery"</td>
+                    <td>✅ Shipping cancelled, order stays valid, can rebook</td>
+                </tr>
+                <tr>
+                    <td>Cancel Entire Order</td>
+                    <td>Seller cancels order</td>
+                    <td>❌ Order invalid, no rebook</td>
+                </tr>
+            </tbody>
+        </table>
+    </div>
+
+    <div class="card">
+        <h3><span class="scenario-icon">🛒</span>4. Buyer-Initiated Cancellations</h3>
+        <table>
+            <thead>
+                <tr>
+                    <th>Action</th>
+                    <th>Trigger</th>
+                    <th>Solution</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td>Cancel Order</td>
+                    <td>Buyer requests cancellation</td>
+                    <td>❌ Order invalid, no rebook</td>
+                </tr>
+                <tr>
+                    <td>Cancel Delivery</td>
+                    <td>Buyer cancels via tracking link</td>
+                    <td>⚠️ Revert to PROCESSING, seller reviews</td>
+                </tr>
+            </tbody>
+        </table>
+    </div>
+
+    <h2>🔧 Phase 1: Technical Implementation Details</h2>
+
+    <div class="card">
+        <h3><span class="badge badge-modify">MODIFY</span> Backend - Webhook Handler</h3>
+        <p class="file-path">📁 app/api/webhooks/lalamove/route.js</p>
+
+        <h4>Current Code (Lines 230-236 & 264-271):</h4>
+        <div class="code-block">
+            <span class="comment">// In ORDER_STATUS_CHANGED handler</span>
+            } <span class="keyword">else if</span> (status === <span class="string">'CANCELED'</span> || status ===
+            <span class="string">'CANCELLED'</span>) {
+            <span class="keyword">if</span> (order.status !== <span class="string">'COMPLETED'</span> && order.status
+            !== <span class="string">'DELIVERED'</span>) {
+            newStatus = <span class="string">'CANCELLED'</span>;
+            updateData.status = <span class="string">'CANCELLED'</span>;
+            }
+            }
+
+            <span class="keyword">case</span> <span class="string">'CANCELLED'</span>:
+            console.log(<span class="string">`Order ${order.id} cancelled`</span>);
+            <span class="keyword">if</span> (order.status !== <span class="string">'COMPLETED'</span> && order.status
+            !== <span class="string">'DELIVERED'</span>) {
+            newStatus = <span class="string">'CANCELLED'</span>;
+            updateData.status = <span class="string">'CANCELLED'</span>;
+            }
+            <span class="keyword">break</span>;
+        </div>
+
+        <h4>✅ Phase 1 Implementation:</h4>
+        <div class="code-block">
+            <span class="comment">// ✅ Combined handler for all delivery failures</span>
+            <span class="keyword">case</span> <span class="string">'CANCELLED'</span>:
+            <span class="keyword">case</span> <span class="string">'REJECTED'</span>:
+            <span class="keyword">case</span> <span class="string">'EXPIRED'</span>:
+            console.log(<span class="string">`Delivery ${event} for order ${order.id}`</span>);
+            <span class="keyword">if</span> (order.status !== <span class="string">'COMPLETED'</span> && order.status
+            !== <span class="string">'DELIVERED'</span>) {
+            newStatus = <span class="string">'PROCESSING'</span>; <span class="comment">// ✅ Revert to "To Ship"</span>
+            updateData.status = <span class="string">'PROCESSING'</span>;
+
+            <span class="comment">// Archive old tracking</span>
+            updatedShipping.previousAttempts = [
+            ...(order.shipping.previousAttempts || []),
+            {
+            bookingId: order.shipping.bookingId,
+            failureReason: event,
+            failedAt: <span class="keyword">new</span> Date().toISOString(),
+            status: <span class="string">'INVALID'</span>
+            }
+            ];
+
+            <span class="comment">// Mark current shipping as failed</span>
+            updatedShipping.failureReason = event;
+            updatedShipping.failedAt = <span class="keyword">new</span> Date().toISOString();
+            }
+            <span class="keyword">break</span>;
+
+            <span class="comment">// Also update ORDER_STATUS_CHANGED handler</span>
+            } <span class="keyword">else if</span> (status === <span class="string">'CANCELED'</span> || status ===
+            <span class="string">'CANCELLED'</span> ||
+            status === <span class="string">'EXPIRED'</span> || status === <span class="string">'REJECTED'</span>) {
+            <span class="keyword">if</span> (order.status !== <span class="string">'COMPLETED'</span> && order.status
+            !== <span class="string">'DELIVERED'</span>) {
+            newStatus = <span class="string">'PROCESSING'</span>;
+            updateData.status = <span class="string">'PROCESSING'</span>;
+            updatedShipping.failureReason = status;
+            updatedShipping.failedAt = <span class="keyword">new</span> Date().toISOString();
+            }
+            }
+        </div>
+    </div>
+
+    <div class="card">
+        <h3><span class="badge badge-modify">MODIFY</span> Frontend - Order Status Helper</h3>
+        <p class="file-path">📁 app/store/orders/page.jsx</p>
+
+        <div class="code-block">
+            <span class="keyword">const</span> <span class="function">getDeliveryStatus</span> = (order) => {
+            <span class="keyword">if</span> (!order.isPaid) <span class="keyword">return</span> <span
+                class="string">'unpaid'</span>;
+            <span class="keyword">if</span> (order.status === <span class="string">'DELIVERED'</span>) <span
+                class="keyword">return</span> <span class="string">'delivered'</span>;
+            <span class="keyword">if</span> (order.status === <span class="string">'CANCELLED'</span> || order.status
+            === <span class="string">'REFUNDED'</span>) <span class="keyword">return</span> <span
+                class="string">'cancelled'</span>;
+
+            <span class="comment">// ✅ NEW: Check for delivery failure</span>
+            <span class="keyword">if</span> (order.status === <span class="string">'PROCESSING'</span> &&
+            order.shipping?.failureReason) {
+            <span class="keyword">return</span> <span class="string">'delivery_failed'</span>;
+            }
+
+            <span class="keyword">if</span> (order.shipping?.provider && order.shipping?.bookingId) {
+            <span class="keyword">if</span> (order.status === <span class="string">'SHIPPED'</span>) <span
+                class="keyword">return</span> <span class="string">'in_transit'</span>;
+            <span class="keyword">return</span> <span class="string">'booked'</span>;
+            }
+
+            <span class="keyword">if</span> (order.isPaid && !order.shipping?.bookingId) <span
+                class="keyword">return</span> <span class="string">'needs_booking'</span>;
+            <span class="keyword">return</span> <span class="string">'other'</span>;
+            }
+        </div>
+    </div>
+
+    <div class="card">
+        <h3><span class="badge badge-modify">MODIFY</span> Frontend - Rebook UI</h3>
+        <p class="file-path">📁 app/store/orders/page.jsx</p>
+
+        <div class="code-block">
+            <span class="comment">/* Delivery Failed State in Table */</span>
+            &lt;td className=<span class="string">"px-4 py-3"</span> onClick={(e) => e.stopPropagation()}&gt;
+            {getDeliveryStatus(order) === <span class="string">'delivery_failed'</span> ? (
+            &lt;div className=<span class="string">"flex flex-col gap-1"</span>&gt;
+            &lt;span className=<span class="string">"text-xs font-medium text-red-700"</span>&gt;
+            ❌ {order.shipping.failureReason}
+            &lt;/span&gt;
+            &lt;button
+            onClick={() => openModal(order)}
+            className=<span class="string">"text-xs text-blue-600 hover:underline font-medium"</span>
+            &gt;
+            🔄 Rebook Delivery
+            &lt;/button&gt;
+            &lt;/div&gt;
+            ) : <span class="comment">/* ... other states ... */</span>}
+            &lt;/td&gt;
+
+            <span class="comment">/* Modal - Show Previous Attempts */</span>
+            {selectedOrder.shipping?.previousAttempts?.length > 0 && (
+            &lt;div className=<span class="string">"mt-4 p-3 bg-yellow-50 rounded border border-yellow-200"</span>&gt;
+            &lt;p className=<span class="string">"text-sm font-medium mb-2"</span>&gt;📋 Previous Delivery
+            Attempts&lt;/p&gt;
+            {selectedOrder.shipping.previousAttempts.map((attempt, i) => (
+            &lt;div key={i} className=<span class="string">"text-xs text-gray-600 mb-1"</span>&gt;
+            {i + 1}. {attempt.bookingId} - {attempt.failureReason}
+            ({<span class="keyword">new</span> Date(attempt.failedAt).toLocaleString()})
+            &lt;/div&gt;
+            ))}
+            &lt;/div&gt;
+            )}
+
+            <span class="comment">/* Rebook Button */</span>
+            {selectedOrder.shipping?.failureReason && (
+            &lt;div className=<span class="string">"mt-4 p-3 bg-red-50 rounded border border-red-200"</span>&gt;
+            &lt;p className=<span class="string">"text-sm text-red-700 font-medium mb-2"</span>&gt;
+            ⚠️ Delivery {selectedOrder.shipping.failureReason.toLowerCase()}
+            &lt;/p&gt;
+            &lt;button
+            onClick={() => handleBookLalamove(selectedOrder)}
+            disabled={isBooking}
+            className=<span class="string">"bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700"</span>
+            &gt;
+            {isBooking ? <span class="string">'Rebooking...'</span> : <span class="string">'🔄 Rebook Delivery'</span>}
+            &lt;/button&gt;
+            &lt;/div&gt;
+            )}
+        </div>
+    </div>
+
+    <h2>📧 Phase 2: Notification System</h2>
+
+    <div class="card">
+        <h3>Buyer Notification Email Template</h3>
+        <div class="code-block">
+            <span class="comment">// lib/email-templates/delivery-rebooked.js</span>
+            <span class="keyword">export</span> <span class="keyword">const</span> deliveryRebookedTemplate = (order,
+            oldTracking, newTracking) => <span class="string">`
+                &lt;h2&gt;Delivery Update for Order #${order.id.slice(0, 8)}&lt;/h2&gt;
+                &lt;p&gt;Dear ${order.user.name},&lt;/p&gt;
+                &lt;p&gt;The courier has cancelled your delivery, but we've already arranged a new one.&lt;/p&gt;
+                &lt;div style="background: #f8f9fa; padding: 15px; border-radius: 5px; margin: 20px 0;"&gt;
+                &lt;p&gt;&lt;strong&gt;Previous Tracking:&lt;/strong&gt; &lt;del&gt;${oldTracking}&lt;/del&gt;
+                (Invalid)&lt;/p&gt;
+                &lt;p&gt;&lt;strong&gt;New Tracking:&lt;/strong&gt; ${newTracking}&lt;/p&gt;
+                &lt;/div&gt;
+                &lt;p&gt;Your order will still arrive as scheduled. Thank you for your patience!&lt;/p&gt;
+                `</span>;
+
+            <span class="comment">// In webhook handler, after updating order</span>
+            <span class="keyword">if</span> (newStatus === <span class="string">'PROCESSING'</span> &&
+            updatedShipping.failureReason) {
+            <span class="keyword">await</span> sendEmail({
+            to: order.user.email,
+            subject: <span class="string">`Delivery Update - Order #${order.id.slice(0, 8)}`</span>,
+            html: deliveryRebookedTemplate(order, oldBookingId, <span class="string">'Will be updated on rebook'</span>)
+            });
+            }
+        </div>
+    </div>
+
+    <h2>✅ Verification Plan</h2>
+
+    <div class="card">
+        <h3><span class="step-number">1</span> Phase 1 Testing</h3>
+        <ul>
+            <li>Simulate CANCELLED/EXPIRED/REJECTED webhooks</li>
+            <li>Verify order reverts to PROCESSING</li>
+            <li>Verify "🔄 Rebook Delivery" button appears</li>
+            <li>Test rebooking generates new tracking number</li>
+            <li>Verify old tracking marked as INVALID</li>
+        </ul>
+    </div>
+
+    <div class="card">
+        <h3><span class="step-number">2</span> Phase 2 Testing</h3>
+        <ul>
+            <li>Verify buyer receives email notification</li>
+            <li>Verify seller receives alert email</li>
+            <li>Test webhook polling fallback (disable webhook, wait 10 min)</li>
+            <li>Test manual "Sync Status" button</li>
+            <li>Test courier switching on rebook</li>
+        </ul>
+    </div>
+
+    <div class="card">
+        <h3><span class="step-number">3</span> Phase 3 Testing</h3>
+        <ul>
+            <li>Test dispute filing with evidence upload</li>
+            <li>Verify analytics dashboard shows cancellation rates</li>
+            <li>Test auto-courier suggestion after 3 failures</li>
+        </ul>
+    </div>
+
+    <h2>📈 Success Metrics</h2>
+    <div class="card">
+        <table>
+            <thead>
+                <tr>
+                    <th>Metric</th>
+                    <th>Target</th>
+                    <th>Measurement</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td>Rebook Success Rate</td>
+                    <td>&gt; 90%</td>
+                    <td>Successful rebooks / Total cancellations</td>
+                </tr>
+                <tr>
+                    <td>Buyer Notification Delivery</td>
+                    <td>&gt; 95%</td>
+                    <td>Emails sent / Cancellation events</td>
+                </tr>
+                <tr>
+                    <td>Webhook Reliability</td>
+                    <td>&gt; 99%</td>
+                    <td>Webhooks received / Webhooks sent by 3PL</td>
+                </tr>
+                <tr>
+                    <td>Average Rebook Time</td>
+                    <td>&lt; 30 min</td>
+                    <td>Time from cancellation to new booking</td>
+                </tr>
+                <tr>
+                    <td>Order Completion Rate</td>
+                    <td>&gt; 85%</td>
+                    <td>Orders delivered / Orders with cancellations</td>
+                </tr>
+            </tbody>
+        </table>
+    </div>
+
+    <div class="alert alert-success">
+        <h3>🎯 Implementation Recommendation</h3>
+        <p><strong>Minimum Viable Product:</strong> Implement Phase 1 + Phase 2 (2 weeks total)</p>
+        <p><strong>Rationale:</strong> This provides full Lazada/Shopee-level functionality with proper notifications
+            and webhook resilience. Phase 3 can be added later based on user feedback.</p>
+        <p><strong>Quick Win:</strong> Phase 1 alone (1.5 days) provides immediate value and can be deployed quickly.
+        </p>
+    </div>
+
+</body>
+
+</html>

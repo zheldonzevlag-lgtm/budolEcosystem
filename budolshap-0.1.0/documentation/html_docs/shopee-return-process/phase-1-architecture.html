@@ -1,0 +1,198 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Phase 1: Architecture & State Machine - Shopee Return Process</title>
+    <style>
+        :root {
+            --primary: #ee4d2d;
+            --primary-dark: #d73211;
+            --secondary: #26aa99;
+            --bg: #f5f5f5;
+            --card-bg: #ffffff;
+            --text: #333333;
+            --text-light: #666666;
+            --border: #e8e8e8;
+            --code-bg: #2d2d2d;
+            --code-text: #f8f8f2;
+        }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            line-height: 1.6;
+            color: var(--text);
+            background-color: var(--bg);
+            margin: 0;
+            padding: 0;
+        }
+        .container {
+            max-width: 1000px;
+            margin: 40px auto;
+            padding: 20px;
+        }
+        nav {
+            margin-bottom: 20px;
+        }
+        nav a {
+            color: var(--primary);
+            text-decoration: none;
+            font-weight: bold;
+        }
+        .card {
+            background: var(--card-bg);
+            padding: 40px;
+            border-radius: 8px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.05);
+            margin-bottom: 20px;
+        }
+        h1 {
+            color: var(--primary);
+            margin-top: 0;
+        }
+        h2 {
+            color: var(--primary-dark);
+            border-bottom: 1px solid var(--border);
+            padding-bottom: 10px;
+            margin-top: 30px;
+        }
+        .workflow-diagram {
+            background: #fdfdfd;
+            border: 1px solid var(--border);
+            padding: 20px;
+            border-radius: 8px;
+            margin: 20px 0;
+            overflow-x: auto;
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 20px 0;
+        }
+        th, td {
+            text-align: left;
+            padding: 12px;
+            border-bottom: 1px solid var(--border);
+        }
+        th {
+            background-color: #fafafa;
+            color: var(--primary);
+            text-transform: uppercase;
+            font-size: 0.85rem;
+        }
+        .code-block {
+            background-color: var(--code-bg);
+            color: var(--code-text);
+            padding: 20px;
+            border-radius: 8px;
+            overflow-x: auto;
+            font-family: 'Courier New', Courier, monospace;
+            font-size: 0.9rem;
+            margin: 20px 0;
+        }
+        .ownership-tag {
+            display: inline-block;
+            padding: 2px 8px;
+            border-radius: 4px;
+            font-size: 0.75rem;
+            font-weight: bold;
+            color: white;
+        }
+        .tag-shopee { background-color: #ee4d2d; }
+        .tag-courier { background-color: #26aa99; }
+        .tag-buyer { background-color: #007bff; }
+        .tag-seller { background-color: #6c757d; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <nav>
+            <a href="index.html">← Back to Overview</a>
+        </nav>
+
+        <div class="card">
+            <h1>Phase 1: Architecture & State Machine</h1>
+            <p>This phase defines the core logic of the Shopee-style return process, focusing on state transitions and control ownership at each stage.</p>
+
+            <h2>1. Control Ownership Summary</h2>
+            <p>In a Shopee-style return, the platform (BudolShap) acts as the central orchestrator, while the courier handles physical logistics.</p>
+            <table>
+                <thead>
+                    <tr>
+                        <th>Stage</th>
+                        <th>Who Controls It</th>
+                        <th>Primary Action</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td>Return Request</td>
+                        <td><span class="ownership-tag tag-buyer">Buyer</span> + <span class="ownership-tag tag-shopee">Platform</span></td>
+                        <td>Initial filing and fund locking (Escrow)</td>
+                    </tr>
+                    <tr>
+                        <td>Approval / Rejection</td>
+                        <td><span class="ownership-tag tag-seller">Seller</span></td>
+                        <td>Accepting return or proposing alternatives</td>
+                    </tr>
+                    <tr>
+                        <td>Courier Selection</td>
+                        <td><span class="ownership-tag tag-shopee">Platform</span></td>
+                        <td>Lalamove (BudolShap default) assigned automatically</td>
+                    </tr>
+                    <tr>
+                        <td>Pickup / Drop-off</td>
+                        <td><span class="ownership-tag tag-courier">Courier</span></td>
+                        <td>Physical scan triggers status update</td>
+                    </tr>
+                    <tr>
+                        <td>In-Transit Updates</td>
+                        <td><span class="ownership-tag tag-courier">Courier</span></td>
+                        <td>Real-time webhook updates from Lalamove</td>
+                    </tr>
+                    <tr>
+                        <td>Refund Release</td>
+                        <td><span class="ownership-tag tag-shopee">Platform</span></td>
+                        <td>Funds released from Escrow to Buyer</td>
+                    </tr>
+                </tbody>
+            </table>
+
+            <h2>2. Return State Machine</h2>
+            <p>The return process follows a strict state progression to ensure transparency and accountability.</p>
+            <div class="workflow-diagram">
+                <strong>PENDING</strong> (Buyer files) → 
+                <strong>APPROVED</strong> (Seller accepts) → 
+                <strong>BOOKING_REQUESTED</strong> (Buyer asks for pickup) → 
+                <strong>BOOKED</strong> (Seller/Platform confirms courier) → 
+                <strong>SHIPPED</strong> (Courier picks up) → 
+                <strong>RECEIVED</strong> (Seller gets item) → 
+                <strong>REFUNDED</strong> (Funds released)
+            </div>
+
+            <h2>3. Prisma Schema Implementation</h2>
+            <p>The <code>ReturnStatus</code> enum in <code>schema.prisma</code> has been updated to reflect these states:</p>
+            <div class="code-block">
+<pre>enum ReturnStatus {
+  PENDING
+  APPROVED
+  BOOKING_REQUESTED
+  BOOKED
+  SHIPPED
+  RECEIVED
+  REFUNDED
+  CANCELLED
+  DISPUTED
+}</pre>
+            </div>
+
+            <h2>4. Key Differences from Forward Delivery</h2>
+            <ul>
+                <li><strong>Initiation:</strong> Buyer initiates the process, not the seller.</li>
+                <li><strong>Escrow:</strong> Funds are locked immediately upon request and only released after verification.</li>
+                <li><strong>SLA Rules:</strong> Platform enforces deadlines for seller response and buyer return shipment.</li>
+                <li><strong>Courier Control:</strong> Platform (Shopee/BudolShap) decides the shipping provider to ensure tracking consistency.</li>
+            </ul>
+        </div>
+    </div>
+</body>
+</html>

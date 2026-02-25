@@ -1,0 +1,57 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Phase 2.1: Core Configuration & State Alignment</title>
+    <style>
+        body { font-family: 'Segoe UI', sans-serif; line-height: 1.6; color: #333; max-width: 900px; margin: 0 auto; padding: 20px; }
+        header { background: #ee4d2d; color: white; padding: 1rem; border-radius: 8px; margin-bottom: 1rem; }
+        .back-link { display: inline-block; margin-bottom: 1rem; color: #ee4d2d; text-decoration: none; }
+        .spec-block { background: #f8f9fa; border: 1px solid #ddd; padding: 1.5rem; border-radius: 4px; margin-bottom: 1.5rem; }
+        code { background: #eee; padding: 0.2rem 0.4rem; border-radius: 3px; font-family: 'Courier New', Courier, monospace; }
+        pre { background: #2d2d2d; color: #f8f8f2; padding: 1rem; border-radius: 4px; overflow-x: auto; }
+        .success { color: #166534; font-weight: bold; }
+    </style>
+</head>
+<body>
+    <a href="index.html" class="back-link">← Back to Overview</a>
+    <header>
+        <h1>Phase 2.1: Core Configuration & State Alignment</h1>
+    </header>
+
+    <div class="spec-block">
+        <h2>Objective</h2>
+        <p>Standardize the internal <code>PROVIDER_STAGES</code> configuration to align with Shopee's 5-stage tracking model: <strong>Placed, Paid, To Ship, To Receive, Completed</strong>.</p>
+    </div>
+
+    <div class="spec-block">
+        <h2>Technical Changes</h2>
+        <h3>File: <code>lib/shipping/config.js</code></h3>
+        <p>Modified the stage definitions for both Lalamove and Standard shipping providers. Removed redundant stages like "Verifying Payment" and simplified labels.</p>
+        
+        <h4>Lalamove Provider Stages:</h4>
+        <pre><code>[SHIPPING_PROVIDERS.LALAMOVE]: [
+    { label: 'Placed', status: 'ORDER_PLACED', icon: '📝' },
+    { label: 'Paid', status: 'PAID', specificStatus: 'ASSIGNING_DRIVER', icon: '💳' },
+    { label: 'To Ship', status: 'PROCESSING', specificStatus: 'ON_GOING', icon: '📦' },
+    { label: 'To Receive', status: 'IN_TRANSIT', specificStatus: ['PICKED_UP', 'IN_TRANSIT'], icon: '🚚' },
+    { label: 'Completed', status: 'DELIVERED', specificStatus: 'COMPLETED', icon: '✅' }
+]</code></pre>
+    </div>
+
+    <div class="spec-block">
+        <h2>Validation Criteria</h2>
+        <ul>
+            <li><span class="success">✓</span> Stage labels are consistent (Placed, Paid, To Ship, To Receive, Completed).</li>
+            <li><span class="success">✓</span> Lalamove specific statuses (ASSIGNING_DRIVER, ON_GOING) are correctly mapped to primary stages.</li>
+            <li><span class="success">✓</span> Standard shipping stages match the new simplified model.</li>
+        </ul>
+    </div>
+
+    <div class="spec-block">
+        <h2>Rollback Plan</h2>
+        <p>A backup of the original configuration and UI files has been created in <code>backups/phase-2-ui-sync/</code>. In case of synchronization issues, restore <code>lib/shipping/config.js</code> and the corresponding UI components.</p>
+    </div>
+</body>
+</html>

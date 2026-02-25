@@ -1,0 +1,60 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Phase 2: Implementation</title>
+    <style>
+        body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; line-height: 1.6; color: #333; max-width: 900px; margin: 0 auto; padding: 20px; background-color: #f4f7f6; }
+        h1, h2, h3 { color: #2c3e50; }
+        .section { background: white; padding: 25px; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); margin-bottom: 25px; }
+        code { background-color: #f8f9fa; padding: 2px 4px; border-radius: 4px; font-family: monospace; color: #e83e8c; }
+        pre { background-color: #2d3436; color: #dfe6e9; padding: 15px; border-radius: 6px; overflow-x: auto; }
+        .change { border-left: 4px solid #3498db; padding-left: 15px; margin-bottom: 20px; }
+        nav { margin-bottom: 20px; }
+        nav a { color: #3498db; text-decoration: none; margin-right: 15px; }
+    </style>
+</head>
+<body>
+    <nav>
+        <a href="index.html">← Back to Index</a>
+    </nav>
+    <h1>Phase 2: Implementation</h1>
+
+    <div class="section">
+        <h2>Code Changes</h2>
+        <div class="change">
+            <h3>Modified: <code>app/(public)/orders/page.jsx</code></h3>
+            <p>Added <code>mounted</code> state and updated loading logic.</p>
+            <pre><code>// Before
+const loading = isLoading && page === 1;
+
+if (loading) {
+    return &lt;Loading /&gt;;
+}
+
+// After
+const [mounted, setMounted] = useState(false);
+useEffect(() => {
+    setMounted(true);
+}, []);
+
+const loading = (isLoading && page === 1) || !mounted;
+
+if (loading) {
+    return &lt;Loading /&gt;;
+}</code></pre>
+        </div>
+    </div>
+
+    <div class="section">
+        <h2>Implementation Steps</h2>
+        <ol>
+            <li>Initialize <code>mounted</code> state to <code>false</code>.</li>
+            <li>Use <code>useEffect</code> to set <code>mounted</code> to <code>true</code> after the component mounts on the client.</li>
+            <li>Modify the <code>loading</code> condition to include <code>!mounted</code>.</li>
+            <li>This ensures that on the server (where <code>useEffect</code> doesn't run) and on the initial client render, the component returns the <code>&lt;Loading /&gt;</code> component.</li>
+        </ol>
+    </div>
+</body>
+</html>

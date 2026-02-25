@@ -1,0 +1,120 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Phase 1: Investigation & Root Cause Analysis - Lalamove Shipping Fee Fix</title>
+    <style>
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; line-height: 1.6; color: #333; max-width: 1000px; margin: 0 auto; padding: 20px; background-color: #f4f7f6; }
+        header { background-color: #007bff; color: white; padding: 20px; text-align: center; border-radius: 8px 8px 0 0; }
+        nav { background: #343a40; padding: 10px; border-radius: 0 0 8px 8px; margin-bottom: 20px; }
+        nav a { color: white; text-decoration: none; margin-right: 15px; font-weight: bold; }
+        section { background: white; padding: 20px; margin-bottom: 20px; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
+        h2 { color: #007bff; border-bottom: 2px solid #007bff; padding-bottom: 10px; }
+        h3 { color: #555; }
+        pre { background: #272822; color: #f8f8f2; padding: 15px; border-radius: 5px; overflow-x: auto; }
+        code { font-family: 'Courier New', Courier, monospace; }
+        table { width: 100%; border-collapse: collapse; margin: 20px 0; }
+        th, td { border: 1px solid #ddd; padding: 12px; text-align: left; }
+        th { background-color: #007bff; color: white; }
+        .success { color: #28a745; font-weight: bold; }
+        .danger { color: #dc3545; font-weight: bold; }
+        .warning { color: #ffc107; font-weight: bold; }
+    </style>
+</head>
+<body>
+    <header>
+        <h1>Lalamove Shipping Fee Discrepancy Fix</h1>
+        <p>Implementation Plan - Phase 1: Investigation & Root Cause Analysis</p>
+    </header>
+    <nav>
+        <a href="index.html">Summary</a>
+        <a href="phase-1-investigation.html">Phase 1: Investigation</a>
+    </nav>
+
+    <section>
+        <h2>Executive Summary</h2>
+        <p>This phase focuses on identifying the root cause of the reported discrepancy where shipping fees show a difference (specifically 73 vs 102). The investigation covers geocoding precision, API quote handling, and data persistence layers.</p>
+    </section>
+
+    <section>
+        <h2>Identified Issues & Hypotheses</h2>
+        <table>
+            <tr>
+                <th>Issue Area</th>
+                <th>Description</th>
+                <th>Hypothesis</th>
+            </tr>
+            <tr>
+                <td>Geocoding Precision</td>
+                <td>Address to coordinate conversion using Nominatim OSM.</td>
+                <td>Low-precision coordinates or address mismatches lead to different distance calculations in Lalamove v3 API.</td>
+            </tr>
+            <tr>
+                <td>Quote Storage</td>
+                <td>Saving quotationId and priceBreakdown in Prisma Order model.</td>
+                <td>The stored price might be excluding certain dynamic surcharges (e.g., peak hour, weight) that are present in the final booking.</td>
+            </tr>
+            <tr>
+                <td>UI vs Backend Logic</td>
+                <td>LalamoveWidget.jsx (frontend) vs shippingService.js (backend).</td>
+                <td>Discrepancies in how stops are formatted or how the serviceType is requested between the widget and the final order creation.</td>
+            </tr>
+        </table>
+    </section>
+
+    <section>
+        <h2>Technical Analysis & Findings</h2>
+        <h3>1. Geocoding Precision & Consistency</h3>
+        <p>The system relies on <code>Nominatim</code> (OpenStreetMap) for geocoding. While functional, Nominatim's coordinates may vary from Lalamove's internal geocoding system, leading to distance calculation discrepancies.</p>
+        <ul>
+            <li><strong>Finding:</strong> Store addresses are geocoded once and cached in the database (<code>prisma.store.update</code> in <code>/api/stores/[storeId]/geocode</code>).</li>
+            <li><strong>Finding:</strong> Delivery addresses use a multi-step geocoding process in <code>LalamoveWidget.jsx</code> with a 500ms debounce.</li>
+            <li><strong>Risk:</strong> Small variations in coordinates (even 4-5 decimal places) can trigger different pricing tiers in Lalamove's distance-based calculation.</li>
+        </ul>
+
+        <h3>2. Price Breakdown & Surcharges</h3>
+        <p>Analysis of <code>services/lalamove.js</code> and <code>shippingService.js</code> shows how the price is extracted from the Lalamove API response.</p>
+        <pre><code>// Current extraction logic in lalamove.js
+return {
+    quotationId: result.data.quotationId,
+    priceBreakdown: result.data.priceBreakdown, // Contains total, totalExcludeTax, totalIncludeTax
+    distance: result.data.distance,
+    // ...
+};</code></pre>
+        <p>The discrepancy (73 vs 102) strongly suggests the exclusion of certain surcharges or taxes in the initial display that are later added during the final booking process.</p>
+        <ul>
+            <li><strong>Hypothesis:</strong> The UI might be displaying <code>totalExcludeTax</code> while the booking uses <code>totalIncludeTax</code>, or a dynamic surcharge (like "Priority Delivery" or "Peak Surcharge") is missing from the initial quote.</li>
+        </ul>
+
+        <h3>3. Quote Refresh Logic</h3>
+        <p>In <code>lib/services/shippingService.js</code>, there is logic to refresh quotes if they are considered "stale".</p>
+        <pre><code>const isQuoteExpired = storedQuote?.expiresAt && new Date(storedQuote.expiresAt) < now;
+const isQuoteTooOld = quoteAge > 30; // 30 minutes
+const needsRefresh = !storedQuote || isQuoteExpired || isQuoteTooOld;</code></pre>
+        <p>If a user waits on the checkout page for more than 30 minutes, the backend will request a NEW quote during the booking process. This new quote might have different pricing due to changing demand (Peak Surcharge).</p>
+    </section>
+
+    <section>
+        <h2>Root Cause Candidates</h2>
+        <ol>
+            <li><strong>Coordinate Mismatch:</strong> Slight differences between coordinates used in the Widget vs. those stored in the Order.</li>
+            <li><strong>Tax/Surcharge Omission:</strong> Displaying <code>totalExcludeTax</code> instead of <code>totalIncludeTax</code> in the UI.</li>
+            <li><strong>Dynamic Pricing:</strong> Quote expiration leading to a fresh (and more expensive) quote at the time of booking.</li>
+        </ol>
+    </section>
+
+    <section>
+        <h2>Validation Criteria for Phase 2</h2>
+        <ul>
+            <li><span class="success">PASS:</span> Quote price in UI matches the final Lalamove booking amount exactly.</li>
+            <li><span class="success">PASS:</span> Coordinates sent to Lalamove are consistent between the Widget and the Order.</li>
+            <li><span class="success">PASS:</span> All surcharges and taxes are explicitly accounted for in the <code>priceBreakdown</code>.</li>
+        </ul>
+    </section>
+
+    <footer>
+        <p>&copy; 2025 Budolshap Implementation Team</p>
+    </footer>
+</body>
+</html>

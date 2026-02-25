@@ -1,0 +1,95 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Phase 2: Code Modification for Shipping Cost Persistence - Shipping Fee Implementation</title>
+    <style>
+        body { font-family: Arial, sans-serif; line-height: 1.6; max-width: 1200px; margin: 0 auto; padding: 20px; }
+        h1, h2 { color: #333; }
+        nav { background: #f4f4f4; padding: 10px; margin-bottom: 20px; }
+        nav ul { list-style: none; padding: 0; }
+        nav li { margin-bottom: 10px; }
+        code { background: #f4f4f4; padding: 2px 4px; border-radius: 4px; }
+        pre { background: #f4f4f4; padding: 10px; overflow-x: auto; }
+        .code-jsx { color: #d14; } /* Simple highlighting */
+        table { border-collapse: collapse; width: 100%; margin-bottom: 20px; }
+        th, td { border: 1px solid #ddd; padding: 8px; text-align: left; }
+        th { background: #f2f2f2; }
+        @media (max-width: 768px) { body { padding: 10px; } }
+    </style>
+</head>
+<body>
+    <h1>Phase 2: Code Modification for Shipping Cost Persistence</h1>
+    
+    <nav>
+        <h2>Table of Contents</h2>
+        <ul>
+            <li><a href="#executive-summary">Executive Summary</a></li>
+            <li><a href="#technical-details">Technical Details</a></li>
+            <li><a href="#dependencies">Dependencies and Prerequisites</a></li>
+            <li><a href="#risks">Risks and Mitigation</a></li>
+            <li><a href="#testing-protocol">Testing Protocol</a></li>
+            <li><a href="#timeline">Timeline and Milestones</a></li>
+        </ul>
+    </nav>
+    
+    <section id="executive-summary">
+        <h2>Executive Summary</h2>
+        <p>In this phase, modifications were made to the frontend code to ensure that the shipping cost from Lalamove quotes is properly passed to the backend during order creation. The key change was in OrderSummary.jsx, adding the 'cost' field to the shipping object in the POST request body. This addresses the root cause identified in Phase 1, enabling correct persistence of shipping costs in the database.</p>
+    </section>
+    
+    <section id="technical-details">
+        <h2>Technical Details</h2>
+        <p>The modification involved editing the handlePlaceOrder function in OrderSummary.jsx to include 'cost: shippingCost' in the Lalamove shipping object. This aligns the frontend payload with backend expectations in ordersService.js.</p>
+        <p>Updated code snippet in OrderSummary.jsx:</p>
+        <pre><code class="language-jsx">const handlePlaceOrder = async (e) =&gt; {
+    e.preventDefault();
+    // Implementation logic
+}
+// Lalamove shipping object in POST body
+shipping: shippingMethod === 'LALAMOVE' &amp;&amp; lalamoveQuote ? {
+    provider: 'lalamove',
+    cost: shippingCost,
+    quotationId: lalamoveQuote.quoteId, // Use quotationId to match API expectation
+    quoteId: lalamoveQuote.quoteId, // Keep for backward compatibility
+    serviceType: lalamoveQuote.serviceType,
+    eta: lalamoveQuote.eta,
+    stops: lalamoveQuote.stops
+} : (shippingMethod === 'BUD_EXPRESS' ? {
+    provider: 'bud_express'
+} : {
+    provider: 'standard'
+})</code></pre>
+        <p>This ensures shipping.cost is sent, allowing ordersService.js to set shippingCost correctly.</p>
+    </section>
+    
+    <section id="dependencies">
+        <h2>Dependencies and Prerequisites</h2>
+        <table>
+            <tr><th>Dependency</th><th>Version</th><th>Purpose</th></tr>
+            <tr><td>Next.js</td><td>16.0.7</td><td>API routes and component rendering</td></tr>
+            <tr><td>React</td><td>(from package.json)</td><td>UI components</td></tr>
+        </table>
+        <p>Prerequisites: Completion of Phase 1, access to codebase for editing.</p>
+    </section>
+    
+    <section id="risks">
+        <h2>Risks and Mitigation</h2>
+        <ul>
+            <li>Risk: Breaking other shipping methods. Mitigation: Changes are conditional to 'LALAMOVE'.</li>
+            <li>Risk: Data inconsistency. Mitigation: Validate with backend logic.</li>
+        </ul>
+    </section>
+    
+    <section id="testing-protocol">
+        <h2>Testing Protocol</h2>
+        <p>Unit tests for handlePlaceOrder function, integration tests for order creation endpoint. Success criteria: Shipping cost persists in database for Lalamove orders.</p>
+    </section>
+    
+    <section id="timeline">
+        <h2>Timeline and Milestones</h2>
+        <p>Duration: 1 day. Milestone: Code changes committed and reviewed.</p>
+    </section>
+</body>
+</html>

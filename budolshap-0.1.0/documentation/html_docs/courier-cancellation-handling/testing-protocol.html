@@ -1,0 +1,919 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Courier Cancellation Testing Protocol - Bodolshap</title>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            line-height: 1.6;
+            color: #333;
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+            background-color: #f8fafc;
+        }
+        .header {
+            background: linear-gradient(135deg, #7c3aed 0%, #a855f7 100%);
+            color: white;
+            padding: 30px;
+            border-radius: 12px;
+            margin-bottom: 30px;
+            text-align: center;
+        }
+        .test-section {
+            background: white;
+            border-radius: 12px;
+            padding: 25px;
+            margin: 20px 0;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+            border-left: 5px solid #7c3aed;
+        }
+        .test-case {
+            background: #f8fafc;
+            border: 1px solid #e2e8f0;
+            border-radius: 8px;
+            padding: 20px;
+            margin: 15px 0;
+        }
+        .test-case-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 15px;
+            padding-bottom: 10px;
+            border-bottom: 1px solid #e2e8f0;
+        }
+        .test-case-title {
+            font-weight: 600;
+            color: #1e40af;
+            font-size: 1.1em;
+        }
+        .test-priority {
+            padding: 4px 8px;
+            border-radius: 12px;
+            font-size: 0.8em;
+            font-weight: 500;
+            text-transform: uppercase;
+        }
+        .priority-critical { background: #fef2f2; color: #991b1b; }
+        .priority-high { background: #fef3c7; color: #92400e; }
+        .priority-medium { background: #dbeafe; color: #1e40af; }
+        .priority-low { background: #dcfce7; color: #166534; }
+        .test-steps {
+            background: white;
+            border-radius: 6px;
+            padding: 15px;
+            margin: 10px 0;
+        }
+        .test-step {
+            display: flex;
+            align-items: flex-start;
+            margin: 8px 0;
+            padding: 8px;
+            border-left: 3px solid #7c3aed;
+        }
+        .step-number {
+            background: #7c3aed;
+            color: white;
+            width: 20px;
+            height: 20px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin-right: 12px;
+            font-size: 0.8em;
+            font-weight: bold;
+        }
+        .expected-result {
+            background: #f0fdf4;
+            border: 1px solid #bbf7d0;
+            border-radius: 6px;
+            padding: 12px;
+            margin: 10px 0;
+        }
+        .test-data {
+            background: #1e293b;
+            color: #e2e8f0;
+            padding: 15px;
+            border-radius: 8px;
+            font-family: 'Monaco', 'Menlo', monospace;
+            font-size: 0.9em;
+            margin: 10px 0;
+            overflow-x: auto;
+        }
+        .api-test {
+            background: #f8fafc;
+            border: 1px solid #cbd5e1;
+            border-radius: 8px;
+            padding: 15px;
+            margin: 10px 0;
+        }
+        .http-method {
+            display: inline-block;
+            padding: 2px 8px;
+            border-radius: 4px;
+            font-size: 0.8em;
+            font-weight: bold;
+            margin-right: 8px;
+        }
+        .method-post { background: #22c55e; color: white; }
+        .method-get { background: #3b82f6; color: white; }
+        .method-put { background: #f59e0b; color: white; }
+        .method-delete { background: #ef4444; color: white; }
+        .test-environment {
+            background: #fefce8;
+            border: 1px solid #fde047;
+            border-radius: 8px;
+            padding: 15px;
+            margin: 15px 0;
+        }
+        .prerequisites {
+            background: #f0f9ff;
+            border: 1px solid #0ea5e9;
+            border-radius: 8px;
+            padding: 15px;
+            margin: 15px 0;
+        }
+        .rollback-plan {
+            background: #fef2f2;
+            border: 1px solid #fca5a5;
+            border-radius: 8px;
+            padding: 15px;
+            margin: 15px 0;
+        }
+        .success-criteria {
+            background: #f0fdf4;
+            border: 1px solid #22c55e;
+            border-radius: 8px;
+            padding: 15px;
+            margin: 15px 0;
+        }
+        .test-matrix {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 20px 0;
+            background: white;
+            border-radius: 8px;
+            overflow: hidden;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        .test-matrix th {
+            background: #7c3aed;
+            color: white;
+            padding: 12px;
+            text-align: left;
+            font-weight: 600;
+        }
+        .test-matrix td {
+            padding: 12px;
+            border-bottom: 1px solid #e2e8eb;
+        }
+        .test-matrix tr:nth-child(even) {
+            background-color: #f9fafb;
+        }
+        .status-pass { color: #22c55e; font-weight: 600; }
+        .status-fail { color: #ef4444; font-weight: 600; }
+        .status-pending { color: #f59e0b; font-weight: 600; }
+        
+        /* Navigation styles */
+        .nav-header {
+            background: #1e293b;
+            padding: 15px 0;
+            position: sticky;
+            top: 0;
+            z-index: 100;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            margin-bottom: 20px;
+        }
+        .nav-container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 0 20px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        .nav-brand {
+            color: white;
+            font-weight: 600;
+        }
+        .nav-links {
+            display: flex;
+            gap: 20px;
+        }
+        .nav-link {
+            color: #94a3b8;
+            text-decoration: none;
+            font-size: 0.9em;
+            padding: 5px 10px;
+            border-radius: 4px;
+            transition: all 0.2s ease;
+        }
+        .nav-link:hover {
+            color: white;
+            background: rgba(255, 255, 255, 0.1);
+        }
+        .nav-link.active {
+            color: white;
+            background: #7c3aed;
+        }
+        .quick-nav {
+            background: linear-gradient(135deg, #f8fafc 0%, #e2e8f0 100%);
+            border-radius: 12px;
+            padding: 20px;
+            margin: 20px 0;
+            border: 1px solid #cbd5e1;
+        }
+        .nav-button {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            background: white;
+            color: #7c3aed;
+            padding: 10px 16px;
+            border: 2px solid #e2e8f0;
+            border-radius: 8px;
+            text-decoration: none;
+            font-weight: 500;
+            transition: all 0.2s ease;
+            margin: 5px;
+        }
+        .nav-button:hover {
+            background: #7c3aed;
+            color: white;
+            border-color: #7c3aed;
+            transform: translateY(-1px);
+        }
+        .nav-button.primary {
+            background: #7c3aed;
+            color: white;
+            border-color: #7c3aed;
+        }
+        .nav-button.primary:hover {
+            background: #6d28d9;
+            box-shadow: 0 4px 12px rgba(124, 58, 237, 0.3);
+        }
+    </style>
+</head>
+<body>
+    <!-- Navigation Header -->
+    <div class="nav-header">
+        <div class="nav-container">
+            <div class="nav-brand">
+                🧪 Testing Protocol
+            </div>
+            <div class="nav-links">
+                <a href="comparative-analysis.html" class="nav-link">📊 Analysis</a>
+                <a href="implementation-plan.html" class="nav-link">📋 Plan</a>
+                <span class="nav-link active">🧪 Testing</span>
+                <a href="index.html" class="nav-link">📈 Summary</a>
+            </div>
+        </div>
+    </div>
+
+    <div class="header">
+        <h1>🧪 Courier Cancellation Testing Protocol</h1>
+        <p>Comprehensive Testing Strategy for Shopee-like Courier Cancellation Implementation</p>
+        
+        <!-- Quick Navigation -->
+        <div class="quick-nav" style="margin-top: 20px;">
+            <h4 style="margin-top: 0; color: #1e40af;">🚀 Quick Navigation</h4>
+            <div style="display: flex; gap: 10px; flex-wrap: wrap;">
+                <a href="comparative-analysis.html" class="nav-button">📊 View Analysis</a>
+                <a href="implementation-plan.html" class="nav-button">📋 View Plan</a>
+                <span class="nav-button primary" style="background: #7c3aed; color: white; border-color: #7c3aed;">🧪 Testing (Current)</span>
+                <a href="index.html" class="nav-button">📈 View Summary</a>
+            </div>
+        </div>
+    </div>
+
+    <div class="test-environment">
+        <h3>🌍 Test Environment Setup</h3>
+        <ul>
+            <li><strong>Environment:</strong> Staging/Development environment with test data</li>
+            <li><strong>Database:</strong> Separate test database with sample orders and returns</li>
+            <li><strong>Email:</strong> Test email service (Mailtrap or similar)</li>
+            <li><strong>Shipping Provider:</strong> Lalamove sandbox environment</li>
+            <li><strong>Test Users:</strong> Pre-configured buyer and seller accounts</li>
+        </ul>
+    </div>
+
+    <div class="prerequisites">
+        <h3>📋 Prerequisites</h3>
+        <ul>
+            <li>✅ All 5 implementation phases completed</li>
+            <li>✅ Database migrations applied</li>
+            <li>✅ Email templates configured</li>
+            <li>✅ Cron jobs scheduled and running</li>
+            <li>✅ Test orders with return requests created</li>
+            <li>✅ Lalamove webhook endpoints configured</li>
+            <li>✅ Test shipping addresses validated</li>
+        </ul>
+    </div>
+
+    <div class="test-section">
+        <h2>🔍 Phase 1: Webhook & Cancellation Detection Tests</h2>
+
+        <div class="test-case">
+            <div class="test-case-header">
+                <div class="test-case-title">TC-001: Courier Cancellation Webhook Processing</div>
+                <div class="test-priority priority-critical">Critical</div>
+            </div>
+
+            <div class="test-steps">
+                <h4>Test Steps:</h4>
+                <div class="test-step">
+                    <div class="step-number">1</div>
+                    <div>Create a return request with status "BOOKING_REQUESTED"</div>
+                </div>
+                <div class="test-step">
+                    <div class="step-number">2</div>
+                    <div>Send webhook with event "CANCELLED" and reason "DRIVER_UNAVAILABLE"</div>
+                </div>
+                <div class="test-step">
+                    <div class="step-number">3</div>
+                    <div>Verify webhook signature validation passes</div>
+                </div>
+                <div class="test-step">
+                    <div class="step-number">4</div>
+                    <div>Check return status is updated to "COURIER_CANCELLED"</div>
+                </div>
+                <div class="test-step">
+                    <div class="step-number">5</div>
+                    <div>Verify cancellation reason is stored in database</div>
+                </div>
+            </div>
+
+            <div class="test-data">
+// Sample webhook payload
+{
+  "data": {
+    "order": {
+      "orderId": "TEST_ORDER_123",
+      "status": "CANCELLED",
+      "cancellationReason": "DRIVER_UNAVAILABLE",
+      "cancelledAt": "2025-12-30T10:00:00Z"
+    }
+  },
+  "timestamp": "2025-12-30T10:00:00Z",
+  "signature": "test_signature_123"
+}
+            </div>
+
+            <div class="expected-result">
+                <strong>Expected Result:</strong> Return status changes to "COURIER_CANCELLED", cancellation reason stored, retry window expiry set to 48 hours from cancellation time.
+            </div>
+        </div>
+
+        <div class="test-case">
+            <div class="test-case-header">
+                <div class="test-case-title">TC-002: Cancellation Type Detection</div>
+                <div class="test-priority priority-high">High</div>
+            </div>
+
+            <div class="test-steps">
+                <h4>Test Steps:</h4>
+                <div class="test-step">
+                    <div class="step-number">1</div>
+                    <div>Test with various cancellation reasons: "DRIVER_UNAVAILABLE", "BUYER_NOT_AVAILABLE", "ADDRESS_NOT_FOUND"</div>
+                </div>
+                <div class="test-step">
+                    <div class="step-number">2</div>
+                    <div>Verify system correctly identifies courier-initiated cancellations</div>
+                </div>
+                <div class="test-step">
+                    <div class="step-number">3</div>
+                    <div>Test with non-courier reasons: "BUYER_CANCELLED", "SELLER_CANCELLED"</div>
+                </div>
+                <div class="test-step">
+                    <div class="step-number">4</div>
+                    <div>Verify different handling for non-courier cancellations</div>
+                </div>
+            </div>
+
+            <div class="expected-result">
+                <strong>Expected Result:</strong> System correctly categorizes cancellations and applies appropriate handling logic.
+            </div>
+        </div>
+
+        <div class="test-case">
+            <div class="test-case-header">
+                <div class="test-case-title">TC-003: Invalid Webhook Handling</div>
+                <div class="test-priority priority-medium">Medium</div>
+            </div>
+
+            <div class="test-steps">
+                <h4>Test Steps:</h4>
+                <div class="test-step">
+                    <div class="step-number">1</div>
+                    <div>Send webhook with invalid signature</div>
+                </div>
+                <div class="test-step">
+                    <div class="step-number">2</div>
+                    <div>Send webhook with missing required fields</div>
+                </div>
+                <div class="test-step">
+                    <div class="step-number">3</div>
+                    <div>Send webhook for non-existent order/return</div>
+                </div>
+                <div class="test-step">
+                    <div class="step-number">4</div>
+                    <div>Verify appropriate error responses and logging</div>
+                </div>
+            </div>
+
+            <div class="expected-result">
+                <strong>Expected Result:</strong> System returns appropriate HTTP status codes, logs errors properly, and doesn't crash on invalid input.
+            </div>
+        </div>
+    </div>
+
+    <div class="test-section">
+        <h2>📧 Phase 2: Notification & Retry System Tests</h2>
+
+        <div class="test-case">
+            <div class="test-case-header">
+                <div class="test-case-title">TC-004: Buyer Notification on Courier Cancellation</div>
+                <div class="test-priority priority-critical">Critical</div>
+            </div>
+
+            <div class="test-steps">
+                <h4>Test Steps:</h4>
+                <div class="test-step">
+                    <div class="step-number">1</div>
+                    <div>Trigger courier cancellation for a return request</div>
+                </div>
+                <div class="test-step">
+                    <div class="step-number">2</div>
+                    <div>Verify email notification is sent to buyer within 5 minutes</div>
+                </div>
+                <div class="test-step">
+                    <div class="step-number">3</div>
+                    <div>Check email contains clear reason for cancellation</div>
+                </div>
+                <div class="test-step">
+                    <div class="step-number">4</div>
+                    <div>Verify email includes retry deadline (48 hours from cancellation)</div>
+                </div>
+                <div class="test-step">
+                    <div class="step-number">5</div>
+                    <div>Check email contains re-scheduling and drop-off options</div>
+                </div>
+            </div>
+
+            <div class="expected-result">
+                <strong>Expected Result:</strong> Buyer receives comprehensive email with clear next steps, retry deadline, and available options within 5 minutes of cancellation.
+            </div>
+        </div>
+
+        <div class="test-case">
+            <div class="test-case-header">
+                <div class="test-case-title">TC-005: Retry Pickup API</div>
+                <div class="test-priority priority-high">High</div>
+            </div>
+
+            <div class="api-test">
+                <div class="http-method method-post">POST</div>
+                <strong>/api/returns/RETURN_123/retry-pickup</strong>
+            </div>
+
+            <div class="test-steps">
+                <h4>Test Steps:</h4>
+                <div class="test-step">
+                    <div class="step-number">1</div>
+                    <div>Call API with valid return ID and retry method "PICKUP"</div>
+                </div>
+                <div class="test-step">
+                    <div class="step-number">2</div>
+                    <div>Verify new pickup booking is created successfully</div>
+                </div>
+                <div class="test-step">
+                    <div class="step-number">3</div>
+                    <div>Check retry attempts counter is incremented</div>
+                </div>
+                <div class="test-step">
+                    <div class="step-number">4</div>
+                    <div>Test with expired retry window</div>
+                </div>
+                <div class="test-step">
+                    <div class="step-number">5</div>
+                    <div>Verify appropriate error response for expired window</div>
+                </div>
+            </div>
+
+            <div class="test-data">
+// Valid request payload
+{
+  "retryMethod": "PICKUP",
+  "preferredTimeSlot": "MORNING"
+}
+
+// Invalid request (expired window)
+{
+  "retryMethod": "PICKUP"
+}
+            </div>
+
+            <div class="expected-result">
+                <strong>Expected Result:</strong> API successfully creates new pickup booking, increments retry counter, and rejects requests with expired retry windows.
+            </div>
+        </div>
+
+        <div class="test-case">
+            <div class="test-case-header">
+                <div class="test-case-title">TC-006: Drop-off Option Integration</div>
+                <div class="test-priority priority-high">High</div>
+            </div>
+
+            <div class="api-test">
+                <div class="http-method method-get">GET</div>
+                <strong>/api/returns/RETURN_123/dropoff-locations</strong>
+            </div>
+
+            <div class="test-steps">
+                <h4>Test Steps:</h4>
+                <div class="test-step">
+                    <div class="step-number">1</div>
+                    <div>Call API to get nearby drop-off locations</div>
+                </div>
+                <div class="test-step">
+                    <div class="step-number">2</div>
+                    <div>Verify locations are within 5km of buyer address</div>
+                </div>
+                <div class="test-step">
+                    <div class="step-number">3</div>
+                    <div>Check location details include address, hours, and contact info</div>
+                </div>
+                <div class="test-step">
+                    <div class="step-number">4</div>
+                    <div>Test drop-off booking conversion</div>
+                </div>
+                <div class="test-step">
+                    <div class="step-number">5</div>
+                    <div>Verify unique drop-off code is generated</div>
+                </div>
+            </div>
+
+            <div class="expected-result">
+                <strong>Expected Result:</strong> System returns valid drop-off locations with complete details and successfully converts to drop-off booking with unique tracking code.
+            </div>
+        </div>
+    </div>
+
+    <div class="test-section">
+        <h2>⏰ Phase 3: SLA Management & Auto-Resolution Tests</h2>
+
+        <div class="test-case">
+            <div class="test-case-header">
+                <div class="test-case-title">TC-007: Retry Window Expiry Auto-Resolution</div>
+                <div class="test-priority priority-critical">Critical</div>
+            </div>
+
+            <div class="test-steps">
+                <h4>Test Steps:</h4>
+                <div class="test-step">
+                    <div class="step-number">1</div>
+                    <div>Create return with courier cancellation and expired retry window</div>
+                </div>
+                <div class="test-step">
+                    <div class="step-number">2</div>
+                    <div>Run SLA monitoring cron job</div>
+                </div>
+                <div class="test-step">
+                    <div class="step-number">3</div>
+                    <div>Verify return is automatically cancelled</div>
+                </div>
+                <div class="test-step">
+                    <div class="step-number">4</div>
+                    <div>Check funds are released to seller</div>
+                </div>
+                <div class="test-step">
+                    <div class="step-number">5</div>
+                    <div>Verify both parties are notified of auto-cancellation</div>
+                </div>
+            </div>
+
+            <div class="expected-result">
+                <strong>Expected Result:</strong> System automatically cancels expired returns, releases funds to seller, and notifies both parties within cron job execution cycle.
+            </div>
+        </div>
+
+        <div class="test-case">
+            <div class="test-case-header">
+                <div class="test-case-title">TC-008: Maximum Retry Attempts Enforcement</div>
+                <div class="test-priority priority-high">High</div>
+            </div>
+
+            <div class="test-steps">
+                <h4>Test Steps:</h4>
+                <div class="test-step">
+                    <div class="step-number">1</div>
+                    <div>Create return with 2 previous retry attempts</div>
+                </div>
+                <div class="test-step">
+                    <div class="step-number">2</div>
+                    <div>Attempt third retry within valid window</div>
+                </div>
+                <div class="test-step">
+                    <div class="step-number">3</div>
+                    <div>Verify third retry is allowed (max 3 attempts)</div>
+                </div>
+                <div class="test-step">
+                    <div class="step-number">4</div>
+                    <div>Attempt fourth retry</div>
+                </div>
+                <div class="test-step">
+                    <div class="step-number">5</div>
+                    <div>Verify fourth retry is rejected</div>
+                </div>
+            </div>
+
+            <div class="expected-result">
+                <strong>Expected Result:</strong> System allows up to 3 retry attempts and rejects additional attempts with appropriate error message.
+            </div>
+        </div>
+    </div>
+
+    <div class="test-section">
+        <h2>📊 Phase 4: Analytics & Monitoring Tests</h2>
+
+        <div class="test-case">
+            <div class="test-case-header">
+                <div class="test-case-title">TC-009: Cancellation Metrics Tracking</div>
+                <div class="test-priority priority-medium">Medium</div>
+            </div>
+
+            <div class="test-steps">
+                <h4>Test Steps:</h4>
+                <div class="test-step">
+                    <div class="step-number">1</div>
+                    <div>Process multiple courier cancellations with different outcomes</div>
+                </div>
+                <div class="test-step">
+                    <div class="step-number">2</div>
+                    <div>Check analytics events are properly recorded</div>
+                </div>
+                <div class="test-step">
+                    <div class="step-number">3</div>
+                    <div>Verify metrics include cancellation reason, resolution time, retry method</div>
+                </div>
+                <div class="test-step">
+                    <div class="step-number">4</div>
+                    <div>Test analytics API endpoints for data retrieval</div>
+                </div>
+                <div class="test-step">
+                    <div class="step-number">5</div>
+                    <div>Validate dashboard displays accurate metrics</div>
+                </div>
+            </div>
+
+            <div class="expected-result">
+                <strong>Expected Result:</strong> All courier cancellation events are tracked with complete metadata, analytics APIs return accurate data, and dashboard reflects real-time metrics.
+            </div>
+        </div>
+
+        <div class="test-case">
+            <div class="test-case-header">
+                <div class="test-case-title">TC-010: Alert System Functionality</div>
+                <div class="test-priority priority-medium">Medium</div>
+            </div>
+
+            <div class="test-steps">
+                <h4>Test Steps:</h4>
+                <div class="test-step">
+                    <div class="step-number">1</div>
+                    <div>Simulate high cancellation rate (>15% within 1 hour)</div>
+                </div>
+                <div class="test-step">
+                    <div class="step-number">2</div>
+                    <div>Verify high cancellation rate alert is triggered</div>
+                </div>
+                <div class="test-step">
+                    <div class="step-number">3</div>
+                    <div>Test repeated cancellation by same courier pattern</div>
+                </div>
+                <div class="test-step">
+                    <div class="step-number">4</div>
+                    <div>Check long resolution time alerts (>72 hours)</div>
+                </div>
+                <div class="test-step">
+                    <div class="step-number">5</div>
+                    <div>Verify alert notifications are sent to appropriate recipients</div>
+                </div>
+            </div>
+
+            <div class="expected-result">
+                <strong>Expected Result:</strong> Alert system correctly identifies unusual patterns and sends notifications to configured recipients with appropriate severity levels.
+            </div>
+        </div>
+    </div>
+
+    <div class="test-section">
+        <h2>🔄 Integration & End-to-End Tests</h2>
+
+        <div class="test-case">
+            <div class="test-case-header">
+                <div class="test-case-title">TC-011: Complete Courier Cancellation Flow</div>
+                <div class="test-priority priority-critical">Critical</div>
+            </div>
+
+            <div class="test-steps">
+                <h4>Test Steps:</h4>
+                <div class="test-step">
+                    <div class="step-number">1</div>
+                    <div>Create complete order → return request → pickup booking flow</div>
+                </div>
+                <div class="test-step">
+                    <div class="step-number">2</div>
+                    <div>Trigger courier cancellation webhook</div>
+                </div>
+                <div class="test-step">
+                    <div class="step-number">3</div>
+                    <div>Verify buyer receives notification with options</div>
+                </div>
+                <div class="test-step">
+                    <div class="step-number">4</div>
+                    <div>Test buyer retry with successful pickup</div>
+                </div>
+                <div class="test-step">
+                    <div class="step-number">5</div>
+                    <div>Verify complete return process completes successfully</div>
+                </div>
+            </div>
+
+            <div class="expected-result">
+                <strong>Expected Result:</strong> Complete end-to-end flow works seamlessly from cancellation through retry to successful return completion.
+            </div>
+        </div>
+
+        <div class="test-case">
+            <div class="test-case-header">
+                <div class="test-case-title">TC-012: Alternative Drop-off Flow</div>
+                <div class="test-priority priority-high">High</div>
+            </div>
+
+            <div class="test-steps">
+                <h4>Test Steps:</h4>
+                <div class="test-step">
+                    <div class="step-number">1</div>
+                    <div>Trigger courier cancellation for return request</div>
+                </div>
+                <div class="test-step">
+                    <div class="step-number">2</div>
+                    <div>Buyer chooses drop-off option instead of retry</div>
+                </div>
+                <div class="test-step">
+                    <div class="step-number">3</div>
+                    <div>Verify drop-off locations are displayed</div>
+                </div>
+                <div class="test-step">
+                    <div class="step-number">4</div>
+                    <div>Complete drop-off booking with unique code</div>
+                </div>
+                <div class="test-step">
+                    <div class="step-number">5</div>
+                    <div>Verify return process continues with drop-off method</div>
+                </div>
+            </div>
+
+            <div class="expected-result">
+                <strong>Expected Result:</strong> Alternative drop-off flow provides seamless experience when courier pickup fails.
+            </div>
+        </div>
+    </div>
+
+    <div class="test-section">
+        <h2>📈 Performance & Load Tests</h2>
+
+        <div class="test-case">
+            <div class="test-case-header">
+                <div class="test-case-title">TC-013: High Volume Cancellation Handling</div>
+                <div class="test-priority priority-medium">Medium</div>
+            </div>
+
+            <div class="test-steps">
+                <h4>Test Steps:</h4>
+                <div class="test-step">
+                    <div class="step-number">1</div>
+                    <div>Simulate 100 concurrent courier cancellation webhooks</div>
+                </div>
+                <div class="test-step">
+                    <div class="step-number">2</div>
+                    <div>Measure webhook processing time for each request</div>
+                </div>
+                <div class="test-step">
+                    <div class="step-number">3</div>
+                    <div>Verify all requests are processed without errors</div>
+                </div>
+                <div class="test-step">
+                    <div class="step-number">4</div>
+                    <div>Check database performance under load</div>
+                </div>
+                <div class="test-step">
+                    <div class="step-number">5</div>
+                    <div>Verify email notifications are queued and sent</div>
+                </div>
+            </div>
+
+            <div class="expected-result">
+                <strong>Expected Result:</strong> System handles high volume without degradation, all webhooks processed within acceptable time limits (< 2 seconds), and notifications are delivered reliably.
+            </div>
+        </div>
+    </div>
+
+    <div class="rollback-plan">
+        <h2>🔄 Rollback Plan</h2>
+        <h3>Emergency Rollback Scenarios:</h3>
+        <ul>
+            <li><strong>Webhook Processing Failures:</strong> Revert to original webhook handler, disable new cancellation logic</li>
+            <li><strong>Database Issues:</strong> Rollback migration, restore previous schema</li>
+            <li><strong>Email System Overload:</strong> Disable new email templates, revert to basic notifications</li>
+            <li><strong>Performance Degradation:</strong> Disable analytics tracking, simplify retry logic</li>
+            <li><strong>Complete System Failure:</strong> Feature flag to disable entire courier cancellation handling</li>
+        </ul>
+
+        <h3>Rollback Commands:</h3>
+        <div class="test-data">
+# Database rollback
+npx prisma migrate rollback --preview-feature
+
+# Feature flag disable (add to environment)
+COURIER_CANCELLATION_ENABLED=false
+
+# Revert webhook handler to backup
+cp app/api/webhooks/lalamove/route.js.backup app/api/webhooks/lalamove/route.js
+        </div>
+    </div>
+
+    <div class="success-criteria">
+        <h2>✅ Overall Success Criteria</h2>
+        <ul>
+            <li>✅ All critical test cases (TC-001, TC-004, TC-007, TC-011) pass</li>
+            <li>✅ 95% of high priority test cases pass</li>
+            <li>✅ No critical bugs in production for 7 days after deployment</li>
+            <li>✅ Webhook processing time < 2 seconds under normal load</li>
+            <li>✅ Email delivery success rate > 98%</li>
+            <li>✅ Buyer satisfaction score > 4.0/5.0 for retry process</li>
+            <li>✅ System maintains 99.9% uptime during testing period</li>
+        </ul>
+    </div>
+
+    <table class="test-matrix">
+        <thead>
+            <tr>
+                <th>Test Case</th>
+                <th>Priority</th>
+                <th>Status</th>
+                <th>Tester</th>
+                <th>Date</th>
+                <th>Notes</th>
+            </tr>
+        </thead>
+        <tbody>
+            <tr>
+                <td>TC-001: Webhook Processing</td>
+                <td>Critical</td>
+                <td class="status-pending">Pending</td>
+                <td>-</td>
+                <td>-</td>
+                <td>-</td>
+            </tr>
+            <tr>
+                <td>TC-002: Cancellation Detection</td>
+                <td>High</td>
+                <td class="status-pending">Pending</td>
+                <td>-</td>
+                <td>-</td>
+                <td>-</td>
+            </tr>
+            <tr>
+                <td>TC-003: Invalid Webhook</td>
+                <td>Medium</td>
+                <td class="status-pending">Pending</td>
+                <td>-</td>
+                <td>-</td>
+                <td>-</td>
+            </tr>
+            <tr>
+                <td>TC-004: Buyer Notification</td>
+                <td>Critical</td>
+                <td class="status-pending">Pending</td>
+                <td>-</td>
+                <td>-</td>
+                <td>-</td>
+            </tr>
+            <tr>
+                <td>TC-005: Retry API</td>
+                <td>High</td>
+                <td class="status-pending">Pending</td>
+                <td>-</td>
+                <td>-</td>
+                <td>-</td>
+            </tr>
+        </tbody>
+    </table>
+</body>
+</html>

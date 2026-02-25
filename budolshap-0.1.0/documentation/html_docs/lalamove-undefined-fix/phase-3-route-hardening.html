@@ -1,0 +1,105 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Phase 3: Webhook & Sync Route Hardening - Lalamove Undefined Fix</title>
+    <style>
+        :root {
+            --primary-color: #e52d27;
+            --secondary-color: #b31217;
+            --bg-color: #f4f7f6;
+            --text-color: #333;
+            --code-bg: #2d2d2d;
+            --code-text: #f8f8f2;
+        }
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            line-height: 1.6;
+            color: var(--text-color);
+            background-color: var(--bg-color);
+            margin: 0;
+            padding: 0;
+        }
+        .container {
+            max-width: 1000px;
+            margin: 40px auto;
+            padding: 30px;
+            background: #fff;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+            border-radius: 8px;
+        }
+        nav {
+            margin-bottom: 20px;
+        }
+        nav a {
+            color: var(--primary-color);
+            text-decoration: none;
+            font-weight: bold;
+        }
+        h1, h2 {
+            color: var(--secondary-color);
+            border-bottom: 1px solid #ddd;
+            padding-bottom: 10px;
+        }
+        pre {
+            background-color: var(--code-bg);
+            color: var(--code-text);
+            padding: 15px;
+            border-radius: 6px;
+            overflow-x: auto;
+            font-size: 0.9em;
+        }
+        code {
+            font-family: 'Consolas', 'Monaco', 'Courier New', monospace;
+        }
+        .highlight {
+            color: #ffcc00;
+            font-weight: bold;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <nav>
+            <a href="index.html">&larr; Back to Index</a>
+        </nav>
+        <h1>Phase 3: Webhook & Sync Route Hardening</h1>
+        
+        <section>
+            <h2>Lalamove Webhook Routes</h2>
+            <p>Both return and standard webhook routes were updated to ensure that driver and location information is always safe for Prisma.</p>
+            <h3>Return Webhook Fix (<code>app/api/shipping/lalamove/webhook/route.js</code>):</h3>
+            <pre><code>driverInfo = {
+    name: driverData.name || driverInfo.name <span class="highlight">|| null</span>,
+    phone: driverData.phone || driverInfo.phone <span class="highlight">|| null</span>,
+    plateNumber: driverData.plateNumber || driverInfo.plateNumber <span class="highlight">|| null</span>,
+    photo: driverData.photoUrl || driverData.photo || driverInfo.photo <span class="highlight">|| null</span>,
+    vehicleType: driverData.vehicleType || driverInfo.vehicleType <span class="highlight">|| null</span>,
+    rating: driverData.rating || driverInfo.rating <span class="highlight">|| null</span>
+};</code></pre>
+        </section>
+
+        <section>
+            <h2>Manual Sync Route Fixes</h2>
+            <p>Modified <code>app/api/orders/[orderId]/sync/route.js</code> and <code>app/api/orders/[orderId]/sync-lalamove/route.js</code>.</p>
+            <p>The manual sync routes are critical for users who need to force an update when background sync is delayed. These routes now use the same hardened mapping logic as the core services.</p>
+            <pre><code>updateData.shipping.location = {
+    ...trackingResult.location,
+    lat: trackingResult.location.lat <span class="highlight">|| null</span>,
+    lng: trackingResult.location.lng <span class="highlight">|| null</span>,
+    updatedAt: new Date().toISOString()
+};</code></pre>
+        </section>
+
+        <section>
+            <h2>Verification Steps</h2>
+            <ul>
+                <li>Simulated webhook events with missing fields to ensure 200 OK responses.</li>
+                <li>Verified that database records now contain <code>null</code> instead of being omitted or causing errors.</li>
+                <li>Confirmed that <code>shareLink</code> and <code>trackingUrl</code> are correctly preserved or set to <code>null</code> if not available.</li>
+            </ul>
+        </section>
+    </div>
+</body>
+</html>

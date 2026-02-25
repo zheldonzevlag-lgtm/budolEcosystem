@@ -1,0 +1,150 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Phase 1: Analysis & Identification - Lalamove Undefined Fix</title>
+    <style>
+        :root {
+            --primary-color: #e52d27;
+            --secondary-color: #b31217;
+            --bg-color: #f4f7f6;
+            --text-color: #333;
+            --code-bg: #2d2d2d;
+            --code-text: #f8f8f2;
+        }
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            line-height: 1.6;
+            color: var(--text-color);
+            background-color: var(--bg-color);
+            margin: 0;
+            padding: 0;
+        }
+        .container {
+            max-width: 1000px;
+            margin: 40px auto;
+            padding: 30px;
+            background: #fff;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+            border-radius: 8px;
+        }
+        nav {
+            margin-bottom: 20px;
+        }
+        nav a {
+            color: var(--primary-color);
+            text-decoration: none;
+            font-weight: bold;
+        }
+        h1, h2 {
+            color: var(--secondary-color);
+            border-bottom: 1px solid #ddd;
+            padding-bottom: 10px;
+        }
+        pre {
+            background-color: var(--code-bg);
+            color: var(--code-text);
+            padding: 15px;
+            border-radius: 6px;
+            overflow-x: auto;
+            font-size: 0.9em;
+        }
+        code {
+            font-family: 'Consolas', 'Monaco', 'Courier New', monospace;
+        }
+        .error-box {
+            background-color: #fff3f3;
+            border-left: 5px solid #ff5f5f;
+            padding: 15px;
+            margin: 20px 0;
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 20px 0;
+        }
+        th, td {
+            text-align: left;
+            padding: 12px;
+            border-bottom: 1px solid #ddd;
+        }
+        th {
+            background-color: #f8f9fa;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <nav>
+            <a href="index.html">&larr; Back to Index</a>
+        </nav>
+        <h1>Phase 1: Analysis & Identification</h1>
+        
+        <section>
+            <h2>Problem Identification</h2>
+            <p>During Lalamove booking operations, specifically for returns, the following error was encountered:</p>
+            <div class="error-box">
+                <code>Invalid `prisma.return.update()` invocation: { data: { returnShipping: { customerOrderId: undefined, shareLink: undefined } } }</code>
+            </div>
+            <p>Prisma JSON fields cannot accept <code>undefined</code> values. If a field is optional or may not be returned by an external API, it must be explicitly set to <code>null</code> or a fallback value.</p>
+        </section>
+
+        <section>
+            <h2>Root Cause Analysis</h2>
+            <p>The root cause was identified in the <code>shippingService.js</code> file within the <code>bookShipping</code> and <code>trackShipping</code> functions. The code was directly mapping response data from the Lalamove API to Prisma update payloads without ensuring that all properties were defined.</p>
+            <p>Additionally, a property name mismatch was discovered in <code>trackShipping</code>, where <code>trackingInfo.driverInfo</code> was incorrectly referenced as <code>trackingInfo.driver</code>, leading to missing driver data in updates.</p>
+        </section>
+
+        <section>
+            <h2>Affected Components</h2>
+            <table>
+                <thead>
+                    <tr>
+                        <th>Component</th>
+                        <th>Type</th>
+                        <th>Impact</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td><code>lib/services/shippingService.js</code></td>
+                        <td>Core Service</td>
+                        <td>Initial error in <code>bookShipping</code> and <code>trackShipping</code>.</td>
+                    </tr>
+                    <tr>
+                        <td><code>app/api/shipping/lalamove/webhook/route.js</code></td>
+                        <td>API Route</td>
+                        <td>Potential failures during webhook processing for both orders and returns.</td>
+                    </tr>
+                    <tr>
+                        <td><code>app/api/webhooks/lalamove/route.js</code></td>
+                        <td>API Route</td>
+                        <td>Potential failures during standard Lalamove webhook events.</td>
+                    </tr>
+                    <tr>
+                        <td><code>services/shippingOrderUpdater.js</code></td>
+                        <td>Service</td>
+                        <td>Failures during background status synchronization.</td>
+                    </tr>
+                    <tr>
+                        <td><code>app/api/orders/[orderId]/sync/route.js</code></td>
+                        <td>API Route</td>
+                        <td>Failures during manual status sync triggered by users/sellers.</td>
+                    </tr>
+                </tbody>
+            </table>
+        </section>
+
+        <section>
+            <h2>Technical Specifications</h2>
+            <ul>
+                <li><strong>Environment:</strong> Node.js with Next.js App Router</li>
+                <li><strong>ORM:</strong> Prisma with PostgreSQL/MySQL</li>
+                <li><strong>External API:</strong> Lalamove Delivery API</li>
+                <li><strong>Solution Strategy:</strong> Implement null coalescing fallbacks (<code>|| null</code>) for all optional fields in JSON payloads.</li>
+            </ul>
+        </section>
+    </div>
+</body>
+</html>

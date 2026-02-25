@@ -1,0 +1,118 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Phase 4: Order Completion & Automation - Shopee-Style Returns</title>
+    <style>
+        :root {
+            --primary-color: #ee4d2d;
+            --secondary-color: #2673dd;
+            --bg-color: #f5f5f5;
+            --card-bg: #ffffff;
+            --text-color: #333;
+        }
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            line-height: 1.6;
+            color: var(--text-color);
+            background-color: var(--bg-color);
+            margin: 0;
+            padding: 20px;
+        }
+        .container {
+            max-width: 1000px;
+            margin: 0 auto;
+            background: var(--card-bg);
+            padding: 40px;
+            border-radius: 8px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        h1, h2, h3 {
+            color: var(--primary-color);
+            border-bottom: 2px solid #eee;
+            padding-bottom: 10px;
+        }
+        .nav {
+            margin-bottom: 30px;
+            padding: 10px;
+            background: #eee;
+            border-radius: 4px;
+        }
+        .nav a {
+            margin-right: 15px;
+            text-decoration: none;
+            color: var(--secondary-color);
+            font-weight: bold;
+        }
+        code {
+            background: #f4f4f4;
+            padding: 2px 5px;
+            border-radius: 4px;
+            font-family: 'Courier New', Courier, monospace;
+        }
+        pre {
+            background: #2d2d2d;
+            color: #ccc;
+            padding: 15px;
+            border-radius: 4px;
+            overflow-x: auto;
+        }
+        .success-criteria {
+            background: #e8f5e9;
+            padding: 20px;
+            border-left: 5px solid #4caf50;
+            margin: 20px 0;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="nav">
+            <a href="index.html">← Back to Index</a>
+            <a href="phase-3-admin-mediation.html">← Previous Phase</a>
+            <a href="phase-5-performance-metrics.html">Next Phase →</a>
+        </div>
+
+        <h1>Phase 4: Order Completion & Automation</h1>
+        <p>This phase focuses on the final transition of funds from the escrow (pending) to the seller's available balance, either through manual buyer confirmation or automated expiration of the Shopee Guarantee.</p>
+
+        <section>
+            <h2>1. Order Completion Logic</h2>
+            <p>Implemented <code>completeOrder</code> in <code>ordersService.js</code> to handle the final state transition and fund release.</p>
+            <ul>
+                <li><strong>Platform Fee:</strong> Automatically deducts a 5% marketplace fee from the total order value.</li>
+                <li><strong>Escrow Release:</strong> Triggers <code>releaseFunds</code> to move the net amount to the seller's available balance.</li>
+                <li><strong>Status Update:</strong> Moves order to <code>COMPLETED</code> and records the completion timestamp.</li>
+            </ul>
+        </section>
+
+        <section>
+            <h2>2. Auto-Completion Trigger</h2>
+            <p>Implemented <code>autoCompleteOrders</code> to handle orders where the buyer fails to confirm receipt within the Shopee Guarantee period.</p>
+            <pre><code>// Example Auto-Completion Query
+const ordersToComplete = await prisma.order.findMany({
+    where: {
+        status: { in: ['DELIVERED', 'SHIPPED'] },
+        autoCompleteAt: { lte: now }
+    }
+});</code></pre>
+        </section>
+
+        <section>
+            <h2>3. Wallet Integration</h2>
+            <p>The <code>updateOrderStatus</code> function was refactored to ensure that for COD (Cash on Delivery) orders, the funds are first credited to the pending balance upon delivery, before being released upon completion.</p>
+        </section>
+
+        <div class="success-criteria">
+            <h3>Success Criteria</h3>
+            <ul>
+                <li>Orders correctly transition to <code>COMPLETED</code> status.</li>
+                <li>Sellers receive 95% of the order total in their available balance.</li>
+                <li>Platform wallet (if implemented) or records track the 5% fee correctly.</li>
+                <li>Expired Shopee Guarantee orders are automatically finalized.</li>
+            </ul>
+        </div>
+    </div>
+</body>
+</html>

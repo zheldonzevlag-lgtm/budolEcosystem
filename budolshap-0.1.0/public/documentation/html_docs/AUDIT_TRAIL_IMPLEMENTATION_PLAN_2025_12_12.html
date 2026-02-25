@@ -1,0 +1,243 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Login & Logout Audit Trail Plan - Budolshap V3</title>
+    <style>
+        :root {
+            --primary: #0f172a;
+            --secondary: #334155;
+            --accent: #6366f1;
+            /* Indigo */
+            --bg: #f8fafc;
+            --card-bg: #ffffff;
+            --border: #e2e8f0;
+        }
+
+        body {
+            font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+            line-height: 1.6;
+            color: var(--secondary);
+            background: var(--bg);
+            margin: 0;
+            padding: 40px;
+        }
+
+        .container {
+            max-width: 1000px;
+            margin: 0 auto;
+        }
+
+        header {
+            margin-bottom: 40px;
+            border-bottom: 3px solid var(--accent);
+            padding-bottom: 20px;
+        }
+
+        h1 {
+            color: var(--primary);
+            font-size: 2.5rem;
+            margin: 0 0 10px 0;
+        }
+
+        .status-badge {
+            display: inline-block;
+            padding: 4px 12px;
+            border-radius: 20px;
+            font-weight: 600;
+            font-size: 0.85rem;
+            background: #e0e7ff;
+            color: #3730a3;
+            margin-left: 10px;
+        }
+
+        .card {
+            background: var(--card-bg);
+            border-radius: 12px;
+            box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1);
+            padding: 30px;
+            margin-bottom: 30px;
+            border: 1px solid var(--border);
+        }
+
+        h2 {
+            color: var(--primary);
+            border-left: 4px solid var(--accent);
+            padding-left: 15px;
+            margin-top: 0;
+        }
+
+        h3 {
+            color: var(--secondary);
+            margin-top: 25px;
+            font-weight: 600;
+        }
+
+        code {
+            background: #f1f5f9;
+            padding: 2px 6px;
+            border-radius: 4px;
+            font-family: 'Consolas', 'Monaco', monospace;
+            font-size: 0.9em;
+            color: #d946ef;
+        }
+
+        ul {
+            list-style-type: none;
+            padding-left: 0;
+        }
+
+        li {
+            position: relative;
+            padding-left: 25px;
+            margin-bottom: 10px;
+        }
+
+        li::before {
+            content: "🔹";
+            position: absolute;
+            left: 0;
+            font-size: 0.8em;
+        }
+
+        .code-block {
+            background: #1e293b;
+            color: #e2e8f0;
+            padding: 15px;
+            border-radius: 8px;
+            overflow-x: auto;
+            font-family: monospace;
+            font-size: 0.85rem;
+            margin: 10px 0;
+        }
+    </style>
+</head>
+
+<body>
+
+    <div class="container">
+        <header>
+            <div style="display: flex; align-items: center;">
+                <h1>Login & Logout Audit Trail Plan</h1>
+                <span class="status-badge">PLANNED</span>
+            </div>
+            <p><strong>Proposed Date:</strong> 2025-12-12<br>
+                <strong>Objective:</strong> Implement a comprehensive logging system to track user access events
+                (Login/Logout) for security auditing.
+            </p>
+        </header>
+
+        <div class="card">
+            <h2>Feature Overview</h2>
+            <p>This feature will record detailed metadata for every successful login and logout event. Administrators
+                will be able to view these logs via a new specific submenu in the Admin Settings.</p>
+
+            <h3>Target Data Points:</h3>
+            <ul>
+                <li><strong>Timestamp:</strong> Exact date and time of the event.</li>
+                <li><strong>User Identity:</strong> Full Name and/or User ID.</li>
+                <li><strong>Action:</strong> LOGIN or LOGOUT.</li>
+                <li><strong>IP Address:</strong> Source IP of the request.</li>
+                <li><strong>Location:</strong> Country (derived from IP/Headers).</li>
+                <li><strong>Device Info:</strong> Operating System (OS) and Hostname/Browser User Agent.</li>
+            </ul>
+        </div>
+
+        <div class="card">
+            <h2>Phase 1: Database Schema Design</h2>
+            <p><strong>Goal:</strong> Update the Prisma schema to support audit log storage.</p>
+            <p><strong>Estimated Time:</strong> 0.5 - 1 Hour</p>
+
+            <h3>Steps:</h3>
+            <ol>
+                <li>Define a new model <code>AuditLog</code> in <code>prisma/schema.prisma</code>.</li>
+                <li>Create relation to the <code>User</code> model.</li>
+                <li>Run migration to update the database.</li>
+            </ol>
+
+            <div class="code-block">
+                model AuditLog {
+                id String @id @default(cuid())
+                userId String
+                action String // "LOGIN" | "LOGOUT"
+                ipAddress String?
+                country String?
+                device String? // e.g., "Windows 10 / Chrome"
+                userAgent String? // Raw string for backup
+                createdAt DateTime @default(now())
+
+                user User @relation(fields: [userId], references: [id])
+                }
+            </div>
+        </div>
+
+        <div class="card">
+            <h2>Phase 2: Backend Logic Implementation</h2>
+            <p><strong>Goal:</strong> Capture data automatically during authentication events.</p>
+            <p><strong>Estimated Time:</strong> 1.5 - 2 Hours</p>
+
+            <h3>Steps:</h3>
+            <ol>
+                <li><strong>Utility Function:</strong> Create <code>lib/audit.js</code> to handle data extraction (IP,
+                    OS parsing, Country) and database insertion.</li>
+                <li><strong>Login Route:</strong> Update <code>app/api/auth/login/route.js</code> to call the logging
+                    utility after a successful password check.</li>
+                <li><strong>Logout Route:</strong> Update <code>app/api/auth/logout/route.js</code> to call the logging
+                    utility before clearing the cookie.</li>
+            </ol>
+
+            <p><em>Note: We will use Vercel headers (<code>x-vercel-ip-country</code>) for accurate geolocation in
+                    production.</em></p>
+        </div>
+
+        <div class="card">
+            <h2>Phase 3: Admin UI Implementation</h2>
+            <p><strong>Goal:</strong> Visualize the logs for administrators.</p>
+            <p><strong>Estimated Time:</strong> 2 - 3 Hours</p>
+
+            <h3>Steps:</h3>
+            <ol>
+                <li><strong>Sidebar Update:</strong> Add "Login & Logout Tracker" to the Admin Settings submenu in
+                    <code>AdminSidebar.jsx</code>.
+                </li>
+                <li><strong>API Endpoint:</strong> Create <code>app/api/admin/audit-logs/route.js</code> to fetch logs
+                    with pagination and filtering.</li>
+                <li><strong>UI Page:</strong> Create <code>app/admin/settings/audit-logs/page.jsx</code>.</li>
+                <li><strong>Data Display:</strong> Implement a data table with two tabs: <strong>Login Logs</strong> and
+                    <strong>Logout Logs</strong>.
+                </li>
+            </ol>
+        </div>
+
+        <div class="card">
+            <h2>Phase 4: Testing & Deployment</h2>
+            <p><strong>Goal:</strong> Ensure accuracy and reliability.</p>
+            <p><strong>Estimated Time:</strong> 1 Hour</p>
+
+            <h3>Steps:</h3>
+            <ol>
+                <li>Login with different accounts/devices to verify data capture.</li>
+                <li>Check if "Country" is correctly populated in production (vs localhost).</li>
+                <li>Verify pagination logic for large log volumes.</li>
+                <li>Deploy changes to production.</li>
+            </ol>
+        </div>
+
+        <div class="card">
+            <h2>Summary of Estimates</h2>
+            <ul>
+                <li><strong>Phase 1:</strong> 1 Hour</li>
+                <li><strong>Phase 2:</strong> 2 Hours</li>
+                <li><strong>Phase 3:</strong> 3 Hours</li>
+                <li><strong>Phase 4:</strong> 1 Hour</li>
+                <li><strong>Total Estimated Effort:</strong> 7 Hours</li>
+            </ul>
+        </div>
+
+    </div>
+
+</body>
+
+</html>

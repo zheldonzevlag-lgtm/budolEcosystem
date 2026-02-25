@@ -1,0 +1,142 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Phase 3: Real-time Synchronization - Lalamove Sync Implementation</title>
+    <style>
+        :root {
+            --primary: #2563eb;
+            --secondary: #64748b;
+            --success: #10b981;
+            --warning: #f59e0b;
+            --danger: #ef4444;
+            --bg: #f8fafc;
+            --text: #1e293b;
+            --card-bg: #ffffff;
+        }
+        body {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            line-height: 1.6;
+            color: var(--text);
+            background-color: var(--bg);
+            margin: 0;
+            padding: 0;
+        }
+        .container {
+            max-width: 1000px;
+            margin: 2rem auto;
+            padding: 0 1.5rem;
+        }
+        header {
+            background: var(--card-bg);
+            padding: 2rem;
+            border-radius: 1rem;
+            box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1);
+            margin-bottom: 2rem;
+        }
+        h1 { margin: 0; color: var(--primary); font-size: 2.25rem; }
+        h2 { color: var(--primary); border-bottom: 2px solid #e2e8f0; padding-bottom: 0.5rem; margin-top: 2rem; }
+        .nav {
+            display: flex;
+            gap: 1rem;
+            margin-bottom: 2rem;
+        }
+        .nav a {
+            text-decoration: none;
+            color: var(--secondary);
+            font-weight: 500;
+            padding: 0.5rem 1rem;
+            border-radius: 0.5rem;
+            transition: all 0.2s;
+        }
+        .nav a:hover { background: #e2e8f0; }
+        .nav a.active { background: var(--primary); color: white; }
+        .card {
+            background: var(--card-bg);
+            padding: 2rem;
+            border-radius: 1rem;
+            box-shadow: 0 1px 3px 0 rgb(0 0 0 / 0.1);
+            margin-bottom: 2rem;
+        }
+        .feature-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 1.5rem;
+            margin-top: 1.5rem;
+        }
+        .feature-card {
+            background: #f8fafc;
+            padding: 1.5rem;
+            border-radius: 0.75rem;
+            border: 1px solid #e2e8f0;
+        }
+        .feature-card h3 { margin-top: 0; color: var(--primary); font-size: 1.1rem; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <nav class="nav">
+            <a href="index.html">Index</a>
+            <a href="phase-1-analysis.html">Phase 1: Analysis</a>
+            <a href="phase-2-mapping.html">Phase 2: Mapping</a>
+            <a href="phase-3-realtime.html" class="active">Phase 3: Real-time</a>
+            <a href="implementation-summary.html">Summary</a>
+        </nav>
+
+        <header>
+            <h1>Phase 3: Real-time Synchronization</h1>
+            <p>How the system keeps the Seller and Buyer UIs updated in real-time.</p>
+        </header>
+
+        <section class="card">
+            <h2>Synchronization Multi-Strategy</h2>
+            <p>Budolshap employs a triple-layered synchronization strategy to ensure that order status changes are reflected instantly across all interfaces.</p>
+            
+            <div class="feature-grid">
+                <div class="feature-card">
+                    <h3>1. Webhook Push</h3>
+                    <p>Lalamove pushes events to our webhook. The server updates the DB and immediately broadcasts a message via Pusher or Socket.io.</p>
+                </div>
+                <div class="feature-card">
+                    <h3>2. Real-time Subscription</h3>
+                    <p>UIs (Seller & Buyer) subscribe to their respective channels (<code>store-{id}</code> and <code>user-{id}</code>). Upon receiving an update, they refresh their data.</p>
+                </div>
+                <div class="feature-card">
+                    <h3>3. Smart Polling Fallback</h3>
+                    <p>The Buyer UI detects active Lalamove orders and triggers a <code>POST /api/orders/[id]/sync-lalamove</code> every 10 seconds as a safety net.</p>
+                </div>
+                <div class="feature-card">
+                    <h3>4. SWR Cache Management</h3>
+                    <p>Using <code>useSWR</code>, the system manages data fetching with background revalidation and instant UI updates (optimistic UI patterns where applicable).</p>
+                </div>
+            </div>
+        </section>
+
+        <section class="card">
+            <h2>Real-time Channel Logic</h2>
+            <p>Channels are secured and scoped to specific users/stores:</p>
+            <ul>
+                <li><strong>Seller Channel:</strong> <code>store-${storeId}</code> - Receives <code>order-updated</code> events for any order belonging to the store.</li>
+                <li><strong>Buyer Channel:</strong> <code>user-${userId}</code> - Receives <code>order-updated</code> events for orders the user has placed.</li>
+            </ul>
+            <p>Event Payload Example:</p>
+            <pre>
+{
+  "orderId": "ord_12345",
+  "status": "IN_TRANSIT",
+  "shippingStatus": "PICKED_UP"
+}
+            </pre>
+        </section>
+
+        <section class="card">
+            <h2>UI Integration Details</h2>
+            <ul>
+                <li><strong>Seller UI:</strong> Uses <code>useRealtimeOrders</code> hook which abstracts the Pusher/Socket.io connection and auto-mutates the SWR cache.</li>
+                <li><strong>Buyer UI:</strong> Uses a dedicated <code>useEffect</code> in the Order Detail page to listen for specific order updates and show toast notifications.</li>
+            </ul>
+        </section>
+    </div>
+</body>
+</html>

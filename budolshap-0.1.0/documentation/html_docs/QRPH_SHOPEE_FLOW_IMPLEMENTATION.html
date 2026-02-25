@@ -1,0 +1,530 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>QRPh Payment Flow - Shopee-like Implementation</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            line-height: 1.6;
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+            background: #f5f5f5;
+        }
+
+        .container {
+            background: white;
+            padding: 30px;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+        }
+
+        h1 {
+            color: #2c3e50;
+            border-bottom: 3px solid #3498db;
+            padding-bottom: 10px;
+        }
+
+        h2 {
+            color: #34495e;
+            margin-top: 30px;
+            border-left: 4px solid #3498db;
+            padding-left: 15px;
+        }
+
+        h3 {
+            color: #7f8c8d;
+            margin-top: 20px;
+        }
+
+        .section {
+            margin: 20px 0;
+            padding: 15px;
+            background: #f8f9fa;
+            border-radius: 5px;
+        }
+
+        .feature {
+            background: #e8f5e9;
+            padding: 15px;
+            margin: 10px 0;
+            border-left: 4px solid #4caf50;
+            border-radius: 4px;
+        }
+
+        .issue {
+            background: #fff3e0;
+            padding: 15px;
+            margin: 10px 0;
+            border-left: 4px solid #ff9800;
+            border-radius: 4px;
+        }
+
+        .recommendation {
+            background: #e3f2fd;
+            padding: 15px;
+            margin: 10px 0;
+            border-left: 4px solid #2196f3;
+            border-radius: 4px;
+        }
+
+        .code-block {
+            background: #2d2d2d;
+            color: #f8f8f2;
+            padding: 15px;
+            border-radius: 5px;
+            overflow-x: auto;
+            font-family: 'Courier New', monospace;
+            font-size: 14px;
+        }
+
+        .flow-diagram {
+            background: #fff;
+            border: 2px solid #3498db;
+            padding: 20px;
+            margin: 20px 0;
+            border-radius: 8px;
+        }
+
+        .step {
+            padding: 10px;
+            margin: 5px 0;
+            background: #ecf0f1;
+            border-radius: 4px;
+            border-left: 3px solid #3498db;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 20px 0;
+        }
+
+        th,
+        td {
+            padding: 12px;
+            text-align: left;
+            border-bottom: 1px solid #ddd;
+        }
+
+        th {
+            background-color: #3498db;
+            color: white;
+        }
+
+        tr:hover {
+            background-color: #f5f5f5;
+        }
+
+        .badge {
+            display: inline-block;
+            padding: 3px 8px;
+            border-radius: 3px;
+            font-size: 12px;
+            font-weight: bold;
+        }
+
+        .badge-success {
+            background: #4caf50;
+            color: white;
+        }
+
+        .badge-warning {
+            background: #ff9800;
+            color: white;
+        }
+
+        .badge-info {
+            background: #2196f3;
+            color: white;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="container">
+        <h1>🛒 QRPh Payment Flow - Shopee-like Implementation</h1>
+        <p><strong>Date:</strong> December 18, 2024</p>
+        <p><strong>Project:</strong> Budolshap v3</p>
+        <p><strong>Author:</strong> Development Team</p>
+
+        <h2>📋 Executive Summary</h2>
+        <div class="section">
+            <p>This document details the implementation of a Shopee-like QRPh payment flow in Budolshap, including the
+                fixes applied to display QR codes immediately after order placement and align the user experience with
+                industry-standard e-commerce platforms.</p>
+
+            <h3>Key Achievements</h3>
+            <ul>
+                <li>✅ QR code displays immediately after order placement</li>
+                <li>✅ Redirect to "To Pay" tab on modal close (Shopee-like behavior)</li>
+                <li>✅ Cart persistence until payment success</li>
+                <li>✅ Screenshot upload instruction added</li>
+                <li>✅ Simplified user flow with removed redundant modals</li>
+            </ul>
+        </div>
+
+        <h2>🔍 Problem Statement</h2>
+        <div class="issue">
+            <h3>Initial Issues</h3>
+            <ol>
+                <li><strong>QR Modal Not Displaying:</strong> After placing a QRPh order, the QR code modal failed to
+                    appear</li>
+                <li><strong>Loading Overlay Blocking:</strong> Fullscreen loading component covered the QR modal</li>
+                <li><strong>Premature Cart Clearing:</strong> Cart was cleared before QR modal could render, causing
+                    component unmounting</li>
+                <li><strong>Non-standard UX:</strong> Flow didn't match familiar Shopee experience</li>
+            </ol>
+        </div>
+
+        <h2>🛠️ Technical Implementation</h2>
+
+        <h3>1. QR Modal Display Fix</h3>
+        <div class="feature">
+            <h4>File: <code>components/OrderSummary.jsx</code></h4>
+
+            <p><strong>Issue:</strong> Loading overlay was covering the QR modal</p>
+            <p><strong>Solution:</strong> Added condition to prevent Loading component when QR modal is visible</p>
+
+            <div class="code-block">
+                {isPlacingOrder && !showQRModal && &lt;Loading /&gt;}
+            </div>
+        </div>
+
+        <h3>2. Cart Clearing Timing</h3>
+        <div class="feature">
+            <h4>File: <code>components/OrderSummary.jsx:260-279</code></h4>
+
+            <p><strong>Issue:</strong> Cart cleared immediately after order creation, unmounting OrderSummary before QR
+                modal could render</p>
+            <p><strong>Solution:</strong> Delayed cart clearing for QR-based payments until modal closes or payment
+                succeeds</p>
+
+            <div class="code-block">
+                const isQRPayment = ['MAYA', 'GRAB_PAY', 'QRPH'].includes(paymentMethod);
+
+                if (response.ok && !isQRPayment) {
+                // Clear cart immediately for COD, BudolPay
+                dispatch(clearCart());
+                // ...
+                }
+            </div>
+        </div>
+
+        <h3>3. Shopee-like Redirect Flow</h3>
+        <div class="feature">
+            <h4>File: <code>components/OrderSummary.jsx:675-684</code></h4>
+
+            <p><strong>Change:</strong> Redirect to orders page on QR modal close instead of showing order info modal
+            </p>
+
+            <div class="code-block">
+                onClose={() => {
+                console.log('📱 [OrderSummary] QR Modal closed by user - redirecting to orders');
+                setShowQRModal(false);
+                router.push('/orders?tab=TO_PAY');
+                }}
+            </div>
+        </div>
+
+        <h3>4. Enhanced QR Instructions</h3>
+        <div class="feature">
+            <h4>File: <code>components/payment/QRCodeModal.jsx:174</code></h4>
+
+            <p><strong>Addition:</strong> Screenshot upload instruction for same-device payments</p>
+
+            <div class="code-block">
+                &lt;li&gt;Or take a screenshot and upload it to your payment app&lt;/li&gt;
+            </div>
+        </div>
+
+        <h2>📊 User Flow Comparison</h2>
+
+        <table>
+            <thead>
+                <tr>
+                    <th>Step</th>
+                    <th>Before</th>
+                    <th>After (Shopee-like)</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td>1. Place Order</td>
+                    <td>✅ QRPh selected</td>
+                    <td>✅ QRPh selected</td>
+                </tr>
+                <tr>
+                    <td>2. QR Display</td>
+                    <td>❌ Modal didn't appear</td>
+                    <td>✅ Modal appears immediately</td>
+                </tr>
+                <tr>
+                    <td>3. Close Modal</td>
+                    <td>Cart cleared → Order Info modal → Stay on cart</td>
+                    <td>Redirect to /orders?tab=TO_PAY</td>
+                </tr>
+                <tr>
+                    <td>4. Cart State</td>
+                    <td>Cleared on modal close</td>
+                    <td>Persists until payment success</td>
+                </tr>
+                <tr>
+                    <td>5. Retry Payment</td>
+                    <td>Manual navigation needed</td>
+                    <td>Direct access from "To Pay" tab</td>
+                </tr>
+            </tbody>
+        </table>
+
+        <h2>🎯 Current vs Shopee Behavior</h2>
+
+        <div class="flow-diagram">
+            <h3>✅ Implemented (Matches Shopee)</h3>
+            <div class="step">1. QR code appears immediately after order placement</div>
+            <div class="step">2. Order persists in database</div>
+            <div class="step">3. "To Pay" tab shows unpaid orders</div>
+            <div class="step">4. Redirect to "To Pay" on modal close</div>
+            <div class="step">5. Cart persists until payment success</div>
+            <div class="step">6. Repay functionality from orders page</div>
+        </div>
+
+        <div class="flow-diagram" style="border-color: #ff9800;">
+            <h3>⚠️ Not Yet Implemented (Shopee Features)</h3>
+            <div class="step">1. Change payment method for existing orders</div>
+            <div class="step">2. Automatic order cancellation after 24 hours</div>
+            <div class="step">3. QR code reuse (currently generates new QR on retry)</div>
+            <div class="step">4. Payment deadline countdown on order details</div>
+        </div>
+
+        <h2>🚀 Future Enhancements</h2>
+
+        <div class="recommendation">
+            <h3>Priority 1: High Impact</h3>
+            <ol>
+                <li>
+                    <strong>Automatic Order Cancellation</strong>
+                    <p>Implement a cron job or scheduled task to automatically cancel unpaid orders after 24 hours</p>
+                    <ul>
+                        <li>Add <code>paymentDeadline</code> field to Order model</li>
+                        <li>Create <code>/api/cron/cancel-expired-orders</code> endpoint</li>
+                        <li>Use Vercel Cron Jobs or external scheduler</li>
+                    </ul>
+                </li>
+
+                <li>
+                    <strong>Change Payment Method</strong>
+                    <p>Allow users to change payment method for unpaid orders</p>
+                    <ul>
+                        <li>Add "Change Payment Method" button in order details</li>
+                        <li>Create <code>/api/orders/[orderId]/change-payment</code> endpoint</li>
+                        <li>Invalidate old payment intent when changing method</li>
+                    </ul>
+                </li>
+            </ol>
+        </div>
+
+        <div class="recommendation">
+            <h3>Priority 2: UX Improvements</h3>
+            <ol>
+                <li>
+                    <strong>Payment Deadline Display</strong>
+                    <p>Show countdown timer for payment deadline on order details</p>
+                    <ul>
+                        <li>Display "Pay within X hours" on order card</li>
+                        <li>Add visual urgency indicators (red text when &lt; 1 hour)</li>
+                        <li>Real-time countdown using client-side timer</li>
+                    </ul>
+                </li>
+
+                <li>
+                    <strong>QR Code Reuse</strong>
+                    <p>Reuse existing payment intent if not expired</p>
+                    <ul>
+                        <li>Check payment intent expiry before generating new QR</li>
+                        <li>Store payment intent expiry in database</li>
+                        <li>Only generate new QR if expired or invalidated</li>
+                    </ul>
+                </li>
+
+                <li>
+                    <strong>Payment Status Notifications</strong>
+                    <p>Real-time notifications for payment status changes</p>
+                    <ul>
+                        <li>WebSocket or Server-Sent Events for live updates</li>
+                        <li>Push notifications for mobile users</li>
+                        <li>Email notifications for payment success/failure</li>
+                    </ul>
+                </li>
+            </ol>
+        </div>
+
+        <div class="recommendation">
+            <h3>Priority 3: Technical Improvements</h3>
+            <ol>
+                <li>
+                    <strong>Payment Intent Caching</strong>
+                    <p>Cache payment intents to reduce API calls to PayMongo</p>
+                    <ul>
+                        <li>Use Redis or in-memory cache</li>
+                        <li>Cache key: <code>payment_intent:{orderId}</code></li>
+                        <li>TTL: 10 minutes (QR code validity period)</li>
+                    </ul>
+                </li>
+
+                <li>
+                    <strong>Error Recovery</strong>
+                    <p>Better error handling and recovery mechanisms</p>
+                    <ul>
+                        <li>Retry logic for failed payment API calls</li>
+                        <li>Fallback UI when QR generation fails</li>
+                        <li>Manual payment verification option</li>
+                    </ul>
+                </li>
+
+                <li>
+                    <strong>Analytics & Monitoring</strong>
+                    <p>Track payment flow metrics</p>
+                    <ul>
+                        <li>QR modal open/close rates</li>
+                        <li>Payment success/failure rates by method</li>
+                        <li>Average time to payment completion</li>
+                        <li>Cart abandonment after QR modal close</li>
+                    </ul>
+                </li>
+            </ol>
+        </div>
+
+        <h2>📝 Implementation Recommendations</h2>
+
+        <div class="section">
+            <h3>1. Database Schema Updates</h3>
+            <div class="code-block">
+                // Add to Order model
+                model Order {
+                // ... existing fields
+                paymentDeadline DateTime?
+                paymentIntentId String?
+                paymentIntentExpiry DateTime?
+                allowPaymentChange Boolean @default(true)
+                }
+            </div>
+        </div>
+
+        <div class="section">
+            <h3>2. Cron Job for Order Cancellation</h3>
+            <div class="code-block">
+                // vercel.json
+                {
+                "crons": [{
+                "path": "/api/cron/cancel-expired-orders",
+                "schedule": "0 * * * *" // Every hour
+                }]
+                }
+
+                // app/api/cron/cancel-expired-orders/route.js
+                export async function GET(request) {
+                const expiredOrders = await prisma.order.findMany({
+                where: {
+                isPaid: false,
+                paymentDeadline: { lt: new Date() },
+                status: 'ORDER_PLACED'
+                }
+                });
+
+                for (const order of expiredOrders) {
+                await prisma.order.update({
+                where: { id: order.id },
+                data: { status: 'CANCELLED', cancelReason: 'Payment deadline exceeded' }
+                });
+                }
+
+                return NextResponse.json({ cancelled: expiredOrders.length });
+                }
+            </div>
+        </div>
+
+        <div class="section">
+            <h3>3. Change Payment Method API</h3>
+            <div class="code-block">
+                // app/api/orders/[orderId]/change-payment/route.js
+                export async function POST(request, { params }) {
+                const { newPaymentMethod } = await request.json();
+                const { orderId } = params;
+
+                // Invalidate old payment intent
+                if (order.paymentIntentId) {
+                await invalidatePaymentIntent(order.paymentIntentId);
+                }
+
+                // Update order
+                await prisma.order.update({
+                where: { id: orderId },
+                data: {
+                paymentMethod: newPaymentMethod,
+                paymentIntentId: null,
+                paymentIntentExpiry: null
+                }
+                });
+
+                return NextResponse.json({ success: true });
+                }
+            </div>
+        </div>
+
+        <h2>🧪 Testing Checklist</h2>
+
+        <div class="section">
+            <h3>Manual Testing</h3>
+            <ul>
+                <li>☐ Place QRPh order → QR modal appears immediately</li>
+                <li>☐ Close QR modal → Redirected to /orders?tab=TO_PAY</li>
+                <li>☐ Cart still has items after closing modal</li>
+                <li>☐ Order appears in "To Pay" tab</li>
+                <li>☐ Click order in "To Pay" → Can retry payment</li>
+                <li>☐ Complete payment → Cart clears</li>
+                <li>☐ Screenshot instruction visible in QR modal</li>
+                <li>☐ QR modal timeout → Redirects to orders</li>
+            </ul>
+        </div>
+
+        <div class="section">
+            <h3>Edge Cases</h3>
+            <ul>
+                <li>☐ Multiple QR payment attempts for same order</li>
+                <li>☐ Browser refresh during QR modal display</li>
+                <li>☐ Network error during payment initiation</li>
+                <li>☐ PayMongo API timeout</li>
+                <li>☐ Concurrent payment attempts</li>
+            </ul>
+        </div>
+
+        <h2>📚 References</h2>
+        <ul>
+            <li><a href="https://help.shopee.ph/portal/article/79193">Shopee QRPh Payment Guide</a></li>
+            <li><a href="https://developers.paymongo.com/docs">PayMongo API Documentation</a></li>
+            <li><a href="https://www.bsp.gov.ph/Regulations/Issuances/2017/c1055.pdf">BSP QRPh Specifications</a></li>
+        </ul>
+
+        <h2>📞 Support & Maintenance</h2>
+        <div class="section">
+            <p><strong>For issues or questions:</strong></p>
+            <ul>
+                <li>Check PayMongo webhook logs for payment failures</li>
+                <li>Monitor Vercel deployment logs for errors</li>
+                <li>Review database for orphaned payment intents</li>
+                <li>Contact PayMongo support for QR code generation issues</li>
+            </ul>
+        </div>
+
+        <hr style="margin: 40px 0;">
+        <p style="text-align: center; color: #7f8c8d;">
+            <small>Document Version 1.0 | Last Updated: December 18, 2024</small>
+        </p>
+    </div>
+</body>
+
+</html>

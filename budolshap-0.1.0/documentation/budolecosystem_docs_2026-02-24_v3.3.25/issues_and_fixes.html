@@ -1,0 +1,81 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Issues & Fixes - v3.3.24</title>
+    <style>
+        body { font-family: sans-serif; line-height: 1.6; max-width: 1000px; margin: 0 auto; padding: 20px; }
+        .issue { background: #ffe6e6; padding: 15px; border-radius: 5px; margin-bottom: 20px; }
+        .fix { background: #e6ffe6; padding: 15px; border-radius: 5px; border-left: 5px solid green; }
+    </style>
+</head>
+<body>
+    <h1>Issues & Fixes Log: v3.3.24</h1>
+
+    <div class="issue">
+        <h3>Issue: Missing Required Fields (Barangay)</h3>
+        <p><strong>Description:</strong> Users reported getting a "Missing required fields" toast error even when all visible required fields were filled. The issue was traced to the `barangay` field being implicitly required in the backend API and database schema, despite being intended as optional.</p>
+        <p><strong>Reported By:</strong> User Feedback</p>
+        <p><strong>Date:</strong> 2026-02-24</p>
+        
+        <div class="fix">
+            <h4>Fix Implemented</h4>
+            <p><strong>Action:</strong></p>
+            <ul>
+                <li>Updated Prisma schema (`Address`, `StoreAddress`) to make `barangay` nullable (`String?`).</li>
+                <li>Updated API routes to remove `barangay` from required field checks.</li>
+                <li>Updated Frontend Zod validation schema to mark `barangay` as optional.</li>
+                <li>Replaced generic toast errors with field-specific Zod validation messages.</li>
+            </ul>
+            <p><strong>Status:</strong> Resolved</p>
+        </div>
+    </div>
+
+    <div class="issue">
+        <h3>Issue: Prisma Client File Lock (EPERM)</h3>
+        <p><strong>Description:</strong> During development, `prisma generate` failed with `EPERM: operation not permitted` when trying to rename `query_engine-windows.dll.node` in `@prisma/client-custom`. This is caused by the file being locked by the running Next.js development server or other node processes.</p>
+        <p><strong>Reported By:</strong> Developer (Internal)</p>
+        <p><strong>Date:</strong> 2026-02-24</p>
+        
+        <div class="fix">
+            <h4>Fix Implemented</h4>
+            <p><strong>Action:</strong> Changed the Prisma client output directory to `@prisma/client-custom-v4` in `schema.prisma` and updated `lib/prisma.js` to import from the new location. This bypasses the locked file.</p>
+            <p><strong>Status:</strong> Resolved (Workaround)</p>
+        </div>
+    </div>
+    <div class="issue">
+        <h3>Issue: Missing Required Fields (Store Address - District/Zip)</h3>
+        <p><strong>Description:</strong> When saving a store address, the user encountered a "Missing required fields" toast error. The API required `district` and `zip` fields, but the frontend form did not enforce or provide these fields consistently.</p>
+        <p><strong>Reported By:</strong> User Feedback (Screenshot)</p>
+        <p><strong>Date:</strong> 2026-02-24</p>
+        
+        <div class="fix">
+            <h4>Fix Implemented</h4>
+            <p><strong>Action:</strong></p>
+            <ul>
+                <li>Updated `StoreAddress` model in Prisma schema to make `district` and `zip` optional (`String?`).</li>
+                <li>Updated Store Address API (`app/api/stores/[storeId]/addresses/route.js`) to remove `district` and `zip` from required validation logic.</li>
+                <li>Verified fix with new test script `verify_store_address_optional_fields.test.js`.</li>
+            </ul>
+            <p><strong>Status:</strong> Resolved</p>
+        </div>
+    </div>
+    <div class="issue">
+        <h3>Issue: Store Address Label & Default Persistence</h3>
+        <p><strong>Description:</strong> "Label As" (Home/Work/Other) and "Set as Default" selections in the Store Address form were not being saved. Users would select these options, but the saved address would have no label and `isDefault` would remain false.</p>
+        <p><strong>Reported By:</strong> User Feedback (Implicit)</p>
+        <p><strong>Date:</strong> 2026-02-24</p>
+        
+        <div class="fix">
+            <h4>Fix Implemented (v3.3.25)</h4>
+            <p><strong>Action:</strong></p>
+            <ul>
+                <li><strong>Frontend:</strong> Added `label` to `AddressFormManager` initial state and `StoreAddressModal` data passing. Fixed variable shadowing bug in the label selection UI.</li>
+                <li><strong>Backend:</strong> Updated API route to extract `label` from request body.</li>
+                <li><strong>Validation:</strong> Verified with new test script `verify_store_address_label_and_default.test.js`.</li>
+            </ul>
+            <p><strong>Status:</strong> Resolved</p>
+        </div>
+    </div>
+</body>
+</html>

@@ -1,0 +1,1208 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Vercel Environment Variables - Complete Guide</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            line-height: 1.6;
+            color: #333;
+            max-width: 1400px;
+            margin: 0 auto;
+            padding: 20px;
+            background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
+        }
+
+        h1 {
+            color: #2c3e50;
+            border-bottom: 4px solid #3498db;
+            padding-bottom: 15px;
+            text-align: center;
+            font-size: 2.5em;
+        }
+
+        h2 {
+            color: #2980b9;
+            margin-top: 40px;
+            border-left: 6px solid #3498db;
+            padding-left: 20px;
+            background: linear-gradient(90deg, #e8f4fc 0%, transparent 100%);
+            padding-top: 10px;
+            padding-bottom: 10px;
+        }
+
+        h3 {
+            color: #34495e;
+            margin-top: 25px;
+        }
+
+        .card {
+            background: white;
+            padding: 30px;
+            border-radius: 12px;
+            box-shadow: 0 6px 12px rgba(0, 0, 0, 0.1);
+            margin-bottom: 30px;
+            border: 1px solid #e1e4e8;
+        }
+
+        .env-var {
+            background: white;
+            padding: 25px;
+            border-radius: 10px;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.08);
+            margin-bottom: 25px;
+            border-left: 5px solid #3498db;
+        }
+
+        .env-var.critical {
+            border-left-color: #e74c3c;
+            background: #fff5f5;
+        }
+
+        .env-var.important {
+            border-left-color: #f39c12;
+            background: #fffbf0;
+        }
+
+        .env-var.optional {
+            border-left-color: #95a5a6;
+            background: #f8f9fa;
+        }
+
+        .env-var.auto {
+            border-left-color: #27ae60;
+            background: #f0fff4;
+        }
+
+        .var-name {
+            font-family: 'Consolas', 'Monaco', monospace;
+            font-size: 1.3em;
+            color: #2c3e50;
+            font-weight: bold;
+            margin-bottom: 10px;
+        }
+
+        .badge {
+            display: inline-block;
+            padding: 5px 12px;
+            border-radius: 20px;
+            font-size: 0.85em;
+            font-weight: bold;
+            margin-left: 10px;
+            text-transform: uppercase;
+        }
+
+        .badge-critical {
+            background: #e74c3c;
+            color: white;
+        }
+
+        .badge-important {
+            background: #f39c12;
+            color: white;
+        }
+
+        .badge-optional {
+            background: #95a5a6;
+            color: white;
+        }
+
+        .badge-auto {
+            background: #27ae60;
+            color: white;
+        }
+
+        .section {
+            margin: 15px 0;
+        }
+
+        .section-title {
+            font-weight: 600;
+            color: #2c3e50;
+            margin-bottom: 8px;
+            font-size: 1.05em;
+        }
+
+        .section-content {
+            color: #555;
+            padding-left: 15px;
+            border-left: 3px solid #e1e4e8;
+            margin-left: 5px;
+        }
+
+        .code-block {
+            background-color: #2d3436;
+            color: #dfe6e9;
+            padding: 15px;
+            border-radius: 8px;
+            font-family: 'Consolas', 'Monaco', monospace;
+            overflow-x: auto;
+            margin: 15px 0;
+            font-size: 14px;
+            line-height: 1.5;
+        }
+
+        .code-inline {
+            background-color: #f4f4f4;
+            padding: 3px 8px;
+            border-radius: 4px;
+            font-family: 'Consolas', 'Monaco', monospace;
+            color: #e74c3c;
+            font-size: 0.95em;
+        }
+
+        .warning-box {
+            background: #fff3cd;
+            border: 2px solid #ffc107;
+            border-radius: 8px;
+            padding: 20px;
+            margin: 20px 0;
+        }
+
+        .success-box {
+            background: #d4edda;
+            border: 2px solid #28a745;
+            border-radius: 8px;
+            padding: 20px;
+            margin: 20px 0;
+        }
+
+        .danger-box {
+            background: #f8d7da;
+            border: 2px solid #dc3545;
+            border-radius: 8px;
+            padding: 20px;
+            margin: 20px 0;
+        }
+
+        .info-box {
+            background: #d1ecf1;
+            border: 2px solid #17a2b8;
+            border-radius: 8px;
+            padding: 20px;
+            margin: 20px 0;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 20px 0;
+        }
+
+        th,
+        td {
+            text-align: left;
+            padding: 14px;
+            border-bottom: 1px solid #ddd;
+        }
+
+        th {
+            background-color: #34495e;
+            color: white;
+            font-weight: 600;
+        }
+
+        tr:hover {
+            background-color: #f8f9fa;
+        }
+
+        .toc {
+            background: #34495e;
+            color: white;
+            padding: 25px;
+            border-radius: 10px;
+            margin-bottom: 30px;
+        }
+
+        .toc a {
+            color: #3498db;
+            text-decoration: none;
+            display: block;
+            padding: 8px 0;
+            transition: all 0.3s;
+        }
+
+        .toc a:hover {
+            color: #5dade2;
+            padding-left: 10px;
+        }
+
+        .migration-step {
+            background: #fff;
+            border: 2px solid #3498db;
+            border-radius: 8px;
+            padding: 20px;
+            margin: 15px 0;
+        }
+
+        .migration-step h4 {
+            color: #2980b9;
+            margin-top: 0;
+        }
+
+        ul.checklist {
+            list-style: none;
+            padding-left: 0;
+        }
+
+        ul.checklist li {
+            padding: 8px 0;
+            padding-left: 30px;
+            position: relative;
+        }
+
+        ul.checklist li:before {
+            content: "☐";
+            position: absolute;
+            left: 0;
+            font-size: 1.3em;
+            color: #3498db;
+        }
+    </style>
+</head>
+
+<body>
+
+    <h1>🚀 Vercel Environment Variables - Complete Deployment Guide</h1>
+
+    <div class="card toc">
+        <h3 style="color: white; margin-top: 0;">📑 Table of Contents</h3>
+        <a href="#critical">1. Critical Variables (Must Have)</a>
+        <a href="#important">2. Important Variables (Highly Recommended)</a>
+        <a href="#optional">3. Optional Variables (Feature-Specific)</a>
+        <a href="#auto">4. Auto-Generated Variables (Vercel Managed)</a>
+        <a href="#migration">5. Migration Guide (New Vercel Account)</a>
+        <a href="#troubleshooting">6. Troubleshooting Common Issues</a>
+    </div>
+
+    <!-- CRITICAL VARIABLES -->
+    <h2 id="critical">🔴 Critical Variables (Application Won't Work Without These)</h2>
+
+    <div class="env-var critical">
+        <div class="var-name">
+            JWT_SECRET
+            <span class="badge badge-critical">CRITICAL</span>
+        </div>
+
+        <div class="section">
+            <div class="section-title">📝 Purpose:</div>
+            <div class="section-content">
+                Secret key used to sign and verify JWT (JSON Web Tokens) for user authentication. This is the backbone
+                of your authentication system.
+            </div>
+        </div>
+
+        <div class="section">
+            <div class="section-title">⚠️ Impact if Missing:</div>
+            <div class="section-content">
+                <strong>SEVERE:</strong> Users cannot stay logged in. After successful login, they will be immediately
+                redirected back to the login page because the server cannot verify their authentication token.
+            </div>
+        </div>
+
+        <div class="section">
+            <div class="section-title">❌ Impact if Wrong Value:</div>
+            <div class="section-content">
+                All existing user sessions become invalid. Users will be logged out and need to login again. Tokens
+                signed with the old secret cannot be verified with the new secret.
+            </div>
+        </div>
+
+        <div class="section">
+            <div class="section-title">✅ How to Set:</div>
+            <div class="section-content">
+                <div class="code-block">
+                    # Generate a secure random value (32+ characters):
+                    node -e "console.log(require('crypto').randomBytes(32).toString('hex'))"
+
+                    # Example output:
+                    0f8ea2f62aec76393597dc8acad695e74273adb405ae9a64122cf6d75d625af
+
+                    # Add to Vercel:
+                    Name: JWT_SECRET
+                    Value: [paste the generated value]
+                    Environments: Production, Preview, Development
+                </div>
+            </div>
+        </div>
+
+        <div class="section">
+            <div class="section-title">🔄 Migration to New Account:</div>
+            <div class="section-content">
+                <strong>Option 1 (Recommended):</strong> Generate a NEW secret for the new deployment. All users will
+                need to login again.<br>
+                <strong>Option 2:</strong> Copy the exact same value from the old account if you want to preserve
+                existing sessions (not recommended for security).
+            </div>
+        </div>
+    </div>
+
+    <div class="env-var critical">
+        <div class="var-name">
+            DATABASE_URL
+            <span class="badge badge-auto">AUTO-SET</span>
+        </div>
+
+        <div class="section">
+            <div class="section-title">📝 Purpose:</div>
+            <div class="section-content">
+                Connection string to your PostgreSQL database. This is where all your data (users, products, orders) is
+                stored.
+            </div>
+        </div>
+
+        <div class="section">
+            <div class="section-title">⚠️ Impact if Missing:</div>
+            <div class="section-content">
+                <strong>FATAL:</strong> Application crashes on startup. Cannot read or write any data. All pages will
+                show errors.
+            </div>
+        </div>
+
+        <div class="section">
+            <div class="section-title">❌ Impact if Wrong Value:</div>
+            <div class="section-content">
+                Database connection fails. Application shows "Cannot connect to database" errors. No data can be
+                accessed.
+            </div>
+        </div>
+
+        <div class="section">
+            <div class="section-title">✅ How to Set:</div>
+            <div class="section-content">
+                <strong>Automatically set by Vercel when you:</strong>
+                <ol>
+                    <li>Go to Storage tab in Vercel project</li>
+                    <li>Create → Postgres Database</li>
+                    <li>Connect to your project</li>
+                </ol>
+                Vercel automatically adds: <code class="code-inline">DATABASE_URL</code>, <code
+                    class="code-inline">POSTGRES_URL</code>, <code class="code-inline">POSTGRES_PRISMA_URL</code>, etc.
+            </div>
+        </div>
+
+        <div class="section">
+            <div class="section-title">🔄 Migration to New Account:</div>
+            <div class="section-content">
+                <strong>You MUST create a new Postgres database in the new Vercel account.</strong> Then either:
+                <ul>
+                    <li><strong>Option 1:</strong> Start fresh (empty database, run migrations)</li>
+                    <li><strong>Option 2:</strong> Migrate data from old database using <code
+                            class="code-inline">pg_dump</code> and <code class="code-inline">pg_restore</code></li>
+                </ul>
+            </div>
+        </div>
+    </div>
+
+    <div class="env-var critical">
+        <div class="var-name">
+            NEXT_PUBLIC_APP_URL
+            <span class="badge badge-critical">CRITICAL</span>
+        </div>
+
+        <div class="section">
+            <div class="section-title">📝 Purpose:</div>
+            <div class="section-content">
+                The public URL of your deployed application. Used for generating absolute URLs in emails, webhooks,
+                OAuth callbacks, and social sharing.
+            </div>
+        </div>
+
+        <div class="section">
+            <div class="section-title">⚠️ Impact if Missing:</div>
+            <div class="section-content">
+                Email verification links break (point to localhost). Webhook callbacks fail. Social sharing shows
+                incorrect URLs. OAuth redirects fail.
+            </div>
+        </div>
+
+        <div class="section">
+            <div class="section-title">❌ Impact if Wrong Value:</div>
+            <div class="section-content">
+                Links in emails redirect to wrong domain. Webhooks sent to wrong URL. Users cannot verify email or reset
+                password.
+            </div>
+        </div>
+
+        <div class="section">
+            <div class="section-title">✅ How to Set:</div>
+            <div class="section-content">
+                <div class="code-block">
+                    # For your current deployment:
+                    Name: NEXT_PUBLIC_APP_URL
+                    Value: https://budolshap-v3-j81ea1fen-jon-galvezs-projects-f5372ed2.vercel.app
+                    Environments: Production
+
+                    # For custom domain (if you have one):
+                    Value: https://budolshap.com
+                </div>
+            </div>
+        </div>
+
+        <div class="section">
+            <div class="section-title">🔄 Migration to New Account:</div>
+            <div class="section-content">
+                <strong>MUST CHANGE:</strong> Update to the new Vercel deployment URL or your custom domain.
+                <div class="code-block">
+                    # New account will have different URL:
+                    https://budolshap-v3-[new-random-id]-[new-username].vercel.app
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- IMPORTANT VARIABLES -->
+    <h2 id="important">🟡 Important Variables (Required for Key Features)</h2>
+
+    <div class="env-var important">
+        <div class="var-name">
+            LALAMOVE_CLIENT_ID
+            <span class="badge badge-important">IMPORTANT</span>
+        </div>
+
+        <div class="section">
+            <div class="section-title">📝 Purpose:</div>
+            <div class="section-content">
+                API client ID for Lalamove delivery service integration. Required for booking deliveries and getting
+                shipping quotes.
+            </div>
+        </div>
+
+        <div class="section">
+            <div class="section-title">⚠️ Impact if Missing:</div>
+            <div class="section-content">
+                Delivery booking fails. "Book Lalamove Delivery" button shows errors. Sellers cannot arrange shipping
+                for orders.
+            </div>
+        </div>
+
+        <div class="section">
+            <div class="section-title">❌ Impact if Wrong Value:</div>
+            <div class="section-content">
+                API authentication fails. Error: "Invalid API credentials". All Lalamove features non-functional.
+            </div>
+        </div>
+
+        <div class="section">
+            <div class="section-title">✅ How to Get:</div>
+            <div class="section-content">
+                <ol>
+                    <li>Register at <a href="https://www.lalamove.com/en-ph/business" target="_blank">Lalamove
+                            Business</a></li>
+                    <li>Login to Lalamove Dashboard</li>
+                    <li>Go to Settings → API Integration</li>
+                    <li>Copy your Client ID</li>
+                </ol>
+                <div class="code-block">
+                    Name: LALAMOVE_CLIENT_ID
+                    Value: [your-client-id-from-lalamove]
+                    Environments: Production, Preview, Development
+                </div>
+            </div>
+        </div>
+
+        <div class="section">
+            <div class="section-title">🔄 Migration to New Account:</div>
+            <div class="section-content">
+                <strong>SAME VALUE:</strong> Use the same Lalamove credentials. The API keys are tied to your Lalamove
+                business account, not Vercel.
+            </div>
+        </div>
+    </div>
+
+    <div class="env-var important">
+        <div class="var-name">
+            LALAMOVE_CLIENT_SECRET
+            <span class="badge badge-important">IMPORTANT</span>
+        </div>
+
+        <div class="section">
+            <div class="section-title">📝 Purpose:</div>
+            <div class="section-content">
+                API secret key for Lalamove. Used together with CLIENT_ID to authenticate API requests.
+            </div>
+        </div>
+
+        <div class="section">
+            <div class="section-title">⚠️ Impact if Missing:</div>
+            <div class="section-content">
+                Same as LALAMOVE_CLIENT_ID - all delivery features fail.
+            </div>
+        </div>
+
+        <div class="section">
+            <div class="section-title">❌ Impact if Wrong Value:</div>
+            <div class="section-content">
+                HMAC signature verification fails. API returns 401 Unauthorized. Cannot book deliveries.
+            </div>
+        </div>
+
+        <div class="section">
+            <div class="section-title">✅ How to Get:</div>
+            <div class="section-content">
+                From the same location as CLIENT_ID in Lalamove Dashboard → Settings → API Integration
+            </div>
+        </div>
+
+        <div class="section">
+            <div class="section-title">🔄 Migration to New Account:</div>
+            <div class="section-content">
+                <strong>SAME VALUE:</strong> Copy from old deployment or get from Lalamove Dashboard.
+            </div>
+        </div>
+    </div>
+
+    <div class="env-var important">
+        <div class="var-name">
+            LALAMOVE_ENV
+            <span class="badge badge-important">IMPORTANT</span>
+        </div>
+
+        <div class="section">
+            <div class="section-title">📝 Purpose:</div>
+            <div class="section-content">
+                Specifies which Lalamove environment to use: <code class="code-inline">sandbox</code> (testing) or <code
+                    class="code-inline">production</code> (real deliveries).
+            </div>
+        </div>
+
+        <div class="section">
+            <div class="section-title">⚠️ Impact if Missing:</div>
+            <div class="section-content">
+                Defaults to <code class="code-inline">sandbox</code>. Not critical but you might be testing when you
+                think you're in production.
+            </div>
+        </div>
+
+        <div class="section">
+            <div class="section-title">❌ Impact if Wrong Value:</div>
+            <div class="section-content">
+                <strong>DANGEROUS:</strong> If set to <code class="code-inline">production</code> in testing, you'll
+                create REAL delivery orders and be charged! If set to <code class="code-inline">sandbox</code> in
+                production, deliveries won't actually happen.
+            </div>
+        </div>
+
+        <div class="section">
+            <div class="section-title">✅ How to Set:</div>
+            <div class="section-content">
+                <div class="code-block">
+                    # For testing/development:
+                    Name: LALAMOVE_ENV
+                    Value: sandbox
+
+                    # For production (real deliveries):
+                    Value: production
+                </div>
+            </div>
+        </div>
+
+        <div class="section">
+            <div class="section-title">🔄 Migration to New Account:</div>
+            <div class="section-content">
+                <strong>DECIDE:</strong> Choose based on whether new deployment is for testing or production use.
+            </div>
+        </div>
+    </div>
+
+    <div class="env-var important">
+        <div class="var-name">
+            PAYMONGO_SECRET_KEY
+            <span class="badge badge-important">IMPORTANT</span>
+        </div>
+
+        <div class="section">
+            <div class="section-title">📝 Purpose:</div>
+            <div class="section-content">
+                Secret API key for PayMongo payment processing. Required for accepting GCash and card payments.
+            </div>
+        </div>
+
+        <div class="section">
+            <div class="section-title">⚠️ Impact if Missing:</div>
+            <div class="section-content">
+                Payment processing fails. Users cannot pay for orders. "Pay with GCash" button shows errors. Revenue
+                stream blocked.
+            </div>
+        </div>
+
+        <div class="section">
+            <div class="section-title">❌ Impact if Wrong Value:</div>
+            <div class="section-content">
+                API authentication fails. Payments rejected. Error: "Invalid API key". No transactions can be processed.
+            </div>
+        </div>
+
+        <div class="section">
+            <div class="section-title">✅ How to Get:</div>
+            <div class="section-content">
+                <ol>
+                    <li>Register at <a href="https://dashboard.paymongo.com/" target="_blank">PayMongo Dashboard</a>
+                    </li>
+                    <li>Complete KYC verification</li>
+                    <li>Go to Developers → API Keys</li>
+                    <li>Copy Secret Key (starts with <code class="code-inline">sk_test_</code> or <code
+                            class="code-inline">sk_live_</code>)</li>
+                </ol>
+                <div class="code-block">
+                    Name: PAYMONGO_SECRET_KEY
+                    Value: sk_test_... (for testing) or sk_live_... (for production)
+                </div>
+            </div>
+        </div>
+
+        <div class="section">
+            <div class="section-title">🔄 Migration to New Account:</div>
+            <div class="section-content">
+                <strong>SAME VALUE:</strong> PayMongo keys are tied to your business account, not Vercel. Use same
+                credentials.
+            </div>
+        </div>
+    </div>
+
+    <div class="env-var important">
+        <div class="var-name">
+            CLOUDINARY_API_KEY & CLOUDINARY_API_SECRET
+            <span class="badge badge-important">IMPORTANT</span>
+        </div>
+
+        <div class="section">
+            <div class="section-title">📝 Purpose:</div>
+            <div class="section-content">
+                Credentials for Cloudinary image hosting service. Used for uploading and storing product images, user
+                avatars, and store logos.
+            </div>
+        </div>
+
+        <div class="section">
+            <div class="section-title">⚠️ Impact if Missing:</div>
+            <div class="section-content">
+                Image uploads fail. Sellers cannot add product photos. Store logo upload broken. Users see default
+                placeholder images.
+            </div>
+        </div>
+
+        <div class="section">
+            <div class="section-title">❌ Impact if Wrong Value:</div>
+            <div class="section-content">
+                Upload API fails with 401 Unauthorized. Images not saved. Product creation fails if images required.
+            </div>
+        </div>
+
+        <div class="section">
+            <div class="section-title">✅ How to Get:</div>
+            <div class="section-content">
+                <ol>
+                    <li>Register at <a href="https://cloudinary.com/" target="_blank">Cloudinary</a></li>
+                    <li>Go to Dashboard</li>
+                    <li>Copy: Cloud Name, API Key, API Secret</li>
+                </ol>
+                <div class="code-block">
+                    Name: NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME
+                    Value: [your-cloud-name]
+
+                    Name: CLOUDINARY_API_KEY
+                    Value: [your-api-key]
+
+                    Name: CLOUDINARY_API_SECRET
+                    Value: [your-api-secret]
+                </div>
+            </div>
+        </div>
+
+        <div class="section">
+            <div class="section-title">🔄 Migration to New Account:</div>
+            <div class="section-content">
+                <strong>SAME VALUE:</strong> Use same Cloudinary account. OR create new Cloudinary account if you want
+                separate image storage.
+            </div>
+        </div>
+    </div>
+
+    <!-- OPTIONAL VARIABLES -->
+    <h2 id="optional">🔵 Optional Variables (Feature Enhancements)</h2>
+
+    <div class="env-var optional">
+        <div class="var-name">
+            SMTP_HOST, SMTP_PORT, SMTP_USER, SMTP_PASS
+            <span class="badge badge-optional">OPTIONAL</span>
+        </div>
+
+        <div class="section">
+            <div class="section-title">📝 Purpose:</div>
+            <div class="section-content">
+                Email server configuration for sending transactional emails (order confirmations, password resets,
+                delivery notifications - Phase 2 feature).
+            </div>
+        </div>
+
+        <div class="section">
+            <div class="section-title">⚠️ Impact if Missing:</div>
+            <div class="section-content">
+                <strong>GRACEFUL DEGRADATION:</strong> Emails are logged to console instead of being sent. Users won't
+                receive email notifications but app still works. Phase 2 delivery failure notifications won't reach
+                users.
+            </div>
+        </div>
+
+        <div class="section">
+            <div class="section-title">❌ Impact if Wrong Value:</div>
+            <div class="section-content">
+                Email sending fails silently. Users don't receive verification emails, password resets, or order
+                notifications. Check server logs for SMTP errors.
+            </div>
+        </div>
+
+        <div class="section">
+            <div class="section-title">✅ How to Set (Gmail Example):</div>
+            <div class="section-content">
+                <div class="code-block">
+                    # Using Gmail:
+                    1. Enable 2-Step Verification in Google Account
+                    2. Generate App Password: Google Account → Security → App Passwords
+                    3. Add to Vercel:
+
+                    SMTP_HOST=smtp.gmail.com
+                    SMTP_PORT=587
+                    SMTP_USER=your-email@gmail.com
+                    SMTP_PASS=[16-character app password]
+                    SMTP_FROM=noreply@budolshap.com
+                </div>
+                <strong>Alternatives:</strong> SendGrid, AWS SES, Mailgun, Postmark
+            </div>
+        </div>
+
+        <div class="section">
+            <div class="section-title">🔄 Migration to New Account:</div>
+            <div class="section-content">
+                <strong>SAME VALUE:</strong> Email credentials are independent of Vercel. Copy same values or use
+                different email service.
+            </div>
+        </div>
+    </div>
+
+    <div class="env-var optional">
+        <div class="var-name">
+            LALAMOVE_WEBHOOK_SECRET
+            <span class="badge badge-optional">OPTIONAL</span>
+        </div>
+
+        <div class="section">
+            <div class="section-title">📝 Purpose:</div>
+            <div class="section-content">
+                Secret for verifying Lalamove webhook signatures. Ensures webhook requests actually come from Lalamove
+                and haven't been tampered with.
+            </div>
+        </div>
+
+        <div class="section">
+            <div class="section-title">⚠️ Impact if Missing:</div>
+            <div class="section-content">
+                <strong>SECURITY RISK:</strong> Webhook signature verification is currently disabled in code (marked
+                "TEMPORARILY DISABLED"). App works but vulnerable to fake webhook attacks. Real-time order updates still
+                work.
+            </div>
+        </div>
+
+        <div class="section">
+            <div class="section-title">❌ Impact if Wrong Value:</div>
+            <div class="section-content">
+                If verification is enabled, all webhooks will be rejected. Order status won't update automatically.
+                Deliveries appear stuck.
+            </div>
+        </div>
+
+        <div class="section">
+            <div class="section-title">✅ How to Get:</div>
+            <div class="section-content">
+                From Lalamove Dashboard → Webhooks → Webhook Secret
+            </div>
+        </div>
+
+        <div class="section">
+            <div class="section-title">🔄 Migration to New Account:</div>
+            <div class="section-content">
+                <strong>SAME VALUE:</strong> Use same Lalamove webhook secret.
+            </div>
+        </div>
+    </div>
+
+    <div class="env-var optional">
+        <div class="var-name">
+            CRON_SECRET
+            <span class="badge badge-optional">OPTIONAL</span>
+        </div>
+
+        <div class="section">
+            <div class="section-title">📝 Purpose:</div>
+            <div class="section-content">
+                Secret for authenticating cron job requests. Used by Phase 2 auto-polling feature (<code
+                    class="code-inline">/api/cron/sync-orders</code>) to prevent unauthorized access.
+            </div>
+        </div>
+
+        <div class="section">
+            <div class="section-title">⚠️ Impact if Missing:</div>
+            <div class="section-content">
+                Cron endpoint is publicly accessible (security risk). Auto-polling still works but anyone can trigger
+                it.
+            </div>
+        </div>
+
+        <div class="section">
+            <div class="section-title">❌ Impact if Wrong Value:</div>
+            <div class="section-content">
+                Vercel Cron Jobs will fail authentication. Auto-sync won't run. Manual sync button still works.
+            </div>
+        </div>
+
+        <div class="section">
+            <div class="section-title">✅ How to Set:</div>
+            <div class="section-content">
+                <div class="code-block">
+                    # Generate random secret:
+                    node -e "console.log(require('crypto').randomBytes(16).toString('hex'))"
+
+                    Name: CRON_SECRET
+                    Value: [generated value]
+                </div>
+            </div>
+        </div>
+
+        <div class="section">
+            <div class="section-title">🔄 Migration to New Account:</div>
+            <div class="section-content">
+                <strong>GENERATE NEW:</strong> Create a new random value for security.
+            </div>
+        </div>
+    </div>
+
+    <!-- AUTO-GENERATED VARIABLES -->
+    <h2 id="auto">🟢 Auto-Generated Variables (Managed by Vercel)</h2>
+
+    <div class="card">
+        <p>These variables are automatically set by Vercel and should NOT be manually configured:</p>
+
+        <table>
+            <thead>
+                <tr>
+                    <th>Variable</th>
+                    <th>Purpose</th>
+                    <th>Migration Notes</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td><code class="code-inline">POSTGRES_URL</code></td>
+                    <td>Direct Postgres connection URL</td>
+                    <td>Auto-set when you create Postgres database in new account</td>
+                </tr>
+                <tr>
+                    <td><code class="code-inline">POSTGRES_PRISMA_URL</code></td>
+                    <td>Prisma-optimized connection (pooled)</td>
+                    <td>Auto-set by Vercel Postgres</td>
+                </tr>
+                <tr>
+                    <td><code class="code-inline">DIRECT_URL</code></td>
+                    <td>Used by Prisma for migrations</td>
+                    <td>Auto-set by Vercel Postgres</td>
+                </tr>
+                <tr>
+                    <td><code class="code-inline">NODE_ENV</code></td>
+                    <td>Set to <code class="code-inline">production</code> in production</td>
+                    <td>Auto-set by Vercel</td>
+                </tr>
+                <tr>
+                    <td><code class="code-inline">VERCEL</code></td>
+                    <td>Set to <code class="code-inline">1</code> when running on Vercel</td>
+                    <td>Auto-set by Vercel</td>
+                </tr>
+                <tr>
+                    <td><code class="code-inline">VERCEL_URL</code></td>
+                    <td>Deployment URL (changes per deployment)</td>
+                    <td>Auto-set by Vercel</td>
+                </tr>
+            </tbody>
+        </table>
+    </div>
+
+    <!-- MIGRATION GUIDE -->
+    <h2 id="migration">🔄 Migration Guide: Deploying to New Vercel Account</h2>
+
+    <div class="card">
+        <h3>Scenario: Moving BudolShap to a Different Vercel Account</h3>
+
+        <div class="migration-step">
+            <h4>Step 1: Prepare New Vercel Account</h4>
+            <ul class="checklist">
+                <li>Create/login to new Vercel account</li>
+                <li>Install Vercel CLI: <code class="code-inline">npm i -g vercel</code></li>
+                <li>Login: <code class="code-inline">vercel login</code></li>
+            </ul>
+        </div>
+
+        <div class="migration-step">
+            <h4>Step 2: Create New Postgres Database</h4>
+            <ul class="checklist">
+                <li>In Vercel dashboard → Storage → Create Database → Postgres</li>
+                <li>Name it (e.g., "budolshap-db")</li>
+                <li>Select region (choose closest to your users)</li>
+                <li>This auto-creates: <code class="code-inline">DATABASE_URL</code>, <code
+                        class="code-inline">POSTGRES_URL</code>, etc.</li>
+            </ul>
+
+            <div class="warning-box">
+                <strong>⚠️ Data Migration Required:</strong> New database is empty. You must either:
+                <ul>
+                    <li><strong>Option A:</strong> Start fresh (run migrations, seed data)</li>
+                    <li><strong>Option B:</strong> Export from old DB and import to new DB</li>
+                </ul>
+            </div>
+        </div>
+
+        <div class="migration-step">
+            <h4>Step 3: Set Environment Variables</h4>
+
+            <h5>Variables That MUST Change:</h5>
+            <table>
+                <thead>
+                    <tr>
+                        <th>Variable</th>
+                        <th>Action</th>
+                        <th>How to Get New Value</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td><code class="code-inline">JWT_SECRET</code></td>
+                        <td>Generate NEW</td>
+                        <td><code
+                                class="code-inline">node -e "console.log(require('crypto').randomBytes(32).toString('hex'))"</code>
+                        </td>
+                    </tr>
+                    <tr>
+                        <td><code class="code-inline">NEXT_PUBLIC_APP_URL</code></td>
+                        <td>Update to new URL</td>
+                        <td>Will be <code
+                                class="code-inline">https://budolshap-v3-[random]-[new-username].vercel.app</code></td>
+                    </tr>
+                    <tr>
+                        <td><code class="code-inline">DATABASE_URL</code></td>
+                        <td>Auto-set</td>
+                        <td>Automatically set when you create Postgres database</td>
+                    </tr>
+                </tbody>
+            </table>
+
+            <h5>Variables That Can Stay Same:</h5>
+            <table>
+                <thead>
+                    <tr>
+                        <th>Variable</th>
+                        <th>Action</th>
+                        <th>Notes</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td><code class="code-inline">LALAMOVE_CLIENT_ID</code></td>
+                        <td>Copy same value</td>
+                        <td>Tied to your Lalamove business account</td>
+                    </tr>
+                    <tr>
+                        <td><code class="code-inline">LALAMOVE_CLIENT_SECRET</code></td>
+                        <td>Copy same value</td>
+                        <td>Tied to your Lalamove business account</td>
+                    </tr>
+                    <tr>
+                        <td><code class="code-inline">LALAMOVE_ENV</code></td>
+                        <td>Copy or decide</td>
+                        <td><code class="code-inline">sandbox</code> for testing, <code
+                                class="code-inline">production</code> for live</td>
+                    </tr>
+                    <tr>
+                        <td><code class="code-inline">PAYMONGO_SECRET_KEY</code></td>
+                        <td>Copy same value</td>
+                        <td>Tied to your PayMongo account</td>
+                    </tr>
+                    <tr>
+                        <td><code class="code-inline">CLOUDINARY_*</code></td>
+                        <td>Copy same value</td>
+                        <td>Tied to your Cloudinary account</td>
+                    </tr>
+                    <tr>
+                        <td><code class="code-inline">SMTP_*</code></td>
+                        <td>Copy same value</td>
+                        <td>Tied to your email provider</td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+
+        <div class="migration-step">
+            <h4>Step 4: Deploy Application</h4>
+            <div class="code-block">
+                # From project directory:
+                vercel
+
+                # Follow prompts:
+                # - Link to existing project? No
+                # - Project name: budolshap-v3
+                # - Directory: ./
+                # - Override settings? No
+
+                # Deploy to production:
+                vercel --prod
+            </div>
+        </div>
+
+        <div class="migration-step">
+            <h4>Step 5: Run Database Migrations</h4>
+            <div class="code-block">
+                # Connect to new database and run migrations:
+                npx prisma migrate deploy
+
+                # Or reset and seed:
+                npx prisma migrate reset --force
+                node scripts/seed-users-prod.js
+            </div>
+        </div>
+
+        <div class="migration-step">
+            <h4>Step 6: Update Webhook URLs</h4>
+            <ul class="checklist">
+                <li>Login to Lalamove Dashboard</li>
+                <li>Update webhook URL to: <code class="code-inline">https://[new-url]/api/webhooks/lalamove</code></li>
+                <li>Login to PayMongo Dashboard</li>
+                <li>Update webhook URL to: <code class="code-inline">https://[new-url]/api/webhooks/paymongo</code></li>
+            </ul>
+        </div>
+
+        <div class="migration-step">
+            <h4>Step 7: Test Everything</h4>
+            <ul class="checklist">
+                <li>Test user registration and login</li>
+                <li>Test product creation with image upload</li>
+                <li>Test order placement</li>
+                <li>Test payment (use test mode first)</li>
+                <li>Test Lalamove delivery booking</li>
+                <li>Test email sending (if configured)</li>
+            </ul>
+        </div>
+    </div>
+
+    <!-- TROUBLESHOOTING -->
+    <h2 id="troubleshooting">🔧 Troubleshooting Common Issues</h2>
+
+    <div class="card">
+        <h3>Issue: "Redirected to login after successful login"</h3>
+        <div class="danger-box">
+            <strong>Cause:</strong> <code class="code-inline">JWT_SECRET</code> is missing or incorrect<br>
+            <strong>Solution:</strong> Add/verify <code class="code-inline">JWT_SECRET</code> in Vercel environment
+            variables, then redeploy
+        </div>
+    </div>
+
+    <div class="card">
+        <h3>Issue: "Cannot connect to database"</h3>
+        <div class="danger-box">
+            <strong>Cause:</strong> <code class="code-inline">DATABASE_URL</code> missing or database not created<br>
+            <strong>Solution:</strong> Create Postgres database in Vercel Storage tab and connect to project
+        </div>
+    </div>
+
+    <div class="card">
+        <h3>Issue: "Lalamove booking fails with 401 Unauthorized"</h3>
+        <div class="danger-box">
+            <strong>Cause:</strong> Wrong <code class="code-inline">LALAMOVE_CLIENT_ID</code> or <code
+                class="code-inline">LALAMOVE_CLIENT_SECRET</code><br>
+            <strong>Solution:</strong> Verify credentials in Lalamove Dashboard → API Integration
+        </div>
+    </div>
+
+    <div class="card">
+        <h3>Issue: "Email verification links point to localhost"</h3>
+        <div class="danger-box">
+            <strong>Cause:</strong> <code class="code-inline">NEXT_PUBLIC_APP_URL</code> not set or set to wrong
+            value<br>
+            <strong>Solution:</strong> Set to your actual Vercel deployment URL or custom domain
+        </div>
+    </div>
+
+    <div class="card">
+        <h3>Issue: "Image upload fails"</h3>
+        <div class="danger-box">
+            <strong>Cause:</strong> Cloudinary credentials missing or incorrect<br>
+            <strong>Solution:</strong> Verify <code class="code-inline">CLOUDINARY_API_KEY</code>, <code
+                class="code-inline">CLOUDINARY_API_SECRET</code>, and <code
+                class="code-inline">NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME</code>
+        </div>
+    </div>
+
+    <div class="card">
+        <h3>Issue: "Emails not being sent"</h3>
+        <div class="warning-box">
+            <strong>Cause:</strong> SMTP not configured or credentials wrong<br>
+            <strong>Solution:</strong> Check server logs. Emails are logged to console if SMTP not configured. Verify
+            SMTP credentials if configured.
+        </div>
+    </div>
+
+    <!-- QUICK REFERENCE -->
+    <h2>📋 Quick Reference Checklist</h2>
+
+    <div class="card">
+        <h3>Minimum Required for Basic Functionality:</h3>
+        <ul class="checklist">
+            <li><code class="code-inline">JWT_SECRET</code> - Authentication</li>
+            <li><code class="code-inline">DATABASE_URL</code> - Data storage (auto-set)</li>
+            <li><code class="code-inline">NEXT_PUBLIC_APP_URL</code> - App URL</li>
+        </ul>
+
+        <h3>Add These for Full E-commerce Features:</h3>
+        <ul class="checklist">
+            <li><code class="code-inline">LALAMOVE_CLIENT_ID</code> - Delivery booking</li>
+            <li><code class="code-inline">LALAMOVE_CLIENT_SECRET</code> - Delivery booking</li>
+            <li><code class="code-inline">LALAMOVE_ENV</code> - Sandbox or production</li>
+            <li><code class="code-inline">PAYMONGO_SECRET_KEY</code> - Payment processing</li>
+            <li><code class="code-inline">CLOUDINARY_API_KEY</code> - Image uploads</li>
+            <li><code class="code-inline">CLOUDINARY_API_SECRET</code> - Image uploads</li>
+            <li><code class="code-inline">NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME</code> - Image uploads</li>
+        </ul>
+
+        <h3>Optional but Recommended:</h3>
+        <ul class="checklist">
+            <li><code class="code-inline">SMTP_*</code> - Email notifications</li>
+            <li><code class="code-inline">LALAMOVE_WEBHOOK_SECRET</code> - Webhook security</li>
+            <li><code class="code-inline">CRON_SECRET</code> - Cron job security</li>
+        </ul>
+    </div>
+
+    <div class="success-box">
+        <h3>✅ Final Checklist Before Going Live:</h3>
+        <ol>
+            <li>All critical variables set (JWT_SECRET, DATABASE_URL, NEXT_PUBLIC_APP_URL)</li>
+            <li>All API credentials verified (Lalamove, PayMongo, Cloudinary)</li>
+            <li>LALAMOVE_ENV set to <code class="code-inline">production</code> (not sandbox)</li>
+            <li>PAYMONGO_SECRET_KEY using <code class="code-inline">sk_live_</code> (not sk_test_)</li>
+            <li>Database migrated and seeded</li>
+            <li>Webhook URLs updated in external services</li>
+            <li>Test all critical flows (login, order, payment, delivery)</li>
+            <li>SMTP configured for production emails</li>
+        </ol>
+    </div>
+
+    <div
+        style="text-align: center; margin-top: 50px; padding: 30px; background: #34495e; color: white; border-radius: 10px;">
+        <h3 style="margin-top: 0;">📚 Documentation Generated</h3>
+        <p>BudolShap V3 - Environment Variables Guide</p>
+        <p>Date: December 12, 2025</p>
+        <p>For questions or issues, refer to Vercel documentation or check server logs</p>
+    </div>
+
+</body>
+
+</html>

@@ -1,0 +1,1287 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>BudolShap Knowledge Base - Complete Documentation</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+            background: #f5f7fa;
+            color: #333;
+            line-height: 1.6;
+        }
+
+        .header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 20px 30px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+            position: sticky;
+            top: 0;
+            z-index: 100;
+        }
+
+        .header h1 {
+            font-size: 1.8em;
+            margin-bottom: 10px;
+        }
+
+        .header p {
+            opacity: 0.9;
+            font-size: 0.95em;
+        }
+
+        .search-container {
+            margin-top: 15px;
+            position: relative;
+        }
+
+        .search-input {
+            width: 100%;
+            padding: 12px 45px 12px 15px;
+            border: none;
+            border-radius: 8px;
+            font-size: 1em;
+            background: rgba(255,255,255,0.2);
+            color: white;
+            backdrop-filter: blur(10px);
+        }
+
+        .search-input::placeholder {
+            color: rgba(255,255,255,0.7);
+        }
+
+        .search-input:focus {
+            outline: none;
+            background: rgba(255,255,255,0.3);
+        }
+
+        .search-icon {
+            position: absolute;
+            right: 15px;
+            top: 50%;
+            transform: translateY(-50%);
+            color: rgba(255,255,255,0.8);
+        }
+
+        .main-container {
+            display: flex;
+            min-height: calc(100vh - 200px);
+        }
+
+        .sidebar {
+            width: 320px;
+            background: white;
+            border-right: 1px solid #e2e8f0;
+            padding: 20px;
+            overflow-y: auto;
+            max-height: calc(100vh - 200px);
+            position: sticky;
+            top: 200px;
+        }
+
+        .sidebar h2 {
+            font-size: 1.1em;
+            color: #2d3748;
+            margin-bottom: 15px;
+            padding-bottom: 8px;
+            border-bottom: 2px solid #667eea;
+        }
+
+        .category {
+            margin-bottom: 25px;
+        }
+
+        .category-title {
+            font-weight: 600;
+            color: #4a5568;
+            font-size: 0.95em;
+            margin-bottom: 10px;
+            padding: 8px 12px;
+            background: #f7fafc;
+            border-radius: 6px;
+            cursor: pointer;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            transition: all 0.2s;
+        }
+
+        .category-title:hover {
+            background: #edf2f7;
+        }
+
+        .category-title.active {
+            background: #e6fffa;
+            color: #667eea;
+        }
+
+        .category-toggle {
+            font-size: 0.8em;
+            transition: transform 0.2s;
+        }
+
+        .category-toggle.collapsed {
+            transform: rotate(-90deg);
+        }
+
+        .doc-list {
+            list-style: none;
+            margin-left: 10px;
+            max-height: 0;
+            overflow: hidden;
+            transition: max-height 0.3s ease;
+        }
+
+        .doc-list.expanded {
+            max-height: 2000px;
+        }
+
+        .doc-item {
+            padding: 8px 12px;
+            margin: 4px 0;
+            border-radius: 6px;
+            cursor: pointer;
+            transition: all 0.2s;
+            font-size: 0.9em;
+            color: #4a5568;
+        }
+
+        .doc-item:hover {
+            background: #edf2f7;
+            color: #667eea;
+        }
+
+        .doc-item.active {
+            background: #667eea;
+            color: white;
+        }
+
+        .content-area {
+            flex: 1;
+            padding: 30px;
+            overflow-y: auto;
+        }
+
+        .content-header {
+            margin-bottom: 25px;
+        }
+
+        .content-header h2 {
+            font-size: 1.8em;
+            color: #2d3748;
+            margin-bottom: 10px;
+        }
+
+        .content-header .meta {
+            color: #718096;
+            font-size: 0.9em;
+        }
+
+        .doc-viewer {
+            background: white;
+            border-radius: 8px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+            padding: 0;
+            min-height: 600px;
+        }
+
+        .doc-viewer iframe {
+            width: 100%;
+            height: calc(100vh - 250px);
+            border: none;
+            border-radius: 8px;
+        }
+
+        .empty-state {
+            text-align: center;
+            padding: 60px 20px;
+            color: #718096;
+        }
+
+        .empty-state svg {
+            width: 120px;
+            height: 120px;
+            margin: 0 auto 20px;
+            opacity: 0.5;
+        }
+
+        .empty-state h3 {
+            font-size: 1.5em;
+            margin-bottom: 10px;
+            color: #4a5568;
+        }
+
+        .stats {
+            display: flex;
+            gap: 20px;
+            margin-top: 15px;
+            flex-wrap: wrap;
+        }
+
+        .stat-item {
+            background: rgba(255,255,255,0.2);
+            padding: 8px 15px;
+            border-radius: 6px;
+            font-size: 0.9em;
+            backdrop-filter: blur(10px);
+        }
+
+        .breadcrumb {
+            margin-bottom: 20px;
+            font-size: 0.9em;
+            color: #718096;
+        }
+
+        .breadcrumb a {
+            color: #667eea;
+            text-decoration: none;
+        }
+
+        .breadcrumb a:hover {
+            text-decoration: underline;
+        }
+
+        @media (max-width: 768px) {
+            .main-container {
+                flex-direction: column;
+            }
+
+            .sidebar {
+                width: 100%;
+                max-height: 300px;
+                position: relative;
+                top: 0;
+            }
+
+            .doc-viewer iframe {
+                height: 500px;
+            }
+        }
+
+        .loading {
+            text-align: center;
+            padding: 40px;
+            color: #718096;
+        }
+
+        .spinner {
+            border: 3px solid #f3f3f3;
+            border-top: 3px solid #667eea;
+            border-radius: 50%;
+            width: 40px;
+            height: 40px;
+            animation: spin 1s linear infinite;
+            margin: 0 auto 20px;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        /* Session Warning Modal Styles */
+        .session-warning-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0, 0, 0, 0.75);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 10000;
+            backdrop-filter: blur(5px);
+        }
+
+        .session-warning-modal {
+            background: white;
+            border-radius: 12px;
+            padding: 30px;
+            max-width: 500px;
+            width: 90%;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+            animation: slideIn 0.3s ease-out;
+        }
+
+        @keyframes slideIn {
+            from {
+                opacity: 0;
+                transform: translateY(-20px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .session-warning-modal h2 {
+            color: #d97706;
+            font-size: 1.5em;
+            margin-bottom: 15px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .session-warning-modal .warning-icon {
+            font-size: 1.8em;
+        }
+
+        .session-warning-modal p {
+            color: #4a5568;
+            margin-bottom: 25px;
+            line-height: 1.6;
+        }
+
+        .session-warning-modal .time-remaining {
+            background: #fef3c7;
+            border: 2px solid #f59e0b;
+            border-radius: 8px;
+            padding: 15px;
+            text-align: center;
+            margin-bottom: 25px;
+        }
+
+        .session-warning-modal .time-remaining .time {
+            font-size: 2em;
+            font-weight: bold;
+            color: #d97706;
+            font-family: 'Courier New', monospace;
+        }
+
+        .session-warning-modal .time-remaining .label {
+            font-size: 0.9em;
+            color: #92400e;
+            margin-top: 5px;
+        }
+
+        .session-warning-modal .button-group {
+            display: flex;
+            gap: 15px;
+        }
+
+        .session-warning-modal button {
+            flex: 1;
+            padding: 12px 24px;
+            border: none;
+            border-radius: 8px;
+            font-size: 1em;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .session-warning-modal .btn-extend {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+        }
+
+        .session-warning-modal .btn-extend:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4);
+        }
+
+        .session-warning-modal .btn-close {
+            background: #e5e7eb;
+            color: #374151;
+        }
+
+        .session-warning-modal .btn-close:hover {
+            background: #d1d5db;
+        }
+
+        /* Password Protection Modal Styles */
+        .password-protection-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0, 0, 0, 0.75);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 10001;
+            backdrop-filter: blur(5px);
+        }
+
+        .password-protection-modal {
+            background: white;
+            border-radius: 12px;
+            padding: 30px;
+            max-width: 450px;
+            width: 90%;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+            animation: slideIn 0.3s ease-out;
+        }
+
+        .password-protection-modal h2 {
+            color: #dc2626;
+            font-size: 1.5em;
+            margin-bottom: 15px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .password-protection-modal .lock-icon {
+            font-size: 1.8em;
+        }
+
+        .password-protection-modal p {
+            color: #4a5568;
+            margin-bottom: 20px;
+            line-height: 1.6;
+        }
+
+        .password-protection-modal input {
+            width: 100%;
+            padding: 12px 15px;
+            border: 2px solid #e2e8f0;
+            border-radius: 8px;
+            font-size: 1em;
+            margin-bottom: 15px;
+            transition: border-color 0.2s;
+        }
+
+        .password-protection-modal input:focus {
+            outline: none;
+            border-color: #667eea;
+        }
+
+        .password-protection-modal .error-message {
+            background: #fef2f2;
+            border: 1px solid #fecaca;
+            color: #dc2626;
+            padding: 10px;
+            border-radius: 6px;
+            margin-bottom: 15px;
+            font-size: 0.9em;
+            display: none;
+        }
+
+        .password-protection-modal .error-message.show {
+            display: block;
+        }
+
+        .password-protection-modal .button-group {
+            display: flex;
+            gap: 15px;
+        }
+
+        .password-protection-modal button {
+            flex: 1;
+            padding: 12px 24px;
+            border: none;
+            border-radius: 8px;
+            font-size: 1em;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .password-protection-modal .btn-submit {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+        }
+
+        .password-protection-modal .btn-submit:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4);
+        }
+
+        .password-protection-modal .btn-cancel {
+            background: #e5e7eb;
+            color: #374151;
+        }
+
+        .password-protection-modal .btn-cancel:hover {
+            background: #d1d5db;
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <h1>📚 BudolShap Knowledge Base</h1>
+        <p>Complete documentation and implementation guides for the BudolShap e-commerce platform</p>
+        <div class="search-container">
+            <input type="text" class="search-input" id="searchInput" placeholder="Search documentation... (e.g., 'migration', 'payment', 'deployment')">
+            <span class="search-icon">🔍</span>
+        </div>
+        <div class="stats">
+            <div class="stat-item">📄 <span id="totalDocs">186</span> Documents</div>
+            <div class="stat-item">📁 <span id="totalCategories">12</span> Categories</div>
+        </div>
+    </div>
+
+    <div class="main-container">
+        <div class="sidebar" id="sidebar">
+            <h2>📂 Documentation Categories</h2>
+            <!-- Categories will be populated by JavaScript -->
+        </div>
+
+        <div class="content-area">
+            <div id="contentViewer">
+                <div class="empty-state">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5"/>
+                    </svg>
+                    <h3>Welcome to BudolShap Knowledge Base</h3>
+                    <p>Select a document from the sidebar to view its content</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Documentation structure
+        const documentation = {
+            'Microservices Migration': {
+                expanded: true,
+                docs: [
+                    { name: 'Complete Migration Plan', path: 'cursor_html/complete-migration-plan.html' },
+                    { name: 'Microservices Migration Plan', path: 'cursor_html/microservices-migration-plan.html' },
+                    { name: 'Phase 1: Modularization', path: 'cursor_html/phase1-migration-report.html' },
+                    { name: 'Phase 2: Realtime Service', path: 'cursor_html/phase2-migration-report.html' },
+                    { name: 'Phase 3: Security Service', path: 'cursor_html/phase3-migration-report.html' },
+                    { name: 'Phase 4: Orders Service', path: 'cursor_html/phase4-migration-report.html' },
+                    { name: 'Phase 5: Shipping Service', path: 'cursor_html/phase5-migration-report.html' },
+                    { name: 'Phase 6: Auth & Cache Service', path: 'cursor_html/phase6-migration-report.html' },
+                    { name: 'SWR + Microservices Guide', path: 'cursor_html/swr-microservices-guide.html' }
+                ]
+            },
+            'Setup & Configuration': {
+                expanded: false,
+                docs: [
+                    { name: 'Knowledge Base Access Guide', path: 'html_docs/KNOWLEDGE_BASE_ACCESS_GUIDE.html' },
+                    { name: 'Knowledge Base Security Implementation', path: 'html_docs/KNOWLEDGE_BASE_SECURITY_IMPLEMENTATION.html', protected: true },
+                    { name: 'Sentry Setup Guide', path: 'cursor_html/sentry-setup-guide.html' },
+                    { name: 'Configure Sentry in BudolShap', path: 'cursor_html/how-to-configure-sentry-in-budolshap.html' },
+                    { name: 'Vercel Sentry Sync', path: 'cursor_html/vercel-sentry-sync-compatibility.html' },
+                    { name: 'Pusher Setup Guide', path: 'cursor_html/pusher-setup-guide.html' },
+                    { name: 'Admin Setup Guide', path: 'html_docs/ADMIN_SETUP_GUIDE.html' },
+                    { name: 'Environment Setup', path: 'html_docs/SETUP_ENV.html' },
+                    { name: 'Local Development Guide', path: 'html_docs/Local_Development_Guide.html' },
+                    { name: 'LAN Access Configuration', path: 'html_docs/LAN_ACCESS_CONFIGURATION_2025_12_14.html' }
+                ]
+            },
+            'Deployment': {
+                expanded: false,
+                docs: [
+                    { name: 'Vercel Deployment Guide (Postgres)', path: 'html_docs/Budolshap_Vercel_Deployment_Guide_With_Postgres.html' },
+                    { name: 'Vercel Deployment Guide (MySQL)', path: 'html_docs/Budolshap_Vercel_Deployment_Guide_With_MySQL.html' },
+                    { name: 'Vercel Deployment Guide (Railway)', path: 'html_docs/Budolshap_Vercel_Deployment_Guide_With_Railway.html' },
+                    { name: 'Vercel Deployment Guide', path: 'html_docs/Vercel_Deployment_Guide.html' },
+                    { name: 'Master Deployment Guide', path: 'html_docs/MASTER_DEVELOPMENT_AND_DEPLOYMENT_GUIDE_2025_12_13.html' },
+                    { name: 'Production Deployment Guide', path: 'html_docs/PRODUCTION_DEPLOYMENT_DOCUMENTATION_GUIDE.html' },
+                    { name: 'Vercel Environment Variables', path: 'html_docs/VERCEL_ENVIRONMENT_VARIABLES_COMPLETE_GUIDE_2025_12_12.html' },
+                    { name: 'Vercel ENV Checklist', path: 'html_docs/VERCEL_ENV_CHECKLIST.html' },
+                    { name: 'Vercel ENV Audit', path: 'html_docs/VERCEL_ENV_AUDIT_2025_12_12.html' },
+                    { name: 'Vercel Deployment Protection', path: 'html_docs/VERCEL_DEPLOYMENT_PROTECTION_GUIDE_2025_12_12.html' },
+                    { name: 'GitHub Push Guide', path: 'html_docs/GITHUB_PUSH_GUIDE.html' }
+                ]
+            },
+            'Database': {
+                expanded: false,
+                docs: [
+                    { name: 'Database Switching Guide', path: 'html_docs/DATABASE_SWITCHING_GUIDE.html' },
+                    { name: 'Postgres Migration Guide', path: 'html_docs/DATABASE_MIGRATION_TO_LOCAL_POSTGRES_GUIDE_2025_12_13.html' },
+                    { name: 'Postgres Migration Plan', path: 'html_docs/DATABASE_MIGRATION_TO_LOCAL_POSTGRES_PLAN_2025_12_13.html' },
+                    { name: 'MySQL Parallel Migration', path: 'html_docs/DATABASE_MIGRATION_TO_MYSQL_PARALLEL_GUIDE_2025_12_13.html' },
+                    { name: 'Database Backup Guide', path: 'html_docs/DATABASE_BACKUP_GUIDE.html' },
+                    { name: 'Database Sync Report', path: 'html_docs/DATABASE_SYNC_AND_INCIDENT_REPORT_2025_12_13.html' },
+                    { name: 'Vercel Postgres Migration', path: 'html_docs/VERCEL_POSTGRES_MIGRATION_GUIDE.html' }
+                ]
+            },
+            'Payment Integration': {
+                expanded: false,
+                docs: [
+                    { name: 'Payment Flow Redesign', path: 'html_docs/PAYMENT_FLOW_REDESIGN.html' },
+                    { name: 'Payment Gateway Agnostic Plan', path: 'html_docs/PAYMENT_GATEWAY_AGNOSTIC_PLAN.html' },
+                    { name: 'GCash Payment Setup', path: 'html_docs/GCASH_PAYMENT_SETUP.html' },
+                    { name: 'GCash Direct Integration', path: 'html_docs/Gcash_budolShap_Direct_Integration.html' },
+                    { name: 'GCash Documentation', path: 'html_docs/gcash-documentation.html' },
+                    { name: 'PayMongo QRPH Maya Grab', path: 'html_docs/PAYMONGO_QRPH_MAYA_GRAB_INTEGRATION_SUMMARY.html' },
+                    { name: 'PayMongo QRPH Implementation', path: 'html_docs/PAYMONGO_QRPH_MAYA_GRAB_IMPLEMENTATION_PLAN.html' },
+                    { name: 'PayMongo Webhook Implementation', path: 'html_docs/PAYMONGO_WEBHOOK_IMPLEMENTATION_PLAN.html' },
+                    { name: 'PayMongo Local Redirect Fix', path: 'html_docs/PAYMONGO_LOCAL_REDIRECT_FIX_PLAN.html' },
+                    { name: 'PayMongo Redirect Issue', path: 'html_docs/PAYMONGO_REDIRECT_ISSUE_SUMMARY.html' },
+                    { name: 'PayMongo GCash Fix', path: 'html_docs/PAYMONGO_GCASH_FIX_GUIDE.html' },
+                    { name: 'Vercel PayMongo Setup', path: 'html_docs/Vercel_PayMongo_Setup_Guide.html' },
+                    { name: 'QRPH Payment Redirect Fix', path: 'html_docs/QRPH_PAYMENT_REDIRECT_FIX_PLAN.html' },
+                    { name: 'Payment Error Handling', path: 'html_docs/payment-error-handling-guide.html' },
+                    { name: 'Testing Payments Without Charge', path: 'html_docs/TESTING_PAYMENTS_WITHOUT_CHARGE.html' },
+                    { name: 'Maya GrabPay Payment Success Modal', path: 'html_docs/ENHANCE_UI_MAYA_GRABPAY_PAYMENT_SUCCESS_MODAL.html' }
+                ]
+            },
+            'Shipping & Delivery': {
+                expanded: false,
+                docs: [
+                    { name: 'Lalamove Complete Documentation', path: 'html_docs/LALAMOVE_COMPLETE_DOCUMENTATION.html' },
+                    { name: 'Lalamove API Setup Guide', path: 'html_docs/LALAMOVE_API_SETUP_GUIDE.html' },
+                    { name: 'Lalamove Integration Doc', path: 'html_docs/LALAMOVE_INTEGRATION_DOC.html' },
+                    { name: 'Lalamove Phase 1 Complete', path: 'html_docs/LALAMOVE_PHASE1_COMPLETE.html' },
+                    { name: 'Lalamove Phase 2 Complete', path: 'html_docs/LALAMOVE_PHASE2_COMPLETE.html' },
+                    { name: 'Lalamove Phase 2 Documentation', path: 'html_docs/LALAMOVE_PHASE2_DOCUMENTATION.html' },
+                    { name: 'Lalamove Phase 3 Complete', path: 'html_docs/LALAMOVE_PHASE3_COMPLETE.html' },
+                    { name: 'Lalamove Phase 3 Processes', path: 'html_docs/LALAMOVE_PHASE3_PROCESSES.html' },
+                    { name: 'Lalamove Phase 4 Complete', path: 'html_docs/LALAMOVE_PHASE4_COMPLETE.html' },
+                    { name: 'Lalamove Phase 4 Processes', path: 'html_docs/LALAMOVE_PHASE4_PROCESSES.html' },
+                    { name: 'Lalamove Phase 5 Complete', path: 'html_docs/LALAMOVE_PHASE5_COMPLETE.html' },
+                    { name: 'Lalamove Phase 5 Final Report', path: 'html_docs/LALAMOVE_PHASE5_FINAL_REPORT.html' },
+                    { name: 'Lalamove Phase 5 Implementation', path: 'html_docs/LALAMOVE_PHASE5_IMPLEMENTATION_GUIDE.html' },
+                    { name: 'Lalamove Booking Implementation', path: 'html_docs/LALAMOVE_BOOKING_IMPLEMENTATION_REPORT.html' },
+                    { name: 'Lalamove Booking Testing', path: 'html_docs/LALAMOVE_BOOKING_TESTING_GUIDE.html' },
+                    { name: 'Lalamove Booking Error Fix', path: 'html_docs/LALAMOVE_BOOKING_ERROR_FIX.html' },
+                    { name: 'Lalamove Deployment Guide', path: 'html_docs/LALAMOVE_DEPLOYMENT_GUIDE.html' },
+                    { name: 'Lalamove Tracking Sync', path: 'html_docs/LALAMOVE_TRACKING_SYNC_2025_12_14.html' },
+                    { name: 'Lalamove Status Sync Fix', path: 'html_docs/LALAMOVE_STATUS_SYNC_FIX_WALKTHROUGH_2025_12_13.html' },
+                    { name: 'Lalamove Status Sync Plan', path: 'html_docs/LALAMOVE_STATUS_SYNC_FIX_PLAN_2025_12_13.html' },
+                    { name: 'Geocoding Lalamove Fixes', path: 'html_docs/geocoding_lalamove_fixes_2025_12_10.html' },
+                    { name: 'Delivery Status System Plan', path: 'html_docs/DELIVERY_STATUS_SYSTEM_PLAN.html' },
+                    { name: 'Canceled Delivery Workflow', path: 'html_docs/CANCELED_DELIVERY_WORKFLOW_PLAN_2025_12_08.html' },
+                    { name: 'Canceled Delivery Phase 1', path: 'html_docs/CANCELED_DELIVERY_PHASE1_COMPLETION_REPORT_2025_12_12.html' },
+                    { name: 'Canceled Delivery Phase 2', path: 'html_docs/CANCELED_DELIVERY_PHASE2_COMPLETION_REPORT_2025_12_12.html' }
+                ]
+            },
+            'Orders & Tracking': {
+                expanded: false,
+                docs: [
+                    { name: 'Order Tracking Complete', path: 'html_docs/ORDER_TRACKING_COMPLETE_DOCUMENTATION_2025_12_08.html' },
+                    { name: 'Order Tracking Implementation', path: 'html_docs/ORDER_TRACKING_IMPLEMENTATION_GUIDE.html' },
+                    { name: 'Order Tracking & Management', path: 'html_docs/ORDER_TRACKING_AND_MANAGEMENT_DOCUMENTATION.html' },
+                    { name: 'Order Tracking UI Design', path: 'html_docs/ORDER_TRACKING_UI_DESIGN.html' },
+                    { name: 'Order Tracking Status', path: 'html_docs/ORDER_TRACKING_IMPLEMENTATION_STATUS.html' },
+                    { name: 'Complete Order Flow Test', path: 'html_docs/COMPLETE_ORDER_FLOW_TEST_GUIDE.html' },
+                    { name: 'Sync Orders Implementation', path: 'html_docs/implementation_plan_sync_orders.html' },
+                    { name: 'Sync Orders Walkthrough', path: 'html_docs/walkthrough_sync_orders.html' },
+                    { name: 'Order Table Complete', path: 'html_docs/ORDER_TABLE_COMPLETE_DOCUMENTATION.html' },
+                    { name: 'Order Table Column Update', path: 'html_docs/ORDER_TABLE_COLUMN_UPDATE.html' },
+                    { name: 'Order Page UI Updates', path: 'html_docs/ORDER_PAGE_UI_UPDATES_DOCUMENTATION.html' },
+                    { name: 'UI Enhancement Order Details', path: 'html_docs/UI_ENHANCEMENT_ORDER_DETAILS_2025_12_14.html' },
+                    { name: 'Orders Pagination Cloudinary', path: 'html_docs/ORDERS_PAGINATION_CLOUDINARY_GUIDE.html' }
+                ]
+            },
+            'Escrow & Payments': {
+                expanded: false,
+                docs: [
+                    { name: 'Complete Escrow Implementation', path: 'html_docs/COMPLETE_ESCROW_IMPLEMENTATION_GUIDE_2025_12_08.html' },
+                    { name: 'Virtual Escrow & Funds Separation', path: 'html_docs/VIRTUAL_ESCROW_AND_FUNDS_SEPARATION_PLAN_2025_12_08.html' },
+                    { name: 'Escrow Phase 1 Implementation', path: 'html_docs/ESCROW_PHASE1_IMPLEMENTATION_DOCUMENTATION_2025_12_08.html' },
+                    { name: 'Escrow Phase 2 Complete', path: 'html_docs/ESCROW_PHASE2_COMPLETE_2025_12_09.html' },
+                    { name: 'Escrow Phase 2 Documentation', path: 'html_docs/ESCROW_PHASE2_COMPLETE_DOCUMENTATION_2025_12_09.html' },
+                    { name: 'Escrow Phase 2 Implementation', path: 'html_docs/ESCROW_PHASE2_IMPLEMENTATION_DOCUMENTATION_2025_12_09.html' },
+                    { name: 'Escrow Phase 2 Production Test', path: 'html_docs/ESCROW_PHASE2_PRODUCTION_TEST_2025_12_09.html' },
+                    { name: 'Escrow Phase 2 Test Results', path: 'html_docs/ESCROW_PHASE2_TEST_RESULTS_2025_12_09.html' },
+                    { name: 'Escrow System Complete', path: 'html_docs/ESCROW_SYSTEM_COMPLETE_DOCUMENTATION_2025_12_09.html' },
+                    { name: 'Escrow System Complete Final', path: 'html_docs/ESCROW_SYSTEM_COMPLETE_FINAL_2025_12_09.html' },
+                    { name: 'Escrow Phase 2 Admin Dashboard', path: 'html_docs/ESCROW_SYSTEM_PHASE2_ADMIN_DASHBOARD_2025_12_09.html' },
+                    { name: 'Escrow Phase 3 Seller Wallet', path: 'html_docs/ESCROW_SYSTEM_PHASE3_SELLER_WALLET_2025_12_09.html' },
+                    { name: 'Escrow Fixes & Enhancements', path: 'html_docs/ESCROW_FIXES_AND_ENHANCEMENTS_2025_12_10.html' },
+                    { name: 'Seller Dashboard Escrow Update', path: 'html_docs/SELLER_DASHBOARD_ESCROW_UPDATE_2025_12_09.html' },
+                    { name: 'Dashboards Escrow Update', path: 'html_docs/DASHBOARDS_ESCROW_UPDATE_2025_12_09.html' }
+                ]
+            },
+            'Security & Authentication': {
+                expanded: false,
+                docs: [
+                    { name: 'Security Enhancement Plan', path: 'html_docs/SECURITY_ENHANCEMENT_PLAN_2025_12_11.html' },
+                    { name: 'Security Phase 1 Implementation', path: 'html_docs/SECURITY_PHASE1_IMPLEMENTATION_2025_12_12.html' },
+                    { name: 'Security Phase 2 Implementation', path: 'html_docs/SECURITY_PHASE2_IMPLEMENTATION_2025_12_12.html' },
+                    { name: 'Security Phase 2 Dynamic Settings', path: 'html_docs/SECURITY_PHASE2_DYNAMIC_SETTINGS_2025_12_12.html' },
+                    { name: 'Security Phase 3 Implementation', path: 'html_docs/SECURITY_PHASE3_IMPLEMENTATION_2025_12_12.html' },
+                    { name: 'Critical Security Fix Admin Auth', path: 'html_docs/CRITICAL_SECURITY_FIX_ADMIN_AUTH_2025_12_12.html' },
+                    { name: 'Session Management & Login Refactor', path: 'html_docs/SESSION_MANAGEMENT_AND_LOGIN_REFACTOR_2025_12_13.html' },
+                    { name: 'Session Timeout UX Plan', path: 'html_docs/SESSION_TIMEOUT_UX_PLAN_2025_12_13.html' },
+                    { name: 'Session Timeout UX Walkthrough', path: 'html_docs/SESSION_TIMEOUT_UX_WALKTHROUGH_2025_12_13.html' },
+                    { name: 'Login UI Refactor', path: 'html_docs/LOGIN_UI_REFACTOR_DOCUMENTATION_2025_12_16.html' },
+                    { name: 'User Deletion Fix', path: 'html_docs/USER_DELETION_FIX_2025_12_12.html' },
+                    { name: 'User Deletion Deployment', path: 'html_docs/USER_DELETION_DEPLOYMENT_2025_12_12.html' }
+                ]
+            },
+            'Realtime & UI': {
+                expanded: false,
+                docs: [
+                    { name: 'Realtime Implementation Plan', path: 'html_docs/REALTIME_IMPLEMENTATION_PLAN_2025_12_14.html' },
+                    { name: 'Realtime Implementation Summary', path: 'html_docs/REALTIME_IMPLEMENTATION_SUMMARY_2025_12_10.html' },
+                    { name: 'Store Creation & Realtime Updates', path: 'html_docs/STORE_CREATION_AND_REALTIME_UPDATES_DOC_2025_12_14.html' },
+                    { name: 'Star Rating Realtime Display', path: 'html_docs/STAR_RATING_REALTIME_DISPLAY_2025_12_14.html' },
+                    { name: 'Navbar Visibility Enhancement', path: 'html_docs/NAVBAR_VISIBILITY_ENHANCEMENT.html' },
+                    { name: 'Navbar Fix Documentation', path: 'html_docs/NAVBAR_FIX_DOCUMENTATION.html' },
+                    { name: 'Privacy Policy Modal', path: 'html_docs/PRIVACY_POLICY_MODAL_IMPLEMENTATION.html' },
+                    { name: 'Admin Sidebar Redesign', path: 'html_docs/ADMIN_SIDEBAR_REDESIGN_2025_12_10.html' },
+                    { name: 'Admin Settings Refactor', path: 'html_docs/ADMIN_SETTINGS_REFACTOR_2025_12_12.html' },
+                    { name: 'UI Improvements Session', path: 'html_docs/UI_IMPROVEMENTS_SESSION_2025_12_03.html' }
+                ]
+            },
+            'Stores & Products': {
+                expanded: false,
+                docs: [
+                    { name: 'Store Geocoding Implementation', path: 'html_docs/STORE_GEOCODING_IMPLEMENTATION.html' },
+                    { name: 'Store Geocoding Summary', path: 'html_docs/STORE_GEOCODING_SUMMARY.html' },
+                    { name: 'Store Address Fix Plan', path: 'html_docs/STORE_ADDRESS_FIX_PLAN.html' },
+                    { name: 'Store Address Implementation', path: 'html_docs/STORE_ADDRESS_IMPLEMENTATION.html' },
+                    { name: 'Multiple Store Addresses Guide', path: 'html_docs/MULTIPLE_STORE_ADDRESSES_GUIDE.html' },
+                    { name: 'Become a Seller Menu', path: 'html_docs/BECOME_A_SELLER_MENU_DOCUMENTATION.html' },
+                    { name: 'Seller Menu Badge Fix', path: 'html_docs/SELLER_MENU_BADGE_FIX_2025_12_08.html' },
+                    { name: 'Seller Navbar & Redirect Fix', path: 'html_docs/SELLER_NAVBAR_AND_REDIRECT_FIX_2025_12_08.html' }
+                ]
+            },
+            'Other Features': {
+                expanded: false,
+                docs: [
+                    { name: 'WYSIWYG Final Implementation', path: 'html_docs/WYSIWYG_FINAL_IMPLEMENTATION.html' },
+                    { name: 'WYSIWYG Testing Guide', path: 'html_docs/WYSIWYG_TESTING_GUIDE.html' },
+                    { name: 'WYSIWYG & Deployment Update', path: 'html_docs/WYSIWYG_AND_DEPLOYMENT_UPDATE.html' },
+                    { name: 'Audit Trail Implementation Plan', path: 'html_docs/AUDIT_TRAIL_IMPLEMENTATION_PLAN_2025_12_12.html' },
+                    { name: 'Audit Trail Final', path: 'html_docs/AUDIT_TRAIL_FINAL_2025_12_12.html' },
+                    { name: 'Audit Trail Phase 1 & 2', path: 'html_docs/AUDIT_TRAIL_PHASE_1_AND_2_2025_12_12.html' },
+                    { name: 'Audit Log City Geolocation', path: 'html_docs/AUDIT_LOG_CITY_GEOLOCATION_PLAN_2025_12_12.html' },
+                    { name: 'Ecommerce Revenue Streams', path: 'html_docs/ECOMMERCE_REVENUE_STREAMS_IMPLEMENTATION_PLAN_2025_12_11.html' },
+                    { name: 'Logout Data Clearing', path: 'html_docs/LOGOUT_DATA_CLEARING_COMPLETE_DOCUMENTATION.html' },
+                    { name: 'Logout Spinner & Admin Fixes', path: 'html_docs/logout_spinner_and_admin_fixes.html' },
+                    { name: 'Rating Modal Fix Session', path: 'html_docs/RATING_MODAL_FIX_SESSION_2025_12_08.html' },
+                    { name: 'Lalamove & Rating Fixes', path: 'html_docs/LALAMOVE_AND_RATING_FIXES_SESSION_2025_12_04.html' }
+                ]
+            }
+        };
+
+        // Initialize the sidebar
+        function initSidebar() {
+            const sidebar = document.getElementById('sidebar');
+            let html = '<h2>📂 Documentation Categories</h2>';
+
+            Object.keys(documentation).forEach((categoryName, index) => {
+                const category = documentation[categoryName];
+                const categoryId = `category-${index}`;
+                const isExpanded = category.expanded ? 'expanded' : '';
+                const toggleClass = category.expanded ? '' : 'collapsed';
+
+                html += `
+                    <div class="category">
+                        <div class="category-title ${category.expanded ? 'active' : ''}" onclick="toggleCategory('${categoryId}')">
+                            <span>${categoryName}</span>
+                            <span class="category-toggle ${toggleClass}">▼</span>
+                        </div>
+                        <ul class="doc-list ${isExpanded}" id="${categoryId}">
+                            ${category.docs.map((doc, docIndex) => `
+                                <li class="doc-item" onclick="loadDocument('${categoryName}', ${docIndex}, '${doc.path}')">
+                                    ${doc.name}
+                                </li>
+                            `).join('')}
+                        </ul>
+                    </div>
+                `;
+            });
+
+            sidebar.innerHTML = html;
+        }
+
+        // Toggle category expansion
+        function toggleCategory(categoryId) {
+            const list = document.getElementById(categoryId);
+            const title = list.previousElementSibling;
+            const toggle = title.querySelector('.category-toggle');
+
+            if (list.classList.contains('expanded')) {
+                list.classList.remove('expanded');
+                toggle.classList.add('collapsed');
+                title.classList.remove('active');
+            } else {
+                list.classList.add('expanded');
+                toggle.classList.remove('collapsed');
+                title.classList.add('active');
+            }
+        }
+
+        // Store token for protected document password validation
+        let protectedDocToken = null;
+
+        // Show password protection modal
+        function showPasswordModal(categoryName, docIndex, docPath, docName) {
+            // Reset token
+            protectedDocToken = null;
+            
+            const overlay = document.createElement('div');
+            overlay.className = 'password-protection-overlay';
+            overlay.id = 'password-protection-modal';
+
+            overlay.innerHTML = `
+                <div class="password-protection-modal">
+                    <h2>
+                        <span class="lock-icon">🔒</span>
+                        Protected Document
+                    </h2>
+                    <p>This document is password-protected. Please request a password via email or enter the password if you have it:</p>
+                    <div class="error-message" id="password-error">Access Denied. Incorrect password.</div>
+                    <div id="email-sent-message" style="display: none; background: #d1fae5; border: 1px solid #10b981; color: #065f46; padding: 10px; border-radius: 6px; margin-bottom: 15px; font-size: 0.9em;">
+                        ✅ Password has been sent to your email. Please check your inbox. The password expires in 10 minutes.
+                    </div>
+                    <input 
+                        type="text" 
+                        id="document-password-input" 
+                        placeholder="Enter password (case-insensitive)"
+                        autofocus
+                        onkeydown="if(event.key === 'Enter') document.getElementById('submit-password-btn').click()"
+                    />
+                    <div class="button-group">
+                        <button class="btn-submit" id="submit-password-btn" onclick="handlePasswordSubmit('${categoryName}', ${docIndex}, '${docPath}', '${docName.replace(/'/g, "\\'")}')">
+                            🔓 Access Document
+                        </button>
+                        <button class="btn-cancel" onclick="closePasswordModal()">
+                            ❌ Cancel
+                        </button>
+                    </div>
+                    <div style="margin-top: 15px; text-align: center;">
+                        <button 
+                            id="request-password-btn" 
+                            onclick="requestDocumentPassword()" 
+                            style="background: transparent; border: 1px solid #667eea; color: #667eea; padding: 8px 16px; border-radius: 6px; cursor: pointer; font-size: 0.9em; transition: all 0.2s;"
+                            onmouseover="this.style.background='#667eea'; this.style.color='white';"
+                            onmouseout="this.style.background='transparent'; this.style.color='#667eea';"
+                        >
+                            📧 Request Password via Email
+                        </button>
+                    </div>
+                </div>
+            `;
+
+            document.body.appendChild(overlay);
+            
+            // Focus input after modal is added
+            setTimeout(() => {
+                const input = document.getElementById('document-password-input');
+                if (input) input.focus();
+            }, 100);
+        }
+
+        // Request document password via email
+        async function requestDocumentPassword() {
+            const btn = document.getElementById('request-password-btn');
+            const emailMsg = document.getElementById('email-sent-message');
+            const originalText = btn.innerHTML;
+            
+            // Disable button and show loading
+            btn.disabled = true;
+            btn.innerHTML = '📧 Sending...';
+            btn.style.opacity = '0.6';
+            btn.style.cursor = 'not-allowed';
+
+            try {
+                const response = await fetch('/api/knowledge-base/auth', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({ action: 'request-doc-password' }),
+                });
+
+                const data = await response.json();
+
+                if (response.ok) {
+                    // Store token for validation
+                    protectedDocToken = data.token;
+                    
+                    // Show success message
+                    emailMsg.style.display = 'block';
+                    btn.innerHTML = '✅ Password Sent';
+                    setTimeout(() => {
+                        btn.innerHTML = originalText;
+                        btn.disabled = false;
+                        btn.style.opacity = '1';
+                        btn.style.cursor = 'pointer';
+                    }, 3000);
+                } else {
+                    alert(data.error || 'Failed to send password. Please try again.');
+                    btn.innerHTML = originalText;
+                    btn.disabled = false;
+                    btn.style.opacity = '1';
+                    btn.style.cursor = 'pointer';
+                }
+            } catch (error) {
+                alert('Failed to request password. Please check your connection.');
+                btn.innerHTML = originalText;
+                btn.disabled = false;
+                btn.style.opacity = '1';
+                btn.style.cursor = 'pointer';
+            }
+        }
+
+        // Handle password submission
+        async function handlePasswordSubmit(categoryName, docIndex, docPath, docName) {
+            const input = document.getElementById('document-password-input');
+            const errorMsg = document.getElementById('password-error');
+            const password = input.value.trim();
+
+            if (!password) {
+                errorMsg.textContent = 'Please enter a password.';
+                errorMsg.classList.add('show');
+                return;
+            }
+
+            if (!protectedDocToken) {
+                errorMsg.textContent = 'Please request a password via email first.';
+                errorMsg.classList.add('show');
+                return;
+            }
+
+            // Disable submit button
+            const submitBtn = document.getElementById('submit-password-btn');
+            submitBtn.disabled = true;
+            submitBtn.innerHTML = 'Validating...';
+
+            try {
+                const response = await fetch('/api/knowledge-base/auth', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        action: 'validate-doc-password',
+                        token: protectedDocToken,
+                        password: password,
+                    }),
+                });
+
+                const data = await response.json();
+
+                if (response.ok && data.valid) {
+                    // Password is correct - load document
+                    closePasswordModal();
+                    loadDocumentContent(categoryName, docIndex, docPath, docName);
+                } else {
+                    // Password is incorrect
+                    if (data.remainingAttempts !== undefined) {
+                        errorMsg.textContent = `${data.error} ${data.remainingAttempts} attempt(s) remaining.`;
+                    } else {
+                        errorMsg.textContent = data.error || 'Access Denied. Incorrect password.';
+                    }
+                    errorMsg.classList.add('show');
+                    input.value = '';
+                    input.focus();
+                    
+                    // Reset token if max attempts or expired
+                    if (response.status === 429 || response.status === 400) {
+                        protectedDocToken = null;
+                    }
+                }
+            } catch (error) {
+                errorMsg.textContent = 'Failed to validate password. Please try again.';
+                errorMsg.classList.add('show');
+            } finally {
+                submitBtn.disabled = false;
+                submitBtn.innerHTML = '🔓 Access Document';
+            }
+        }
+
+        // Close password modal
+        function closePasswordModal() {
+            const modal = document.getElementById('password-protection-modal');
+            if (modal) {
+                modal.remove();
+            }
+        }
+
+        // Load document content (after password verification)
+        function loadDocumentContent(categoryName, docIndex, docPath, docName) {
+            const viewer = document.getElementById('contentViewer');
+
+            // Show loading state
+            viewer.innerHTML = `
+                <div class="loading">
+                    <div class="spinner"></div>
+                    <p>Loading document...</p>
+                </div>
+            `;
+
+            // Load document in iframe
+            setTimeout(() => {
+                viewer.innerHTML = `
+                    <div class="content-header">
+                        <div class="breadcrumb">
+                            <a href="#" onclick="resetViewer(); return false;">Knowledge Base</a> / 
+                            ${categoryName} / ${docName}
+                        </div>
+                        <h2>${docName}</h2>
+                        <div class="meta">Category: ${categoryName} | Path: ${docPath}</div>
+                    </div>
+                    <div class="doc-viewer">
+                        <iframe src="${docPath}" onload="this.style.opacity = 1"></iframe>
+                    </div>
+                `;
+            }, 300);
+        }
+
+        // Load document into viewer
+        function loadDocument(categoryName, docIndex, docPath) {
+            const viewer = document.getElementById('contentViewer');
+            const doc = documentation[categoryName].docs[docIndex];
+
+            // Update active state
+            document.querySelectorAll('.doc-item').forEach(item => {
+                item.classList.remove('active');
+            });
+            event.target.classList.add('active');
+
+            // Check if document is protected
+            if (doc.protected) {
+                showPasswordModal(categoryName, docIndex, docPath, doc.name);
+                return;
+            }
+
+            // Load non-protected document normally
+            loadDocumentContent(categoryName, docIndex, docPath, doc.name);
+        }
+
+        // Reset viewer to empty state
+        function resetViewer() {
+            document.getElementById('contentViewer').innerHTML = `
+                <div class="empty-state">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5"/>
+                    </svg>
+                    <h3>Welcome to BudolShap Knowledge Base</h3>
+                    <p>Select a document from the sidebar to view its content</p>
+                </div>
+            `;
+            document.querySelectorAll('.doc-item').forEach(item => {
+                item.classList.remove('active');
+            });
+        }
+
+        // Search functionality
+        function setupSearch() {
+            const searchInput = document.getElementById('searchInput');
+            searchInput.addEventListener('input', (e) => {
+                const query = e.target.value.toLowerCase().trim();
+                
+                if (query === '') {
+                    // Reset to default view
+                    document.querySelectorAll('.category').forEach(cat => {
+                        cat.style.display = 'block';
+                    });
+                    document.querySelectorAll('.doc-item').forEach(item => {
+                        item.style.display = 'block';
+                    });
+                    return;
+                }
+
+                // Search through all documents
+                let hasResults = false;
+                Object.keys(documentation).forEach((categoryName, catIndex) => {
+                    const category = documentation[categoryName];
+                    const categoryEl = document.querySelectorAll('.category')[catIndex];
+                    let categoryHasResults = false;
+
+                    category.docs.forEach((doc, docIndex) => {
+                        const docItem = categoryEl.querySelectorAll('.doc-item')[docIndex];
+                        const docName = doc.name.toLowerCase();
+                        const docPath = doc.path.toLowerCase();
+
+                        if (docName.includes(query) || docPath.includes(query)) {
+                            docItem.style.display = 'block';
+                            categoryHasResults = true;
+                            hasResults = true;
+                        } else {
+                            docItem.style.display = 'none';
+                        }
+                    });
+
+                    // Show/hide category based on results
+                    if (categoryHasResults) {
+                        categoryEl.style.display = 'block';
+                        // Expand category if it has results
+                        const list = categoryEl.querySelector('.doc-list');
+                        const title = categoryEl.querySelector('.category-title');
+                        if (!list.classList.contains('expanded')) {
+                            list.classList.add('expanded');
+                            title.querySelector('.category-toggle').classList.remove('collapsed');
+                            title.classList.add('active');
+                        }
+                    } else {
+                        categoryEl.style.display = 'none';
+                    }
+                });
+
+                // Update stats
+                if (!hasResults) {
+                    // Could show "No results" message
+                }
+            });
+        }
+
+        // Calculate total documents
+        function updateStats() {
+            let totalDocs = 0;
+            Object.keys(documentation).forEach(categoryName => {
+                totalDocs += documentation[categoryName].docs.length;
+            });
+            document.getElementById('totalDocs').textContent = totalDocs;
+            document.getElementById('totalCategories').textContent = Object.keys(documentation).length;
+        }
+
+        // Session expiration warning system
+        let sessionCheckInterval = null;
+        let warningShown = false;
+
+        function checkSessionExpiration() {
+            const expiresAt = localStorage.getItem('kb_session_expires');
+            if (!expiresAt) {
+                return; // No session found
+            }
+
+            const now = Date.now();
+            const expirationTime = parseInt(expiresAt);
+            const timeRemaining = expirationTime - now;
+
+            // Check if session has expired
+            if (timeRemaining <= 0) {
+                clearInterval(sessionCheckInterval);
+                endSession('Session expired');
+                return;
+            }
+
+            // Show warning when 2 minutes remaining (2 * 60 * 1000 = 120000 ms)
+            const twoMinutesInMs = 2 * 60 * 1000;
+            if (timeRemaining <= twoMinutesInMs && !warningShown) {
+                showSessionWarning(timeRemaining);
+                warningShown = true;
+            }
+        }
+
+        function formatTimeRemaining(ms) {
+            const minutes = Math.floor(ms / 60000);
+            const seconds = Math.floor((ms % 60000) / 1000);
+            return `${minutes}:${seconds.toString().padStart(2, '0')}`;
+        }
+
+        function showSessionWarning(timeRemaining) {
+            // Remove existing warning if any
+            const existingWarning = document.getElementById('session-warning-modal');
+            if (existingWarning) {
+                existingWarning.remove();
+            }
+
+            const overlay = document.createElement('div');
+            overlay.className = 'session-warning-overlay';
+            overlay.id = 'session-warning-modal';
+
+            const timeDisplay = formatTimeRemaining(timeRemaining);
+
+            overlay.innerHTML = `
+                <div class="session-warning-modal">
+                    <h2>
+                        <span class="warning-icon">⚠️</span>
+                        Session Expiring Soon
+                    </h2>
+                    <p>Your knowledge base session will expire in <strong>2 minutes</strong>. Please choose an action:</p>
+                    <div class="time-remaining">
+                        <div class="time">${timeDisplay}</div>
+                        <div class="label">Time remaining</div>
+                    </div>
+                    <div class="button-group">
+                        <button class="btn-extend" onclick="extendSession()">
+                            🔄 Extend Session
+                        </button>
+                        <button class="btn-close" onclick="endSession('User closed session')">
+                            ❌ Close & End Session
+                        </button>
+                    </div>
+                </div>
+            `;
+
+            document.body.appendChild(overlay);
+
+            // Update countdown every second
+            let remaining = timeRemaining;
+            const countdownInterval = setInterval(() => {
+                remaining -= 1000;
+                if (remaining <= 0) {
+                    clearInterval(countdownInterval);
+                    endSession('Session expired');
+                } else {
+                    const timeElement = overlay.querySelector('.time');
+                    if (timeElement) {
+                        timeElement.textContent = formatTimeRemaining(remaining);
+                    }
+                }
+            }, 1000);
+        }
+
+        function extendSession() {
+            // Set flag for main app to auto-show password modal
+            localStorage.setItem('kb_extend_requested', 'true');
+            
+            // Try to open main application (remove /documentation/knowledge-base.html to get base URL)
+            const currentUrl = window.location.href;
+            const baseUrl = currentUrl.substring(0, currentUrl.lastIndexOf('/documentation'));
+            
+            // Open main app in new tab
+            const mainAppWindow = window.open(baseUrl, '_blank');
+            
+            // Remove warning modal temporarily (it will come back if session expires)
+            const warning = document.getElementById('session-warning-modal');
+            if (warning) {
+                warning.remove();
+                warningShown = false; // Allow warning to show again if needed
+            }
+            
+            // Show message
+            alert('Main application opened in a new tab. Please use Ctrl+Shift+K or the password modal will appear automatically to request a new access code and extend your session.');
+        }
+
+        function endSession(reason) {
+            // Clear session data
+            localStorage.removeItem('kb_session_expires');
+            localStorage.removeItem('kb_session_start');
+            
+            // Clear interval
+            if (sessionCheckInterval) {
+                clearInterval(sessionCheckInterval);
+            }
+
+            // Remove warning modal if exists
+            const warning = document.getElementById('session-warning-modal');
+            if (warning) {
+                warning.remove();
+            }
+
+            // Show message and close
+            alert(reason === 'Session expired' ? 'Your session has expired. Please authenticate again to continue.' : 'Session ended.');
+            window.close();
+        }
+
+        // Make functions globally available
+        window.extendSession = extendSession;
+        window.endSession = endSession;
+
+        // Initialize on page load
+        document.addEventListener('DOMContentLoaded', () => {
+            initSidebar();
+            setupSearch();
+            updateStats();
+            
+            // Start checking session expiration every 5 seconds
+            sessionCheckInterval = setInterval(checkSessionExpiration, 5000);
+            checkSessionExpiration(); // Check immediately
+        });
+
+        // Make functions globally available
+        window.toggleCategory = toggleCategory;
+        window.loadDocument = loadDocument;
+        window.resetViewer = resetViewer;
+        window.handlePasswordSubmit = handlePasswordSubmit;
+        window.closePasswordModal = closePasswordModal;
+        window.requestDocumentPassword = requestDocumentPassword;
+    </script>
+</body>
+</html>

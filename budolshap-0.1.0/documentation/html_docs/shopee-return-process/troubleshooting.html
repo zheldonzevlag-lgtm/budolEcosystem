@@ -1,0 +1,188 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Troubleshooting - Shopee Return Process</title>
+    <style>
+        :root {
+            --primary: #ee4d2d;
+            --primary-dark: #d73211;
+            --bg: #f5f5f5;
+            --card-bg: #ffffff;
+            --text: #333333;
+            --border: #e8e8e8;
+            --code-bg: #2d2d2d;
+            --code-text: #f8f8f2;
+            --warning: #ffc107;
+            --error: #dc3545;
+        }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            line-height: 1.6;
+            color: var(--text);
+            background-color: var(--bg);
+            margin: 0;
+            padding: 0;
+        }
+        .container {
+            max-width: 900px;
+            margin: 40px auto;
+            padding: 20px;
+        }
+        nav {
+            margin-bottom: 20px;
+        }
+        nav a {
+            color: var(--primary);
+            text-decoration: none;
+            font-weight: bold;
+        }
+        .card {
+            background: var(--card-bg);
+            padding: 30px;
+            border-radius: 8px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.05);
+            margin-bottom: 20px;
+        }
+        h1 {
+            color: var(--primary);
+            margin-top: 0;
+        }
+        h2 {
+            color: var(--primary-dark);
+            border-bottom: 1px solid var(--border);
+            padding-bottom: 10px;
+            margin-top: 30px;
+        }
+        .issue {
+            margin-bottom: 30px;
+            padding: 15px;
+            border-left: 4px solid var(--primary);
+            background: #fffcfb;
+        }
+        .issue-title {
+            font-weight: bold;
+            font-size: 1.1rem;
+            color: var(--primary-dark);
+            margin-bottom: 10px;
+        }
+        .resolution {
+            background: #f8f9fa;
+            padding: 15px;
+            border-radius: 4px;
+            margin-top: 10px;
+        }
+        pre {
+            background: var(--code-bg);
+            color: var(--code-text);
+            padding: 15px;
+            border-radius: 4px;
+            overflow-x: auto;
+        }
+        code {
+            font-family: "SFMono-Regular", Consolas, "Liberation Mono", Menlo, monospace;
+        }
+        .tag {
+            display: inline-block;
+            padding: 2px 8px;
+            border-radius: 4px;
+            font-size: 0.8rem;
+            font-weight: bold;
+            text-transform: uppercase;
+            margin-bottom: 10px;
+        }
+        .tag-database { background: #e3f2fd; color: #1976d2; }
+        .tag-api { background: #f3e5f5; color: #7b1fa2; }
+        .tag-lalamove { background: #fff8e1; color: #ffa000; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <nav>
+            <a href="index.html">← Back to Overview</a>
+        </nav>
+
+        <div class="card">
+            <h1>Troubleshooting Guide</h1>
+            <p>Common issues encountered during the implementation of the Shopee-style return process and their resolutions.</p>
+
+            <div class="issue">
+                <span class="tag tag-database">Database</span>
+                <div class="issue-title">1. Prisma Enum Mismatch (BOOKING_REQUESTED)</div>
+                <p>The <code>ReturnStatus</code> enum was updated in <code>schema.prisma</code> but the Prisma Client or the database itself was not in sync, causing validation errors during updates.</p>
+                <div class="resolution">
+                    <strong>Resolution:</strong>
+                    <ol>
+                        <li>Ensure all schema files (<code>schema.prisma</code>, <code>schema.local.prisma</code>, <code>schema.mysql.prisma</code>) are synchronized.</li>
+                        <li>Run <code>npx prisma db push</code> to update the database schema.</li>
+                        <li>Run <code>npx prisma generate</code> to update the client.</li>
+                    </ol>
+                    <p><em>Note: If <code>prisma generate</code> fails with EPERM, stop the development server and try again.</em></p>
+                    <div class="issue">
+                <span class="tag tag-lalamove">Lalamove</span>
+                <div class="issue-title">5. Courier Cancellation (Re-booking)</div>
+                <p>If Lalamove cancels a return booking (e.g., no rider found), the return status must revert to a state where the seller can book again.</p>
+                <div class="resolution">
+                    <strong>Resolution:</strong>
+                    <p>The webhook handler in <code>route.js</code> has been updated to revert <code>CANCELLED</code> return bookings to <code>BOOKING_REQUESTED</code> instead of <code>APPROVED</code>. This ensures the "Book Courier" button reappears on the Seller's Return Management page.</p>
+                </div>
+            </div>
+
+            <div class="issue">
+                <span class="tag tag-lalamove">Lalamove</span>
+                <div class="issue-title">6. New Tracking Number Assigned</div>
+                <p>Sometimes Lalamove assigns a new internal order ID or tracking number after a re-booking or driver reassignment.</p>
+                <div class="resolution">
+                    <strong>Resolution:</strong>
+                    <p>The webhook handler now captures <code>incomingLalamoveOrderId</code> from every event. If it detects a mismatch with the stored <code>trackingNumber</code>, it automatically updates the database to ensure tracking links and waybills remain valid.</p>
+                </div>
+            </div>
+        </div>
+            </div>
+
+            <div class="issue">
+                <span class="tag tag-lalamove">Lalamove</span>
+                <div class="issue-title">2. Failed to book return pickup</div>
+                <p>When the buyer clicks "Request Pickup", the status changes to <code>BOOKING_REQUESTED</code>, but the seller sees an error when clicking "Book Courier".</p>
+                <div class="resolution">
+                    <strong>Resolution:</strong>
+                    <ol>
+                        <li>Check if the <code>LALAMOVE_CLIENT_ID</code> and <code>SECRET</code> are correctly set in <code>.env</code>.</li>
+                        <li>Ensure the Store's pickup address and Buyer's delivery address are within Lalamove's supported regions.</li>
+                        <li>Verify the Lalamove balance (for production) or use the Sandbox environment.</li>
+                    </ol>
+                </div>
+            </div>
+
+            <div class="issue">
+                <span class="tag tag-api">API</span>
+                <div class="issue-title">3. Escrow funds not releasing</div>
+                <p>The return is marked as <code>RECEIVED</code> but the <code>lockedBalance</code> in the Store Wallet is not moving.</p>
+                <div class="resolution">
+                    <strong>Resolution:</strong>
+                    <p>The refund only processes when the seller explicitly clicks "Receive" in the Return Management portal. This triggers <code>receiveReturn()</code> which handles the final escrow transfer.</p>
+                    <pre><code>// Ensure this function is called:
+await refundFromLocked({
+    walletId: store.wallet.id,
+    amount: returnRequest.refundAmount,
+    description: `Refund for Return #${returnRequest.id}`
+});</code></pre>
+                </div>
+            </div>
+
+            <div class="issue">
+                <span class="tag tag-api">API</span>
+                <div class="issue-title">4. Webhook status not updating Return</div>
+                <p>Lalamove delivery is completed but the Return status remains <code>SHIPPED</code>.</p>
+                <div class="resolution">
+                    <strong>Resolution:</strong>
+                    <p>Check the <code>isReturnBooking</code> logic in <code>app/api/shipping/lalamove/webhook/route.js</code>. It relies on metadata being passed during booking:</p>
+                    <pre><code>const isReturnBooking = (data.metadata?.type === 'return') || 
+                       (activeReturn && activeReturn.trackingNumber === lalamoveOrderId);</code></pre>
+                </div>
+            </div>
+        </div>
+    </div>
+</body>
+</html>

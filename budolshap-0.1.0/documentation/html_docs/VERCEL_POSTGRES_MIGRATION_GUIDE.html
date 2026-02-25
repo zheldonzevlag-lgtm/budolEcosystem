@@ -1,0 +1,164 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Vercel Postgres Migration Guide</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+        }
+
+        pre {
+            background-color: #1e293b;
+            color: #e2e8f0;
+            padding: 1rem;
+            border-radius: 0.5rem;
+            overflow-x: auto;
+        }
+
+        code {
+            font-family: 'Courier New', Courier, monospace;
+        }
+
+        .step-number {
+            background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);
+            color: white;
+            width: 2.5rem;
+            height: 2.5rem;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 9999px;
+            font-weight: bold;
+            font-size: 1.25rem;
+            box-shadow: 0 4px 6px -1px rgba(59, 130, 246, 0.5);
+        }
+    </style>
+</head>
+
+<body class="bg-slate-50 text-slate-900 leading-relaxed">
+
+    <div class="max-w-4xl mx-auto px-6 py-12">
+
+        <header class="mb-12 text-center">
+            <div class="inline-block p-3 bg-blue-100 rounded-full mb-4">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-10 w-10 text-blue-600" fill="none" viewBox="0 0 24 24"
+                    stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                        d="M4 7v10c0 2.21 3.582 4 8 4s8-1.79 8-4V7M4 7c0 2.21 3.582 4 8 4s8-1.79 8-4M4 7c0-2.21 3.582-4 8-4s8 1.79 8 4m0 5c0 2.21-3.582 4-8 4s-8-1.79-8-4" />
+                </svg>
+            </div>
+            <p class="mb-4 text-slate-600">We need the Vercel CLI to connect your local environment to the cloud
+                database.</p>
+            <pre><code class="language-bash">npm install -g vercel</code></pre>
+            </section>
+
+            <!-- Step 2 -->
+            <section class="mb-10 bg-white p-8 rounded-2xl shadow-sm border border-slate-200">
+                <div class="flex items-center gap-4 mb-6">
+                    <div class="step-number">2</div>
+                    <h2 class="text-2xl font-bold text-slate-800">Link Your Project</h2>
+                </div>
+                <p class="mb-4 text-slate-600">Run the following command in your project root
+                    (`c:\wamp64\www\budolshap`) to
+                    link it to your Vercel project.</p>
+                <pre><code class="language-bash">vercel link</code></pre>
+                <div class="mt-4 bg-slate-50 p-4 rounded-lg text-sm text-slate-600 border border-slate-200">
+                    <p class="font-semibold mb-2">Follow the prompts:</p>
+                    <ul class="list-disc list-inside space-y-1">
+                        <li>Log in to Vercel (if asked).</li>
+                        <li>Set up "c:\wamp64\www\budolshap"? <strong>Y</strong></li>
+                        <li>Which scope? (Select your account)</li>
+                        <li>Link to existing project? <strong>Y</strong></li>
+                        <li>What's the name? (Enter <strong>budolshap</strong> or whatever you named it in Vercel)</li>
+                    </ul>
+                </div>
+            </section>
+
+            <!-- Step 3 -->
+            <section class="mb-10 bg-white p-8 rounded-2xl shadow-sm border border-slate-200">
+                <div class="flex items-center gap-4 mb-6">
+                    <div class="step-number">3</div>
+                    <h2 class="text-2xl font-bold text-slate-800">Pull Environment Variables</h2>
+                </div>
+                <p class="mb-4 text-slate-600">This downloads the database connection strings (`POSTGRES_PRISMA_URL`,
+                    etc.)
+                    from Vercel to a local file.</p>
+                <pre><code class="language-bash">vercel env pull .env.local</code></pre>
+                <p class="mt-2 text-sm text-slate-500">This creates a `.env.local` file with your production database
+                    credentials.</p>
+            </section>
+
+            <!-- Step 4 -->
+            <section class="mb-10 bg-white p-8 rounded-2xl shadow-sm border border-slate-200">
+                <div class="flex items-center gap-4 mb-6">
+                    <div class="step-number">4</div>
+                    <h2 class="text-2xl font-bold text-slate-800">Generate & Apply Migration</h2>
+                </div>
+                <p class="mb-4 text-slate-600">Now we will generate the SQL migration file based on your updated schema
+                    and
+                    apply it to the Vercel Postgres database.</p>
+
+                <div class="bg-blue-50 border-l-4 border-blue-500 p-4 mb-4">
+                    <p class="text-sm text-blue-700">
+                        <strong>Note:</strong> We use `dotenv -e .env.local` to force Prisma to use the Vercel DB
+                        credentials we just downloaded, instead of your local `.env` file.
+                    </p>
+                </div>
+
+                <pre><code class="language-bash">npx dotenv -e .env.local -- npx prisma migrate dev --name init_postgres</code></pre>
+
+                <div class="mt-4 space-y-2 text-sm text-slate-600">
+                    <p><strong>What this does:</strong></p>
+                    <ul class="list-disc list-inside ml-2">
+                        <li>Connects to your Vercel Postgres database.</li>
+                        <li>Creates a `migrations/` folder in your project.</li>
+                        <li>Generates the SQL to create all your tables (User, Product, Order, etc.).</li>
+                        <li>Applies the SQL to the Vercel database immediately.</li>
+                        <li>Generates the Prisma Client.</li>
+                    </ul>
+                </div>
+            </section>
+
+            <!-- Step 5 -->
+            <section class="mb-10 bg-white p-8 rounded-2xl shadow-sm border border-slate-200">
+                <div class="flex items-center gap-4 mb-6">
+                    <div class="step-number">5</div>
+                    <h2 class="text-2xl font-bold text-slate-800">Push Changes</h2>
+                </div>
+                <p class="mb-4 text-slate-600">The migration files (`migrations/*.sql`) are now part of your codebase.
+                    You
+                    must commit them to GitHub so Vercel knows about the database structure.</p>
+                <pre><code class="language-bash">git add .
+git commit -m "Add postgres migrations"
+git push origin main</code></pre>
+            </section>
+
+            <!-- Step 6 -->
+            <section class="mb-10 bg-white p-8 rounded-2xl shadow-sm border border-slate-200">
+                <div class="flex items-center gap-4 mb-6">
+                    <div class="step-number">6</div>
+                    <h2 class="text-2xl font-bold text-slate-800">Verify Deployment</h2>
+                </div>
+                <p class="mb-4 text-slate-600">Go to your Vercel Dashboard. The new deployment should trigger
+                    automatically.
+                    Once finished:</p>
+                <ol class="list-decimal list-inside space-y-2 text-slate-700 ml-2">
+                    <li>Open your live app URL.</li>
+                    <li>Since the DB is empty, you need to create a new account.</li>
+                    <li>To make yourself an admin, you can use <strong>Prisma Studio</strong> connected to the remote
+                        DB:
+                    </li>
+                </ol>
+                <pre class="mt-4"><code class="language-bash">npx dotenv -e .env.local -- npx prisma studio</code></pre>
+            </section>
+
+    </div>
+
+</body>
+
+</html>

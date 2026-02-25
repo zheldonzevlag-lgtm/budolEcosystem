@@ -1,0 +1,1555 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Complete Microservices Migration Plan - BudolShap</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+            line-height: 1.6;
+            color: #333;
+            background: #f5f5f5;
+            padding: 20px;
+        }
+        
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+            background: white;
+            padding: 40px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+            border-radius: 8px;
+        }
+        
+        h1 {
+            color: #2c3e50;
+            border-bottom: 4px solid #3498db;
+            padding-bottom: 10px;
+            margin-bottom: 30px;
+            font-size: 2.5em;
+        }
+        
+        h2 {
+            color: #34495e;
+            margin-top: 50px;
+            margin-bottom: 25px;
+            padding-left: 15px;
+            border-left: 5px solid #3498db;
+            font-size: 2em;
+            page-break-before: always;
+        }
+        
+        h2:first-of-type {
+            page-break-before: auto;
+        }
+        
+        h3 {
+            color: #555;
+            margin-top: 30px;
+            margin-bottom: 15px;
+            font-size: 1.5em;
+        }
+        
+        h4 {
+            color: #666;
+            margin-top: 20px;
+            margin-bottom: 10px;
+            font-size: 1.2em;
+        }
+        
+        p {
+            margin-bottom: 15px;
+            text-align: justify;
+        }
+        
+        ul, ol {
+            margin-left: 30px;
+            margin-bottom: 20px;
+        }
+        
+        li {
+            margin-bottom: 10px;
+        }
+        
+        code {
+            background: #f4f4f4;
+            padding: 2px 6px;
+            border-radius: 3px;
+            font-family: 'Courier New', monospace;
+            color: #e74c3c;
+            font-size: 0.9em;
+        }
+        
+        pre {
+            background: #2c3e50;
+            color: #ecf0f1;
+            padding: 20px;
+            border-radius: 5px;
+            overflow-x: auto;
+            margin: 20px 0;
+            font-size: 0.9em;
+        }
+        
+        pre code {
+            background: transparent;
+            color: inherit;
+            padding: 0;
+        }
+        
+        .highlight {
+            background: #fff3cd;
+            padding: 15px;
+            border-left: 4px solid #ffc107;
+            margin: 20px 0;
+            border-radius: 4px;
+        }
+        
+        .success {
+            background: #d4edda;
+            padding: 15px;
+            border-left: 4px solid #28a745;
+            margin: 20px 0;
+            border-radius: 4px;
+        }
+        
+        .info {
+            background: #d1ecf1;
+            padding: 15px;
+            border-left: 4px solid #17a2b8;
+            margin: 20px 0;
+            border-radius: 4px;
+        }
+        
+        .warning {
+            background: #f8d7da;
+            padding: 15px;
+            border-left: 4px solid #dc3545;
+            margin: 20px 0;
+            border-radius: 4px;
+        }
+        
+        .phase-box {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 30px;
+            border-radius: 8px;
+            margin: 30px 0;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.2);
+        }
+        
+        .phase-box h3 {
+            color: white;
+            margin-top: 0;
+            font-size: 1.8em;
+        }
+        
+        .phase-box h4 {
+            color: white;
+            margin-top: 20px;
+        }
+        
+        .phase-box ul, .phase-box ol {
+            color: white;
+        }
+        
+        .phase-box code {
+            background: rgba(255,255,255,0.2);
+            color: white;
+        }
+        
+        .task-list {
+            background: #f8f9fa;
+            border: 2px solid #dee2e6;
+            border-radius: 8px;
+            padding: 20px;
+            margin: 20px 0;
+        }
+        
+        .task-list h4 {
+            color: #3498db;
+            margin-top: 0;
+        }
+        
+        .task-item {
+            background: white;
+            padding: 15px;
+            margin: 10px 0;
+            border-left: 4px solid #3498db;
+            border-radius: 4px;
+        }
+        
+        .task-item h5 {
+            color: #2c3e50;
+            margin-bottom: 8px;
+            font-size: 1.1em;
+        }
+        
+        .deliverable-box {
+            background: #e8f5e9;
+            border: 2px solid #4caf50;
+            border-radius: 8px;
+            padding: 20px;
+            margin: 20px 0;
+        }
+        
+        .deliverable-box h4 {
+            color: #2e7d32;
+            margin-top: 0;
+        }
+        
+        .timeline-box {
+            background: #fff3e0;
+            border: 2px solid #ff9800;
+            border-radius: 8px;
+            padding: 20px;
+            margin: 20px 0;
+        }
+        
+        .timeline-box h4 {
+            color: #e65100;
+            margin-top: 0;
+        }
+        
+        .badge {
+            display: inline-block;
+            padding: 4px 8px;
+            border-radius: 4px;
+            font-size: 0.85em;
+            font-weight: bold;
+            margin-left: 10px;
+        }
+        
+        .badge-success {
+            background: #28a745;
+            color: white;
+        }
+        
+        .badge-warning {
+            background: #ffc107;
+            color: #333;
+        }
+        
+        .badge-danger {
+            background: #dc3545;
+            color: white;
+        }
+        
+        .badge-info {
+            background: #17a2b8;
+            color: white;
+        }
+        
+        .badge-primary {
+            background: #3498db;
+            color: white;
+        }
+        
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 20px 0;
+        }
+        
+        th, td {
+            padding: 12px;
+            text-align: left;
+            border-bottom: 1px solid #ddd;
+        }
+        
+        th {
+            background: #3498db;
+            color: white;
+            font-weight: bold;
+        }
+        
+        tr:hover {
+            background: #f5f5f5;
+        }
+        
+        .gantt-chart {
+            background: #f8f9fa;
+            padding: 20px;
+            border-radius: 8px;
+            margin: 20px 0;
+            overflow-x: auto;
+        }
+        
+        .gantt-bar {
+            height: 30px;
+            background: #3498db;
+            border-radius: 4px;
+            margin: 5px 0;
+            display: flex;
+            align-items: center;
+            padding: 0 10px;
+            color: white;
+            font-weight: bold;
+        }
+        
+        .checklist {
+            list-style: none;
+            margin-left: 0;
+        }
+        
+        .checklist li:before {
+            content: "☐ ";
+            margin-right: 8px;
+            font-size: 1.2em;
+        }
+        
+        .checklist li.checked:before {
+            content: "☑ ";
+            color: #28a745;
+        }
+        
+        .code-block {
+            background: #f8f9fa;
+            border: 1px solid #dee2e6;
+            border-radius: 5px;
+            padding: 15px;
+            margin: 15px 0;
+        }
+        
+        .milestone {
+            background: #ffd700;
+            color: #333;
+            padding: 10px 15px;
+            border-radius: 5px;
+            font-weight: bold;
+            margin: 15px 0;
+            display: inline-block;
+        }
+        
+        .risk-box {
+            background: #fff3cd;
+            border-left: 4px solid #ffc107;
+            padding: 15px;
+            margin: 15px 0;
+            border-radius: 4px;
+        }
+        
+        .toc {
+            background: #e9ecef;
+            padding: 20px;
+            border-radius: 8px;
+            margin-bottom: 30px;
+        }
+        
+        .toc ul {
+            list-style: none;
+            margin-left: 0;
+        }
+        
+        .toc li {
+            margin: 8px 0;
+        }
+        
+        .toc a {
+            color: #3498db;
+            text-decoration: none;
+        }
+        
+        .toc a:hover {
+            text-decoration: underline;
+        }
+        
+        @media print {
+            .phase-box {
+                page-break-inside: avoid;
+            }
+            h2 {
+                page-break-after: avoid;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🚀 Complete Microservices Migration Plan</h1>
+        <p style="font-size: 1.1em; color: #666; margin-bottom: 30px;">
+            <strong>Document Version:</strong> 1.0<br>
+            <strong>Date:</strong> January 2025<br>
+            <strong>Project:</strong> BudolShap v3 → Microservices Architecture<br>
+            <strong>Total Duration:</strong> 12-16 weeks (3-4 months)
+        </p>
+
+        <div class="toc">
+            <h3>📑 Table of Contents</h3>
+            <ul>
+                <li><a href="#overview">1. Executive Overview</a></li>
+                <li><a href="#prerequisites">2. Prerequisites & Setup</a></li>
+                <li><a href="#phase1">3. Phase 1: Modularization (Weeks 1-2)</a></li>
+                <li><a href="#phase2">4. Phase 2: Internal Service Boundaries (Weeks 3-4)</a></li>
+                <li><a href="#phase3">5. Phase 3: Payment Service Extraction (Weeks 5-6)</a></li>
+                <li><a href="#phase4">6. Phase 4: Shipping Service Extraction (Weeks 7-8)</a></li>
+                <li><a href="#phase5">7. Phase 5: Remaining Services (Weeks 9-12)</a></li>
+                <li><a href="#phase6">8. Phase 6: Optimization & Monitoring (Weeks 13-16)</a></li>
+                <li><a href="#timeline">9. Complete Timeline & Gantt Chart</a></li>
+                <li><a href="#resources">10. Resources & Tools</a></li>
+                <li><a href="#risks">11. Risk Management</a></li>
+            </ul>
+        </div>
+
+        <section id="overview">
+            <h2>1. Executive Overview</h2>
+            
+            <div class="success">
+                <h3>Project Goal</h3>
+                <p>
+                    Migrate BudolShap from a modular monolith to a microservices architecture while maintaining 
+                    full functionality, improving scalability, and enabling independent deployment of services.
+                </p>
+            </div>
+
+            <h3>1.1 Current State</h3>
+            <table>
+                <tr>
+                    <th>Aspect</th>
+                    <th>Current</th>
+                </tr>
+                <tr>
+                    <td><strong>Architecture</strong></td>
+                    <td>Next.js monolith with 80+ API routes</td>
+                </tr>
+                <tr>
+                    <td><strong>Deployment</strong></td>
+                    <td>Single Vercel project</td>
+                </tr>
+                <tr>
+                    <td><strong>Database</strong></td>
+                    <td>Single PostgreSQL database (shared)</td>
+                </tr>
+                <tr>
+                    <td><strong>Realtime</strong></td>
+                    <td>POLLING (default), Pusher-ready, Socket.io server available</td>
+                </tr>
+                <tr>
+                    <td><strong>Data Fetching</strong></td>
+                    <td>SWR (perfect for microservices!)</td>
+                </tr>
+            </table>
+
+            <h3>1.2 Target State</h3>
+            <table>
+                <tr>
+                    <th>Service</th>
+                    <th>Responsibility</th>
+                    <th>Deployment</th>
+                </tr>
+                <tr>
+                    <td><strong>API Gateway</strong></td>
+                    <td>Frontend + Composition APIs</td>
+                    <td>Vercel (main app)</td>
+                </tr>
+                <tr>
+                    <td><strong>Auth Service</strong></td>
+                    <td>Authentication & User Management</td>
+                    <td>Vercel (separate project)</td>
+                </tr>
+                <tr>
+                    <td><strong>Catalog Service</strong></td>
+                    <td>Stores, Products, Coupons</td>
+                    <td>Vercel (separate project)</td>
+                </tr>
+                <tr>
+                    <td><strong>Order Service</strong></td>
+                    <td>Orders, Cart, Ratings, Returns</td>
+                    <td>Vercel (separate project)</td>
+                </tr>
+                <tr>
+                    <td><strong>Payment Service</strong></td>
+                    <td>Payment Processing, Webhooks</td>
+                    <td>Vercel (separate project)</td>
+                </tr>
+                <tr>
+                    <td><strong>Shipping Service</strong></td>
+                    <td>Lalamove, Manual Shipping, Tracking</td>
+                    <td>Vercel (separate project)</td>
+                </tr>
+                <tr>
+                    <td><strong>Admin Service</strong></td>
+                    <td>Analytics, Admin Operations</td>
+                    <td>Vercel (main app or separate)</td>
+                </tr>
+                <tr>
+                    <td><strong>Realtime Service</strong></td>
+                    <td>Pusher (hosted) or Socket.io</td>
+                    <td>Pusher Cloud (recommended)</td>
+                </tr>
+            </table>
+
+            <h3>1.3 Key Principles</h3>
+            <ul>
+                <li><strong>Incremental Migration:</strong> Extract services one at a time, test thoroughly</li>
+                <li><strong>Zero Downtime:</strong> Maintain production functionality throughout</li>
+                <li><strong>Backward Compatible:</strong> Old endpoints work until fully migrated</li>
+                <li><strong>SWR Compatible:</strong> Frontend code requires minimal changes</li>
+                <li><strong>Vercel Native:</strong> All services deployable on Vercel</li>
+            </ul>
+        </section>
+
+        <section id="prerequisites">
+            <h2>2. Prerequisites & Setup (Week 0)</h2>
+
+            <div class="phase-box">
+                <h3>📋 Pre-Migration Checklist</h3>
+                <h4>Duration: 3-5 days</h4>
+            </div>
+
+            <div class="task-list">
+                <h4>2.1 Environment Setup</h4>
+                
+                <div class="task-item">
+                    <h5>✅ Set up Pusher Account</h5>
+                    <ul>
+                        <li>Create account at <a href="https://pusher.com" target="_blank">pusher.com</a></li>
+                        <li>Create app (choose cluster: <code>ap1</code> for Philippines)</li>
+                        <li>Get credentials: App ID, Key, Secret, Cluster</li>
+                        <li><strong>Time:</strong> 30 minutes</li>
+                    </ul>
+                </div>
+
+                <div class="task-item">
+                    <h5>✅ Configure Pusher in Admin Panel</h5>
+                    <ul>
+                        <li>Navigate to Admin → Settings → Realtime Updates</li>
+                        <li>Select "Pusher" provider</li>
+                        <li>Enter all 4 credentials</li>
+                        <li>Test connection</li>
+                        <li><strong>Time:</strong> 15 minutes</li>
+                    </ul>
+                </div>
+
+                <div class="task-item">
+                    <h5>✅ Set up Vercel Projects (Optional - Can do later)</h5>
+                    <ul>
+                        <li>Create separate Vercel projects for each service (or wait until extraction)</li>
+                        <li>Configure environment variables</li>
+                        <li>Set up domain mappings</li>
+                        <li><strong>Time:</strong> 1-2 hours (can be done per-phase)</li>
+                    </ul>
+                </div>
+
+                <div class="task-item">
+                    <h5>✅ Create Centralized API Fetcher</h5>
+                    <ul>
+                        <li>Create <code>lib/api/fetcher.js</code></li>
+                        <li>Create <code>lib/api/serviceUrls.js</code> for service URL management</li>
+                        <li>Add environment variables for service URLs</li>
+                        <li><strong>Time:</strong> 2-3 hours</li>
+                    </ul>
+                </div>
+
+                <div class="task-item">
+                    <h5>✅ Set up Monitoring & Logging</h5>
+                    <ul>
+                        <li>Configure Vercel Analytics (if not already)</li>
+                        <li>Set up error tracking (Sentry or similar)</li>
+                        <li>Configure logging aggregation</li>
+                        <li><strong>Time:</strong> 2-3 hours</li>
+                    </ul>
+                </div>
+            </div>
+
+            <div class="deliverable-box">
+                <h4>✅ Deliverables</h4>
+                <ul>
+                    <li>Pusher account configured and tested</li>
+                    <li>Centralized API fetcher created</li>
+                    <li>Service URL configuration system in place</li>
+                    <li>Monitoring tools configured</li>
+                    <li>Development environment ready for Phase 1</li>
+                </ul>
+            </div>
+        </section>
+
+        <section id="phase1">
+            <h2>3. Phase 1: Modularization (Weeks 1-2)</h2>
+
+            <div class="phase-box">
+                <h3>🎯 Phase 1 Goal</h3>
+                <p>Transform the monolith into a modular monolith with clear service boundaries, 
+                while keeping everything in one codebase and deployment.</p>
+                <h4>Duration: 2 weeks (10 working days)</h4>
+                <h4>Risk Level: <span class="badge badge-success">Low</span></h4>
+            </div>
+
+            <div class="timeline-box">
+                <h4>Week 1: Service Layer Creation</h4>
+                <ul>
+                    <li><strong>Days 1-2:</strong> Create service layer structure</li>
+                    <li><strong>Days 3-4:</strong> Extract business logic from API routes</li>
+                    <li><strong>Day 5:</strong> Standardize responses and error handling</li>
+                </ul>
+            </div>
+
+            <div class="timeline-box">
+                <h4>Week 2: Refactoring & Testing</h4>
+                <ul>
+                    <li><strong>Days 6-7:</strong> Refactor API routes to use services</li>
+                    <li><strong>Days 8-9:</strong> Enforce domain boundaries</li>
+                    <li><strong>Day 10:</strong> Testing, documentation, code review</li>
+                </ul>
+            </div>
+
+            <div class="task-list">
+                <h4>3.1 Week 1 Tasks</h4>
+
+                <div class="task-item">
+                    <h5>Day 1-2: Create Service Layer Structure</h5>
+                    <ul>
+                        <li>Create <code>lib/services/</code> directory</li>
+                        <li>Create service modules:
+                            <ul>
+                                <li><code>lib/services/authService.js</code></li>
+                                <li><code>lib/services/ordersService.js</code></li>
+                                <li><code>lib/services/paymentService.js</code></li>
+                                <li><code>lib/services/shippingService.js</code></li>
+                                <li><code>lib/services/catalogService.js</code></li>
+                                <li><code>lib/services/adminService.js</code></li>
+                            </ul>
+                        </li>
+                        <li>Define service interfaces (JSDoc or TypeScript types)</li>
+                        <li><strong>Estimated Time:</strong> 8-10 hours</li>
+                    </ul>
+                </div>
+
+                <div class="task-item">
+                    <h5>Day 3-4: Extract Business Logic</h5>
+                    <ul>
+                        <li>Move Prisma queries from API routes to services</li>
+                        <li>Extract validation logic</li>
+                        <li>Extract business rules (e.g., order creation logic)</li>
+                        <li>Keep API routes as thin controllers</li>
+                        <li><strong>Estimated Time:</strong> 16-20 hours</li>
+                    </ul>
+                </div>
+
+                <div class="task-item">
+                    <h5>Day 5: Standardize Responses</h5>
+                    <ul>
+                        <li>Create common response format</li>
+                        <li>Standardize error handling</li>
+                        <li>Add request/response logging</li>
+                        <li>Create error utility functions</li>
+                        <li><strong>Estimated Time:</strong> 4-6 hours</li>
+                    </ul>
+                </div>
+            </div>
+
+            <div class="task-list">
+                <h4>3.2 Week 2 Tasks</h4>
+
+                <div class="task-item">
+                    <h5>Day 6-7: Refactor API Routes</h5>
+                    <ul>
+                        <li>Update all API routes to call service methods</li>
+                        <li>Remove direct Prisma calls from routes</li>
+                        <li>Ensure routes are thin controllers</li>
+                        <li>Test each route after refactoring</li>
+                        <li><strong>Estimated Time:</strong> 16-20 hours</li>
+                    </ul>
+                </div>
+
+                <div class="task-item">
+                    <h5>Day 8-9: Enforce Domain Boundaries</h5>
+                    <ul>
+                        <li>Ensure services only access their own Prisma models</li>
+                        <li>Create service-to-service interfaces</li>
+                        <li>Add validation to prevent cross-domain access</li>
+                        <li>Document service dependencies</li>
+                        <li><strong>Estimated Time:</strong> 12-16 hours</li>
+                    </ul>
+                </div>
+
+                <div class="task-item">
+                    <h5>Day 10: Testing & Documentation</h5>
+                    <ul>
+                        <li>Run full test suite</li>
+                        <li>Manual testing of all features</li>
+                        <li>Update documentation</li>
+                        <li>Code review</li>
+                        <li>Deploy to staging</li>
+                        <li><strong>Estimated Time:</strong> 8-10 hours</li>
+                    </ul>
+                </div>
+            </div>
+
+            <div class="deliverable-box">
+                <h4>✅ Phase 1 Deliverables</h4>
+                <ul>
+                    <li>✅ Service layer modules created and tested</li>
+                    <li>✅ All API routes refactored to use services</li>
+                    <li>✅ Domain boundaries enforced</li>
+                    <li>✅ Standardized response format</li>
+                    <li>✅ All tests passing</li>
+                    <li>✅ Code deployed to staging</li>
+                    <li>✅ Documentation updated</li>
+                </ul>
+            </div>
+
+            <div class="milestone">
+                🎯 Milestone 1: Modular Monolith Complete
+            </div>
+
+            <div class="risk-box">
+                <strong>⚠️ Risks & Mitigation:</strong>
+                <ul>
+                    <li><strong>Risk:</strong> Breaking existing functionality</li>
+                    <li><strong>Mitigation:</strong> Test each route after refactoring, maintain backward compatibility</li>
+                    <li><strong>Risk:</strong> Service boundaries not clear</li>
+                    <li><strong>Mitigation:</strong> Code review, document boundaries clearly</li>
+                </ul>
+            </div>
+        </section>
+
+        <section id="phase2">
+            <h2>4. Phase 2: Internal Service Boundaries (Weeks 3-4)</h2>
+
+            <div class="phase-box">
+                <h3>🎯 Phase 2 Goal</h3>
+                <p>Introduce HTTP-based communication between services, even though they're still in the same codebase. 
+                This prepares for actual service extraction.</p>
+                <h4>Duration: 2 weeks (10 working days)</h4>
+                <h4>Risk Level: <span class="badge badge-warning">Medium</span></h4>
+            </div>
+
+            <div class="timeline-box">
+                <h4>Week 3: Internal API Structure</h4>
+                <ul>
+                    <li><strong>Days 11-12:</strong> Create internal API structure</li>
+                    <li><strong>Days 13-14:</strong> Define service interfaces</li>
+                    <li><strong>Day 15:</strong> Implement service-to-service HTTP calls</li>
+                </ul>
+            </div>
+
+            <div class="timeline-box">
+                <h4>Week 4: Integration & Testing</h4>
+                <ul>
+                    <li><strong>Days 16-17:</strong> Update services to use HTTP calls</li>
+                    <li><strong>Days 18-19:</strong> Add health checks and monitoring</li>
+                    <li><strong>Day 20:</strong> Testing and documentation</li>
+                </ul>
+            </div>
+
+            <div class="task-list">
+                <h4>4.1 Week 3 Tasks</h4>
+
+                <div class="task-item">
+                    <h5>Day 11-12: Create Internal API Structure</h5>
+                    <ul>
+                        <li>Create <code>app/api/internal/</code> directory</li>
+                        <li>Move domain routes to <code>app/api/internal/{service}/*</code></li>
+                        <li>Keep public routes in <code>app/api/public/*</code> or root</li>
+                        <li>Set up routing structure</li>
+                        <li><strong>Estimated Time:</strong> 8-10 hours</li>
+                    </ul>
+                </div>
+
+                <div class="task-item">
+                    <h5>Day 13-14: Define Service Interfaces</h5>
+                    <ul>
+                        <li>Document API contracts for each service</li>
+                        <li>Create OpenAPI/Swagger specs (optional)</li>
+                        <li>Define request/response formats</li>
+                        <li>Define error codes and status codes</li>
+                        <li><strong>Estimated Time:</strong> 12-16 hours</li>
+                    </ul>
+                </div>
+
+                <div class="task-item">
+                    <h5>Day 15: Implement Service-to-Service Calls</h5>
+                    <ul>
+                        <li>Create HTTP client utilities</li>
+                        <li>Implement service-to-service calls via HTTP</li>
+                        <li>Use environment variables for service URLs</li>
+                        <li>In dev: use <code>http://localhost:3000/api/internal/...</code></li>
+                        <li><strong>Estimated Time:</strong> 8-10 hours</li>
+                    </ul>
+                </div>
+            </div>
+
+            <div class="task-list">
+                <h4>4.2 Week 4 Tasks</h4>
+
+                <div class="task-item">
+                    <h5>Day 16-17: Update Service Calls</h5>
+                    <ul>
+                        <li>Replace direct service method calls with HTTP calls</li>
+                        <li>Update all cross-service interactions</li>
+                        <li>Add retry logic and error handling</li>
+                        <li>Test each integration</li>
+                        <li><strong>Estimated Time:</strong> 16-20 hours</li>
+                    </ul>
+                </div>
+
+                <div class="task-item">
+                    <h5>Day 18-19: Health Checks & Monitoring</h5>
+                    <ul>
+                        <li>Create <code>GET /api/internal/{service}/health</code> endpoints</li>
+                        <li>Add health check monitoring</li>
+                        <li>Implement circuit breakers (optional)</li>
+                        <li>Add request tracing</li>
+                        <li><strong>Estimated Time:</strong> 8-12 hours</li>
+                    </ul>
+                </div>
+
+                <div class="task-item">
+                    <h5>Day 20: Testing & Documentation</h5>
+                    <ul>
+                        <li>End-to-end testing</li>
+                        <li>Performance testing</li>
+                        <li>Update documentation</li>
+                        <li>Deploy to staging</li>
+                        <li><strong>Estimated Time:</strong> 8-10 hours</li>
+                    </ul>
+                </div>
+            </div>
+
+            <div class="deliverable-box">
+                <h4>✅ Phase 2 Deliverables</h4>
+                <ul>
+                    <li>✅ Internal service structure defined</li>
+                    <li>✅ Service interfaces documented</li>
+                    <li>✅ Service-to-service HTTP calls implemented</li>
+                    <li>✅ Health checks in place</li>
+                    <li>✅ All tests passing</li>
+                    <li>✅ Monitoring configured</li>
+                </ul>
+            </div>
+
+            <div class="milestone">
+                🎯 Milestone 2: Internal Service Boundaries Complete
+            </div>
+        </section>
+
+        <section id="phase3">
+            <h2>5. Phase 3: Payment Service Extraction (Weeks 5-6)</h2>
+
+            <div class="phase-box">
+                <h3>🎯 Phase 3 Goal</h3>
+                <p>Extract Payment Service as the first independent microservice. This is the highest-value extraction 
+                due to security and isolation requirements.</p>
+                <h4>Duration: 2 weeks (10 working days)</h4>
+                <h4>Risk Level: <span class="badge badge-danger">High</span> (Critical service)</h4>
+            </div>
+
+            <div class="timeline-box">
+                <h4>Week 5: Service Creation</h4>
+                <ul>
+                    <li><strong>Days 21-22:</strong> Create payment service repository</li>
+                    <li><strong>Days 23-24:</strong> Copy and adapt payment code</li>
+                    <li><strong>Day 25:</strong> Deploy to Vercel</li>
+                </ul>
+            </div>
+
+            <div class="timeline-box">
+                <h4>Week 6: Integration & Testing</h4>
+                <ul>
+                    <li><strong>Days 26-27:</strong> Update main app to call payment service</li>
+                    <li><strong>Days 28-29:</strong> Test payment flows end-to-end</li>
+                    <li><strong>Day 30:</strong> Production deployment</li>
+                </ul>
+            </div>
+
+            <div class="task-list">
+                <h4>5.1 Week 5 Tasks</h4>
+
+                <div class="task-item">
+                    <h5>Day 21-22: Create Payment Service Repository</h5>
+                    <ul>
+                        <li>Create new repository: <code>budolshap-payment-service</code></li>
+                        <li>Initialize Next.js project</li>
+                        <li>Set up Prisma (shared DB or separate schema)</li>
+                        <li>Configure environment variables</li>
+                        <li>Set up Vercel project</li>
+                        <li><strong>Estimated Time:</strong> 8-10 hours</li>
+                    </ul>
+                </div>
+
+                <div class="task-item">
+                    <h5>Day 23-24: Copy and Adapt Payment Code</h5>
+                    <ul>
+                        <li>Copy payment-related files:
+                            <ul>
+                                <li><code>app/api/payment/*</code></li>
+                                <li><code>app/api/paymongo/*</code></li>
+                                <li><code>app/api/webhooks/paymongo/*</code></li>
+                                <li><code>lib/paymongo.js</code></li>
+                                <li><code>lib/payment/service.js</code></li>
+                                <li><code>lib/payment/adapters/*</code></li>
+                                <li><code>lib/escrow.js</code> (or coordinate with Order Service)</li>
+                            </ul>
+                        </li>
+                        <li>Adapt code for standalone service</li>
+                        <li>Update imports and dependencies</li>
+                        <li>Test locally</li>
+                        <li><strong>Estimated Time:</strong> 12-16 hours</li>
+                    </ul>
+                </div>
+
+                <div class="task-item">
+                    <h5>Day 25: Deploy to Vercel</h5>
+                    <ul>
+                        <li>Deploy to: <code>payment.budolshap.com</code></li>
+                        <li>Configure environment variables</li>
+                        <li>Set up PayMongo webhook URL</li>
+                        <li>Test deployment</li>
+                        <li><strong>Estimated Time:</strong> 4-6 hours</li>
+                    </ul>
+                </div>
+            </div>
+
+            <div class="task-list">
+                <h4>5.2 Week 6 Tasks</h4>
+
+                <div class="task-item">
+                    <h5>Day 26-27: Update Main App</h5>
+                    <ul>
+                        <li>Replace local payment code with HTTP calls</li>
+                        <li>Update <code>app/api/payment/*</code> to proxy to payment service</li>
+                        <li>Update <code>lib/payment/service.js</code> to call external API</li>
+                        <li>Update environment variables</li>
+                        <li>Test integration</li>
+                        <li><strong>Estimated Time:</strong> 12-16 hours</li>
+                    </ul>
+                </div>
+
+                <div class="task-item">
+                    <h5>Day 28-29: End-to-End Testing</h5>
+                    <ul>
+                        <li>Test payment flow (GCash, Maya, GrabPay, QRPH)</li>
+                        <li>Test webhook handling</li>
+                        <li>Test error scenarios</li>
+                        <li>Test with real PayMongo (sandbox)</li>
+                        <li>Load testing</li>
+                        <li><strong>Estimated Time:</strong> 12-16 hours</li>
+                    </ul>
+                </div>
+
+                <div class="task-item">
+                    <h5>Day 30: Production Deployment</h5>
+                    <ul>
+                        <li>Deploy payment service to production</li>
+                        <li>Update main app production environment</li>
+                        <li>Monitor for issues</li>
+                        <li>Rollback plan ready</li>
+                        <li><strong>Estimated Time:</strong> 4-6 hours</li>
+                    </ul>
+                </div>
+            </div>
+
+            <div class="deliverable-box">
+                <h4>✅ Phase 3 Deliverables</h4>
+                <ul>
+                    <li>✅ Payment service deployed independently</li>
+                    <li>✅ Main app calls payment service via HTTP</li>
+                    <li>✅ All payment tests passing</li>
+                    <li>✅ Webhooks functioning correctly</li>
+                    <li>✅ Production deployment successful</li>
+                </ul>
+            </div>
+
+            <div class="milestone">
+                🎯 Milestone 3: First Microservice Extracted (Payment)
+            </div>
+
+            <div class="warning">
+                <strong>⚠️ Critical Considerations:</strong>
+                <ul>
+                    <li>Payment is critical - test thoroughly before production</li>
+                    <li>Have rollback plan ready</li>
+                    <li>Monitor webhook delivery closely</li>
+                    <li>Keep old code as backup for 1-2 weeks</li>
+                </ul>
+            </div>
+        </section>
+
+        <section id="phase4">
+            <h2>6. Phase 4: Shipping Service Extraction (Weeks 7-8)</h2>
+
+            <div class="phase-box">
+                <h3>🎯 Phase 4 Goal</h3>
+                <p>Extract Shipping Service as second microservice. This service handles Lalamove integration, 
+                tracking, and webhooks.</p>
+                <h4>Duration: 2 weeks (10 working days)</h4>
+                <h4>Risk Level: <span class="badge badge-warning">Medium</span></h4>
+            </div>
+
+            <div class="timeline-box">
+                <h4>Week 7: Service Creation</h4>
+                <ul>
+                    <li><strong>Days 31-32:</strong> Create shipping service repository</li>
+                    <li><strong>Days 33-34:</strong> Copy and adapt shipping code</li>
+                    <li><strong>Day 35:</strong> Deploy to Vercel</li>
+                </ul>
+            </div>
+
+            <div class="timeline-box">
+                <h4>Week 8: Integration & Testing</h4>
+                <ul>
+                    <li><strong>Days 36-37:</strong> Update main app and order service</li>
+                    <li><strong>Days 38-39:</strong> Test shipping flows</li>
+                    <li><strong>Day 40:</strong> Production deployment</li>
+                </ul>
+            </div>
+
+            <div class="task-list">
+                <h4>6.1 Week 7 Tasks</h4>
+
+                <div class="task-item">
+                    <h5>Day 31-32: Create Shipping Service Repository</h5>
+                    <ul>
+                        <li>Create: <code>budolshap-shipping-service</code></li>
+                        <li>Initialize Next.js project</li>
+                        <li>Set up Prisma</li>
+                        <li>Configure Lalamove API client</li>
+                        <li>Set up Vercel project</li>
+                        <li><strong>Estimated Time:</strong> 8-10 hours</li>
+                    </ul>
+                </div>
+
+                <div class="task-item">
+                    <h5>Day 33-34: Copy and Adapt Shipping Code</h5>
+                    <ul>
+                        <li>Copy shipping-related files:
+                            <ul>
+                                <li><code>services/lalamove.js</code></li>
+                                <li><code>services/shippingFactory.js</code></li>
+                                <li><code>services/shippingProvider.js</code></li>
+                                <li><code>app/api/shipping/lalamove/*</code></li>
+                                <li><code>app/api/shipping/manual/*</code></li>
+                                <li><code>app/api/webhooks/lalamove/*</code></li>
+                                <li><code>app/api/cron/sync-orders/*</code></li>
+                            </ul>
+                        </li>
+                        <li>Adapt for standalone service</li>
+                        <li>Update to call Order Service API</li>
+                        <li>Test locally</li>
+                        <li><strong>Estimated Time:</strong> 12-16 hours</li>
+                    </ul>
+                </div>
+
+                <div class="task-item">
+                    <h5>Day 35: Deploy to Vercel</h5>
+                    <ul>
+                        <li>Deploy to: <code>shipping.budolshap.com</code></li>
+                        <li>Configure Lalamove webhook URL</li>
+                        <li>Set up cron jobs in Vercel</li>
+                        <li>Test deployment</li>
+                        <li><strong>Estimated Time:</strong> 4-6 hours</li>
+                    </ul>
+                </div>
+            </div>
+
+            <div class="task-list">
+                <h4>6.2 Week 8 Tasks</h4>
+
+                <div class="task-item">
+                    <h5>Day 36-37: Update Main App & Order Service</h5>
+                    <ul>
+                        <li>Update Order Service to call Shipping Service</li>
+                        <li>Replace local shipping code with HTTP calls</li>
+                        <li>Create order update endpoint in Order Service (for shipping to call)</li>
+                        <li>Update environment variables</li>
+                        <li>Test integration</li>
+                        <li><strong>Estimated Time:</strong> 12-16 hours</li>
+                    </ul>
+                </div>
+
+                <div class="task-item">
+                    <h5>Day 38-39: Test Shipping Flows</h5>
+                    <ul>
+                        <li>Test Lalamove quote generation</li>
+                        <li>Test booking creation</li>
+                        <li>Test webhook handling</li>
+                        <li>Test order sync cron job</li>
+                        <li>Test manual shipping</li>
+                        <li><strong>Estimated Time:</strong> 12-16 hours</li>
+                    </ul>
+                </div>
+
+                <div class="task-item">
+                    <h5>Day 40: Production Deployment</h5>
+                    <ul>
+                        <li>Deploy shipping service to production</li>
+                        <li>Update main app production</li>
+                        <li>Monitor for issues</li>
+                        <li><strong>Estimated Time:</strong> 4-6 hours</li>
+                    </ul>
+                </div>
+            </div>
+
+            <div class="deliverable-box">
+                <h4>✅ Phase 4 Deliverables</h4>
+                <ul>
+                    <li>✅ Shipping service deployed independently</li>
+                    <li>✅ Order-to-Shipping integration working</li>
+                    <li>✅ Webhooks and cron jobs functioning</li>
+                    <li>✅ Production deployment successful</li>
+                </ul>
+            </div>
+
+            <div class="milestone">
+                🎯 Milestone 4: Second Microservice Extracted (Shipping)
+            </div>
+        </section>
+
+        <section id="phase5">
+            <h2>7. Phase 5: Remaining Services (Weeks 9-12)</h2>
+
+            <div class="phase-box">
+                <h3>🎯 Phase 5 Goal</h3>
+                <p>Extract remaining services: Auth, Orders, Catalog, and Admin. These follow the same pattern 
+                as Payment and Shipping services.</p>
+                <h4>Duration: 4 weeks (20 working days)</h4>
+                <h4>Risk Level: <span class="badge badge-warning">Medium</span></h4>
+            </div>
+
+            <div class="timeline-box">
+                <h4>Week 9: Auth Service</h4>
+                <ul>
+                    <li><strong>Days 41-42:</strong> Create auth service</li>
+                    <li><strong>Days 43-44:</strong> Copy and adapt auth code</li>
+                    <li><strong>Day 45:</strong> Deploy and integrate</li>
+                </ul>
+            </div>
+
+            <div class="timeline-box">
+                <h4>Week 10: Order Service</h4>
+                <ul>
+                    <li><strong>Days 46-47:</strong> Create order service</li>
+                    <li><strong>Days 48-49:</strong> Copy and adapt order code</li>
+                    <li><strong>Day 50:</strong> Deploy and integrate</li>
+                </ul>
+            </div>
+
+            <div class="timeline-box">
+                <h4>Week 11: Catalog Service</h4>
+                <ul>
+                    <li><strong>Days 51-52:</strong> Create catalog service</li>
+                    <li><strong>Days 53-54:</strong> Copy and adapt catalog code</li>
+                    <li><strong>Day 55:</strong> Deploy and integrate</li>
+                </ul>
+            </div>
+
+            <div class="timeline-box">
+                <h4>Week 12: Admin Service</h4>
+                <ul>
+                    <li><strong>Days 56-57:</strong> Create admin service (or keep in gateway)</li>
+                    <li><strong>Days 58-59:</strong> Copy and adapt admin code</li>
+                    <li><strong>Day 60:</strong> Deploy and integrate</li>
+                </ul>
+            </div>
+
+            <div class="task-list">
+                <h4>7.1 Auth Service (Week 9)</h4>
+                <div class="task-item">
+                    <h5>Tasks:</h5>
+                    <ul>
+                        <li>Create <code>budolshap-auth-service</code></li>
+                        <li>Extract: <code>app/api/auth/*</code>, <code>app/api/users/*</code>, <code>app/api/addresses/*</code></li>
+                        <li>Extract: <code>lib/auth.js</code>, <code>lib/token.js</code>, <code>lib/adminAuth.js</code></li>
+                        <li>Deploy to: <code>auth.budolshap.com</code></li>
+                        <li>Update main app to use auth service</li>
+                        <li><strong>Estimated Time:</strong> 30-40 hours</li>
+                    </ul>
+                </div>
+            </div>
+
+            <div class="task-list">
+                <h4>7.2 Order Service (Week 10)</h4>
+                <div class="task-item">
+                    <h5>Tasks:</h5>
+                    <ul>
+                        <li>Create <code>budolshap-order-service</code></li>
+                        <li>Extract: <code>app/api/orders/*</code>, <code>app/api/cart/*</code>, <code>app/api/ratings/*</code>, <code>app/api/returns/*</code></li>
+                        <li>Extract: <code>lib/orderAutoComplete.js</code>, <code>lib/escrow.js</code></li>
+                        <li>Deploy to: <code>orders.budolshap.com</code></li>
+                        <li>Update main app to use order service</li>
+                        <li><strong>Estimated Time:</strong> 30-40 hours</li>
+                    </ul>
+                </div>
+            </div>
+
+            <div class="task-list">
+                <h4>7.3 Catalog Service (Week 11)</h4>
+                <div class="task-item">
+                    <h5>Tasks:</h5>
+                    <ul>
+                        <li>Create <code>budolshap-catalog-service</code></li>
+                        <li>Extract: <code>app/api/stores/*</code>, <code>app/api/products/*</code>, <code>app/api/coupons/*</code></li>
+                        <li>Extract: <code>lib/store.js</code></li>
+                        <li>Deploy to: <code>catalog.budolshap.com</code></li>
+                        <li>Update main app to use catalog service</li>
+                        <li><strong>Estimated Time:</strong> 30-40 hours</li>
+                    </ul>
+                </div>
+            </div>
+
+            <div class="task-list">
+                <h4>7.4 Admin Service (Week 12)</h4>
+                <div class="task-item">
+                    <h5>Tasks:</h5>
+                    <ul>
+                        <li>Option A: Keep in main app (API Gateway)</li>
+                        <li>Option B: Create <code>budolshap-admin-service</code></li>
+                        <li>Extract: <code>app/api/admin/*</code>, <code>app/api/dashboard/admin/*</code></li>
+                        <li>If separate: Deploy to <code>admin.budolshap.com</code></li>
+                        <li><strong>Estimated Time:</strong> 20-30 hours (if separate)</li>
+                    </ul>
+                </div>
+            </div>
+
+            <div class="deliverable-box">
+                <h4>✅ Phase 5 Deliverables</h4>
+                <ul>
+                    <li>✅ Auth service extracted and deployed</li>
+                    <li>✅ Order service extracted and deployed</li>
+                    <li>✅ Catalog service extracted and deployed</li>
+                    <li>✅ Admin service extracted or kept in gateway</li>
+                    <li>✅ All services communicating via HTTP</li>
+                    <li>✅ Main app is now API Gateway/BFF</li>
+                </ul>
+            </div>
+
+            <div class="milestone">
+                🎯 Milestone 5: Full Microservices Architecture Complete
+            </div>
+        </section>
+
+        <section id="phase6">
+            <h2>8. Phase 6: Optimization & Monitoring (Weeks 13-16)</h2>
+
+            <div class="phase-box">
+                <h3>🎯 Phase 6 Goal</h3>
+                <p>Optimize the microservices architecture, add monitoring, improve performance, and document everything.</p>
+                <h4>Duration: 4 weeks (20 working days)</h4>
+                <h4>Risk Level: <span class="badge badge-success">Low</span></h4>
+            </div>
+
+            <div class="task-list">
+                <h4>8.1 Optimization Tasks</h4>
+                <div class="task-item">
+                    <h5>Performance Optimization</h5>
+                    <ul>
+                        <li>Add caching layers (Redis or Vercel Edge Cache)</li>
+                        <li>Optimize database queries</li>
+                        <li>Implement request batching</li>
+                        <li>Add connection pooling</li>
+                        <li><strong>Estimated Time:</strong> 20-30 hours</li>
+                    </ul>
+                </div>
+
+                <div class="task-item">
+                    <h5>Monitoring & Observability</h5>
+                    <ul>
+                        <li>Set up distributed tracing</li>
+                        <li>Configure centralized logging</li>
+                        <li>Add performance monitoring</li>
+                        <li>Set up alerts</li>
+                        <li><strong>Estimated Time:</strong> 20-30 hours</li>
+                    </ul>
+                </div>
+
+                <div class="task-item">
+                    <h5>Documentation</h5>
+                    <ul>
+                        <li>Document all service APIs</li>
+                        <li>Create service dependency diagram</li>
+                        <li>Write deployment guides</li>
+                        <li>Create runbooks</li>
+                        <li><strong>Estimated Time:</strong> 20-30 hours</li>
+                    </ul>
+                </div>
+
+                <div class="task-item">
+                    <h5>Testing & Quality</h5>
+                    <ul>
+                        <li>Add integration tests</li>
+                        <li>Add contract tests</li>
+                        <li>Load testing</li>
+                        <li>Security audit</li>
+                        <li><strong>Estimated Time:</strong> 30-40 hours</li>
+                    </ul>
+                </div>
+            </div>
+
+            <div class="deliverable-box">
+                <h4>✅ Phase 6 Deliverables</h4>
+                <ul>
+                    <li>✅ Performance optimizations implemented</li>
+                    <li>✅ Monitoring and observability in place</li>
+                    <li>✅ Complete documentation</li>
+                    <li>✅ Test coverage improved</li>
+                    <li>✅ Production-ready microservices architecture</li>
+                </ul>
+            </div>
+
+            <div class="milestone">
+                🎯 Milestone 6: Production-Ready Microservices Architecture
+            </div>
+        </section>
+
+        <section id="timeline">
+            <h2>9. Complete Timeline & Gantt Chart</h2>
+
+            <h3>9.1 Overall Timeline</h3>
+            <table>
+                <tr>
+                    <th>Phase</th>
+                    <th>Duration</th>
+                    <th>Start Week</th>
+                    <th>End Week</th>
+                    <th>Status</th>
+                </tr>
+                <tr>
+                    <td><strong>Prerequisites</strong></td>
+                    <td>3-5 days</td>
+                    <td>Week 0</td>
+                    <td>Week 0</td>
+                    <td><span class="badge badge-info">Setup</span></td>
+                </tr>
+                <tr>
+                    <td><strong>Phase 1: Modularization</strong></td>
+                    <td>2 weeks</td>
+                    <td>Week 1</td>
+                    <td>Week 2</td>
+                    <td><span class="badge badge-warning">Pending</span></td>
+                </tr>
+                <tr>
+                    <td><strong>Phase 2: Internal Boundaries</strong></td>
+                    <td>2 weeks</td>
+                    <td>Week 3</td>
+                    <td>Week 4</td>
+                    <td><span class="badge badge-warning">Pending</span></td>
+                </tr>
+                <tr>
+                    <td><strong>Phase 3: Payment Service</strong></td>
+                    <td>2 weeks</td>
+                    <td>Week 5</td>
+                    <td>Week 6</td>
+                    <td><span class="badge badge-warning">Pending</span></td>
+                </tr>
+                <tr>
+                    <td><strong>Phase 4: Shipping Service</strong></td>
+                    <td>2 weeks</td>
+                    <td>Week 7</td>
+                    <td>Week 8</td>
+                    <td><span class="badge badge-warning">Pending</span></td>
+                </tr>
+                <tr>
+                    <td><strong>Phase 5: Remaining Services</strong></td>
+                    <td>4 weeks</td>
+                    <td>Week 9</td>
+                    <td>Week 12</td>
+                    <td><span class="badge badge-warning">Pending</span></td>
+                </tr>
+                <tr>
+                    <td><strong>Phase 6: Optimization</strong></td>
+                    <td>4 weeks</td>
+                    <td>Week 13</td>
+                    <td>Week 16</td>
+                    <td><span class="badge badge-warning">Pending</span></td>
+                </tr>
+            </table>
+
+            <h3>9.2 Detailed Week-by-Week Breakdown</h3>
+            <div class="gantt-chart">
+                <h4>Timeline Visualization</h4>
+                <div style="margin: 20px 0;">
+                    <div class="gantt-bar" style="width: 5%;">Week 0: Prerequisites</div>
+                    <div class="gantt-bar" style="width: 12.5%; background: #3498db;">Week 1-2: Phase 1</div>
+                    <div class="gantt-bar" style="width: 12.5%; background: #9b59b6;">Week 3-4: Phase 2</div>
+                    <div class="gantt-bar" style="width: 12.5%; background: #e74c3c;">Week 5-6: Phase 3</div>
+                    <div class="gantt-bar" style="width: 12.5%; background: #f39c12;">Week 7-8: Phase 4</div>
+                    <div class="gantt-bar" style="width: 25%; background: #27ae60;">Week 9-12: Phase 5</div>
+                    <div class="gantt-bar" style="width: 25%; background: #16a085;">Week 13-16: Phase 6</div>
+                </div>
+            </div>
+
+            <h3>9.3 Key Milestones</h3>
+            <table>
+                <tr>
+                    <th>Milestone</th>
+                    <th>Week</th>
+                    <th>Deliverable</th>
+                </tr>
+                <tr>
+                    <td><strong>M1: Modular Monolith</strong></td>
+                    <td>Week 2</td>
+                    <td>Service layer complete, boundaries enforced</td>
+                </tr>
+                <tr>
+                    <td><strong>M2: Internal Boundaries</strong></td>
+                    <td>Week 4</td>
+                    <td>Services communicate via HTTP</td>
+                </tr>
+                <tr>
+                    <td><strong>M3: First Microservice</strong></td>
+                    <td>Week 6</td>
+                    <td>Payment service extracted</td>
+                </tr>
+                <tr>
+                    <td><strong>M4: Second Microservice</strong></td>
+                    <td>Week 8</td>
+                    <td>Shipping service extracted</td>
+                </tr>
+                <tr>
+                    <td><strong>M5: Full Architecture</strong></td>
+                    <td>Week 12</td>
+                    <td>All services extracted</td>
+                </tr>
+                <tr>
+                    <td><strong>M6: Production Ready</strong></td>
+                    <td>Week 16</td>
+                    <td>Optimized and monitored</td>
+                </tr>
+            </table>
+        </section>
+
+        <section id="resources">
+            <h2>10. Resources & Tools</h2>
+
+            <h3>10.1 Required Tools</h3>
+            <table>
+                <tr>
+                    <th>Tool</th>
+                    <th>Purpose</th>
+                    <th>Cost</th>
+                </tr>
+                <tr>
+                    <td><strong>Vercel</strong></td>
+                    <td>Hosting for all services</td>
+                    <td>Free tier (upgrade if needed)</td>
+                </tr>
+                <tr>
+                    <td><strong>Pusher</strong></td>
+                    <td>Realtime messaging</td>
+                    <td>Free tier (200K msgs/day)</td>
+                </tr>
+                <tr>
+                    <td><strong>PostgreSQL</strong></td>
+                    <td>Database (shared initially)</td>
+                    <td>Varies by provider</td>
+                </tr>
+                <tr>
+                    <td><strong>GitHub</strong></td>
+                    <td>Version control</td>
+                    <td>Free</td>
+                </tr>
+                <tr>
+                    <td><strong>Sentry / Error Tracking</strong></td>
+                    <td>Error monitoring</td>
+                    <td>Free tier available</td>
+                </tr>
+            </table>
+
+            <h3>10.2 Documentation References</h3>
+            <ul>
+                <li><a href="microservices-migration-plan.html">Microservices Migration Plan</a></li>
+                <li><a href="swr-microservices-guide.html">SWR + Microservices Guide</a></li>
+                <li><a href="pusher-setup-guide.html">Pusher Setup Guide</a></li>
+            </ul>
+        </section>
+
+        <section id="risks">
+            <h2>11. Risk Management</h2>
+
+            <h3>11.1 Risk Matrix</h3>
+            <table>
+                <tr>
+                    <th>Risk</th>
+                    <th>Probability</th>
+                    <th>Impact</th>
+                    <th>Mitigation</th>
+                </tr>
+                <tr>
+                    <td>Breaking existing functionality</td>
+                    <td>Medium</td>
+                    <td>High</td>
+                    <td>Thorough testing, gradual migration, rollback plan</td>
+                </tr>
+                <tr>
+                    <td>Service communication failures</td>
+                    <td>Medium</td>
+                    <td>High</td>
+                    <td>Retry logic, circuit breakers, graceful degradation</td>
+                </tr>
+                <tr>
+                    <td>Increased latency</td>
+                    <td>Low</td>
+                    <td>Medium</td>
+                    <td>Optimize calls, use caching, minimize cross-service calls</td>
+                </tr>
+                <tr>
+                    <td>Database connection limits</td>
+                    <td>Low</td>
+                    <td>Medium</td>
+                    <td>Connection pooling, monitor usage</td>
+                </tr>
+                <tr>
+                    <td>Deployment complexity</td>
+                    <td>Medium</td>
+                    <td>Medium</td>
+                    <td>Automate deployments, use CI/CD</td>
+                </tr>
+                <tr>
+                    <td>Team knowledge gap</td>
+                    <td>Low</td>
+                    <td>Medium</td>
+                    <td>Training, documentation, code reviews</td>
+                </tr>
+            </table>
+
+            <h3>11.2 Contingency Plans</h3>
+            <div class="warning">
+                <h4>Rollback Strategy</h4>
+                <ul>
+                    <li>Keep old code in separate branch for 2-4 weeks after migration</li>
+                    <li>Maintain feature flags to switch between old/new implementations</li>
+                    <li>Have database migration rollback scripts ready</li>
+                    <li>Document rollback procedures for each service</li>
+                </ul>
+            </div>
+        </section>
+
+        <section>
+            <h2>12. Success Criteria</h2>
+            <div class="success">
+                <h3>✅ Migration Complete When:</h3>
+                <ul>
+                    <li>All services extracted and deployed independently</li>
+                    <li>All functionality working as before</li>
+                    <li>Performance equal or better than monolith</li>
+                    <li>Monitoring and observability in place</li>
+                    <li>Documentation complete</li>
+                    <li>Team trained on new architecture</li>
+                    <li>Zero critical bugs in production</li>
+                </ul>
+            </div>
+        </section>
+
+        <div style="margin-top: 50px; padding-top: 20px; border-top: 2px solid #dee2e6; text-align: center; color: #6c757d; font-size: 0.9em;">
+            <p><strong>Complete Microservices Migration Plan</strong></p>
+            <p>Document Version 1.0 | Generated January 2025</p>
+            <p>BudolShap © 2025 - Jon Galvez</p>
+            <p style="margin-top: 20px;">
+                <strong>Total Duration:</strong> 12-16 weeks (3-4 months)<br>
+                <strong>Total Estimated Hours:</strong> 600-800 hours<br>
+                <strong>Recommended Team Size:</strong> 1-2 developers
+            </p>
+        </div>
+    </div>
+</body>
+</html>
+
+
+

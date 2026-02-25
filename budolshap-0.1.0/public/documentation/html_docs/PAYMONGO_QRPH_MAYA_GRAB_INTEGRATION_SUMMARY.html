@@ -1,0 +1,286 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>PayMongo Integration Session Summary: QRPh, Maya, GrabPay</title>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, 'Open Sans', 'Helvetica Neue', sans-serif;
+            line-height: 1.6;
+            color: #333;
+            max-width: 900px;
+            margin: 0 auto;
+            padding: 40px;
+            background-color: #f8fafc;
+        }
+
+        h1 {
+            border-bottom: 2px solid #e2e8f0;
+            padding-bottom: 15px;
+            color: #0f172a;
+            font-size: 2.2em;
+            margin-bottom: 30px;
+        }
+
+        h2 {
+            margin-top: 40px;
+            color: #1e293b;
+            border-bottom: 1px solid #e2e8f0;
+            padding-bottom: 8px;
+            font-size: 1.6em;
+        }
+
+        h3 {
+            margin-top: 25px;
+            color: #334155;
+            font-size: 1.25em;
+            font-weight: 600;
+        }
+
+        h4 {
+            margin-top: 15px;
+            color: #475569;
+            font-size: 1.1em;
+            font-weight: 600;
+        }
+
+        .card {
+            background: white;
+            padding: 25px;
+            border-radius: 12px;
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+            margin-bottom: 30px;
+            border: 1px solid #e2e8f0;
+        }
+
+        .issue-block {
+            background-color: #fff1f2;
+            border-left: 4px solid #f43f5e;
+            padding: 15px;
+            margin: 15px 0;
+            border-radius: 0 6px 6px 0;
+        }
+
+        .fix-block {
+            background-color: #f0fdf4;
+            border-left: 4px solid #22c55e;
+            padding: 15px;
+            margin: 15px 0;
+            border-radius: 0 6px 6px 0;
+        }
+
+        code {
+            background-color: #f1f5f9;
+            padding: 3px 6px;
+            border-radius: 4px;
+            font-family: 'Menlo', 'Monaco', 'Courier New', monospace;
+            font-size: 0.9em;
+            color: #0f172a;
+        }
+
+        pre {
+            background-color: #1e293b;
+            color: #e2e8f0;
+            padding: 20px;
+            border-radius: 8px;
+            overflow-x: auto;
+            margin: 15px 0;
+        }
+
+        pre code {
+            background-color: transparent;
+            color: inherit;
+            padding: 0;
+        }
+
+        ul {
+            padding-left: 20px;
+        }
+
+        li {
+            margin-bottom: 8px;
+        }
+
+        .tag {
+            display: inline-block;
+            padding: 2px 8px;
+            border-radius: 12px;
+            font-size: 0.75em;
+            font-weight: bold;
+            text-transform: uppercase;
+            margin-right: 8px;
+            vertical-align: middle;
+        }
+
+        .tag-feat {
+            background-color: #dbeafe;
+            color: #1e40af;
+        }
+
+        .tag-bug {
+            background-color: #fee2e2;
+            color: #991b1b;
+        }
+
+        .tag-infra {
+            background-color: #f3e8ff;
+            color: #6b21a8;
+        }
+
+        .timestamp {
+            color: #64748b;
+            font-size: 0.85em;
+            display: block;
+            margin-top: -5px;
+            margin-bottom: 20px;
+        }
+    </style>
+</head>
+
+<body>
+
+    <h1>PayMongo Integration Session Documentation</h1>
+    <span class="timestamp">Session Date: December 15, 2024</span>
+
+    <div class="card">
+        <h2>Overview</h2>
+        <p>This session focused on finalizing the integration of Maya, GrabPay, and QRPh payment methods via PayMongo.
+            The primary objectives were to ensure reliable QR code display, fix production deployment issues,
+            synchronize the database schema, and verify the end-to-end payment flow including the success page details.
+        </p>
+    </div>
+
+    <h2>Process & Issues Log</h2>
+
+    <div class="card">
+        <h3>1. QR Code Modal Display <span class="tag tag-feat">Feature</span></h3>
+
+        <div class="issue-block">
+            <strong>Issue:</strong> The QR Code modal was disappearing immediately or not showing at all due to
+            component unmounting in <code>OrderSummary.jsx</code> (caused by premature cart clearing).
+        </div>
+
+        <div class="fix-block">
+            <strong>Fix: Inline Modal & Smart Cart Logic</strong><br>
+            Restored the inline modal within <code>components/OrderSummary.jsx</code>:
+            <ul>
+                <li><strong>Portal Implementation:</strong> Used <code>ReactDOM.createPortal</code> to render the
+                    modal at the document body level, ensuring it overlays correctly.</li>
+                <li><strong>Cart Persistence:</strong> modified <code>handlePlaceOrder</code> to <em>only</em> clear
+                    the cart immediately for non-QR payments. For QR payments, the cart (and thus the component)
+                    remains active until the payment is confirmed.</li>
+                <li><strong>Z-Index:</strong> Increased modal z-index to <code>9999</code> to prevent navbar overlap.
+                </li>
+            </ul>
+        </div>
+    </div>
+
+    <div class="card">
+        <h3>2. Vercel Build Failure <span class="tag tag-bug">Bug Fix</span></h3>
+
+        <div class="issue-block">
+            <strong>Issue:</strong> Deployment failed with error:
+            <code>useSearchParams() should be wrapped in a suspense boundary</code>.
+        </div>
+
+        <div class="fix-block">
+            <strong>Fix: Suspense Boundary</strong><br>
+            Refactored pages using search params to wrap content in <code>Suspense</code>. <em>(Note: The dedicated
+                QR page was removed in favor of the inline modal, but this pattern was applied elsewhere).</em>
+        </div>
+    </div>
+
+    <div class="card">
+        <h3>3. Production Database Schema Sync <span class="tag tag-infra">DevOps</span></h3>
+
+        <div class="issue-block">
+            <strong>Issue:</strong> Runtime error "invalid input value for enum" for <code>PaymentMethod</code>.
+        </div>
+
+        <div class="fix-block">
+            <strong>Fix: Remote Schema Push</strong><br>
+            Executed <code>npx prisma db push</code> to align the production database enum values with the codebase.
+        </div>
+    </div>
+
+    <div class="card">
+        <h3>4. Payment Success Page Details <span class="tag tag-bug">Bug Fix</span></h3>
+
+        <div class="issue-block">
+            <strong>Issue:</strong> Order ID, Amount, and Status were missing on the success page for Maya/GrabPay.
+        </div>
+
+        <div class="fix-block">
+            <strong>Fix: Robust Order Lookup</strong><br>
+            Updated <code>app/api/orders/update-status/route.js</code> to look up orders by `paymentId` instead of
+            relying solely on description parsing.
+        </div>
+    </div>
+
+    <div class="card">
+        <h3>5. Automatic Payment Verification <span class="tag tag-feat">New Feature</span></h3>
+        <div class="fix-block">
+            <strong>Implementation: Polling</strong><br>
+            Added a polling mechanism to <code>components/payment/QRCodeModal.jsx</code>:
+            <ul>
+                <li>Checks <code>/api/paymongo/status</code> every 3 seconds while the modal is open.</li>
+                <li>Automatically redirects the user to the success page upon detecting <code>succeeded</code> status.
+                </li>
+                <li><strong>Benefit:</strong> Reduces friction; users don't need to manually click "I've Paid".</li>
+            </ul>
+        </div>
+    </div>
+
+    <div class="card">
+        <h3>6. UI Polish & Branding <span class="tag tag-feat">UX</span></h3>
+        <div class="fix-block">
+            <strong>Enhancements:</strong>
+            <ul>
+                <li><strong>Branding:</strong> Added colorful "budolShap." logo to the modal header (Green 'budol',
+                    Slate 'Shap', Green dot) and updated labels (e.g., "budolShap Owner").</li>
+                <li><strong>Responsiveness:</strong> Added <code>max-h-[90vh]</code> and scroll support for smaller
+                    screens.</li>
+                <li><strong>Cleanliness:</strong> Hidden visual scrollbar using CSS utilities while maintaining
+                    functionality.</li>
+            </ul>
+        </div>
+    </div>
+
+    <h2>Technical Details</h2>
+
+    <div class="card">
+        <h3>Payment Flow Architecture</h3>
+        <ul>
+            <li><strong>GCash:</strong> Redirect Flow (PayMongo Hosted Page)</li>
+            <li><strong>Maya / GrabPay / QRPh:</strong> Inline QR Code Modal -> Auto-poll Verification -> Success Page
+            </li>
+        </ul>
+
+        <h3>Key Files</h3>
+        <ul>
+            <li><code>components/OrderSummary.jsx</code>: Main checkout logic & modal trigger.</li>
+            <li><code>components/payment/QRCodeModal.jsx</code>: QR UI & Polling Logic.</li>
+            <li><code>app/api/orders/update-status/route.js</code>: Verification webhook/callback handler.</li>
+        </ul>
+    </div>
+
+    <div class="card">
+        <h3>Recommendations for Future Enhancement</h3>
+        <ol>
+            <li><strong>Webhook Implementation:</strong> Currently, we rely on the client redirecting to
+                <code>/payment/return</code> to update the order status. Implementing full server-side webhooks
+                (listening to PayMongo's `source.chargeable` or `payment_intent.succeeded` events) would ensure orders
+                are marked as paid even if the user closes their browser immediately after payment.
+            </li>
+            <li><strong>Abandoned Checkout Recovery:</strong> Capture partial order details before payment initiation to
+                allow retargeting users who drop off at the payment modal or gateway page.</li>
+            <li><strong>Payment Method Icons:</strong> Centralize payment method icons in a UI component library to
+                ensure consistency across the checkout, modal, and footer.</li>
+        </ol>
+    </div>
+
+</body>
+
+</html>

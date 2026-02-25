@@ -1,0 +1,121 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Phase 2: Technical Specification - Address Form Improvement</title>
+    <style>
+        :root {
+            --shopee-orange: #ee4d2d;
+            --shopee-bg: #f5f5f5;
+            --text-main: #222;
+            --text-sub: #666;
+            --border-color: #e8e8e8;
+            --code-bg: #282c34;
+            --code-text: #abb2bf;
+        }
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            line-height: 1.6;
+            color: var(--text-main);
+            background-color: var(--shopee-bg);
+            margin: 0;
+            padding: 20px;
+        }
+        .container {
+            max-width: 1000px;
+            margin: 0 auto;
+            background: white;
+            padding: 40px;
+            border-radius: 4px;
+            box-shadow: 0 1px 1px rgba(0,0,0,0.05);
+        }
+        h1, h2, h3 { color: var(--shopee-orange); }
+        .spec-section {
+            border: 1px solid var(--border-color);
+            padding: 20px;
+            margin-bottom: 20px;
+            border-radius: 4px;
+        }
+        pre {
+            background: var(--code-bg);
+            color: var(--code-text);
+            padding: 15px;
+            border-radius: 4px;
+            overflow-x: auto;
+            font-size: 0.9em;
+        }
+        .nav { margin-bottom: 20px; }
+        .nav a { color: var(--shopee-orange); text-decoration: none; margin-right: 15px; font-weight: bold; }
+        .tech-tag {
+            background: #e1f5fe;
+            color: #01579b;
+            padding: 2px 8px;
+            border-radius: 4px;
+            font-size: 0.85em;
+            font-weight: bold;
+        }
+    </style>
+</head>
+<body>
+    <div class="nav">
+        <a href="index.html">← Back to Index</a>
+        <a href="phase-1-ux-audit.html">Phase 1: UX Audit</a>
+        <span>Phase 2: Technical Spec</span>
+    </div>
+    <div class="container">
+        <h1>Phase 2: Technical Specification</h1>
+        <p>This phase defines the technical architecture, data structures, and component hierarchy required to implement the Shopee-like address system.</p>
+
+        <div class="spec-section">
+            <h2>1. Database Schema Unification</h2>
+            <p>We need to unify <code>Address</code> and <code>StoreAddress</code> models to ensure consistency. The proposed unified structure is:</p>
+            <pre><code>// Unified Address structure (mental model)
+{
+  region: string;     // e.g., "Metro Manila"
+  province: string;   // e.g., "Metro Manila"
+  city: string;       // e.g., "Quezon City"
+  barangay: string;   // e.g., "Commonwealth"
+  detailedAddress: string; // House #, Street, etc.
+  latitude: float;
+  longitude: float;
+}</code></pre>
+            <p><strong>Note:</strong> We will map <code>state</code> in <code>Address</code> and <code>district/province</code> in <code>StoreAddress</code> to this standardized hierarchy.</p>
+        </div>
+
+        <div class="spec-section">
+            <h2>2. Component Architecture (Geoapify Enhanced)</h2>
+            <p>We will leverage Geoapify's specialized APIs to provide a superior "Shopee-like" experience.</p>
+            
+            <h3>2.1 AddressAutocomplete.jsx <span class="tech-tag">Geoapify API</span></h3>
+            <ul>
+                <li><strong>Responsibility:</strong> Provides a search bar that suggests real addresses in the Philippines.</li>
+                <li><strong>Logic:</strong> When a user selects a suggestion, it automatically fills the City, Barangay, and sets the Map coordinates.</li>
+            </ul>
+
+            <h3>2.2 MapPicker.jsx <span class="tech-tag">React Leaflet + Geoapify Tiles</span></h3>
+            <ul>
+                <li><strong>Responsibility:</strong> Displays an interactive map with Geoapify-styled tiles.</li>
+                <li><strong>Reverse Geocoding:</strong> Uses Geoapify Reverse Geocoding API to update the address fields if the pin is moved manually.</li>
+            </ul>
+        </div>
+
+        <div class="spec-section">
+            <h2>3. API & Data Strategy</h2>
+            <p>We will use <strong>Geoapify</strong> as the primary data source, with a local <strong>PSGC JSON</strong> as a fallback for manual selection if the user cannot find their address via search.</p>
+        </div>
+
+        <div class="spec-section">
+            <h2>4. Implementation Checklist</h2>
+            <ol>
+                <li><strong>Admin Panel Integration:</strong> Create Map Provider settings UI.</li>
+                <li><strong>Dynamic Provider Factory:</strong> Create a utility that initializes the correct Geocoder/Map based on Admin settings.</li>
+                <li>Install <code>@geoapify/react-geocoder-autocomplete</code>, <code>react-leaflet</code>, and <code>leaflet</code>.</li>
+                <li>Develop <code>AddressAutocomplete</code> integration (supporting multiple providers).</li>
+                <li>Develop <code>MapPicker</code> with dynamic tile layers.</li>
+                <li>Update <code>AddressModal.jsx</code> and <code>StoreAddressModal.jsx</code>.</li>
+            </ol>
+        </div>
+    </div>
+</body>
+</html>

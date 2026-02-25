@@ -1,0 +1,144 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Environment Setup - BudolShap</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 40px auto;
+            padding: 20px;
+            line-height: 1.6;
+        }
+        h1 {
+            color: #333;
+            border-bottom: 3px solid #4CAF50;
+            padding-bottom: 10px;
+        }
+        h2 {
+            color: #555;
+            margin-top: 30px;
+            border-bottom: 2px solid #ddd;
+            padding-bottom: 5px;
+        }
+        code {
+            background-color: #f4f4f4;
+            padding: 2px 6px;
+            border-radius: 3px;
+            font-family: 'Courier New', monospace;
+        }
+        pre {
+            background-color: #f4f4f4;
+            padding: 15px;
+            border-radius: 5px;
+            border-left: 4px solid #4CAF50;
+            overflow-x: auto;
+        }
+        ul, ol {
+            margin-left: 20px;
+        }
+        li {
+            margin-bottom: 8px;
+        }
+        .note {
+            background-color: #fff3cd;
+            border-left: 4px solid #ffc107;
+            padding: 10px;
+            margin: 15px 0;
+        }
+    </style>
+</head>
+<body>
+    <h1>Environment Setup</h1>
+    
+    <p>Since the <code>.env</code> file is protected, please create it manually:</p>
+    
+    <h2>Steps:</h2>
+    
+    <ol>
+        <li><strong>Create a file named <code>.env</code> in the root directory</strong> (same level as <code>package.json</code>)</li>
+        
+        <li><strong>Add the following content:</strong>
+            <pre>DATABASE_URL="mysql://root:@localhost:3306/budolshap"
+NEXT_PUBLIC_CURRENCY_SYMBOL="$"
+
+# Authentication
+JWT_SECRET="your-super-secret-jwt-key-change-this-in-production"
+JWT_EXPIRES_IN="7d"
+
+# Admin Configuration (comma-separated emails)
+ADMIN_EMAILS="admin@example.com,admin2@example.com"
+# Or use NEXT_PUBLIC_ADMIN_EMAILS for client-side access (optional)
+NEXT_PUBLIC_ADMIN_EMAILS="admin@example.com,admin2@example.com"
+
+# Email Configuration (for email verification and password reset)
+SMTP_HOST="smtp.gmail.com"
+SMTP_PORT="587"
+SMTP_USER="your-email@gmail.com"
+SMTP_PASS="your-app-password"
+SMTP_FROM="your-email@gmail.com"
+NEXT_PUBLIC_APP_URL="http://localhost:3000"</pre>
+        </li>
+        
+        <li><strong>If your MySQL has a password</strong>, update the DATABASE_URL:
+            <pre>DATABASE_URL="mysql://root:yourpassword@localhost:3306/budolshap"</pre>
+        </li>
+        
+        <li><strong>If your MySQL uses a different port</strong>, update accordingly:
+            <pre>DATABASE_URL="mysql://root:@localhost:3307/budolshap"</pre>
+        </li>
+    </ol>
+    
+    <h2>After creating .env file:</h2>
+    
+    <ol>
+        <li><strong>Create the database</strong> in phpMyAdmin (http://localhost/phpmyadmin):
+            <ul>
+                <li>Click "New" in the left sidebar</li>
+                <li>Database name: <code>budolshap</code></li>
+                <li>Collation: <code>utf8mb4_unicode_ci</code> (or leave default)</li>
+                <li>Click "Create"</li>
+            </ul>
+        </li>
+        
+        <li><strong>Run the migration:</strong>
+            <pre>npx prisma migrate dev --name init</pre>
+        </li>
+    </ol>
+    
+    <p>This will create all the necessary tables in your database.</p>
+    
+    <h2>Admin Access Setup</h2>
+    
+    <p>To grant admin access to specific users:</p>
+    
+    <ol>
+        <li><strong>Register the user</strong> as a regular user first (via <code>/login</code> → Sign Up)</li>
+        
+        <li><strong>Add their email to ADMIN_EMAILS</strong> in <code>.env</code>:
+            <pre>ADMIN_EMAILS="admin@example.com,admin2@example.com"</pre>
+            <ul>
+                <li>Multiple admin emails can be separated by commas</li>
+                <li>Admin emails must match the email used during registration</li>
+                <li>Make sure there are no extra spaces around commas</li>
+            </ul>
+        </li>
+        
+        <li><strong>Restart your development server</strong> after updating <code>.env</code>:
+            <pre># Stop the server (Ctrl+C) and restart:
+npm run dev</pre>
+        </li>
+        
+        <li><strong>Login as admin</strong> at <code>/admin/login</code> using the configured admin email</li>
+    </ol>
+    
+    <div class="note">
+        <strong>Note:</strong> Admin users must first register as regular users before accessing admin features. The admin email configuration only grants access to the admin dashboard; the user account must already exist in the database.
+    </div>
+    
+    <p>For more details, see <code>LOGIN_GUIDE.md</code>.</p>
+</body>
+</html>
+

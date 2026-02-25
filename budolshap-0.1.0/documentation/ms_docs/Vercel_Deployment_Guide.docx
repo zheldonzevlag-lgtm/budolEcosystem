@@ -1,0 +1,228 @@
+Vercel Deployment Guide – Free Tier
+===================================
+
+Prepared for the **budolshap** project (Next.js – App Router)
+Date: 2025‑11‑23
+
+---
+
+## 1. Prerequisites
+
+1. **Git** installed on your Windows machine.
+2. **Node.js** (v18 or later) and **npm** (or Yarn) installed.
+3. A **GitHub**, **GitLab**, or **Bitbucket** account (Vercel pulls code from a Git repository).
+4. A **Vercel** account (free tier is sufficient).
+5. (Optional) A cloud‑hosted database (PostgreSQL, MySQL, etc.) and the connection string (`DATABASE_URL`).
+
+---
+
+## 2. Prepare the Project for Version Control
+
+### 2.1 Initialise a Git repository (if not already)
+```powershell
+cd C:\wamp64\www\budolshap
+git init
+```
+
+### 2.2 Create a .gitignore
+Create a file named **.gitignore** in the project root with the following content:
+```
+node_modules/
+/.next/
+.env.local
+.DS_Store
+```
+
+### 2.3 Add and commit all files
+```powershell
+git add .
+git commit -m "Initial commit – ready for Vercel"
+```
+
+---
+
+## 3. Push the Repository to a Remote Host
+
+1. Create a new empty repository on GitHub (or GitLab/Bitbucket).  
+2. Link the remote and push the code:
+```powershell
+git remote add origin https://github.com/<YOUR_USERNAME>/budolshap.git
+git branch -M main
+git push -u origin main
+```
+Replace `<YOUR_USERNAME>` with your actual username.
+
+---
+
+## 4. Verify `package.json` Scripts
+
+Open **package.json** and ensure the following scripts exist (they are used by Vercel automatically):
+```json
+{
+  "scripts": {
+    "dev": "next dev",
+    "build": "next build",
+    "start": "next start"
+  }
+}
+```
+If they are missing, add them, save, and commit:
+```powershell
+git add package.json
+git commit -m "Add Next.js scripts"
+git push
+```
+
+---
+
+## 5. (Optional) Pin the Node Version
+
+Add an `engines` field to **package.json** so Vercel knows which Node version to use:
+```json
+"engines": {
+  "node": ">=18 <21"
+}
+```
+Commit the change.
+
+---
+
+## 6. Identify Environment Variables
+
+List every variable that your app reads from `.env.local` (e.g., `DATABASE_URL`, `NEXT_PUBLIC_API_URL`, `JWT_SECRET`).
+
+### 6.1 Add them to Vercel later (do **not** commit secrets to the repo!).
+
+---
+
+## 7. Create the Vercel Project
+
+1. Go to <https://vercel.com> and sign‑in.
+2. Click **New Project** → **Import Git Repository**.
+3. Select the repository you just pushed.
+4. Vercel will auto‑detect **Next.js** and pre‑fill:
+   - **Framework Preset**: *Next.js*
+   - **Build Command**: `npm run build`
+   - **Output Directory**: `.next`
+5. Click **Deploy**.
+
+Vercel will:
+- Clone the repo.
+- Run `npm install`.
+- Execute `npm run build`.
+- Deploy the site to `<project>.vercel.app`.
+
+---
+
+## 8. Configure Environment Variables on Vercel
+
+1. In the Vercel dashboard, open **Project Settings → Environment Variables**.
+2. Click **Add** for each variable you listed in step 6.
+   - **Key**: exact name (e.g., `DATABASE_URL`).
+   - **Value**: the secret value.
+   - **Environment**: *Production* (and optionally *Preview*).
+3. Save.
+
+---
+
+## 9. (Optional) Run Prisma Migrations on Deploy
+
+If you use Prisma, you need the database schema up‑to‑date.
+
+### 9.1 Simple – Run on every deploy
+Add a `postinstall` script to **package.json**:
+```json
+"scripts": {
+  "dev": "next dev",
+  "build": "next build",
+  "start": "next start",
+  "postinstall": "prisma generate && prisma migrate deploy"
+}
+```
+Commit and push.
+
+### 9.2 Manual – One‑off migration
+After the first deployment, open the Vercel **Terminal** (or use the Vercel CLI) and run:
+```powershell
+npx prisma migrate deploy
+```
+Make sure `DATABASE_URL` points to a production‑ready DB.
+
+---
+
+## 10. Verify the Deployment
+
+1. Open the generated URL (e.g., `https://budolshap.vercel.app`).
+2. Test all critical flows: login, product browsing, API routes, admin pages.
+3. If something fails, open **Deployments → Logs** in Vercel to see error details.
+
+---
+
+## 11. Add a Custom Domain (Optional but Recommended)
+
+1. In Vercel, go to **Project Settings → Domains** → **Add**.
+2. Enter your domain (e.g., `www.myshop.com`).
+3. Follow the DNS instructions – usually a **CNAME** to `cname.vercel-dns.com` or an **A** record to Vercel’s IPs.
+4. After propagation (usually < 30 min), the domain will point to your Vercel deployment.
+
+---
+
+## 12. Monitor Free‑Tier Limits
+
+| Resource | Free‑Tier Quota (2025) |
+|----------|-----------------------|
+| Build minutes | 100 hrs / month |
+| Serverless execution | 125 k GB‑seconds / month |
+| Bandwidth | 100 GB / month |
+| Concurrent builds | 1 |
+| Custom domains | Unlimited |
+
+If you approach any limit, Vercel will warn you in the dashboard.
+
+---
+
+## 13. Quick Reference Commands (PowerShell)
+
+```powershell
+# Initialise & push repo
+cd C:\wamp64\www\budolshap
+git init
+git add .
+git commit -m "Initial commit"
+git remote add origin https://github.com/<USER>/budolshap.git
+git branch -M main
+git push -u origin main
+
+# Verify scripts
+cat package.json
+
+# Add postinstall for Prisma (if needed)
+# (edit package.json manually, then)
+git add package.json
+git commit -m "Add postinstall for Prisma migrations"
+git push
+```
+
+---
+
+## 14. Troubleshooting Common Issues
+
+| Symptom | Likely Cause | Fix |
+|---------|---------------|-----|
+| **404 on API routes** | `DATABASE_URL` missing or wrong | Add correct `DATABASE_URL` in Vercel env vars |
+| **Build fails – missing module** | `node_modules` not installed (cache issue) | Clear build cache in Vercel → Redeploy |
+| **Prisma error – migrations pending** | `prisma migrate deploy` not run | Add `postinstall` script or run manually via Vercel CLI |
+| **Environment variable not found** | Variable defined only for *Preview* not *Production* | Add it to *Production* environment |
+
+---
+
+## 15. Next Steps
+
+- Set up **Analytics** in Vercel to monitor traffic.
+- Enable **Automatic Git Deployments** (already default) for continuous delivery.
+- Consider adding **Preview Deployments** for pull‑request testing.
+- Explore Vercel’s **Edge Functions** if you need ultra‑low‑latency APIs.
+
+---
+
+*End of guide*

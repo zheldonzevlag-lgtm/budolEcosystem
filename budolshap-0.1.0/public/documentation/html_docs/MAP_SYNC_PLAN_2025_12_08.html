@@ -1,0 +1,101 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Lalamove Map Sync Implementation Plan</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            line-height: 1.6;
+            color: #333;
+            max-width: 900px;
+            margin: 0 auto;
+            padding: 20px;
+            background-color: #f9f9f9;
+        }
+
+        h1 {
+            color: #2c3e50;
+            border-bottom: 3px solid #e74c3c;
+            padding-bottom: 15px;
+            margin-bottom: 30px;
+        }
+
+        h2 {
+            color: #c0392b;
+            margin-top: 40px;
+            border-left: 5px solid #e74c3c;
+            padding-left: 15px;
+        }
+
+        .card {
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 5px rgba(0, 0, 0, 0.05);
+            margin-bottom: 20px;
+            border: 1px solid #e1e4e8;
+        }
+
+        .code-block {
+            background-color: #282c34;
+            color: #abb2bf;
+            padding: 15px;
+            border-radius: 5px;
+            font-family: 'Consolas', 'Monaco', monospace;
+            overflow-x: auto;
+            margin: 15px 0;
+        }
+
+        .keyword {
+            color: #c678dd;
+        }
+
+        .string {
+            color: #98c379;
+        }
+
+        .comment {
+            color: #5c6370;
+            font-style: italic;
+        }
+    </style>
+</head>
+
+<body>
+    <h1>Plan: Sync Map Status with Order Status</h1>
+
+    <div class="card">
+        <h3>Problem</h3>
+        <p>The app shows the order as <strong>DELIVERED</strong> (based on webhook), but the embedded Lalamove map
+            (iframe) still shows the driver at the "Drop-off Point". This visual discrepancy confuses users.</p>
+    </div>
+
+    <h2>Proposed Solution</h2>
+    <div class="card">
+        <p>We will override the iframe display when the local order status is <code>DELIVERED</code>. Instead of showing
+            the live map (which might be lagging or showing 'Drop-off'), we will display a clear <strong>"Package
+                Delivered"</strong> success state.</p>
+    </div>
+
+    <h2>Implementation Logic</h2>
+    <div class="card">
+        <p>In <code>components/LalamoveTracking.jsx</code>:</p>
+        <div class="code-block">
+            <span class="keyword">if</span> (order.status === <span class="string">'DELIVERED'</span>) {
+            <span class="keyword">return</span> (
+            &lt;div className="delivered-banner"&gt;
+            &lt;h3&gt;✅ Package Delivered&lt;/h3&gt;
+            &lt;p&gt;Your driver has completed the delivery.&lt;/p&gt;
+            &lt;/div&gt;
+            );
+            }
+
+            <span class="comment">// Otherwise, show the live map iframe</span>
+        </div>
+    </div>
+</body>
+
+</html>

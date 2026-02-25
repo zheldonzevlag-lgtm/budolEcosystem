@@ -1,0 +1,182 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>PayMongo Redirect Fix & Future Recommendations</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            line-height: 1.6;
+            color: #333;
+            max-width: 900px;
+            margin: 0 auto;
+            padding: 40px 20px;
+            background-color: #f9f9f9;
+        }
+
+        h1 {
+            color: #2c3e50;
+            border-bottom: 3px solid #3498db;
+            padding-bottom: 15px;
+            margin-bottom: 30px;
+        }
+
+        h2 {
+            color: #2980b9;
+            margin-top: 40px;
+            border-left: 5px solid #3498db;
+            padding-left: 15px;
+        }
+
+        h3 {
+            color: #34495e;
+            margin-top: 25px;
+        }
+
+        p {
+            margin-bottom: 15px;
+        }
+
+        code {
+            background-color: #e8f0f8;
+            padding: 2px 6px;
+            border-radius: 4px;
+            font-family: 'Consolas', 'Monaco', monospace;
+            color: #c0392b;
+        }
+
+        pre {
+            background-color: #2c3e50;
+            color: #ecf0f1;
+            padding: 20px;
+            border-radius: 8px;
+            overflow-x: auto;
+            font-family: 'Consolas', 'Monaco', monospace;
+        }
+
+        .alert {
+            background-color: #fce4ec;
+            border-left: 5px solid #c2185b;
+            padding: 15px;
+            margin: 20px 0;
+            border-radius: 4px;
+        }
+
+        .success {
+            background-color: #e8f5e9;
+            border-left: 5px solid #2ecc71;
+            padding: 15px;
+            margin: 20px 0;
+            border-radius: 4px;
+        }
+
+        .recommendation-card {
+            background: white;
+            border: 1px solid #ddd;
+            padding: 20px;
+            border-radius: 8px;
+            margin-bottom: 15px;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+        }
+
+        ul {
+            margin-left: 20px;
+        }
+
+        li {
+            margin-bottom: 8px;
+        }
+    </style>
+</head>
+
+<body>
+
+    <h1>PayMongo Redirect Issue: Summary & Resolution</h1>
+    <p><strong>Date:</strong> December 15, 2025<br>
+        <strong>Environment:</strong> Next.js (Localhost & Production)
+    </p>
+
+    <h2>1. The Issue</h2>
+    <div class="alert">
+        <strong>Symptom:</strong> When testing payments (Maya, GrabPay, GCash) locally, the user was redirected to the
+        <em>production</em> URL (<code>budolshap.vercel.app</code>) instead of <code>localhost:3000</code> after
+        authorization.
+    </div>
+    <p><strong>Root Cause:</strong></p>
+    <ul>
+        <li>The application logic prioritized the <code>NEXT_PUBLIC_BASE_URL</code> environment variable.</li>
+        <li>During local development, if this variable was loaded (e.g., from a shared <code>.env</code> file or default
+            fallback), the app would construct the <code>successUrl</code> using the production domain.</li>
+        <li>This caused the PayMongo API to receive a production return URL, breaking the local testing loop.</li>
+    </ul>
+
+    <h2>2. The Fix</h2>
+    <div class="success">
+        <strong>Resolution:</strong> Implemented a "Localhost Priority" logic in the backend route handlers.
+    </div>
+    <p>We modified the following files:</p>
+    <ul>
+        <li><code>app/api/payment/checkout/route.js</code></li>
+        <li><code>app/api/paymongo/create-intent/route.js</code></li>
+    </ul>
+
+    <h3>Implemented Logic</h3>
+    <p>We now inspect the request headers <em>before</em> checking environment variables:</p>
+    <pre>
+// Dynamic Return URL Strategy
+const host = request.headers.get('host');
+const protocol = request.headers.get('x-forwarded-proto') || 'https';
+
+// 1. Force localhost if detected in host header
+if (host && (host.includes('localhost') || host.includes('127.0.0.1'))) {
+    baseUrl = `http://${host}`; // e.g., http://localhost:3000
+} 
+// 2. Use Environment Variable (if not local)
+else if (process.env.NEXT_PUBLIC_BASE_URL) {
+    baseUrl = process.env.NEXT_PUBLIC_BASE_URL;
+} 
+// 3. Fallback to Vercel URL or Host Header
+else {
+    baseUrl = `https://${process.env.VERCEL_URL || host || 'budolshap-v3.vercel.app'}`;
+}
+    </pre>
+
+    <h2>3. How it Works Now</h2>
+    <ul>
+        <li><strong>Local Development:</strong> The system sees <code>localhost:3000</code> in the header and
+            immediately forces the return URL to match. Environment variables are ignored for this specific purpose.
+        </li>
+        <li><strong>Production/Preview:</strong> The system sees the actual domain (e.g.,
+            <code>budolshap.vercel.app</code>) and uses it, or falls back to the configured environment variable.</li>
+    </ul>
+
+    <h2>4. Future Recommendations</h2>
+
+    <div class="recommendation-card">
+        <h3>🔹 Recommendation 1: Centralize Base URL Logic</h3>
+        <p><strong>Status:</strong> Not Started</p>
+        <p>Currently, the logic above is duplicated in two different route files. It should be extracted into a shared
+            utility function, e.g., <code>lib/utils/url-helper.js</code>.</p>
+        <code>export function getBaseUrl(request) { ... }</code>
+    </div>
+
+    <div class="recommendation-card">
+        <h3>🔹 Recommendation 2: Strict Environment Variable Separation</h3>
+        <p><strong>Status:</strong> Ongoing</p>
+        <p>Ensure that local development does not accidentally load production-specific environment files (like
+            <code>.env.connection.prod</code>) unless explicitly intended. Validate <code>.env</code> loading order in
+            <code>package.json</code> scripts.</p>
+    </div>
+
+    <div class="recommendation-card">
+        <h3>🔹 Recommendation 3: Automated Testing for Redirects</h3>
+        <p><strong>Status:</strong> Recommended</p>
+        <p>Implement a unit test for the URL generation logic to ensure that passing a <code>localhost</code> header
+            always returns a <code>http://localhost</code> URL, preventing future regressions.</p>
+    </div>
+
+</body>
+
+</html>

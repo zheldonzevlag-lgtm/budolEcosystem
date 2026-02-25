@@ -1,0 +1,110 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Phase 1: Lalamove Return Booking Bug Fix</title>
+    <style>
+        body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; line-height: 1.6; color: #333; max-width: 1000px; margin: 0 auto; padding: 20px; }
+        h1 { color: #2c3e50; border-bottom: 2px solid #3498db; padding-bottom: 10px; }
+        h2 { color: #2980b9; margin-top: 30px; }
+        .code-block { background: #f4f4f4; border-left: 5px solid #3498db; padding: 15px; overflow-x: auto; font-family: "Courier New", Courier, monospace; }
+        .status-badge { display: inline-block; padding: 5px 10px; border-radius: 4px; font-weight: bold; font-size: 0.9em; }
+        .status-fixed { background: #d4edda; color: #155724; }
+        .status-issue { background: #f8d7da; color: #721c24; }
+        .nav { margin-bottom: 20px; }
+        .nav a { color: #3498db; text-decoration: none; margin-right: 15px; }
+        table { width: 100%; border-collapse: collapse; margin: 20px 0; }
+        th, td { border: 1px solid #ddd; padding: 12px; text-align: left; }
+        th { background: #f8f9fa; }
+    </style>
+</head>
+<body>
+    <div class="nav">
+        <a href="index.html">← Back to Summary</a>
+    </div>
+
+    <h1>Phase 1: Lalamove Return Booking Bug Fix</h1>
+
+    <div class="section">
+        <h2>Issue Overview</h2>
+        <p>The system was failing to book return shipments with Lalamove, resulting in a 500 Internal Server Error and the UI error message: <code>lalamove.placeOrder is not a function</code>.</p>
+        
+        <table>
+            <tr>
+                <th>Component</th>
+                <th>Status</th>
+                <th>Details</th>
+            </tr>
+            <tr>
+                <td>Lalamove Provider</td>
+                <td><span class="status-issue status-badge">MISMATCH</span></td>
+                <td>The provider implemented <code>createOrder()</code> but the service called <code>placeOrder()</code>.</td>
+            </tr>
+            <tr>
+                <td>Payload Structure</td>
+                <td><span class="status-issue status-badge">INVALID</span></td>
+                <td>The payload structure sent to the provider did not match the required schema for Lalamove V3.</td>
+            </tr>
+            <tr>
+                <td>Phone Formatting</td>
+                <td><span class="status-issue status-badge">MISSING</span></td>
+                <td>Return contacts were not being formatted to E.164, causing Lalamove API rejection.</td>
+            </tr>
+        </table>
+    </div>
+
+    <div class="section">
+        <h2>Implemented Fixes</h2>
+        
+        <h3>1. Standardized Provider Method Call</h3>
+        <p>Updated <code>shippingService.js</code> to use the correct method <code>createOrder()</code> instead of the non-existent <code>placeOrder()</code>.</p>
+
+        <h3>2. Payload Restructuring</h3>
+        <p>Restructured the booking payload to match the Lalamove provider's expected abstraction:</p>
+        <div class="code-block">
+            const bookingPayload = {<br>
+            &nbsp;&nbsp;quotationId: quoteId,<br>
+            &nbsp;&nbsp;stops,<br>
+            &nbsp;&nbsp;pickupContact: { name: pickup.name, phone: pickupPhone },<br>
+            &nbsp;&nbsp;deliveryContact: { name: delivery.name, phone: deliveryPhone },<br>
+            &nbsp;&nbsp;packageDetails: { remarks: `Return for Order ${order.id}` }<br>
+            };
+        </div>
+
+        <h3>3. Centralized Phone Formatting</h3>
+        <p>Extracted <code>formatPhone</code> into a top-level utility within <code>shippingService.js</code> to ensure consistent E.164 formatting for both forward and return logistics.</p>
+
+        <h3>4. Database Mapping & Schema Fix</h3>
+        <p>Identified that the <code>Return</code> model in <code>schema.prisma</code> was missing the <code>returnShipping</code> field. Added the field to the schema and synchronized the database.</p>
+        <div class="code-block">
+            model Return {<br>
+            &nbsp;&nbsp;...<br>
+            &nbsp;&nbsp;returnShipping Json?<br>
+            &nbsp;&nbsp;...<br>
+            }
+        </div>
+        <p>Corrected the field mapping when updating the <code>Return</code> record, ensuring the complex shipping object is stored in the new <code>returnShipping</code> JSON field.</p>
+    </div>
+
+    <div class="section">
+        <h2>Troubleshooting: EPERM Errors</h2>
+        <p>If you encounter an <code>Unknown argument returnShipping</code> error after these changes, it means the Prisma Client needs to be regenerated. On Windows, this may fail with an <code>EPERM</code> error if the dev server is running.</p>
+        <p><strong>Solution:</strong></p>
+        <ol>
+            <li>Stop your Next.js dev server (Ctrl+C).</li>
+            <li>Run <code>npx prisma generate</code> in your terminal.</li>
+            <li>Restart your dev server with <code>npm run dev</code>.</li>
+        </ol>
+    </div>
+
+    <div class="section">
+        <h2>Verification Steps</h2>
+        <ul>
+            <li>Verified <code>formatPhone</code> handles PH local numbers (09...) and converts to +63...</li>
+            <li>Verified <code>lalamove.js</code> implements <code>createOrder</code> and correctly handles the restructured payload.</li>
+            <li>Verified database updates use the correct returned fields from the Lalamove API.</li>
+        </ul>
+    </div>
+</body>
+</html>

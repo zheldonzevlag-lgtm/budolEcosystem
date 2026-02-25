@@ -1,0 +1,55 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Phase 2: Refactoring & Schema Sync - Prisma Upsert Fix</title>
+    <style>
+        body { font-family: sans-serif; line-height: 1.6; color: #333; max-width: 900px; margin: 0 auto; padding: 20px; background: #f4f7f6; }
+        header { background: #27ae60; color: white; padding: 20px; border-radius: 8px; margin-bottom: 30px; }
+        .content { background: white; padding: 30px; border-radius: 8px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); }
+        code { background: #f8f8f8; padding: 2px 5px; border-radius: 4px; font-family: monospace; }
+        pre { background: #2d3436; color: #dfe6e9; padding: 15px; border-radius: 8px; overflow-x: auto; }
+        .back-link { display: inline-block; margin-top: 20px; color: #3498db; text-decoration: none; }
+    </style>
+</head>
+<body>
+    <header>
+        <h1>Phase 2: Refactoring & Schema Sync</h1>
+        <p>Implementation of robust defaults and cross-environment schema consistency.</p>
+    </header>
+    <div class="content">
+        <h2>Key Technical Changes</h2>
+        
+        <h3>1. Centralized Defaults</h3>
+        <p>A <code>DEFAULT_SETTINGS</code> constant was introduced in <code>lib/settings.js</code> to ensure all mandatory fields are accounted for in both <code>get</code> and <code>update</code> operations.</p>
+        <pre><code>export const DEFAULT_SETTINGS = {
+    id: "default",
+    realtimeProvider: "POLLING",
+    sessionTimeout: 15,
+    // ... all other required fields
+};</code></pre>
+
+        <h3>2. Robust Upsert Pattern</h3>
+        <p>The <code>updateSystemSettings</code> function now merges incoming data with the full set of defaults in the <code>create</code> block:</p>
+        <pre><code>create: { 
+    ...DEFAULT_SETTINGS,
+    ...data,
+    id: "default"
+}</code></pre>
+
+        <h3>3. Multi-Schema Synchronization</h3>
+        <p>The <code>SystemSettings</code> model was synchronized across three different Prisma schema files to ensure that local development (MySQL) doesn't fall behind production (PostgreSQL):</p>
+        <ul>
+            <li><code>prisma/schema.prisma</code> (Main / Production)</li>
+            <li><code>prisma/schema.mysql.prisma</code> (Local MySQL)</li>
+            <li><code>prisma/schema.local.prisma</code> (Local PostgreSQL)</li>
+        </ul>
+
+        <h2>Impact</h2>
+        <p>These changes eliminate "Missing field" validation errors during upserts and ensure that partial updates (like map settings) can safely initialize the entire settings record if it doesn't already exist.</p>
+        
+        <a href="index.html" class="back-link">← Back to Index</a>
+    </div>
+</body>
+</html>

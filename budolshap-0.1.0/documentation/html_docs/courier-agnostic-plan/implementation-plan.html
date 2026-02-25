@@ -1,0 +1,769 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Courier-Agnostic Shipping Implementation Plan - BudolShap</title>
+    <style>
+        :root {
+            --primary: #0f172a;
+            --secondary: #334155;
+            --accent: #10b981;
+            --bg: #f8fafc;
+            --card: #ffffff;
+            --border: #e2e8f0;
+            --text: #1e293b;
+            --text-muted: #64748b;
+        }
+
+        .tab-content {
+            display: none;
+        }
+
+        .tab-content.active {
+            display: block;
+        }
+
+        .tab-btn {
+            padding: 10px 20px;
+            color: var(--text-muted);
+            cursor: pointer;
+            border-bottom: 2px solid transparent;
+            transition: all 0.2s;
+            font-weight: 500;
+        }
+
+        .tab-btn.active {
+            color: var(--primary);
+            border-bottom: 2px solid var(--primary);
+            font-weight: 600;
+        }
+
+        .tab-btn:hover {
+            color: var(--primary);
+            background: rgba(15, 23, 42, 0.05);
+        }
+
+        .switch {
+            position: relative;
+            display: inline-block;
+            width: 44px;
+            height: 22px;
+        }
+
+        .switch input {
+            opacity: 0;
+            width: 0;
+            height: 0;
+        }
+
+        .slider {
+            position: absolute;
+            cursor: pointer;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background-color: #cbd5e1;
+            transition: .4s;
+            border-radius: 34px;
+        }
+
+        .slider:before {
+            position: absolute;
+            content: "";
+            height: 16px;
+            width: 16px;
+            left: 3px;
+            bottom: 3px;
+            background-color: white;
+            transition: .4s;
+            border-radius: 50%;
+        }
+
+        input:checked + .slider {
+            background-color: var(--accent);
+        }
+
+        input:checked + .slider:before {
+            transform: translateX(22px);
+        }
+
+        .card-header-actions {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+        }
+
+        body {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background-color: var(--bg);
+            color: var(--text);
+            line-height: 1.6;
+            margin: 0;
+            padding: 0;
+        }
+
+        .container {
+            max-width: 1000px;
+            margin: 40px auto;
+            padding: 0 20px;
+        }
+
+        header {
+            text-align: center;
+            margin-bottom: 40px;
+        }
+
+        h1 {
+            color: var(--primary);
+            font-size: 2.5rem;
+            margin-bottom: 10px;
+        }
+
+        .subtitle {
+            color: var(--text-muted);
+            font-size: 1.1rem;
+        }
+
+        .card {
+            background: var(--card);
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            padding: 30px;
+            margin-bottom: 30px;
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+        }
+
+        h2 {
+            color: var(--primary);
+            border-bottom: 2px solid var(--bg);
+            padding-bottom: 10px;
+            margin-top: 0;
+        }
+
+        h3 {
+            color: var(--secondary);
+            margin-top: 25px;
+        }
+
+        ul, ol {
+            padding-left: 20px;
+        }
+
+        li {
+            margin-bottom: 10px;
+        }
+
+        .status-badge {
+            display: inline-block;
+            padding: 4px 12px;
+            border-radius: 9999px;
+            font-size: 0.85rem;
+            font-weight: 600;
+            background: #dcfce7;
+            color: #166534;
+        }
+
+        .phase-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 20px;
+            margin-top: 20px;
+        }
+
+        .phase-card {
+            background: var(--bg);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            padding: 20px;
+        }
+
+        .phase-number {
+            font-weight: bold;
+            color: var(--accent);
+            font-size: 1.2rem;
+            margin-bottom: 10px;
+        }
+
+        .mockup-container {
+            background: #f1f5f9;
+            border-radius: 8px;
+            padding: 20px;
+            border: 1px dashed var(--text-muted);
+            margin-top: 20px;
+        }
+
+        .mockup-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+        }
+
+        .btn {
+            padding: 8px 16px;
+            border-radius: 6px;
+            font-weight: 500;
+            cursor: pointer;
+            border: none;
+        }
+
+        .btn-primary {
+            background: var(--primary);
+            color: white;
+        }
+
+        code {
+            background: #f1f5f9;
+            padding: 2px 6px;
+            border-radius: 4px;
+            font-family: monospace;
+        }
+
+        .timeline-item {
+            display: flex;
+            gap: 20px;
+            margin-bottom: 20px;
+        }
+
+        .timeline-date {
+            min-width: 120px;
+            font-weight: bold;
+            color: var(--secondary);
+        }
+
+        .nav-links {
+            display: flex;
+            justify-content: center;
+            gap: 20px;
+            margin-bottom: 40px;
+        }
+
+        .nav-links a {
+            color: var(--accent);
+            text-decoration: none;
+            font-weight: 500;
+        }
+
+        .nav-links a:hover {
+            text-decoration: underline;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>Courier-Agnostic Integration</h1>
+            <p class="subtitle">Implementation Plan for Ship24 & TrackingMore Aggregators</p>
+        </header>
+
+        <div class="nav-links">
+            <a href="#overview">Architecture</a>
+            <a href="#aggregators">Aggregators</a>
+            <a href="#notifications">Notifications</a>
+            <a href="#admin">Admin Settings</a>
+            <a href="#security">Security</a>
+            <a href="#phases">Implementation Phases</a>
+            <a href="#mockup">UI Mockup</a>
+        </div>
+
+        <section id="overview" class="card">
+            <h2>🏗️ Architecture Overview</h2>
+            <p>The BudolShap platform is evolving towards a <strong>Centralized Configuration Management</strong> system. By migrating environment variables (<code>.env</code>) to a secure Admin UI, we enable real-time platform adjustments without requiring code redeployments or server restarts.</p>
+            <ul>
+                <li><strong>Dynamic Configuration:</strong> Switch payment gateways (Paymongo/Xendit) or tracking providers instantly.</li>
+                <li><strong>Environment Agnostic:</strong> Manage local, staging, and Vercel-specific settings from a single dashboard.</li>
+                <li><strong>Secure Storage:</strong> Secrets are encrypted at rest using industry-standard AES-256 before being saved to the database.</li>
+            </ul>
+        </section>
+
+        <section id="notifications" class="card">
+            <h2>🔔 Multi-Channel Notification System</h2>
+            <p>A comprehensive notification strategy for Buyers, Sellers, and Admins to ensure transparency at every stage of the shipment.</p>
+            
+            <h3>1. Email Notifications (Nodemailer + SMTP / Brevo)</h3>
+            <ul>
+                <li><strong>Buyer:</strong> Tracking number issued, In Transit alert, Out for Delivery, and Successful Delivery.</li>
+                <li><strong>Seller:</strong> Order booked confirmation, Pickup successful, and Delivery failure alerts (for rebooking).</li>
+                <li><strong>Admin:</strong> Aggregator API credit warnings, failed webhook processing alerts.</li>
+                <li><strong>Brevo Integration:</strong> Future-proof integration for transactional and marketing emails with advanced tracking and templates.</li>
+            </ul>
+
+            <h3>2. Real-time Notifications (Pusher)</h3>
+            <p><strong>Note:</strong> Pusher is used for <em>Real-time UI Updates</em> (toasts, live maps, badge increments) rather than sending actual Emails or SMS.</p>
+            <ul>
+                <li><strong>UI Toasts:</strong> Immediate popup when a courier status changes while the user is on the site.</li>
+                <li><strong>Dashboard Sync:</strong> Update the "In Transit" and "Delivered" counts in real-time.</li>
+            </ul>
+
+            <h3>3. SMS Notifications (Semaphore / Zerix / Twilio)</h3>
+            <ul>
+                <li><strong>Buyer:</strong> "Out for Delivery" SMS with the courier's name and contact number.</li>
+                <li><strong>Zerix Text Integration:</strong> Leveraging <a href="https://www.zerixtext.com/" target="_blank">Zerix Text</a> for reliable PH-local messaging, bulk updates, and structured two-way threads.</li>
+                <li><strong>Reliability:</strong> SMS is the fallback for buyers without consistent internet access.</li>
+            </ul>
+        </section>
+
+        <section id="aggregators" class="card">
+            <h2>🔌 Aggregator Integration Strategy</h2>
+            <p>Instead of building separate integrations for 50+ local couriers, we will leverage tracking aggregators:</p>
+            
+            <h3>1. Ship24 Integration</h3>
+            <ul>
+                <li><strong>Role:</strong> Global tracking and logistics aggregator.</li>
+                <li><strong>Capability:</strong> Supports J&T Express, NinjaVan, and LBC natively.</li>
+                <li><strong>Feature:</strong> Webhook support for real-time status updates from couriers.</li>
+            </ul>
+
+            <h3>2. TrackingMore Integration</h3>
+            <ul>
+                <li><strong>Role:</strong> Specialized e-commerce tracking API.</li>
+                <li><strong>Capability:</strong> Strong support for Southeast Asian couriers including Shopee and Lazada express services.</li>
+                <li><strong>Feature:</strong> Auto-detection of couriers based on tracking number format.</li>
+            </ul>
+        </section>
+
+        <section id="admin" class="card">
+            <h2>⚙️ Centralized Platform Settings</h2>
+            <p>The Admin Settings will be reorganized into logical categories to manage all platform dependencies currently residing in <code>.env</code> files.</p>
+            
+            <div class="phase-grid">
+                <div class="phase-card">
+                    <h3>💳 Payments</h3>
+                    <ul>
+                        <li><strong>Paymongo:</strong> Public/Secret Keys.</li>
+                        <li><strong>Xendit:</strong> API Key, Callback Tokens.</li>
+                    </ul>
+                </div>
+                <div class="phase-card">
+                    <h3>📦 Shipping</h3>
+                    <ul>
+                        <li><strong>Lalamove:</strong> API Key, Secret, Region.</li>
+                        <li><strong>Aggregators:</strong> Ship24 / TrackingMore.</li>
+                    </ul>
+                </div>
+                <div class="phase-card">
+                    <h3>🖼️ Media & Storage</h3>
+                    <ul>
+                        <li><strong>Cloudinary:</strong> Cloud Name, API Key/Secret.</li>
+                    </ul>
+                </div>
+                <div class="phase-card">
+                    <h3>📧 Email (SMTP/API)</h3>
+                    <ul>
+                        <li><strong>Gmail:</strong> SMTP User, App Password.</li>
+                        <li><strong>Brevo:</strong> API Key, Transactional templates.</li>
+                    </ul>
+                </div>
+                <div class="phase-card">
+                    <h3>🗄️ Infrastructure</h3>
+                    <ul>
+                        <li><strong>Database:</strong> Local DB strings, Vercel Postgres URLs.</li>
+                        <li><strong>Vercel:</strong> Project ID, Team ID, Env Vars sync.</li>
+                    </ul>
+                </div>
+            </div>
+        </section>
+
+        <section id="security" class="card">
+            <h2>🔒 Security & Secret Management</h2>
+            <p>Moving secrets from <code>.env</code> to the database requires a robust security layer:</p>
+            <ul>
+                <li><strong>AES-256 Encryption:</strong> All sensitive keys (Secret Keys, Passwords) will be encrypted before being stored in the database.</li>
+                <li><strong>Master Key:</strong> A single <code>ENCRYPTION_KEY</code> will remain in the server's environment to decrypt values at runtime.</li>
+                <li><strong>Audit Logs:</strong> Track which admin user modified specific configuration values.</li>
+            </ul>
+        </section>
+
+        <section id="phases" class="card">
+            <h2>📅 Implementation Phases & Timeframe</h2>
+            <div class="phase-grid">
+                <div class="phase-card">
+                    <div class="phase-number">Phase 1: Core Service Layer</div>
+                    <p><strong>Duration:</strong> 3-5 Days</p>
+                    <ul>
+                        <li>Implement <code>Ship24Provider</code> and <code>TrackingMoreProvider</code> classes.</li>
+                        <li>Update <code>ShippingFactory</code> to register new providers.</li>
+                        <li>Create unified data normalization layer.</li>
+                    </ul>
+                </div>
+                <div class="phase-card">
+                    <div class="phase-number">Phase 2: Admin Settings UI</div>
+                    <p><strong>Duration:</strong> 2-3 Days</p>
+                    <ul>
+                        <li>Develop <code>/admin/settings/shipping</code> page.</li>
+                        <li>Add secure API key management in backend.</li>
+                        <li>Implement provider switching logic.</li>
+                    </ul>
+                </div>
+                <div class="phase-card">
+                    <div class="phase-number">Phase 3: Webhook Handlers</div>
+                    <p><strong>Duration:</strong> 4-5 Days</p>
+                    <ul>
+                        <li>Create <code>/api/webhooks/ship24</code> and <code>/api/webhooks/trackingmore</code> endpoints.</li>
+                        <li>Implement signature verification for security.</li>
+                        <li>Map external status updates to real-time UI events.</li>
+                    </ul>
+                </div>
+                <div class="phase-card">
+                    <div class="phase-number">Phase 4: Testing & UAT</div>
+                    <p><strong>Duration:</strong> 3 Days</p>
+                    <ul>
+                        <li>End-to-end testing with sandbox tracking numbers.</li>
+                        <li>Verify mobile/desktop timeline responsiveness.</li>
+                        <li>Load testing for high-volume webhook updates.</li>
+                    </ul>
+                </div>
+            </div>
+            <p style="margin-top: 20px; font-weight: bold;">Total Estimated Time: 12-16 Working Days</p>
+        </section>
+
+        <section id="mockup" class="card">
+            <h2>🎨 Admin UI Mockup (System Settings)</h2>
+            <div class="mockup-container">
+                <div class="mockup-header">
+                    <h3 style="margin:0;">Platform Configuration Dashboard</h3>
+                    <div>
+                        <button class="btn" style="background:#e2e8f0;">Discard</button>
+                        <button class="btn btn-primary">Save All Changes</button>
+                    </div>
+                </div>
+                
+                <!-- Tab Navigation -->
+                <div style="display:flex; gap:10px; border-bottom:1px solid #cbd5e1; margin-bottom:20px;">
+                    <div class="tab-btn active" onclick="showTab('shipping')">Shipping</div>
+                    <div class="tab-btn" onclick="showTab('payments')">Payments</div>
+                    <div class="tab-btn" onclick="showTab('media')">Media & Storage</div>
+                    <div class="tab-btn" onclick="showTab('infrastructure')">Infrastructure</div>
+                    <div class="tab-btn" onclick="showTab('email')">Email</div>
+                </div>
+
+                <!-- Shipping Tab -->
+                <div id="shipping" class="tab-content active">
+                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 30px;">
+                        <!-- Lalamove Card -->
+                        <div style="background: white; padding: 20px; border-radius: 8px; border: 1px solid #e2e8f0;">
+                            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:15px;">
+                                <div style="display:flex; align-items:center; gap:10px;">
+                                    <h4 style="margin:0;">Lalamove Integration</h4>
+                                    <label class="switch">
+                                        <input type="checkbox" checked>
+                                        <span class="slider"></span>
+                                    </label>
+                                </div>
+                                <div style="display:flex; gap:8px;">
+                                    <button class="btn" style="background:#f1f5f9; padding:4px 12px; font-size:0.8rem;">Cancel</button>
+                                    <button class="btn btn-primary" style="padding:4px 12px; font-size:0.8rem;">Save</button>
+                                </div>
+                            </div>
+                            <div style="margin-bottom:15px;">
+                                <label style="display:block; font-size:0.85rem; margin-bottom:4px;">API Key</label>
+                                <input type="password" value="••••••••••••" style="width:100%; padding:8px; border-radius:6px; border:1px solid #cbd5e1;">
+                            </div>
+                            <div style="margin-bottom:15px;">
+                                <label style="display:block; font-size:0.85rem; margin-bottom:4px;">API Secret</label>
+                                <input type="password" value="••••••••••••" style="width:100%; padding:8px; border-radius:6px; border:1px solid #cbd5e1;">
+                            </div>
+                        </div>
+
+                        <!-- Ship24 Card -->
+                        <div style="background: white; padding: 20px; border-radius: 8px; border: 1px solid #e2e8f0;">
+                            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:15px;">
+                                <div style="display:flex; align-items:center; gap:10px;">
+                                    <h4 style="margin:0;">Ship24 API Configuration</h4>
+                                    <label class="switch">
+                                        <input type="checkbox" checked>
+                                        <span class="slider"></span>
+                                    </label>
+                                </div>
+                                <div style="display:flex; gap:8px;">
+                                    <button class="btn" style="background:#f1f5f9; padding:4px 12px; font-size:0.8rem;">Cancel</button>
+                                    <button class="btn btn-primary" style="padding:4px 12px; font-size:0.8rem;">Save</button>
+                                </div>
+                            </div>
+                            <div style="margin-bottom:15px;">
+                                <label style="display:block; font-size:0.9rem; margin-bottom:5px;">API Key</label>
+                                <input type="password" value="••••••••••••••••••••••••" style="width:100%; padding:10px; border-radius:6px; border:1px solid #cbd5e1;">
+                            </div>
+                            <div>
+                                <label style="display:block; font-size:0.9rem; margin-bottom:5px;">Webhook Secret</label>
+                                <input type="password" value="••••••••••••••••" style="width:100%; padding:10px; border-radius:6px; border:1px solid #cbd5e1;">
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Payments Tab -->
+                <div id="payments" class="tab-content">
+                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 30px;">
+                        <!-- Paymongo Card -->
+                        <div style="background: white; padding: 20px; border-radius: 8px; border: 1px solid #e2e8f0;">
+                            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:15px;">
+                                <div style="display:flex; align-items:center; gap:10px;">
+                                    <h4 style="margin:0;">Paymongo Settings</h4>
+                                    <label class="switch">
+                                        <input type="checkbox" checked>
+                                        <span class="slider"></span>
+                                    </label>
+                                </div>
+                                <div style="display:flex; gap:8px;">
+                                    <button class="btn" style="background:#f1f5f9; padding:4px 12px; font-size:0.8rem;">Cancel</button>
+                                    <button class="btn btn-primary" style="padding:4px 12px; font-size:0.8rem;">Save</button>
+                                </div>
+                            </div>
+                            <div style="margin-bottom:15px;">
+                                <label style="display:block; font-size:0.85rem; margin-bottom:4px;">Public Key</label>
+                                <input type="text" value="pk_test_••••••••" style="width:100%; padding:8px; border-radius:6px; border:1px solid #cbd5e1;">
+                            </div>
+                            <div style="margin-bottom:15px;">
+                                <label style="display:block; font-size:0.85rem; margin-bottom:4px;">Secret Key</label>
+                                <input type="password" value="sk_test_••••••••" style="width:100%; padding:8px; border-radius:6px; border:1px solid #cbd5e1;">
+                            </div>
+                        </div>
+
+                        <!-- Xendit Card -->
+                        <div style="background: white; padding: 20px; border-radius: 8px; border: 1px solid #e2e8f0;">
+                            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:15px;">
+                                <div style="display:flex; align-items:center; gap:10px;">
+                                    <h4 style="margin:0;">Xendit Settings</h4>
+                                    <label class="switch">
+                                        <input type="checkbox">
+                                        <span class="slider"></span>
+                                    </label>
+                                </div>
+                                <div style="display:flex; gap:8px;">
+                                    <button class="btn" style="background:#f1f5f9; padding:4px 12px; font-size:0.8rem;">Cancel</button>
+                                    <button class="btn btn-primary" style="padding:4px 12px; font-size:0.8rem;">Save</button>
+                                </div>
+                            </div>
+                            <div style="margin-bottom:15px;">
+                                <label style="display:block; font-size:0.85rem; margin-bottom:4px;">API Key</label>
+                                <input type="password" value="xnd_development_••••" style="width:100%; padding:8px; border-radius:6px; border:1px solid #cbd5e1;">
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Media Tab -->
+                <div id="media" class="tab-content">
+                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 30px;">
+                        <!-- Cloudinary Card -->
+                        <div style="background: white; padding: 20px; border-radius: 8px; border: 1px solid #e2e8f0;">
+                            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:15px;">
+                                <div style="display:flex; align-items:center; gap:10px;">
+                                    <h4 style="margin:0;">Cloudinary Storage</h4>
+                                    <label class="switch">
+                                        <input type="checkbox" checked>
+                                        <span class="slider"></span>
+                                    </label>
+                                </div>
+                                <div style="display:flex; gap:8px;">
+                                    <button class="btn" style="background:#f1f5f9; padding:4px 12px; font-size:0.8rem;">Cancel</button>
+                                    <button class="btn btn-primary" style="padding:4px 12px; font-size:0.8rem;">Save</button>
+                                </div>
+                            </div>
+                            <div style="margin-bottom:15px;">
+                                <label style="display:block; font-size:0.85rem; margin-bottom:4px;">Cloud Name</label>
+                                <input type="text" value="budolshap-cloud" style="width:100%; padding:8px; border-radius:6px; border:1px solid #cbd5e1;">
+                            </div>
+                            <div style="margin-bottom:15px;">
+                                <label style="display:block; font-size:0.85rem; margin-bottom:4px;">API Key</label>
+                                <input type="text" value="••••••••••••" style="width:100%; padding:8px; border-radius:6px; border:1px solid #cbd5e1;">
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Infrastructure Tab -->
+                <div id="infrastructure" class="tab-content">
+                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 30px;">
+                        <!-- Database Card -->
+                        <div style="background: white; padding: 20px; border-radius: 8px; border: 1px solid #e2e8f0;">
+                            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:15px;">
+                                <h4 style="margin:0;">Database Configuration</h4>
+                                <div style="display:flex; gap:8px;">
+                                    <button class="btn" style="background:#f1f5f9; padding:4px 12px; font-size:0.8rem;">Cancel</button>
+                                    <button class="btn btn-primary" style="padding:4px 12px; font-size:0.8rem;">Save</button>
+                                </div>
+                            </div>
+                            <div style="margin-bottom:15px;">
+                                <label style="display:block; font-size:0.85rem; margin-bottom:4px;">Database URL</label>
+                                <input type="password" value="postgres://••••••••••••" style="width:100%; padding:8px; border-radius:6px; border:1px solid #cbd5e1;">
+                            </div>
+                        </div>
+                        <!-- Vercel Card -->
+                        <div style="background: white; padding: 20px; border-radius: 8px; border: 1px solid #e2e8f0;">
+                            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:15px;">
+                                <h4 style="margin:0;">Vercel Environment</h4>
+                                <div style="display:flex; gap:8px;">
+                                    <button class="btn" style="background:#f1f5f9; padding:4px 12px; font-size:0.8rem;">Cancel</button>
+                                    <button class="btn btn-primary" style="padding:4px 12px; font-size:0.8rem;">Save</button>
+                                </div>
+                            </div>
+                            <div style="margin-bottom:15px;">
+                                <label style="display:block; font-size:0.85rem; margin-bottom:4px;">Project ID</label>
+                                <input type="text" value="prj_••••••••" style="width:100%; padding:8px; border-radius:6px; border:1px solid #cbd5e1;">
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Email Tab -->
+                <div id="email" class="tab-content">
+                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 30px;">
+                        <!-- Gmail Card -->
+                        <div style="background: white; padding: 20px; border-radius: 8px; border: 1px solid #e2e8f0;">
+                            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:15px;">
+                                <div style="display:flex; align-items:center; gap:10px;">
+                                    <h4 style="margin:0;">Gmail SMTP</h4>
+                                    <label class="switch">
+                                        <input type="checkbox" checked>
+                                        <span class="slider"></span>
+                                    </label>
+                                </div>
+                                <div style="display:flex; gap:8px;">
+                                    <button class="btn" style="background:#f1f5f9; padding:4px 12px; font-size:0.8rem;">Cancel</button>
+                                    <button class="btn btn-primary" style="padding:4px 12px; font-size:0.8rem;">Save</button>
+                                </div>
+                            </div>
+                            <div style="margin-bottom:10px;">
+                                <label style="display:block; font-size:0.85rem; margin-bottom:4px;">SMTP Host</label>
+                                <input type="text" value="smtp.gmail.com" style="width:100%; padding:8px; border-radius:6px; border:1px solid #cbd5e1;">
+                            </div>
+                            <div style="margin-bottom:10px;">
+                                <label style="display:block; font-size:0.85rem; margin-bottom:4px;">SMTP Port</label>
+                                <input type="text" value="587" style="width:100%; padding:8px; border-radius:6px; border:1px solid #cbd5e1;">
+                            </div>
+                            <div style="margin-bottom:10px;">
+                                <label style="display:block; font-size:0.85rem; margin-bottom:4px;">Gmail User</label>
+                                <input type="text" value="admin@gmail.com" style="width:100%; padding:8px; border-radius:6px; border:1px solid #cbd5e1;">
+                            </div>
+                            <div style="margin-bottom:10px;">
+                                <label style="display:block; font-size:0.85rem; margin-bottom:4px;">App Password</label>
+                                <input type="password" value="•••• •••• •••• ••••" style="width:100%; padding:8px; border-radius:6px; border:1px solid #cbd5e1;">
+                            </div>
+                            <div style="margin-bottom:10px;">
+                                <label style="display:block; font-size:0.85rem; margin-bottom:4px;">From Email</label>
+                                <input type="text" value="admin@gmail.com" style="width:100%; padding:8px; border-radius:6px; border:1px solid #cbd5e1;">
+                            </div>
+                        </div>
+
+                        <!-- Brevo Card -->
+                        <div style="background: white; padding: 20px; border-radius: 8px; border: 1px solid #e2e8f0;">
+                            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:15px;">
+                                <div style="display:flex; align-items:center; gap:10px;">
+                                    <h4 style="margin:0;">Brevo API</h4>
+                                    <label class="switch">
+                                        <input type="checkbox">
+                                        <span class="slider"></span>
+                                    </label>
+                                </div>
+                                <div style="display:flex; gap:8px;">
+                                    <button class="btn" style="background:#f1f5f9; padding:4px 12px; font-size:0.8rem;">Cancel</button>
+                                    <button class="btn btn-primary" style="padding:4px 12px; font-size:0.8rem;">Save</button>
+                                </div>
+                            </div>
+                            <div style="margin-bottom:15px;">
+                                <label style="display:block; font-size:0.85rem; margin-bottom:4px;">API Key</label>
+                                <input type="password" value="••••••••••••••••••••••••" style="width:100%; padding:8px; border-radius:6px; border:1px solid #cbd5e1;">
+                            </div>
+                        </div>
+
+                        <!-- Zerix SMS Card -->
+                        <div style="background: white; padding: 20px; border-radius: 8px; border: 1px solid #e2e8f0; margin-top:20px; grid-column: span 2;">
+                            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:15px;">
+                                <div style="display:flex; align-items:center; gap:10px;">
+                                    <h4 style="margin:0;">Zerix SMS (SMS Notifications)</h4>
+                                    <label class="switch">
+                                        <input type="checkbox" checked>
+                                        <span class="slider"></span>
+                                    </label>
+                                </div>
+                                <div style="display:flex; gap:8px;">
+                                    <button class="btn" style="background:#f1f5f9; padding:4px 12px; font-size:0.8rem;">Cancel</button>
+                                    <button class="btn btn-primary" style="padding:4px 12px; font-size:0.8rem;">Save</button>
+                                </div>
+                            </div>
+                            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px;">
+                                <div>
+                                    <label style="display:block; font-size:0.85rem; margin-bottom:4px;">API Key</label>
+                                    <input type="password" value="••••••••••••" style="width:100%; padding:8px; border-radius:6px; border:1px solid #cbd5e1;">
+                                </div>
+                                <div>
+                                    <label style="display:block; font-size:0.85rem; margin-bottom:4px;">Sender ID</label>
+                                    <input type="text" value="BUDOLSHAP" style="width:100%; padding:8px; border-radius:6px; border:1px solid #cbd5e1;">
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div style="margin-top:30px; padding-top:20px; border-top:1px solid #e2e8f0;">
+                    <h4 style="margin-top:0;">Notification Templates</h4>
+                    <div style="display:grid; grid-template-columns: 1fr 1fr; gap:15px;">
+                        <div style="padding:10px; background:#f8fafc; border:1px solid #e2e8f0; border-radius:6px; font-size:0.85rem;">
+                            <strong>Buyer Email:</strong> <span style="color:#10b981;">Active</span>
+                        </div>
+                        <div style="padding:10px; background:#f8fafc; border:1px solid #e2e8f0; border-radius:6px; font-size:0.85rem;">
+                            <strong>Seller SMS:</strong> <span style="color:#10b981;">Active</span>
+                        </div>
+                        <div style="padding:10px; background:#f8fafc; border:1px solid #e2e8f0; border-radius:6px; font-size:0.85rem;">
+                            <strong>Admin Webhook:</strong> <span style="color:#10b981;">Active</span>
+                        </div>
+                        <div style="padding:10px; background:#f8fafc; border:1px solid #e2e8f0; border-radius:6px; font-size:0.85rem;">
+                            <strong>Zerix SMS:</strong> <span style="color:#10b981;">Active</span>
+                        </div>
+                        <div style="padding:10px; background:#f8fafc; border:1px solid #e2e8f0; border-radius:6px; font-size:0.85rem;">
+                            <strong>Pusher Realtime:</strong> <span style="color:#10b981;">Active</span>
+                        </div>
+                    </div>
+                </div>
+
+                <div style="margin-top:30px; padding-top:20px; border-top:1px solid #e2e8f0;">
+                    <h4 style="margin-top:0;">Supported Couriers</h4>
+                    <div style="display:flex; flex-wrap:wrap; gap:10px;">
+                        <span style="background:#f1f5f9; padding:4px 10px; border-radius:4px; font-size:0.8rem;">J&T Express</span>
+                        <span style="background:#f1f5f9; padding:4px 10px; border-radius:4px; font-size:0.8rem;">NinjaVan</span>
+                        <span style="background:#f1f5f9; padding:4px 10px; border-radius:4px; font-size:0.8rem;">LBC</span>
+                        <span style="background:#f1f5f9; padding:4px 10px; border-radius:4px; font-size:0.8rem;">Grab Express</span>
+                        <span style="background:#f1f5f9; padding:4px 10px; border-radius:4px; font-size:0.8rem;">Shopee Xpress</span>
+                        <span style="background:#f1f5f9; padding:4px 10px; border-radius:4px; font-size:0.8rem;">Lazada Express</span>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <section class="card">
+            <h2>🚀 Future Enhancements</h2>
+            <ul>
+                <li><strong>Auto-Carrier Switching:</strong> Automatically switch to the cheapest aggregator if one fails.</li>
+                <li><strong>Brevo Email Marketing:</strong> Transition from standard SMTP to Brevo for advanced email templates, tracking, and customer engagement.</li>
+                <li><strong>Courier Performance Analytics:</strong> Dashboard to track which courier is the fastest and most reliable for BudolShap orders.</li>
+            </ul>
+        </section>
+    </div>
+    <script>
+        function showTab(tabId) {
+            // Hide all tab contents
+            document.querySelectorAll('.tab-content').forEach(content => {
+                content.classList.remove('active');
+            });
+
+            // Deactivate all tab buttons
+            document.querySelectorAll('.tab-btn').forEach(btn => {
+                btn.classList.remove('active');
+            });
+
+            // Show selected tab content
+            document.getElementById(tabId).classList.add('active');
+
+            // Activate selected tab button
+            const activeBtn = Array.from(document.querySelectorAll('.tab-btn')).find(btn => 
+                btn.getAttribute('onclick').includes(tabId)
+            );
+            if (activeBtn) activeBtn.classList.add('active');
+        }
+    </script>
+</body>
+</html>

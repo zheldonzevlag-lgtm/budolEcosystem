@@ -1,0 +1,222 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Migration Report: Cloud to Local PostgreSQL</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            line-height: 1.6;
+            color: #333;
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+            background-color: #f5f5f5;
+        }
+
+        .container {
+            background-color: white;
+            padding: 40px;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+        }
+
+        h1 {
+            color: #2c3e50;
+            border-bottom: 2px solid #27ae60;
+            padding-bottom: 10px;
+        }
+
+        h2 {
+            color: #34495e;
+            margin-top: 30px;
+            border-bottom: 1px solid #eee;
+            padding-bottom: 5px;
+        }
+
+        code {
+            background-color: #f8f9fa;
+            padding: 2px 4px;
+            border-radius: 4px;
+            font-family: 'Consolas', 'Monaco', monospace;
+            color: #e83e8c;
+        }
+
+        pre {
+            background-color: #282c34;
+            color: #abb2bf;
+            padding: 15px;
+            border-radius: 5px;
+            overflow-x: auto;
+            font-family: 'Consolas', 'Monaco', monospace;
+            font-size: 0.9em;
+        }
+
+        .alert {
+            padding: 15px;
+            margin-bottom: 20px;
+            border-radius: 4px;
+        }
+
+        .alert-success {
+            color: #155724;
+            background-color: #d4edda;
+            border: 1px solid #c3e6cb;
+        }
+
+        .step {
+            margin-bottom: 20px;
+            padding: 15px;
+            border: 1px solid #e9ecef;
+            border-radius: 5px;
+            background-color: #fcfcfc;
+        }
+
+        .step-heading {
+            font-weight: bold;
+            color: #495057;
+            margin-bottom: 10px;
+            display: block;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 10px;
+        }
+
+        th,
+        td {
+            border: 1px solid #ddd;
+            padding: 8px;
+        }
+
+        th {
+            background-color: #f2f2f2;
+            text-align: left;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="container">
+        <h1>Database Migration Execution Report (Local PostgreSQL)</h1>
+        <p><strong>Goal:</strong> Migrating Vercel PostgreSQL Data to Local PostgreSQL instance.</p>
+        <p><strong>Date Executed:</strong> December 13, 2025</p>
+
+        <div class="alert alert-success">
+            <strong>Result:</strong> 100% Success. All data, including previously failing Order records, was
+            successfully restored to the local database.
+        </div>
+
+        <h2>1. Execution Summary</h2>
+
+        <div class="step">
+            <span class="step-heading">Phase 1: Connection & Provisioning</span>
+            <p><strong>Challenge:</strong> Initial connection attempts defaulted to the cloud database due to
+                <code>directUrl</code> settings in <code>schema.prisma</code>.</p>
+            <p><strong>Solution:</strong> Created a temporary <code>prisma/schema.local.prisma</code> that stripped out
+                cloud-specific configurations to force a local connection.</p>
+            <p><strong>Command Used:</strong></p>
+            <pre>$env:DATABASE_URL='postgresql://postgres:r00t@127.0.0.1:5432/budolshap_local?schema=public'; npx prisma db push --schema=prisma/schema.local.prisma</pre>
+        </div>
+
+        <div class="step">
+            <span class="step-heading">Phase 2: Data Restoration & Fix</span>
+            <p><strong>Initial Issue:</strong> Restoration of <code>Orders</code> failed (0/4 restored). Debugging
+                confirmed that the backup JSON for <code>orderItems</code> included the <code>orderId</code> field.</p>
+            <p><strong>Technical Cause:</strong> Prisma's nested <code>create</code> logic prohibits specifying the
+                foreign key <code>orderId</code> explicitly in the child records, as it is inferred from the parent.</p>
+            <p><strong>Applied Fix:</strong> Modified <code>scripts/restore-database.js</code> to clean the
+                <code>orderItems</code> array and remove <code>orderId</code> before insertion.</p>
+            <pre>
+// Clean up orderItems for nested create
+const cleanOrderItems = orderItems.map(item => {
+    const { orderId, ...rest } = item
+    return rest
+})
+</pre>
+            <p><strong>Outcome:</strong> Re-run of the restoration script against the local database was
+                <strong>flawless</strong> with 100% data integrity.</p>
+        </div>
+
+        <h2>2. Data Restoration Report</h2>
+
+        <table>
+            <thead>
+                <tr>
+                    <th>Table Name</th>
+                    <th>Status</th>
+                    <th>Records Restored</th>
+                    <th>Notes</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td>Users</td>
+                    <td><span style="color:green">✅ Success</span></td>
+                    <td>5</td>
+                    <td></td>
+                </tr>
+                <tr>
+                    <td>Stores</td>
+                    <td><span style="color:green">✅ Success</span></td>
+                    <td>1</td>
+                    <td></td>
+                </tr>
+                <tr>
+                    <td>Products</td>
+                    <td><span style="color:green">✅ Success</span></td>
+                    <td>4</td>
+                    <td></td>
+                </tr>
+                <tr>
+                    <td>Wallets</td>
+                    <td><span style="color:green">✅ Success</span></td>
+                    <td>1</td>
+                    <td></td>
+                </tr>
+                <tr>
+                    <td>Carts</td>
+                    <td><span style="color:green">✅ Success</span></td>
+                    <td>3</td>
+                    <td></td>
+                </tr>
+                <tr>
+                    <td><strong>Orders</strong></td>
+                    <td><span style="color:green">✅ Success</span></td>
+                    <td><strong>4/4</strong></td>
+                    <td>Fully restored after schema fix</td>
+                </tr>
+                <tr>
+                    <td>Addresses</td>
+                    <td><span style="color:green">✅ Success</span></td>
+                    <td>2</td>
+                    <td></td>
+                </tr>
+            </tbody>
+        </table>
+
+        <h2>3. Technical Configuration</h2>
+        <ul>
+            <li><strong>Local Connection String:</strong>
+                <code>postgresql://postgres:r00t@127.0.0.1:5432/budolshap_local?schema=public</code></li>
+            <li><strong>Backup Source:</strong> <code>c:\wamp64\www\budolshap-v3\backups\2025-12-13_12-19\</code></li>
+            <li><strong>Modified Schema:</strong> <code>prisma/schema.local.prisma</code> (Used only for provisioning)
+            </li>
+        </ul>
+
+        <h2>4. Post-Migration State</h2>
+        <p>The application has been automatically reverted to use the <strong>Production Schema</strong> and
+            <strong>Vercel Database</strong>. The local database <code>budolshap_local</code> is now a complete, offline
+            replica available for development or testing.</p>
+
+        <p><strong>Verifying via pgAdmin:</strong> Connect to Host: <code>127.0.0.1</code>, Port: <code>5432</code>,
+            User: <code>postgres</code>, Password: <code>r00t</code>, Database: <code>budolshap_local</code>.</p>
+
+    </div>
+</body>
+
+</html>

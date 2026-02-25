@@ -1,0 +1,569 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Lalamove Tracker Accuracy & Driver Information Fix</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            line-height: 1.6;
+            color: #333;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            padding: 20px;
+        }
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 12px;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+            overflow: hidden;
+        }
+        header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 40px;
+            text-align: center;
+        }
+        header h1 {
+            font-size: 2.5em;
+            margin-bottom: 10px;
+        }
+        header p {
+            font-size: 1.2em;
+            opacity: 0.9;
+        }
+        .content {
+            padding: 40px;
+        }
+        .section {
+            margin-bottom: 40px;
+        }
+        .section h2 {
+            color: #667eea;
+            font-size: 1.8em;
+            margin-bottom: 20px;
+            padding-bottom: 10px;
+            border-bottom: 3px solid #667eea;
+        }
+        .section h3 {
+            color: #764ba2;
+            font-size: 1.4em;
+            margin: 25px 0 15px 0;
+        }
+        .issue-box {
+            background: #fff3cd;
+            border-left: 4px solid #ffc107;
+            padding: 20px;
+            margin: 20px 0;
+            border-radius: 4px;
+        }
+        .fix-box {
+            background: #d4edda;
+            border-left: 4px solid #28a745;
+            padding: 20px;
+            margin: 20px 0;
+            border-radius: 4px;
+        }
+        .code-block {
+            background: #f8f9fa;
+            border: 1px solid #dee2e6;
+            border-radius: 4px;
+            padding: 15px;
+            margin: 15px 0;
+            overflow-x: auto;
+            font-family: 'Courier New', monospace;
+            font-size: 0.9em;
+        }
+        .file-path {
+            background: #e9ecef;
+            padding: 8px 12px;
+            border-radius: 4px;
+            font-family: 'Courier New', monospace;
+            font-size: 0.9em;
+            display: inline-block;
+            margin: 5px 0;
+        }
+        ul, ol {
+            margin-left: 30px;
+            margin-top: 10px;
+        }
+        li {
+            margin: 8px 0;
+        }
+        .badge {
+            display: inline-block;
+            padding: 4px 12px;
+            border-radius: 12px;
+            font-size: 0.85em;
+            font-weight: bold;
+            margin: 0 5px;
+        }
+        .badge-critical {
+            background: #dc3545;
+            color: white;
+        }
+        .badge-important {
+            background: #ffc107;
+            color: #333;
+        }
+        .badge-info {
+            background: #17a2b8;
+            color: white;
+        }
+        .badge-success {
+            background: #28a745;
+            color: white;
+        }
+        .timeline {
+            position: relative;
+            padding-left: 30px;
+            margin: 20px 0;
+        }
+        .timeline::before {
+            content: '';
+            position: absolute;
+            left: 0;
+            top: 0;
+            bottom: 0;
+            width: 2px;
+            background: #667eea;
+        }
+        .timeline-item {
+            position: relative;
+            padding-bottom: 20px;
+        }
+        .timeline-item::before {
+            content: '';
+            position: absolute;
+            left: -35px;
+            top: 5px;
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+            background: #667eea;
+            border: 3px solid white;
+            box-shadow: 0 0 0 2px #667eea;
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 20px 0;
+        }
+        th, td {
+            padding: 12px;
+            text-align: left;
+            border-bottom: 1px solid #dee2e6;
+        }
+        th {
+            background: #f8f9fa;
+            font-weight: bold;
+            color: #667eea;
+        }
+        .test-section {
+            background: #f8f9fa;
+            padding: 20px;
+            border-radius: 8px;
+            margin: 20px 0;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>🚚 Lalamove Tracker Accuracy Fix</h1>
+            <p>Driver Information Display & Status Synchronization</p>
+            <p style="font-size: 0.9em; margin-top: 10px;">December 6, 2025</p>
+        </header>
+
+        <div class="content">
+            <!-- OVERVIEW -->
+            <div class="section">
+                <h2>📋 Overview</h2>
+                <p>This document details the comprehensive fixes applied to ensure accurate Lalamove order tracking and dynamic driver information display in Budolshap V3.</p>
+                
+                <div class="issue-box">
+                    <h3>🔴 Issues Identified</h3>
+                    <ol>
+                        <li><strong>Mock Driver Data:</strong> LalamoveTracking component was displaying hardcoded mock driver information instead of actual data from the order</li>
+                        <li><strong>Incomplete Driver Info:</strong> Webhook handler and trackOrder function weren't fetching/storing complete driver details (rating, vehicle type, photo)</li>
+                        <li><strong>Inaccurate Status Mapping:</strong> Order progress tracker wasn't correctly mapping Lalamove-specific statuses (ASSIGNING_DRIVER, ON_GOING, PICKED_UP, COMPLETED)</li>
+                        <li><strong>Missing Sync Mechanism:</strong> No way to manually refresh Lalamove data when needed</li>
+                    </ol>
+                </div>
+            </div>
+
+            <!-- FILES MODIFIED -->
+            <div class="section">
+                <h2>📁 Files Modified</h2>
+                
+                <h3>1. LalamoveTracking Component</h3>
+                <div class="file-path">components/LalamoveTracking.jsx</div>
+                <div class="fix-box">
+                    <strong>Changes:</strong>
+                    <ul>
+                        <li>Removed mock driver data fallback</li>
+                        <li>Now uses actual <code>order.shipping.driverInfo</code> from database</li>
+                        <li>Shows "Waiting for Driver Assignment" message when driver not yet assigned</li>
+                        <li>Conditionally renders driver details (rating, vehicle type, plate number) only when available</li>
+                        <li>Added proper null checks for all driver fields</li>
+                    </ul>
+                </div>
+
+                <h3>2. Lalamove Service</h3>
+                <div class="file-path">services/lalamove.js</div>
+                <div class="fix-box">
+                    <strong>Enhanced trackOrder() method:</strong>
+                    <ul>
+                        <li>Returns complete driver information: name, phone, plateNumber, photo, rating, vehicleType</li>
+                        <li>Returns location data with lat/lng coordinates</li>
+                        <li>Returns shareLink for tracking map</li>
+                        <li>Returns estimated pickup and delivery times</li>
+                        <li>Added detailed logging for debugging</li>
+                    </ul>
+                </div>
+
+                <h3>3. Webhook Handler</h3>
+                <div class="file-path">app/api/webhooks/lalamove/route.js</div>
+                <div class="fix-box">
+                    <strong>Critical Enhancement:</strong>
+                    <ul>
+                        <li>When driver is assigned (ON_GOING event), webhook now calls Lalamove API to fetch complete driver details</li>
+                        <li>Stores comprehensive driver info in <code>shipping.driverInfo</code> field</li>
+                        <li>Updates location data from API response</li>
+                        <li>Updates shareLink for live tracking</li>
+                        <li>Falls back to webhook data if API call fails</li>
+                        <li>Timeline events now include full driver information</li>
+                    </ul>
+                </div>
+
+                <h3>4. Order Progress Tracker</h3>
+                <div class="file-path">components/OrderProgressTracker.jsx</div>
+                <div class="fix-box">
+                    <strong>Accurate Status Mapping:</strong>
+                    <ul>
+                        <li>Added Lalamove-specific status mapping for each stage</li>
+                        <li>Checks both <code>order.status</code> and <code>order.shipping.status</code></li>
+                        <li>Correctly maps: ASSIGNING_DRIVER → Payment Confirmed, ON_GOING → Driver Assigned, PICKED_UP → Picked Up, COMPLETED → Delivered</li>
+                    </ul>
+                </div>
+
+                <h3>5. Sync API Endpoint (NEW)</h3>
+                <div class="file-path">app/api/orders/[orderId]/sync-lalamove/route.js</div>
+                <div class="fix-box">
+                    <strong>Manual Sync Feature:</strong>
+                    <ul>
+                        <li>POST endpoint to manually sync Lalamove order data</li>
+                        <li>Fetches latest driver info, location, and status from Lalamove API</li>
+                        <li>Updates database with fresh data</li>
+                        <li>Returns updated order object</li>
+                        <li>Useful for testing and troubleshooting</li>
+                    </ul>
+                </div>
+            </div>
+
+            <!-- STATUS FLOW -->
+            <div class="section">
+                <h2>🔄 Lalamove Status Flow</h2>
+                <p>Understanding how Lalamove statuses map to order stages:</p>
+                
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Order Status</th>
+                            <th>Lalamove Status</th>
+                            <th>Display Label</th>
+                            <th>Driver Info Available?</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td>ORDER_PLACED</td>
+                            <td>-</td>
+                            <td>Order Placed</td>
+                            <td>❌ No</td>
+                        </tr>
+                        <tr>
+                            <td>PAID</td>
+                            <td>ASSIGNING_DRIVER</td>
+                            <td>Payment Confirmed</td>
+                            <td>❌ No</td>
+                        </tr>
+                        <tr>
+                            <td>PROCESSING</td>
+                            <td>ON_GOING</td>
+                            <td>Driver Assigned</td>
+                            <td>✅ Yes</td>
+                        </tr>
+                        <tr>
+                            <td>SHIPPED</td>
+                            <td>PICKED_UP</td>
+                            <td>Picked Up</td>
+                            <td>✅ Yes</td>
+                        </tr>
+                        <tr>
+                            <td>IN_TRANSIT</td>
+                            <td>IN_TRANSIT</td>
+                            <td>In Transit</td>
+                            <td>✅ Yes</td>
+                        </tr>
+                        <tr>
+                            <td>DELIVERED</td>
+                            <td>COMPLETED</td>
+                            <td>Delivered</td>
+                            <td>✅ Yes (historical)</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+
+            <!-- DATA STRUCTURE -->
+            <div class="section">
+                <h2>📊 Driver Information Data Structure</h2>
+                <p>The <code>order.shipping.driverInfo</code> object now contains:</p>
+                
+                <div class="code-block">
+{
+  "driverInfo": {
+    "name": "Juan Dela Cruz",
+    "phone": "+639171234567",
+    "plateNumber": "ABC 1234",
+    "vehicleType": "Motorcycle",
+    "rating": 4.8,
+    "photo": "https://..."
+  },
+  "location": {
+    "lat": 14.5995,
+    "lng": 120.9842,
+    "updatedAt": "2025-12-06T05:00:00.000Z"
+  },
+  "shareLink": "https://share.sandbox.lalamove.com/...",
+  "status": "ON_GOING",
+  "lastEvent": "DRIVER_ASSIGNED",
+  "timeline": [
+    {
+      "event": "DRIVER_ASSIGNED",
+      "status": "ON_GOING",
+      "timestamp": "2025-12-06T05:00:00.000Z",
+      "driverInfo": { ... }
+    }
+  ]
+}
+                </div>
+            </div>
+
+            <!-- WEBHOOK FLOW -->
+            <div class="section">
+                <h2>🔔 Webhook Processing Flow</h2>
+                <div class="timeline">
+                    <div class="timeline-item">
+                        <strong>1. Webhook Received</strong>
+                        <p>Lalamove sends webhook with event type and basic data</p>
+                    </div>
+                    <div class="timeline-item">
+                        <strong>2. Signature Verification</strong>
+                        <p>Verify webhook authenticity using HMAC signature</p>
+                    </div>
+                    <div class="timeline-item">
+                        <strong>3. Find Order</strong>
+                        <p>Locate order in database using Lalamove booking ID</p>
+                    </div>
+                    <div class="timeline-item">
+                        <strong>4. Fetch Complete Data</strong>
+                        <p>If driver assigned, call Lalamove API to get full driver details</p>
+                    </div>
+                    <div class="timeline-item">
+                        <strong>5. Update Database</strong>
+                        <p>Store driver info, location, status in order.shipping</p>
+                    </div>
+                    <div class="timeline-item">
+                        <strong>6. Update Order Status</strong>
+                        <p>Change order status based on event (PICKED_UP → SHIPPED, COMPLETED → DELIVERED)</p>
+                    </div>
+                    <div class="timeline-item">
+                        <strong>7. Send Email</strong>
+                        <p>Notify customer of status change</p>
+                    </div>
+                    <div class="timeline-item">
+                        <strong>8. Return 200 OK</strong>
+                        <p>Acknowledge webhook receipt to Lalamove</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- TESTING -->
+            <div class="section">
+                <h2>🧪 Testing Guide</h2>
+                
+                <div class="test-section">
+                    <h3>Test Script Usage</h3>
+                    <p>A comprehensive test script has been created to verify all functionality:</p>
+                    
+                    <div class="code-block">
+# Run the test script with an order ID
+node test-lalamove-tracking.js &lt;orderId&gt;
+
+# Example:
+node test-lalamove-tracking.js cmtrt3lrr000l404387btwu
+                    </div>
+
+                    <p><strong>The script will:</strong></p>
+                    <ul>
+                        <li>Fetch order details and display current status</li>
+                        <li>Check if driver information is present and complete</li>
+                        <li>Verify location data availability</li>
+                        <li>Sync with Lalamove API to get latest data</li>
+                        <li>Display event timeline</li>
+                        <li>Provide a comprehensive summary</li>
+                    </ul>
+                </div>
+
+                <h3>Manual Testing Steps</h3>
+                <ol>
+                    <li><strong>Create a test order</strong> with Lalamove shipping</li>
+                    <li><strong>Wait for payment confirmation</strong> - Status should show "Payment Confirmed"</li>
+                    <li><strong>Wait for driver assignment</strong> - Webhook will trigger and fetch driver details</li>
+                    <li><strong>Check order page</strong> - Driver information should display dynamically</li>
+                    <li><strong>Verify all fields:</strong>
+                        <ul>
+                            <li>Driver name</li>
+                            <li>Phone number (clickable)</li>
+                            <li>Plate number</li>
+                            <li>Vehicle type</li>
+                            <li>Rating (if available)</li>
+                            <li>Photo (if available)</li>
+                        </ul>
+                    </li>
+                    <li><strong>Check live map</strong> - Should show Lalamove tracking iframe</li>
+                    <li><strong>Monitor status updates</strong> - Progress tracker should update as order moves through stages</li>
+                </ol>
+
+                <h3>Manual Sync API</h3>
+                <p>To manually refresh Lalamove data for an order:</p>
+                <div class="code-block">
+POST /api/orders/{orderId}/sync-lalamove
+
+# Using curl:
+curl -X POST http://localhost:3000/api/orders/cmtrt3lrr000l404387btwu/sync-lalamove
+                </div>
+            </div>
+
+            <!-- KEY IMPROVEMENTS -->
+            <div class="section">
+                <h2>✨ Key Improvements</h2>
+                
+                <div class="fix-box">
+                    <h3><span class="badge badge-success">Accuracy</span> Real-Time Data</h3>
+                    <p>Driver information is now fetched directly from Lalamove API, ensuring accuracy and real-time updates.</p>
+                </div>
+
+                <div class="fix-box">
+                    <h3><span class="badge badge-success">Completeness</span> Full Driver Details</h3>
+                    <p>All available driver information is now stored and displayed: name, phone, plate, vehicle type, rating, and photo.</p>
+                </div>
+
+                <div class="fix-box">
+                    <h3><span class="badge badge-success">User Experience</span> Dynamic Display</h3>
+                    <p>UI gracefully handles cases where driver is not yet assigned, showing appropriate waiting messages.</p>
+                </div>
+
+                <div class="fix-box">
+                    <h3><span class="badge badge-success">Status Tracking</span> Accurate Progress</h3>
+                    <p>Progress tracker now correctly maps Lalamove statuses to visual stages, providing accurate order tracking.</p>
+                </div>
+
+                <div class="fix-box">
+                    <h3><span class="badge badge-success">Debugging</span> Manual Sync</h3>
+                    <p>New sync endpoint allows manual data refresh for testing and troubleshooting.</p>
+                </div>
+            </div>
+
+            <!-- TECHNICAL NOTES -->
+            <div class="section">
+                <h2>⚙️ Technical Notes</h2>
+                
+                <h3>API Response Mapping</h3>
+                <p>The Lalamove API returns driver data in <code>result.data.driver</code>, not <code>result.data.driverInfo</code>. The trackOrder function has been updated to use the correct field.</p>
+
+                <h3>Webhook Data Limitations</h3>
+                <p>Lalamove webhooks only send <code>driverId</code>, not complete driver information. The webhook handler now makes an additional API call to fetch full details when needed.</p>
+
+                <h3>Database Schema</h3>
+                <p>The <code>order.shipping</code> JSON field stores all Lalamove-related data:</p>
+                <ul>
+                    <li><code>provider</code>: "lalamove"</li>
+                    <li><code>bookingId</code>: Lalamove order ID</li>
+                    <li><code>status</code>: Current Lalamove status</li>
+                    <li><code>driverInfo</code>: Complete driver details object</li>
+                    <li><code>location</code>: Current GPS coordinates</li>
+                    <li><code>shareLink</code>: Tracking map URL</li>
+                    <li><code>timeline</code>: Array of status change events</li>
+                </ul>
+
+                <h3>Auto-Refresh</h3>
+                <p>The order details page automatically refreshes every 30 seconds for active orders, ensuring users see the latest driver information and location updates.</p>
+            </div>
+
+            <!-- NEXT STEPS -->
+            <div class="section">
+                <h2>🚀 Next Steps</h2>
+                <ol>
+                    <li><strong>Deploy Changes:</strong> Push updates to production</li>
+                    <li><strong>Test with Real Orders:</strong> Create test orders in sandbox environment</li>
+                    <li><strong>Monitor Webhooks:</strong> Check Vercel logs for webhook processing</li>
+                    <li><strong>Verify Driver Display:</strong> Confirm driver information shows correctly on order pages</li>
+                    <li><strong>User Acceptance Testing:</strong> Have users test the tracking functionality</li>
+                </ol>
+            </div>
+
+            <!-- TROUBLESHOOTING -->
+            <div class="section">
+                <h2>🔧 Troubleshooting</h2>
+                
+                <h3>Driver Information Not Showing</h3>
+                <ul>
+                    <li>Check if webhook was received (check Vercel logs)</li>
+                    <li>Verify Lalamove API credentials are correct</li>
+                    <li>Use sync endpoint to manually fetch data</li>
+                    <li>Check if order status is ON_GOING or later</li>
+                </ul>
+
+                <h3>Status Not Updating</h3>
+                <ul>
+                    <li>Verify webhook endpoint is accessible</li>
+                    <li>Check webhook signature verification</li>
+                    <li>Ensure LALAMOVE_WEBHOOK_SECRET is set correctly</li>
+                    <li>Check Lalamove webhook configuration in dashboard</li>
+                </ul>
+
+                <h3>Map Not Displaying</h3>
+                <ul>
+                    <li>Verify shareLink is present in order.shipping</li>
+                    <li>Check browser console for iframe errors</li>
+                    <li>Ensure order has been booked with Lalamove</li>
+                </ul>
+            </div>
+
+            <!-- SUMMARY -->
+            <div class="section">
+                <h2>📝 Summary</h2>
+                <p>All issues with Lalamove tracker accuracy and driver information display have been resolved. The system now:</p>
+                <ul>
+                    <li>✅ Displays real driver information dynamically</li>
+                    <li>✅ Accurately tracks order status through all Lalamove stages</li>
+                    <li>✅ Fetches complete driver details from Lalamove API</li>
+                    <li>✅ Provides manual sync capability for testing</li>
+                    <li>✅ Shows appropriate messages when driver not yet assigned</li>
+                    <li>✅ Updates in real-time via webhooks and auto-refresh</li>
+                </ul>
+            </div>
+        </div>
+    </div>
+</body>
+</html>

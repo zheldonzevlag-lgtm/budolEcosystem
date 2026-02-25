@@ -1,0 +1,997 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Budolshap Database Backup Guide</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        :root {
+            --primary: #6366f1;
+            --primary-dark: #4f46e5;
+            --secondary: #8b5cf6;
+            --success: #10b981;
+            --warning: #f59e0b;
+            --danger: #ef4444;
+            --dark: #1e293b;
+            --dark-light: #334155;
+            --gray: #64748b;
+            --light: #f1f5f9;
+            --white: #ffffff;
+            --gradient: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            --gradient-success: linear-gradient(135deg, #10b981 0%, #059669 100%);
+            --gradient-warning: linear-gradient(135deg, #f59e0b 0%, #d97706 100%);
+        }
+
+        body {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            line-height: 1.6;
+            color: var(--dark);
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 2rem 1rem;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            background: var(--white);
+            border-radius: 24px;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+            overflow: hidden;
+        }
+
+        header {
+            background: var(--gradient);
+            color: var(--white);
+            padding: 3rem 2rem;
+            text-align: center;
+            position: relative;
+            overflow: hidden;
+        }
+
+        header::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: url('data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1440 320"><path fill="rgba(255,255,255,0.1)" d="M0,96L48,112C96,128,192,160,288,160C384,160,480,128,576,122.7C672,117,768,139,864,138.7C960,139,1056,117,1152,101.3C1248,85,1344,75,1392,69.3L1440,64L1440,320L1392,320C1344,320,1248,320,1152,320C1056,320,960,320,864,320C768,320,672,320,576,320C480,320,384,320,288,320C192,320,96,320,48,320L0,320Z"></path></svg>') no-repeat bottom;
+            background-size: cover;
+            opacity: 0.3;
+        }
+
+        h1 {
+            font-size: 2.5rem;
+            font-weight: 800;
+            margin-bottom: 0.5rem;
+            position: relative;
+            z-index: 1;
+        }
+
+        .subtitle {
+            font-size: 1.1rem;
+            opacity: 0.95;
+            position: relative;
+            z-index: 1;
+        }
+
+        .content {
+            padding: 3rem 2rem;
+        }
+
+        .section {
+            margin-bottom: 3rem;
+        }
+
+        h2 {
+            font-size: 1.8rem;
+            color: var(--primary);
+            margin-bottom: 1rem;
+            padding-bottom: 0.5rem;
+            border-bottom: 3px solid var(--primary);
+            display: inline-block;
+        }
+
+        h3 {
+            font-size: 1.3rem;
+            color: var(--dark);
+            margin: 1.5rem 0 1rem;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .icon {
+            display: inline-block;
+            width: 24px;
+            height: 24px;
+        }
+
+        p {
+            margin-bottom: 1rem;
+            color: var(--gray);
+            line-height: 1.8;
+        }
+
+        .card {
+            background: var(--light);
+            border-radius: 16px;
+            padding: 1.5rem;
+            margin: 1rem 0;
+            border-left: 4px solid var(--primary);
+            transition: transform 0.3s ease, box-shadow 0.3s ease;
+        }
+
+        .card:hover {
+            transform: translateX(5px);
+            box-shadow: 0 4px 12px rgba(102, 126, 234, 0.2);
+        }
+
+        .card.success {
+            border-left-color: var(--success);
+            background: linear-gradient(135deg, rgba(16, 185, 129, 0.05) 0%, rgba(5, 150, 105, 0.05) 100%);
+        }
+
+        .card.warning {
+            border-left-color: var(--warning);
+            background: linear-gradient(135deg, rgba(245, 158, 11, 0.05) 0%, rgba(217, 119, 6, 0.05) 100%);
+        }
+
+        .card.danger {
+            border-left-color: var(--danger);
+            background: linear-gradient(135deg, rgba(239, 68, 68, 0.05) 0%, rgba(220, 38, 38, 0.05) 100%);
+        }
+
+        .code-block {
+            background: var(--dark);
+            color: #e2e8f0;
+            padding: 1.5rem;
+            border-radius: 12px;
+            overflow-x: auto;
+            margin: 1rem 0;
+            position: relative;
+            font-family: 'Courier New', monospace;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+        }
+
+        .code-block::before {
+            content: attr(data-lang);
+            position: absolute;
+            top: 0.5rem;
+            right: 0.5rem;
+            background: var(--primary);
+            color: var(--white);
+            padding: 0.25rem 0.75rem;
+            border-radius: 6px;
+            font-size: 0.75rem;
+            font-weight: 600;
+            text-transform: uppercase;
+        }
+
+        code {
+            font-family: 'Courier New', monospace;
+            background: var(--dark-light);
+            padding: 0.2rem 0.5rem;
+            border-radius: 4px;
+            font-size: 0.9rem;
+        }
+
+        .code-block code {
+            background: transparent;
+            padding: 0;
+        }
+
+        .steps {
+            counter-reset: step-counter;
+            list-style: none;
+        }
+
+        .steps li {
+            counter-increment: step-counter;
+            margin-bottom: 2rem;
+            padding-left: 3.5rem;
+            position: relative;
+        }
+
+        .steps li::before {
+            content: counter(step-counter);
+            position: absolute;
+            left: 0;
+            top: 0;
+            background: var(--gradient);
+            color: var(--white);
+            width: 2.5rem;
+            height: 2.5rem;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: 700;
+            font-size: 1.2rem;
+            box-shadow: 0 4px 12px rgba(102, 126, 234, 0.3);
+        }
+
+        .button {
+            display: inline-block;
+            background: var(--gradient);
+            color: var(--white);
+            padding: 0.75rem 1.5rem;
+            border-radius: 8px;
+            text-decoration: none;
+            font-weight: 600;
+            transition: transform 0.3s ease, box-shadow 0.3s ease;
+            box-shadow: 0 4px 12px rgba(102, 126, 234, 0.3);
+        }
+
+        .button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(102, 126, 234, 0.4);
+        }
+
+        .grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 1.5rem;
+            margin: 1.5rem 0;
+        }
+
+        .feature-card {
+            background: var(--white);
+            border: 2px solid var(--light);
+            border-radius: 16px;
+            padding: 1.5rem;
+            transition: all 0.3s ease;
+        }
+
+        .feature-card:hover {
+            border-color: var(--primary);
+            box-shadow: 0 8px 24px rgba(102, 126, 234, 0.2);
+            transform: translateY(-4px);
+        }
+
+        .feature-card h4 {
+            color: var(--primary);
+            margin-bottom: 0.5rem;
+            font-size: 1.2rem;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 1.5rem 0;
+            background: var(--white);
+            border-radius: 12px;
+            overflow: hidden;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+        }
+
+        th,
+        td {
+            padding: 1rem;
+            text-align: left;
+            border-bottom: 1px solid var(--light);
+        }
+
+        th {
+            background: var(--gradient);
+            color: var(--white);
+            font-weight: 600;
+            text-transform: uppercase;
+            font-size: 0.9rem;
+            letter-spacing: 0.5px;
+        }
+
+        tr:hover {
+            background: var(--light);
+        }
+
+        .badge {
+            display: inline-block;
+            padding: 0.25rem 0.75rem;
+            border-radius: 12px;
+            font-size: 0.85rem;
+            font-weight: 600;
+            margin: 0.25rem;
+        }
+
+        .badge.primary {
+            background: var(--primary);
+            color: var(--white);
+        }
+
+        .badge.success {
+            background: var(--success);
+            color: var(--white);
+        }
+
+        .badge.warning {
+            background: var(--warning);
+            color: var(--white);
+        }
+
+        footer {
+            background: var(--dark);
+            color: var(--white);
+            padding: 2rem;
+            text-align: center;
+        }
+
+        @media (max-width: 768px) {
+            h1 {
+                font-size: 2rem;
+            }
+
+            .content {
+                padding: 2rem 1rem;
+            }
+
+            .grid {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        .toc {
+            background: var(--light);
+            border-radius: 16px;
+            padding: 2rem;
+            margin: 2rem 0;
+        }
+
+        .toc h3 {
+            color: var(--primary);
+            margin-bottom: 1rem;
+        }
+
+        .toc ul {
+            list-style: none;
+        }
+
+        .toc li {
+            margin: 0.5rem 0;
+        }
+
+        .toc a {
+            color: var(--dark);
+            text-decoration: none;
+            transition: color 0.3s ease;
+            display: block;
+            padding: 0.5rem;
+            border-radius: 8px;
+        }
+
+        .toc a:hover {
+            color: var(--primary);
+            background: var(--white);
+        }
+    </style>
+</head>
+
+<body>
+    <div class="container">
+        <header>
+            <h1>🗄️ Database Backup Guide</h1>
+            <p class="subtitle">Complete guide for backing up and restoring your Budolshap PostgreSQL database</p>
+        </header>
+
+        <div class="content">
+            <!-- Table of Contents -->
+            <div class="toc">
+                <h3>📑 Table of Contents</h3>
+                <ul>
+                    <li><a href="#overview">Overview</a></li>
+                    <li><a href="#prerequisites">Prerequisites</a></li>
+                    <li><a href="#backup-methods">Backup Methods</a></li>
+                    <li><a href="#quick-start">Quick Start</a></li>
+                    <li><a href="#sql-backup">SQL Backup (pg_dump)</a></li>
+                    <li><a href="#json-backup">JSON Backup (Prisma)</a></li>
+                    <li><a href="#restore">Restore Instructions</a></li>
+                    <li><a href="#automation">Automation & Scheduling</a></li>
+                    <li><a href="#best-practices">Best Practices</a></li>
+                    <li><a href="#troubleshooting">Troubleshooting</a></li>
+                </ul>
+            </div>
+
+            <!-- Overview -->
+            <section id="overview" class="section">
+                <h2>📋 Overview</h2>
+                <p>This guide covers two complementary backup methods for your Budolshap PostgreSQL database:</p>
+
+                <div class="grid">
+                    <div class="feature-card">
+                        <h4>🔧 SQL Backup (pg_dump)</h4>
+                        <p>Creates complete database dumps using PostgreSQL's native tools. Perfect for full database
+                            restoration and migration.</p>
+                        <div>
+                            <span class="badge success">Complete</span>
+                            <span class="badge primary">Production-Ready</span>
+                        </div>
+                    </div>
+                    <div class="feature-card">
+                        <h4>📦 JSON Backup (Prisma)</h4>
+                        <p>Exports data as JSON files using Prisma. Ideal for data inspection, selective restoration,
+                            and development.</p>
+                        <div>
+                            <span class="badge warning">Data Only</span>
+                            <span class="badge primary">Human-Readable</span>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Prerequisites -->
+            <section id="prerequisites" class="section">
+                <h2>⚙️ Prerequisites</h2>
+
+                <div class="card warning">
+                    <h3>🔧 Required Tools</h3>
+                    <p>Before running backups, ensure you have:</p>
+                    <ul style="margin-left: 2rem; color: var(--gray);">
+                        <li><strong>Node.js</strong> - For running Prisma-based JSON backups</li>
+                        <li><strong>PostgreSQL Client Tools</strong> - For SQL dumps (pg_dump, pg_restore)</li>
+                        <li><strong>PowerShell</strong> - For running backup scripts on Windows</li>
+                        <li><strong>Database Access</strong> - Valid credentials in your .env file</li>
+                    </ul>
+                </div>
+
+                <h3>📥 Installing PostgreSQL Client Tools</h3>
+                <p>If you don't have <code>pg_dump</code> installed:</p>
+
+                <ol class="steps">
+                    <li>
+                        <strong>Download PostgreSQL</strong>
+                        <p>Visit <a href="https://www.postgresql.org/download/windows/" target="_blank">PostgreSQL
+                                Downloads</a> and download the Windows installer.</p>
+                    </li>
+                    <li>
+                        <strong>Install Client Tools</strong>
+                        <p>During installation, ensure "Command Line Tools" is selected.</p>
+                    </li>
+                    <li>
+                        <strong>Verify Installation</strong>
+                        <div class="code-block" data-lang="powershell">
+                            <code>pg_dump --version
+# Should output: pg_dump (PostgreSQL) 15.x</code>
+                        </div>
+                    </li>
+                </ol>
+            </section>
+
+            <!-- Backup Methods -->
+            <section id="backup-methods" class="section">
+                <h2>🔄 Backup Methods Comparison</h2>
+
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Feature</th>
+                            <th>SQL Backup (pg_dump)</th>
+                            <th>JSON Backup (Prisma)</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td><strong>Format</strong></td>
+                            <td>SQL statements / Binary</td>
+                            <td>JSON files</td>
+                        </tr>
+                        <tr>
+                            <td><strong>Size</strong></td>
+                            <td>Compressed, smaller</td>
+                            <td>Larger, human-readable</td>
+                        </tr>
+                        <tr>
+                            <td><strong>Schema</strong></td>
+                            <td>✅ Included</td>
+                            <td>❌ Data only</td>
+                        </tr>
+                        <tr>
+                            <td><strong>Restoration</strong></td>
+                            <td>Full database restore</td>
+                            <td>Selective data import</td>
+                        </tr>
+                        <tr>
+                            <td><strong>Use Case</strong></td>
+                            <td>Production backups, migrations</td>
+                            <td>Development, data inspection</td>
+                        </tr>
+                        <tr>
+                            <td><strong>Speed</strong></td>
+                            <td>Fast</td>
+                            <td>Slower for large datasets</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </section>
+
+            <!-- Quick Start -->
+            <section id="quick-start" class="section">
+                <h2>🚀 Quick Start</h2>
+
+                <div class="card success">
+                    <h3>✨ One-Command Backup</h3>
+                    <p>Run the PowerShell script to create both SQL and JSON backups:</p>
+                    <div class="code-block" data-lang="powershell">
+                        <code>.\scripts\backup-postgres.ps1</code>
+                    </div>
+                    <p style="margin-top: 1rem;">This will create a timestamped backup directory containing:</p>
+                    <ul style="margin-left: 2rem; color: var(--gray);">
+                        <li>📄 <code>database-backup.sql</code> - Plain SQL dump</li>
+                        <li>📦 <code>database-backup.dump</code> - Compressed custom format</li>
+                        <li>📁 <code>json-data/</code> - JSON files for each table</li>
+                        <li>📋 <code>README.md</code> - Backup summary and instructions</li>
+                    </ul>
+                </div>
+
+                <h3>🎯 Backup Specific Format</h3>
+                <div class="code-block" data-lang="powershell">
+                    <code># SQL backup only
+.\scripts\backup-postgres.ps1 -BackupType sql
+
+# JSON backup only
+.\scripts\backup-postgres.ps1 -BackupType json
+
+# Both formats (default)
+.\scripts\backup-postgres.ps1 -BackupType both</code>
+                </div>
+            </section>
+
+            <!-- SQL Backup -->
+            <section id="sql-backup" class="section">
+                <h2>💾 SQL Backup (pg_dump)</h2>
+
+                <p>The SQL backup method uses PostgreSQL's <code>pg_dump</code> utility to create complete database
+                    dumps.</p>
+
+                <h3>📝 Manual SQL Backup</h3>
+                <p>If you prefer to run pg_dump manually:</p>
+
+                <div class="code-block" data-lang="powershell">
+                    <code># Set your database password
+$env:PGPASSWORD = "your_password"
+
+# Create plain SQL dump
+pg_dump -h your_host -p 5432 -U your_user -d your_database `
+    -f backup.sql --no-owner --no-acl --clean --if-exists
+
+# Create compressed custom format dump
+pg_dump -h your_host -p 5432 -U your_user -d your_database `
+    -f backup.dump -F c --no-owner --no-acl
+
+# Clear password from environment
+Remove-Item Env:\PGPASSWORD</code>
+                </div>
+
+                <div class="card">
+                    <h4>🔍 Understanding pg_dump Options</h4>
+                    <ul style="margin-left: 2rem; color: var(--gray);">
+                        <li><code>--no-owner</code> - Don't output commands to set ownership</li>
+                        <li><code>--no-acl</code> - Don't output commands to set access privileges</li>
+                        <li><code>--clean</code> - Add DROP commands before CREATE</li>
+                        <li><code>--if-exists</code> - Use IF EXISTS when dropping objects</li>
+                        <li><code>-F c</code> - Custom format (compressed, for pg_restore)</li>
+                    </ul>
+                </div>
+
+                <h3>🌐 Vercel Postgres Backup</h3>
+                <p>For Vercel Postgres databases, the script automatically parses your connection string from
+                    <code>.env</code>:</p>
+
+                <div class="code-block" data-lang="env">
+                    <code># Your .env file should contain:
+POSTGRES_URL="postgres://user:password@host:5432/database"
+# or
+DATABASE_URL="postgres://user:password@host:5432/database"</code>
+                </div>
+            </section>
+
+            <!-- JSON Backup -->
+            <section id="json-backup" class="section">
+                <h2>📦 JSON Backup (Prisma)</h2>
+
+                <p>The JSON backup method uses Prisma to export all data as human-readable JSON files.</p>
+
+                <h3>🔧 Using npm Scripts</h3>
+                <div class="code-block" data-lang="powershell">
+                    <code># Run JSON backup directly
+npm run db:backup
+
+# Or use the PowerShell script
+.\scripts\backup-postgres.ps1 -BackupType json</code>
+                </div>
+
+                <h3>📊 What Gets Backed Up</h3>
+                <p>The JSON backup includes all tables in your database:</p>
+
+                <div class="grid">
+                    <div class="feature-card">
+                        <h4>👥 User Data</h4>
+                        <ul style="margin-left: 1.5rem; color: var(--gray); font-size: 0.9rem;">
+                            <li>users.json</li>
+                            <li>addresses.json</li>
+                            <li>carts.json</li>
+                        </ul>
+                    </div>
+                    <div class="feature-card">
+                        <h4>🏪 Store Data</h4>
+                        <ul style="margin-left: 1.5rem; color: var(--gray); font-size: 0.9rem;">
+                            <li>stores.json</li>
+                            <li>products.json</li>
+                            <li>wallets.json</li>
+                        </ul>
+                    </div>
+                    <div class="feature-card">
+                        <h4>🛒 Transaction Data</h4>
+                        <ul style="margin-left: 1.5rem; color: var(--gray); font-size: 0.9rem;">
+                            <li>orders.json</li>
+                            <li>ratings.json</li>
+                            <li>returns.json</li>
+                        </ul>
+                    </div>
+                    <div class="feature-card">
+                        <h4>💬 Communication</h4>
+                        <ul style="margin-left: 1.5rem; color: var(--gray); font-size: 0.9rem;">
+                            <li>chats.json</li>
+                            <li>coupons.json</li>
+                            <li>payout-requests.json</li>
+                        </ul>
+                    </div>
+                </div>
+
+                <div class="card">
+                    <h4>📋 Backup Metadata</h4>
+                    <p>Each backup includes a <code>metadata.json</code> file with:</p>
+                    <div class="code-block" data-lang="json">
+                        <code>{
+  "timestamp": "2025-11-24T08:00:00.000Z",
+  "tables": {
+    "users": 150,
+    "stores": 45,
+    "products": 320,
+    "orders": 890,
+    ...
+  }
+}</code>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Restore Instructions -->
+            <section id="restore" class="section">
+                <h2>♻️ Restore Instructions</h2>
+
+                <div class="card danger">
+                    <h3>⚠️ Important Warning</h3>
+                    <p><strong>Always test restores in a non-production environment first!</strong> Restoring a backup
+                        will overwrite existing data.</p>
+                </div>
+
+                <h3>🔄 Restoring from SQL Dump</h3>
+
+                <h4>Option 1: Plain SQL File</h4>
+                <div class="code-block" data-lang="powershell">
+                    <code># Set password
+$env:PGPASSWORD = "your_password"
+
+# Restore from SQL file
+psql -h your_host -p 5432 -U your_user -d your_database -f database-backup.sql
+
+# Clear password
+Remove-Item Env:\PGPASSWORD</code>
+                </div>
+
+                <h4>Option 2: Custom Format Dump</h4>
+                <div class="code-block" data-lang="powershell">
+                    <code># Set password
+$env:PGPASSWORD = "your_password"
+
+# Restore from custom dump
+pg_restore -h your_host -p 5432 -U your_user -d your_database `
+    -F c --clean --if-exists database-backup.dump
+
+# Clear password
+Remove-Item Env:\PGPASSWORD</code>
+                </div>
+
+                <h3>📥 Restoring from JSON Backup</h3>
+                <div class="code-block" data-lang="powershell">
+                    <code># Use the restore script
+npm run db:restore
+
+# Or manually run the script
+node scripts/restore-database.js</code>
+                </div>
+
+                <div class="card warning">
+                    <h4>🔍 JSON Restore Notes</h4>
+                    <ul style="margin-left: 2rem; color: var(--gray);">
+                        <li>Requires the database schema to already exist (run migrations first)</li>
+                        <li>Best for selective data restoration</li>
+                        <li>May need to handle foreign key constraints carefully</li>
+                        <li>Useful for development and testing environments</li>
+                    </ul>
+                </div>
+
+                <h3>🆕 Restoring to a New Database</h3>
+                <ol class="steps">
+                    <li>
+                        <strong>Create New Database</strong>
+                        <div class="code-block" data-lang="sql">
+                            <code>CREATE DATABASE budolshap_restored;</code>
+                        </div>
+                    </li>
+                    <li>
+                        <strong>Restore from Backup</strong>
+                        <div class="code-block" data-lang="powershell">
+                            <code>pg_restore -h host -p 5432 -U user -d budolshap_restored `
+    -F c database-backup.dump</code>
+                        </div>
+                    </li>
+                    <li>
+                        <strong>Update Connection String</strong>
+                        <p>Update your <code>.env</code> file to point to the new database.</p>
+                    </li>
+                    <li>
+                        <strong>Verify Data</strong>
+                        <p>Test the application to ensure all data was restored correctly.</p>
+                    </li>
+                </ol>
+            </section>
+
+            <!-- Automation -->
+            <section id="automation" class="section">
+                <h2>⏰ Automation & Scheduling</h2>
+
+                <h3>🪟 Windows Task Scheduler</h3>
+                <p>Set up automated daily backups using Windows Task Scheduler:</p>
+
+                <ol class="steps">
+                    <li>
+                        <strong>Open Task Scheduler</strong>
+                        <p>Press <code>Win + R</code>, type <code>taskschd.msc</code>, and press Enter.</p>
+                    </li>
+                    <li>
+                        <strong>Create Basic Task</strong>
+                        <p>Click "Create Basic Task" and name it "Budolshap Database Backup".</p>
+                    </li>
+                    <li>
+                        <strong>Set Trigger</strong>
+                        <p>Choose "Daily" and set your preferred time (e.g., 2:00 AM).</p>
+                    </li>
+                    <li>
+                        <strong>Set Action</strong>
+                        <p>Choose "Start a program" and configure:</p>
+                        <div class="code-block" data-lang="text">
+                            <code>Program: powershell.exe
+Arguments: -ExecutionPolicy Bypass -File "C:\wamp64\www\budolshap\scripts\backup-postgres.ps1"
+Start in: C:\wamp64\www\budolshap</code>
+                        </div>
+                    </li>
+                    <li>
+                        <strong>Test the Task</strong>
+                        <p>Right-click the task and select "Run" to test it.</p>
+                    </li>
+                </ol>
+
+                <h3>📜 PowerShell Scheduled Job</h3>
+                <div class="code-block" data-lang="powershell">
+                    <code># Create a scheduled job that runs daily at 2 AM
+$trigger = New-JobTrigger -Daily -At "2:00 AM"
+$scriptPath = "C:\wamp64\www\budolshap\scripts\backup-postgres.ps1"
+
+Register-ScheduledJob -Name "BudolshapBackup" `
+    -Trigger $trigger `
+    -FilePath $scriptPath `
+    -MaxResultCount 10
+
+# View scheduled jobs
+Get-ScheduledJob
+
+# Remove scheduled job
+Unregister-ScheduledJob -Name "BudolshapBackup"</code>
+                </div>
+            </section>
+
+            <!-- Best Practices -->
+            <section id="best-practices" class="section">
+                <h2>✅ Best Practices</h2>
+
+                <div class="grid">
+                    <div class="card success">
+                        <h4>🔒 Security</h4>
+                        <ul style="margin-left: 1.5rem; color: var(--gray);">
+                            <li>Never commit backups to version control</li>
+                            <li>Encrypt sensitive backup data</li>
+                            <li>Store backups in secure locations</li>
+                            <li>Use environment variables for credentials</li>
+                            <li>Regularly rotate backup encryption keys</li>
+                        </ul>
+                    </div>
+
+                    <div class="card primary">
+                        <h4>📅 Frequency</h4>
+                        <ul style="margin-left: 1.5rem; color: var(--gray);">
+                            <li>Production: Daily automated backups</li>
+                            <li>Critical data: Multiple daily backups</li>
+                            <li>Before deployments: Always backup</li>
+                            <li>Before migrations: Mandatory backup</li>
+                            <li>Development: Weekly or as needed</li>
+                        </ul>
+                    </div>
+
+                    <div class="card warning">
+                        <h4>💾 Storage</h4>
+                        <ul style="margin-left: 1.5rem; color: var(--gray);">
+                            <li>Keep multiple backup versions</li>
+                            <li>Store backups off-site (cloud storage)</li>
+                            <li>Implement backup retention policy</li>
+                            <li>Monitor backup storage space</li>
+                            <li>Use compression for large databases</li>
+                        </ul>
+                    </div>
+
+                    <div class="card">
+                        <h4>🧪 Testing</h4>
+                        <ul style="margin-left: 1.5rem; color: var(--gray);">
+                            <li>Regularly test restore procedures</li>
+                            <li>Verify backup integrity</li>
+                            <li>Document restore processes</li>
+                            <li>Time your restore operations</li>
+                            <li>Practice disaster recovery scenarios</li>
+                        </ul>
+                    </div>
+                </div>
+
+                <h3>📏 Retention Policy Example</h3>
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Backup Type</th>
+                            <th>Frequency</th>
+                            <th>Retention</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td>Daily Backups</td>
+                            <td>Every day at 2 AM</td>
+                            <td>Keep last 7 days</td>
+                        </tr>
+                        <tr>
+                            <td>Weekly Backups</td>
+                            <td>Every Sunday</td>
+                            <td>Keep last 4 weeks</td>
+                        </tr>
+                        <tr>
+                            <td>Monthly Backups</td>
+                            <td>First day of month</td>
+                            <td>Keep last 12 months</td>
+                        </tr>
+                        <tr>
+                            <td>Pre-Deployment</td>
+                            <td>Before each deployment</td>
+                            <td>Keep last 3</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </section>
+
+            <!-- Troubleshooting -->
+            <section id="troubleshooting" class="section">
+                <h2>🔧 Troubleshooting</h2>
+
+                <div class="card danger">
+                    <h4>❌ pg_dump not found</h4>
+                    <p><strong>Problem:</strong> PowerShell can't find the pg_dump command.</p>
+                    <p><strong>Solution:</strong></p>
+                    <ul style="margin-left: 2rem; color: var(--gray);">
+                        <li>Install PostgreSQL client tools</li>
+                        <li>Add PostgreSQL bin directory to PATH</li>
+                        <li>Typical path: <code>C:\Program Files\PostgreSQL\15\bin</code></li>
+                    </ul>
+                    <div class="code-block" data-lang="powershell">
+                        <code># Add to PATH temporarily
+$env:Path += ";C:\Program Files\PostgreSQL\15\bin"
+
+# Or add permanently via System Properties > Environment Variables</code>
+                    </div>
+                </div>
+
+                <div class="card warning">
+                    <h4>⚠️ Connection refused</h4>
+                    <p><strong>Problem:</strong> Can't connect to the database.</p>
+                    <p><strong>Solution:</strong></p>
+                    <ul style="margin-left: 2rem; color: var(--gray);">
+                        <li>Verify database is running</li>
+                        <li>Check connection string in .env</li>
+                        <li>Ensure firewall allows connections</li>
+                        <li>For Vercel Postgres, check IP whitelist</li>
+                    </ul>
+                </div>
+
+                <div class="card">
+                    <h4>🔐 Authentication failed</h4>
+                    <p><strong>Problem:</strong> Invalid credentials.</p>
+                    <p><strong>Solution:</strong></p>
+                    <ul style="margin-left: 2rem; color: var(--gray);">
+                        <li>Verify username and password in .env</li>
+                        <li>Check for special characters in password</li>
+                        <li>Ensure database user has necessary permissions</li>
+                        <li>Try connecting manually with psql to test credentials</li>
+                    </ul>
+                </div>
+
+                <div class="card warning">
+                    <h4>💥 Out of memory</h4>
+                    <p><strong>Problem:</strong> Backup fails due to memory issues.</p>
+                    <p><strong>Solution:</strong></p>
+                    <ul style="margin-left: 2rem; color: var(--gray);">
+                        <li>Use custom format (-F c) instead of plain SQL</li>
+                        <li>Backup tables individually for very large databases</li>
+                        <li>Increase Node.js memory limit for JSON backups:</li>
+                    </ul>
+                    <div class="code-block" data-lang="powershell">
+                        <code>node --max-old-space-size=4096 scripts/backup-database.js</code>
+                    </div>
+                </div>
+
+                <div class="card">
+                    <h4>📁 Permission denied</h4>
+                    <p><strong>Problem:</strong> Can't write to backup directory.</p>
+                    <p><strong>Solution:</strong></p>
+                    <ul style="margin-left: 2rem; color: var(--gray);">
+                        <li>Run PowerShell as Administrator</li>
+                        <li>Check folder permissions</li>
+                        <li>Ensure backup directory is not read-only</li>
+                    </ul>
+                </div>
+            </section>
+
+            <!-- Additional Resources -->
+            <section class="section">
+                <h2>📚 Additional Resources</h2>
+
+                <div class="grid">
+                    <div class="feature-card">
+                        <h4>📖 Documentation</h4>
+                        <ul style="margin-left: 1.5rem; color: var(--gray); font-size: 0.9rem;">
+                            <li><a href="https://www.postgresql.org/docs/current/app-pgdump.html"
+                                    target="_blank">pg_dump Documentation</a></li>
+                            <li><a href="https://www.postgresql.org/docs/current/app-pgrestore.html"
+                                    target="_blank">pg_restore Documentation</a></li>
+                            <li><a href="https://www.prisma.io/docs" target="_blank">Prisma Documentation</a></li>
+                        </ul>
+                    </div>
+
+                    <div class="feature-card">
+                        <h4>🛠️ Tools</h4>
+                        <ul style="margin-left: 1.5rem; color: var(--gray); font-size: 0.9rem;">
+                            <li><a href="https://www.postgresql.org/download/" target="_blank">PostgreSQL Downloads</a>
+                            </li>
+                            <li><a href="https://www.pgadmin.org/" target="_blank">pgAdmin (GUI Tool)</a></li>
+                            <li><a href="https://vercel.com/docs/storage/vercel-postgres" target="_blank">Vercel
+                                    Postgres Docs</a></li>
+                        </ul>
+                    </div>
+                </div>
+            </section>
+        </div>
+
+        <footer>
+            <p><strong>Budolshap Database Backup Guide</strong></p>
+            <p style="opacity: 0.8; margin-top: 0.5rem;">Last updated: November 24, 2025</p>
+            <p style="opacity: 0.7; margin-top: 1rem; font-size: 0.9rem;">
+                💡 Remember: A backup is only as good as your last successful restore test!
+            </p>
+        </footer>
+    </div>
+</body>
+
+</html>

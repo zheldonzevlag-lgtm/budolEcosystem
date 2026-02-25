@@ -1,0 +1,673 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>PayMongo GCash Return URL Fix - BudolShap</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            line-height: 1.6;
+            color: #333;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 1000px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 20px;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+            overflow: hidden;
+        }
+
+        .header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 40px;
+            text-align: center;
+        }
+
+        .header h1 {
+            font-size: 2.5em;
+            margin-bottom: 10px;
+            text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.2);
+        }
+
+        .header p {
+            font-size: 1.2em;
+            opacity: 0.9;
+        }
+
+        .content {
+            padding: 40px;
+        }
+
+        .section {
+            margin-bottom: 40px;
+        }
+
+        .section h2 {
+            color: #667eea;
+            font-size: 2em;
+            margin-bottom: 20px;
+            padding-bottom: 10px;
+            border-bottom: 3px solid #667eea;
+        }
+
+        .section h3 {
+            color: #764ba2;
+            font-size: 1.5em;
+            margin: 25px 0 15px 0;
+        }
+
+        .problem-box {
+            background: #fff3cd;
+            border-left: 5px solid #ffc107;
+            padding: 20px;
+            margin: 20px 0;
+            border-radius: 5px;
+        }
+
+        .solution-box {
+            background: #d4edda;
+            border-left: 5px solid #28a745;
+            padding: 20px;
+            margin: 20px 0;
+            border-radius: 5px;
+        }
+
+        .warning-box {
+            background: #f8d7da;
+            border-left: 5px solid #dc3545;
+            padding: 20px;
+            margin: 20px 0;
+            border-radius: 5px;
+        }
+
+        .info-box {
+            background: #d1ecf1;
+            border-left: 5px solid #17a2b8;
+            padding: 20px;
+            margin: 20px 0;
+            border-radius: 5px;
+        }
+
+        .code-block {
+            background: #2d2d2d;
+            color: #f8f8f2;
+            padding: 20px;
+            border-radius: 8px;
+            overflow-x: auto;
+            margin: 15px 0;
+            font-family: 'Courier New', monospace;
+            font-size: 0.9em;
+            line-height: 1.5;
+        }
+
+        .code-block code {
+            color: #f8f8f2;
+        }
+
+        .step {
+            background: #f8f9fa;
+            padding: 20px;
+            margin: 15px 0;
+            border-radius: 8px;
+            border-left: 4px solid #667eea;
+        }
+
+        .step-number {
+            display: inline-block;
+            background: #667eea;
+            color: white;
+            width: 30px;
+            height: 30px;
+            border-radius: 50%;
+            text-align: center;
+            line-height: 30px;
+            font-weight: bold;
+            margin-right: 10px;
+        }
+
+        .checklist {
+            list-style: none;
+            padding-left: 0;
+        }
+
+        .checklist li {
+            padding: 10px 0;
+            padding-left: 35px;
+            position: relative;
+        }
+
+        .checklist li:before {
+            content: "✓";
+            position: absolute;
+            left: 0;
+            color: #28a745;
+            font-weight: bold;
+            font-size: 1.5em;
+        }
+
+        .screenshot-placeholder {
+            background: #e9ecef;
+            border: 2px dashed #6c757d;
+            padding: 40px;
+            text-align: center;
+            border-radius: 8px;
+            margin: 20px 0;
+            color: #6c757d;
+        }
+
+        .btn {
+            display: inline-block;
+            padding: 12px 30px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            text-decoration: none;
+            border-radius: 25px;
+            font-weight: bold;
+            transition: transform 0.3s, box-shadow 0.3s;
+            margin: 10px 5px;
+        }
+
+        .btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 20px rgba(0, 0, 0, 0.2);
+        }
+
+        .footer {
+            background: #2d2d2d;
+            color: white;
+            padding: 30px;
+            text-align: center;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 20px 0;
+        }
+
+        table th,
+        table td {
+            padding: 12px;
+            text-align: left;
+            border-bottom: 1px solid #ddd;
+        }
+
+        table th {
+            background: #667eea;
+            color: white;
+        }
+
+        table tr:hover {
+            background: #f5f5f5;
+        }
+
+        .badge {
+            display: inline-block;
+            padding: 5px 10px;
+            border-radius: 12px;
+            font-size: 0.85em;
+            font-weight: bold;
+            margin: 0 5px;
+        }
+
+        .badge-success {
+            background: #28a745;
+            color: white;
+        }
+
+        .badge-warning {
+            background: #ffc107;
+            color: #333;
+        }
+
+        .badge-danger {
+            background: #dc3545;
+            color: white;
+        }
+
+        .badge-info {
+            background: #17a2b8;
+            color: white;
+        }
+
+        @media print {
+            body {
+                background: white;
+            }
+
+            .container {
+                box-shadow: none;
+            }
+
+            .btn {
+                display: none;
+            }
+        }
+    </style>
+</head>
+
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🔧 PayMongo GCash Return URL Fix</h1>
+            <p>Complete Guide to Fixing Vercel SSO Login Issue</p>
+            <p style="font-size: 0.9em; margin-top: 10px;">BudolShap E-commerce Platform</p>
+        </div>
+
+        <div class="content">
+            <!-- Problem Description -->
+            <div class="section">
+                <h2>📋 Problem Description</h2>
+                <div class="problem-box">
+                    <h3>⚠️ Issue Encountered</h3>
+                    <p>After authorizing a GCash payment through PayMongo, users were redirected to <strong>Vercel's
+                            login page</strong> instead of the payment confirmation page.</p>
+                    <p style="margin-top: 10px;"><strong>Expected Behavior:</strong> Redirect to
+                        <code>https://budolshap.vercel.app/payment/return</code></p>
+                    <p><strong>Actual Behavior:</strong> Redirect to <code>vercel.com/login</code> with SSO parameters
+                    </p>
+                </div>
+
+                <h3>🔍 Root Cause Analysis</h3>
+                <p>The issue was caused by PayMongo's return URL pointing to a <strong>protected Vercel
+                        preview/deployment URL</strong> instead of the public production domain.</p>
+
+                <table>
+                    <thead>
+                        <tr>
+                            <th>URL Type</th>
+                            <th>Example</th>
+                            <th>Access</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td><span class="badge badge-success">Production</span></td>
+                            <td>budolshap.vercel.app</td>
+                            <td>✅ Public (No login required)</td>
+                        </tr>
+                        <tr>
+                            <td><span class="badge badge-danger">Preview</span></td>
+                            <td>budolshap-git-main-xxx.vercel.app</td>
+                            <td>🔒 Protected by SSO</td>
+                        </tr>
+                        <tr>
+                            <td><span class="badge badge-danger">Deployment</span></td>
+                            <td>budolshap-xxx-projects.vercel.app</td>
+                            <td>🔒 Protected by SSO</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+
+            <!-- Solution -->
+            <div class="section">
+                <h2>✅ Solution Implemented</h2>
+                <div class="solution-box">
+                    <h3>🎯 Fix Applied</h3>
+                    <p>Hardcoded the PayMongo return URL to use the <strong>public production domain</strong>
+                        (<code>https://budolshap.vercel.app</code>) instead of relying on environment variables that
+                        might point to protected URLs.</p>
+                </div>
+
+                <h3>📝 Code Changes</h3>
+                <p><strong>File Modified:</strong> <code>app/api/paymongo/create-intent/route.js</code></p>
+
+                <h4>Before (Problematic Code):</h4>
+                <div class="code-block">
+                    <code>// Relied on environment variable which could be a protected URL
+const productionDomain = process.env.NEXT_PUBLIC_SITE_URL || 'https://budolshap.vercel.app';
+let cleanDomain = productionDomain.trim();
+// ... complex URL cleaning logic
+returnUrl = `${cleanDomain}/payment/return`;</code>
+                </div>
+
+                <h4>After (Fixed Code):</h4>
+                <div class="code-block">
+                    <code>// Strictly hardcoded to public production domain
+if (isDevelopment) {
+    returnUrl = 'http://localhost:3000/payment/return';
+} else {
+    // Hardcoded to prevent SSO issues
+    returnUrl = 'https://budolshap.vercel.app/payment/return';
+}</code>
+                </div>
+            </div>
+
+            <!-- Testing Instructions -->
+            <div class="section">
+                <h2>🧪 Testing Instructions</h2>
+
+                <div class="step">
+                    <h3><span class="step-number">1</span> Clear Browser Cache</h3>
+                    <p>Before testing, clear your browser cache to ensure you're not seeing cached redirects:</p>
+                    <ul style="margin-left: 20px; margin-top: 10px;">
+                        <li><strong>Windows/Linux:</strong> Press <code>Ctrl + Shift + Delete</code></li>
+                        <li><strong>Mac:</strong> Press <code>Cmd + Shift + Delete</code></li>
+                        <li>Select "Cached images and files"</li>
+                        <li>Click "Clear data"</li>
+                    </ul>
+                    <div class="info-box" style="margin-top: 15px;">
+                        <strong>💡 Pro Tip:</strong> Use Incognito/Private browsing mode for testing to avoid cache
+                        issues entirely.
+                    </div>
+                </div>
+
+                <div class="step">
+                    <h3><span class="step-number">2</span> Create Test Order</h3>
+                    <ol style="margin-left: 20px; margin-top: 10px;">
+                        <li>Go to <a href="https://budolshap.vercel.app"
+                                target="_blank">https://budolshap.vercel.app</a></li>
+                        <li>Add products to cart</li>
+                        <li>Proceed to checkout</li>
+                        <li>Select <strong>GCash</strong> as payment method</li>
+                        <li>Fill in billing details</li>
+                        <li>Click "Place Order"</li>
+                    </ol>
+                </div>
+
+                <div class="step">
+                    <h3><span class="step-number">3</span> Authorize Test Payment</h3>
+                    <p>You'll be redirected to PayMongo's test payment page:</p>
+                    <ul style="margin-left: 20px; margin-top: 10px;">
+                        <li>You'll see "GCash Test Payment Page"</li>
+                        <li>Amount will be displayed (e.g., ₱14,590.00)</li>
+                        <li>Click <strong>"Authorize Test Payment"</strong> button</li>
+                    </ul>
+                </div>
+
+                <div class="step">
+                    <h3><span class="step-number">4</span> Verify Success Page</h3>
+                    <div class="solution-box">
+                        <p><strong>✅ Expected Result:</strong></p>
+                        <ul style="margin-left: 20px; margin-top: 10px;">
+                            <li>URL should be:
+                                <code>https://budolshap.vercel.app/payment/return?payment_intent_id=...</code></li>
+                            <li>Page shows "Payment Successful!" with green checkmark</li>
+                            <li>Order details are displayed (Order ID, Amount, Status)</li>
+                            <li>Buttons: "View My Orders" and "Continue Shopping"</li>
+                        </ul>
+                    </div>
+                    <div class="warning-box">
+                        <p><strong>❌ If You See This (OLD ISSUE):</strong></p>
+                        <ul style="margin-left: 20px; margin-top: 10px;">
+                            <li>URL: <code>vercel.com/login?next=...</code></li>
+                            <li>Page shows "Log in to Vercel"</li>
+                            <li>This means the fix hasn't been deployed yet</li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Environment Variable Setup -->
+            <div class="section">
+                <h2>⚙️ Environment Variable Configuration</h2>
+
+                <div class="info-box">
+                    <h3>📌 Is This Required?</h3>
+                    <p><strong>No, it's optional.</strong> The PayMongo return URL is now hardcoded, so the payment flow
+                        works without this. However, setting it is <strong>recommended as a best practice</strong> for
+                        future features.</p>
+                </div>
+
+                <h3>Method 1: Via Vercel Dashboard (Recommended)</h3>
+                <div class="step">
+                    <p><span class="step-number">1</span> Go to <a href="https://vercel.com/dashboard"
+                            target="_blank">Vercel Dashboard</a></p>
+                </div>
+                <div class="step">
+                    <p><span class="step-number">2</span> Select your <strong>budolshap</strong> project</p>
+                </div>
+                <div class="step">
+                    <p><span class="step-number">3</span> Navigate to <strong>Settings → Environment Variables</strong>
+                    </p>
+                </div>
+                <div class="step">
+                    <p><span class="step-number">4</span> Click <strong>"Add New"</strong> or edit existing
+                        <code>NEXT_PUBLIC_SITE_URL</code></p>
+                </div>
+                <div class="step">
+                    <p><span class="step-number">5</span> Enter the following:</p>
+                    <table style="margin-top: 10px;">
+                        <tr>
+                            <td><strong>Name:</strong></td>
+                            <td><code>NEXT_PUBLIC_SITE_URL</code></td>
+                        </tr>
+                        <tr>
+                            <td><strong>Value:</strong></td>
+                            <td><code>https://budolshap.vercel.app</code></td>
+                        </tr>
+                        <tr>
+                            <td><strong>Environment:</strong></td>
+                            <td>Production (optionally Preview & Development)</td>
+                        </tr>
+                    </table>
+                </div>
+                <div class="step">
+                    <p><span class="step-number">6</span> Click <strong>"Save"</strong></p>
+                </div>
+                <div class="step">
+                    <p><span class="step-number">7</span> When prompted, click <strong>"Redeploy"</strong> (optional)
+                    </p>
+                </div>
+
+                <h3 style="margin-top: 30px;">Method 2: Via Vercel CLI</h3>
+                <div class="code-block">
+                    <code># Add the environment variable
+vercel env add NEXT_PUBLIC_SITE_URL production
+
+# When prompted, enter: https://budolshap.vercel.app
+
+# Redeploy (optional)
+vercel --prod</code>
+                </div>
+            </div>
+
+            <!-- Deployment -->
+            <div class="section">
+                <h2>🚀 Deployment Status</h2>
+
+                <ul class="checklist">
+                    <li>Code changes committed to repository</li>
+                    <li>Deployed to Vercel production</li>
+                    <li>Return URL hardcoded to public domain</li>
+                    <li>Middleware updated to exclude payment routes</li>
+                    <li>Vercel.json configuration added</li>
+                    <li>Payment flow tested and verified</li>
+                </ul>
+
+                <div class="solution-box" style="margin-top: 20px;">
+                    <h3>✅ Current Status: FIXED & DEPLOYED</h3>
+                    <p><strong>Production URL:</strong> <a href="https://budolshap.vercel.app"
+                            target="_blank">https://budolshap.vercel.app</a></p>
+                    <p><strong>Last Updated:</strong> November 26, 2025</p>
+                    <p><strong>Status:</strong> <span class="badge badge-success">Live & Working</span></p>
+                </div>
+            </div>
+
+            <!-- Troubleshooting -->
+            <div class="section">
+                <h2>🔧 Troubleshooting</h2>
+
+                <h3>Issue: Still seeing Vercel login page</h3>
+                <div class="warning-box">
+                    <p><strong>Possible Causes & Solutions:</strong></p>
+                    <ol style="margin-left: 20px; margin-top: 10px;">
+                        <li><strong>Browser Cache:</strong> Clear cache completely or use incognito mode</li>
+                        <li><strong>Old Deployment:</strong> Verify you're on the latest deployment in Vercel dashboard
+                        </li>
+                        <li><strong>Wrong URL:</strong> Check the URL in browser - should be
+                            <code>budolshap.vercel.app</code>, not <code>budolshap-xxx-projects.vercel.app</code></li>
+                        <li><strong>DNS Cache:</strong> Flush DNS cache: <code>ipconfig /flushdns</code> (Windows) or
+                            <code>sudo dscacheutil -flushcache</code> (Mac)</li>
+                    </ol>
+                </div>
+
+                <h3>Issue: Payment verification fails</h3>
+                <div class="warning-box">
+                    <p><strong>Check the following:</strong></p>
+                    <ul style="margin-left: 20px; margin-top: 10px;">
+                        <li>Verify <code>PAYMONGO_SECRET_KEY</code> is set correctly in Vercel</li>
+                        <li>Check Vercel function logs for errors</li>
+                        <li>Verify payment intent was created in PayMongo dashboard</li>
+                        <li>Check if webhook is configured (if using webhooks)</li>
+                    </ul>
+                </div>
+
+                <h3>How to Check Vercel Logs</h3>
+                <div class="step">
+                    <ol style="margin-left: 20px;">
+                        <li>Go to Vercel Dashboard → Your Project</li>
+                        <li>Click on <strong>Deployments</strong></li>
+                        <li>Select the latest deployment</li>
+                        <li>Go to <strong>Functions</strong> tab</li>
+                        <li>Find <code>/api/paymongo/create-intent</code></li>
+                        <li>Look for the log:
+                            <code>🔗 PayMongo Return URL: https://budolshap.vercel.app/payment/return</code></li>
+                    </ol>
+                </div>
+            </div>
+
+            <!-- Additional Files Modified -->
+            <div class="section">
+                <h2>📁 Files Modified</h2>
+
+                <table>
+                    <thead>
+                        <tr>
+                            <th>File</th>
+                            <th>Change</th>
+                            <th>Purpose</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td><code>app/api/paymongo/create-intent/route.js</code></td>
+                            <td>Hardcoded return URL</td>
+                            <td>Fix SSO redirect issue</td>
+                        </tr>
+                        <tr>
+                            <td><code>middleware.js</code></td>
+                            <td>Excluded /payment routes</td>
+                            <td>Allow public access to payment pages</td>
+                        </tr>
+                        <tr>
+                            <td><code>vercel.json</code></td>
+                            <td>Added routing config</td>
+                            <td>Ensure proper payment route handling</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+
+            <!-- Best Practices -->
+            <div class="section">
+                <h2>💡 Best Practices & Recommendations</h2>
+
+                <div class="info-box">
+                    <h3>✅ Do's</h3>
+                    <ul style="margin-left: 20px; margin-top: 10px;">
+                        <li>Always use the public production domain for payment callbacks</li>
+                        <li>Set <code>NEXT_PUBLIC_SITE_URL</code> environment variable for consistency</li>
+                        <li>Test payment flow in incognito mode to avoid cache issues</li>
+                        <li>Monitor Vercel function logs for payment-related errors</li>
+                        <li>Keep PayMongo webhook configured for payment confirmations</li>
+                    </ul>
+                </div>
+
+                <div class="warning-box" style="margin-top: 20px;">
+                    <h3>❌ Don'ts</h3>
+                    <ul style="margin-left: 20px; margin-top: 10px;">
+                        <li>Don't use Vercel preview/deployment URLs for payment callbacks</li>
+                        <li>Don't rely solely on environment variables for critical URLs</li>
+                        <li>Don't skip testing after deployment changes</li>
+                        <li>Don't forget to clear cache when testing</li>
+                    </ul>
+                </div>
+            </div>
+
+            <!-- Quick Reference -->
+            <div class="section">
+                <h2>📖 Quick Reference</h2>
+
+                <h3>Important URLs</h3>
+                <table>
+                    <tr>
+                        <td><strong>Production Site:</strong></td>
+                        <td><a href="https://budolshap.vercel.app" target="_blank">https://budolshap.vercel.app</a></td>
+                    </tr>
+                    <tr>
+                        <td><strong>Payment Return:</strong></td>
+                        <td><code>https://budolshap.vercel.app/payment/return</code></td>
+                    </tr>
+                    <tr>
+                        <td><strong>Vercel Dashboard:</strong></td>
+                        <td><a href="https://vercel.com/dashboard" target="_blank">https://vercel.com/dashboard</a></td>
+                    </tr>
+                    <tr>
+                        <td><strong>PayMongo Dashboard:</strong></td>
+                        <td><a href="https://dashboard.paymongo.com" target="_blank">https://dashboard.paymongo.com</a>
+                        </td>
+                    </tr>
+                </table>
+
+                <h3 style="margin-top: 30px;">Key Commands</h3>
+                <div class="code-block">
+                    <code># Deploy to production
+vercel --prod
+
+# Check environment variables
+vercel env ls
+
+# Add environment variable
+vercel env add NEXT_PUBLIC_SITE_URL production
+
+# View deployment logs
+vercel logs [deployment-url]</code>
+                </div>
+            </div>
+
+            <!-- Support -->
+            <div class="section">
+                <h2>🆘 Need Help?</h2>
+
+                <div class="info-box">
+                    <p>If you encounter any issues not covered in this guide:</p>
+                    <ol style="margin-left: 20px; margin-top: 10px;">
+                        <li>Check the Troubleshooting section above</li>
+                        <li>Review Vercel function logs for errors</li>
+                        <li>Verify all environment variables are set correctly</li>
+                        <li>Test in incognito mode to rule out cache issues</li>
+                        <li>Contact your development team with specific error messages</li>
+                    </ol>
+                </div>
+            </div>
+        </div>
+
+        <div class="footer">
+            <h3>BudolShap E-commerce Platform</h3>
+            <p>PayMongo GCash Integration - Technical Documentation</p>
+            <p style="margin-top: 10px; opacity: 0.8;">Last Updated: November 26, 2025</p>
+            <p style="margin-top: 20px;">
+                <a href="#" onclick="window.print(); return false;" class="btn">🖨️ Print This Guide</a>
+                <a href="https://budolshap.vercel.app" class="btn" target="_blank">🌐 Visit Site</a>
+            </p>
+        </div>
+    </div>
+</body>
+
+</html>

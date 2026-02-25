@@ -1,0 +1,112 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Phase 2: Technical Specifications & Database Schema</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <header>
+        <h1>Phase 2: Technical Specifications & Database Schema</h1>
+        <p>Designing the Data Architecture for Shipping Variance & Cost Allocation</p>
+    </header>
+
+    <nav>
+        <a href="index.html">Home</a>
+        <a href="phase-1-research.html">Phase 1: Research</a>
+        <a href="phase-2-technical-specs.html">Phase 2: Specs</a>
+        <a href="phase-3-logic-integration.html">Phase 3: Logic</a>
+        <a href="phase-4-ui-ux.html">Phase 4: UI/UX</a>
+        <a href="phase-5-testing-protocol.html">Phase 5: Testing</a>
+        <a href="implementation-summary.html">Summary</a>
+    </nav>
+
+    <div class="container">
+        <h2>1. Database Schema Extensions</h2>
+        <p>To support detailed comparative analysis, the <code>Order</code> model must be enhanced to track both initial quotes and final fulfillment costs.</p>
+
+        <div class="code-block">
+<pre>
+model Order {
+  // Existing fields...
+  shippingCost         Float   @default(0) // Final cost charged to buyer
+  quotedShippingCost   Float?  // Original estimate from Lalamove API
+  actualLalamoveCharge Float?  // Final charge from Lalamove (after trip)
+  
+  // Absorption Tracking
+  absorptionType       ShippingAbsorption @default(BUYER_PAYS)
+  platformSubsidy      Float   @default(0)
+  sellerSubsidy        Float   @default(0)
+  
+  // Metadata for Analysis
+  shippingMetadata     Json?   // Stores route_id, surge_factor, vehicle_type
+}
+
+enum ShippingAbsorption {
+  BUYER_PAYS
+  SELLER_ABSORBS
+  PLATFORM_ABSORBS
+  HYBRID
+}
+</pre>
+        </div>
+
+        <h2>2. Technical Components</h2>
+        <table class="spec-table">
+            <tr>
+                <th>Component</th>
+                <th>Specification</th>
+                <th>Tool/Library</th>
+            </tr>
+            <tr>
+                <td>Distance Calculation</td>
+                <td>Road-routing distance via Haversine or Map API.</td>
+                <td>Google Maps / Radar API</td>
+            </tr>
+            <tr>
+                <td>Pricing Engine</td>
+                <td>Logic to compute Base + (KM * Rate) + Surge.</td>
+                <td>Node.js Backend</td>
+            </tr>
+            <tr>
+                <td>Lalamove Webhook</td>
+                <td>Capture <code>ORDER_COMPLETED</code> events for final billing.</td>
+                <td>Next.js API Routes</td>
+            </tr>
+            <tr>
+                <td>Analytics Dashboard</td>
+                <td>Compare <code>quotedShippingCost</code> vs <code>actualLalamoveCharge</code>.</td>
+                <td>Prisma + Chart.js</td>
+            </tr>
+        </table>
+
+        <h2>3. Dependencies</h2>
+        <ul>
+            <li><strong>Lalamove API:</strong> For real-time quotations and booking.</li>
+            <li><strong>Map Provider:</strong> (Google/OSM) for accurate geocoding and pin placement.</li>
+            <li><strong>Prisma:</strong> For database migrations and data access.</li>
+            <li><strong>Redis:</strong> For caching shipping quotes to prevent redundant API calls during checkout.</li>
+        </ul>
+
+        <div class="risk-mitigation">
+            <h3>Risk Assessment: Price Volatility</h3>
+            <p><strong>Risk:</strong> Lalamove quotes expire or change between cart view and checkout completion.</p>
+            <p><strong>Mitigation:</strong> Implement a 5-minute cache for quotes. If the user stays on checkout longer, refresh the quote and notify the user of price changes.</p>
+        </div>
+
+        <div class="success-criteria">
+            <h3>Phase 2 Success Criteria</h3>
+            <ul>
+                <li>Database schema updated to track quoted vs. actual costs.</li>
+                <li>Clear definition of absorption enums and subsidy fields.</li>
+                <li>Mapping of Lalamove webhook payload to internal order fields.</li>
+            </ul>
+        </div>
+    </div>
+
+    <footer>
+        <p>&copy; 2025 BudolShap Implementation Planning. All rights reserved.</p>
+    </footer>
+</body>
+</html>

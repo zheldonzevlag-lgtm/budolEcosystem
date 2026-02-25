@@ -1,0 +1,64 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Phase 1: Config Update - UI Status Synchronization</title>
+    <style>
+        body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; line-height: 1.6; color: #333; max-width: 800px; margin: 0 auto; padding: 20px; background-color: #f8fafc; }
+        h1 { color: #1e293b; border-bottom: 2px solid #e2e8f0; padding-bottom: 10px; }
+        h2 { color: #334155; margin-top: 30px; }
+        code { background-color: #f1f5f9; padding: 2px 4px; border-radius: 4px; font-family: monospace; }
+        pre { background-color: #1e293b; color: #f8fafc; padding: 15px; border-radius: 8px; overflow-x: auto; }
+        .nav { display: flex; gap: 10px; margin-bottom: 30px; }
+        .nav a { text-decoration: none; color: #2563eb; font-weight: 500; }
+        .card { background: white; padding: 20px; border-radius: 8px; border: 1px solid #e2e8f0; margin-bottom: 20px; }
+    </style>
+</head>
+<body>
+    <div class="nav">
+        <a href="index.html">← Back to Home</a>
+    </div>
+
+    <h1>Phase 1: Centralized Configuration Update</h1>
+    <p>The first step was to update the centralized shipping configuration to support the new terminology.</p>
+
+    <div class="card">
+        <h2>Changes in <code>lib/shipping/config.js</code></h2>
+        <p>Modified <code>PROVIDER_STAGES</code> and <code>PROVIDER_TIMELINE_EVENTS</code> to align with seller UI labels.</p>
+        
+        <h3>Updated Stage Labels:</h3>
+        <ul>
+            <li><code>Placed</code> (Order Placed)</li>
+            <li><code>Paid</code> (Payment Received)</li>
+            <li><code>Needs Booking</code> (Awaiting shipment booking)</li>
+            <li><code>Booked</code> (Driver assigned/Shipment booked)</li>
+            <li><code>In Transit</code> (Package on the way)</li>
+            <li><code>Delivered</code> (Package received by buyer)</li>
+        </ul>
+
+        <pre><code>// Updated PROVIDER_STAGES for Lalamove
+[SHIPPING_PROVIDERS.LALAMOVE]: [
+    { label: 'Placed', status: 'ORDER_PLACED', icon: '📝' },
+    { label: 'Paid', status: 'PAID', icon: '💳' },
+    { label: 'Needs Booking', status: 'PROCESSING', icon: '📦' },
+    { label: 'Booked', status: 'PROCESSING', specificStatus: 'ASSIGNING_DRIVER', icon: '📑' },
+    {
+        label: 'In Transit',
+        status: 'IN_TRANSIT',
+        specificStatus: ['PICKED_UP', 'IN_TRANSIT', 'ON_GOING'],
+        icon: '🚚'
+    },
+    { label: 'Delivered', status: 'DELIVERED', specificStatus: 'COMPLETED', icon: '✅' }
+]</code></pre>
+    </div>
+
+    <div class="card">
+        <h2>Key Decisions</h2>
+        <ul>
+            <li><strong>Label Consolidation:</strong> Replaced "To Receive" with "In Transit" to match the more technical status used in seller UIs.</li>
+            <li><strong>Granular Booking:</strong> Split the processing stage into "Needs Booking" and "Booked" specifically for providers like Lalamove.</li>
+        </ul>
+    </div>
+</body>
+</html>

@@ -1,0 +1,74 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Phase 3: UI Auto-Sync & Realtime Updates</title>
+    <style>
+        :root {
+            --primary: #1a56db;
+            --bg: #f9fafb;
+            --card-bg: #ffffff;
+            --text: #111827;
+        }
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: var(--bg);
+            color: var(--text);
+            line-height: 1.6;
+            margin: 0;
+            padding: 2rem;
+        }
+        .container { max-width: 800px; margin: 0 auto; }
+        .card { background: var(--card-bg); padding: 2rem; border-radius: 0.75rem; box-shadow: 0 1px 3px rgba(0,0,0,0.1); margin-bottom: 2rem; }
+        h1 { color: var(--primary); }
+        pre { background: #1e293b; color: #f8f8f2; padding: 1rem; border-radius: 0.5rem; overflow-x: auto; }
+        .back-link { display: inline-block; margin-bottom: 1rem; color: var(--primary); text-decoration: none; font-weight: 500; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <a href="index.html" class="back-link">← Back to Index</a>
+        <div class="card">
+            <h1>Phase 3: UI Auto-Sync & Realtime Updates</h1>
+            <p>
+                To solve the "stuck" UI issue, we implemented client-side auto-synchronization for both 
+                Seller and Buyer interfaces.
+            </p>
+
+            <h2>Seller UI Auto-Sync</h2>
+            <p>
+                The Store Orders page now identifies active Lalamove orders and polls the synchronization 
+                endpoint every 15 seconds.
+            </p>
+            <pre><code>useEffect(() => {
+    const activeLalamoveOrders = orders.filter(order => 
+        order.shipping?.provider === 'lalamove' && 
+        ['PROCESSING', 'SHIPPED', 'IN_TRANSIT'].includes(order.status)
+    );
+
+    const interval = setInterval(async () => {
+        for (const order of activeLalamoveOrders) {
+            await fetch(`/api/orders/${order.id}/sync-lalamove`, { method: 'POST' });
+        }
+        mutate();
+    }, 15000);
+
+    return () => clearInterval(interval);
+}, [orders]);</code></pre>
+
+            <h2>Buyer UI Auto-Sync</h2>
+            <p>
+                Similar logic was added to the Buyer's Order List page, ensuring that status updates 
+                are visible without requiring the user to navigate to the order detail page.
+            </p>
+
+            <h2>Realtime Propogation</h2>
+            <ul>
+                <li><strong>SWR Mutation:</strong> Calling <code>mutate()</code> after sync ensures the UI reflects database changes immediately.</li>
+                <li><strong>Pusher/Socket.io:</strong> The server triggers events on <code>store-{id}</code> and <code>user-{id}</code> channels after every sync or webhook update.</li>
+            </ul>
+        </div>
+    </div>
+</body>
+</html>

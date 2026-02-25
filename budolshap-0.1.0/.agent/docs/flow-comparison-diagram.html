@@ -1,0 +1,861 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Order Status Flow Comparison - Current vs Industry Standard</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            line-height: 1.6;
+            color: #333;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            padding: 20px;
+            min-height: 100vh;
+        }
+
+        .container {
+            max-width: 1600px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 20px;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+            overflow: hidden;
+        }
+
+        .header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 50px;
+            text-align: center;
+        }
+
+        .header h1 {
+            font-size: 3em;
+            margin-bottom: 15px;
+            text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.2);
+        }
+
+        .header p {
+            font-size: 1.3em;
+            opacity: 0.95;
+        }
+
+        .content {
+            padding: 50px;
+        }
+
+        .intro {
+            background: linear-gradient(135deg, #ffecd2 0%, #fcb69f 100%);
+            padding: 30px;
+            border-radius: 15px;
+            margin-bottom: 40px;
+            border-left: 6px solid #f5576c;
+        }
+
+        .intro h2 {
+            color: #f5576c;
+            margin-bottom: 15px;
+        }
+
+        .comparison-container {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 30px;
+            margin: 40px 0;
+        }
+
+        .flow-column {
+            background: #f8f9fa;
+            border-radius: 15px;
+            padding: 30px;
+            position: relative;
+        }
+
+        .flow-column.current {
+            border: 3px solid #e74c3c;
+        }
+
+        .flow-column.proposed {
+            border: 3px solid #27ae60;
+        }
+
+        .flow-header {
+            text-align: center;
+            padding: 20px;
+            border-radius: 10px;
+            margin-bottom: 30px;
+            color: white;
+            font-size: 1.5em;
+            font-weight: bold;
+        }
+
+        .flow-header.current {
+            background: linear-gradient(135deg, #e74c3c 0%, #c0392b 100%);
+        }
+
+        .flow-header.proposed {
+            background: linear-gradient(135deg, #27ae60 0%, #229954 100%);
+        }
+
+        .flow-step {
+            background: white;
+            border-radius: 12px;
+            padding: 20px;
+            margin: 20px 0;
+            box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);
+            position: relative;
+            transition: all 0.3s ease;
+        }
+
+        .flow-step:hover {
+            transform: translateX(5px);
+            box-shadow: 0 6px 15px rgba(0, 0, 0, 0.15);
+        }
+
+        .step-number {
+            position: absolute;
+            top: -12px;
+            left: 20px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            width: 35px;
+            height: 35px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: bold;
+            font-size: 1.1em;
+            box-shadow: 0 3px 8px rgba(0, 0, 0, 0.2);
+        }
+
+        .step-title {
+            font-size: 1.2em;
+            font-weight: bold;
+            color: #667eea;
+            margin-bottom: 10px;
+            padding-left: 10px;
+        }
+
+        .step-content {
+            padding-left: 10px;
+        }
+
+        .status-badge {
+            display: inline-block;
+            padding: 6px 14px;
+            border-radius: 20px;
+            font-size: 0.9em;
+            font-weight: bold;
+            margin: 5px 5px 5px 0;
+        }
+
+        .status-badge.order-placed {
+            background: #95a5a6;
+            color: white;
+        }
+
+        .status-badge.paid {
+            background: #27ae60;
+            color: white;
+        }
+
+        .status-badge.processing {
+            background: #9b59b6;
+            color: white;
+        }
+
+        .status-badge.shipped {
+            background: #3498db;
+            color: white;
+        }
+
+        .status-badge.delivered {
+            background: #1abc9c;
+            color: white;
+        }
+
+        .status-badge.completed {
+            background: #2ecc71;
+            color: white;
+        }
+
+        .status-badge.pending {
+            background: #f39c12;
+            color: white;
+        }
+
+        .arrow {
+            text-align: center;
+            color: #667eea;
+            font-size: 2em;
+            margin: 10px 0;
+            font-weight: bold;
+        }
+
+        .highlight-box {
+            background: #fff3cd;
+            border-left: 4px solid #f39c12;
+            padding: 15px;
+            margin: 10px 0;
+            border-radius: 5px;
+        }
+
+        .highlight-box.success {
+            background: #d4edda;
+            border-left-color: #27ae60;
+        }
+
+        .highlight-box.error {
+            background: #f8d7da;
+            border-left-color: #e74c3c;
+        }
+
+        .code-inline {
+            background: #2d2d2d;
+            color: #f8f8f2;
+            padding: 2px 8px;
+            border-radius: 4px;
+            font-family: 'Courier New', monospace;
+            font-size: 0.9em;
+        }
+
+        .legend {
+            background: white;
+            padding: 25px;
+            border-radius: 15px;
+            margin: 40px 0;
+            box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);
+        }
+
+        .legend h3 {
+            color: #667eea;
+            margin-bottom: 20px;
+            font-size: 1.5em;
+        }
+
+        .legend-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 15px;
+        }
+
+        .legend-item {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .key-differences {
+            background: linear-gradient(135deg, #a8edea 0%, #fed6e3 100%);
+            padding: 30px;
+            border-radius: 15px;
+            margin: 40px 0;
+        }
+
+        .key-differences h2 {
+            color: #667eea;
+            margin-bottom: 20px;
+        }
+
+        .diff-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 20px;
+            margin-top: 20px;
+        }
+
+        .diff-card {
+            background: white;
+            padding: 20px;
+            border-radius: 10px;
+            box-shadow: 0 3px 8px rgba(0, 0, 0, 0.1);
+        }
+
+        .diff-card h3 {
+            margin-bottom: 15px;
+        }
+
+        .diff-card.current h3 {
+            color: #e74c3c;
+        }
+
+        .diff-card.proposed h3 {
+            color: #27ae60;
+        }
+
+        .icon {
+            font-size: 1.3em;
+            margin-right: 8px;
+        }
+
+        .footer {
+            background: #2c3e50;
+            color: white;
+            padding: 30px;
+            text-align: center;
+        }
+
+        .footer a {
+            color: #3498db;
+            text-decoration: none;
+        }
+
+        .footer a:hover {
+            text-decoration: underline;
+        }
+
+        @media (max-width: 1200px) {
+            .comparison-container {
+                grid-template-columns: 1fr;
+            }
+
+            .diff-grid {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        @media (max-width: 768px) {
+            .header h1 {
+                font-size: 2em;
+            }
+
+            .content {
+                padding: 25px;
+            }
+        }
+
+        /* Animation */
+        @keyframes fadeIn {
+            from {
+                opacity: 0;
+                transform: translateY(20px);
+            }
+
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .flow-step {
+            animation: fadeIn 0.5s ease-out;
+        }
+
+        .flow-step:nth-child(1) {
+            animation-delay: 0.1s;
+        }
+
+        .flow-step:nth-child(2) {
+            animation-delay: 0.2s;
+        }
+
+        .flow-step:nth-child(3) {
+            animation-delay: 0.3s;
+        }
+
+        .flow-step:nth-child(4) {
+            animation-delay: 0.4s;
+        }
+
+        .flow-step:nth-child(5) {
+            animation-delay: 0.5s;
+        }
+
+        .flow-step:nth-child(6) {
+            animation-delay: 0.6s;
+        }
+
+        .flow-step:nth-child(7) {
+            animation-delay: 0.7s;
+        }
+
+        .flow-step:nth-child(8) {
+            animation-delay: 0.8s;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>📊 Order Status Flow Comparison</h1>
+            <p>Current Implementation vs Industry Standard (Shopee/Lazada)</p>
+        </div>
+
+        <div class="content">
+            <div class="intro">
+                <h2><span class="icon">🎯</span> Overview</h2>
+                <p>This document provides a visual comparison between <strong>Budolshap's current order status
+                        flow</strong> and the <strong>industry standard approach</strong> used by major e-commerce
+                    platforms like Shopee and Lazada.</p>
+                <p style="margin-top: 15px;">The key difference: <strong>automatic order status updates</strong> when
+                    delivery events occur.</p>
+            </div>
+
+            <!-- Legend -->
+            <div class="legend">
+                <h3>📌 Status Legend</h3>
+                <div class="legend-grid">
+                    <div class="legend-item">
+                        <span class="status-badge order-placed">ORDER_PLACED</span>
+                        <span>Initial order created</span>
+                    </div>
+                    <div class="legend-item">
+                        <span class="status-badge paid">PAID</span>
+                        <span>Payment confirmed</span>
+                    </div>
+                    <div class="legend-item">
+                        <span class="status-badge processing">PROCESSING</span>
+                        <span>Seller preparing order</span>
+                    </div>
+                    <div class="legend-item">
+                        <span class="status-badge shipped">SHIPPED</span>
+                        <span>Package picked up</span>
+                    </div>
+                    <div class="legend-item">
+                        <span class="status-badge delivered">DELIVERED</span>
+                        <span>Package delivered</span>
+                    </div>
+                    <div class="legend-item">
+                        <span class="status-badge completed">COMPLETED</span>
+                        <span>Order finalized</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Side-by-Side Comparison -->
+            <div class="comparison-container">
+                <!-- Current Flow -->
+                <div class="flow-column current">
+                    <div class="flow-header current">
+                        ⚠️ Current Budolshap Flow
+                    </div>
+
+                    <div class="flow-step">
+                        <div class="step-number">1</div>
+                        <div class="step-title">🛒 Customer Places Order</div>
+                        <div class="step-content">
+                            <p><strong>Order Status:</strong> <span
+                                    class="status-badge order-placed">ORDER_PLACED</span></p>
+                            <p><strong>Payment Status:</strong> <span class="status-badge pending">pending</span></p>
+                            <p><strong>isPaid:</strong> <code class="code-inline">false</code></p>
+                            <div class="highlight-box">
+                                <strong>Action:</strong> Order created in database
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="arrow">↓</div>
+
+                    <div class="flow-step">
+                        <div class="step-number">2</div>
+                        <div class="step-title">💳 Customer Pays with GCash</div>
+                        <div class="step-content">
+                            <p><strong>Order Status:</strong> <span
+                                    class="status-badge order-placed">ORDER_PLACED</span></p>
+                            <p><strong>Payment Status:</strong> <span class="status-badge processing">processing</span>
+                            </p>
+                            <div class="highlight-box">
+                                <strong>Action:</strong> PayMongo processes payment
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="arrow">↓</div>
+
+                    <div class="flow-step">
+                        <div class="step-number">3</div>
+                        <div class="step-title">✅ PayMongo Webhook - Payment Confirmed</div>
+                        <div class="step-content">
+                            <p><strong>Order Status:</strong> <span class="status-badge paid">PAID</span> ✅</p>
+                            <p><strong>Payment Status:</strong> <span class="status-badge paid">paid</span></p>
+                            <p><strong>isPaid:</strong> <code class="code-inline">true</code></p>
+                            <div class="highlight-box success">
+                                <strong>✅ Automatic:</strong> Seller wallet credited<br>
+                                <strong>Amount:</strong> Total - 10% commission
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="arrow">↓</div>
+
+                    <div class="flow-step">
+                        <div class="step-number">4</div>
+                        <div class="step-title">🚚 Store Owner Books Lalamove</div>
+                        <div class="step-content">
+                            <p><strong>Order Status:</strong> <span class="status-badge paid">PAID</span></p>
+                            <p><strong>Shipping Status:</strong> <span class="status-badge">ASSIGNING_DRIVER</span></p>
+                            <div class="highlight-box">
+                                <strong>Action:</strong> Lalamove order created<br>
+                                <strong>Booking ID:</strong> 337613168334815740
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="arrow">↓</div>
+
+                    <div class="flow-step">
+                        <div class="step-number">5</div>
+                        <div class="step-title">👨‍✈️ Driver Assigned & Picks Up</div>
+                        <div class="step-content">
+                            <p><strong>Order Status:</strong> <span class="status-badge paid">PAID</span></p>
+                            <p><strong>Shipping Status:</strong> <span class="status-badge">PICKED_UP</span></p>
+                            <div class="highlight-box">
+                                <strong>Webhook:</strong> Lalamove sends PICKED_UP event<br>
+                                <strong>Updates:</strong> <code class="code-inline">shipping.status</code> only
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="arrow">↓</div>
+
+                    <div class="flow-step">
+                        <div class="step-number">6</div>
+                        <div class="step-title">📦 Delivery Completed</div>
+                        <div class="step-content">
+                            <p><strong>Order Status:</strong> <span class="status-badge paid">PAID</span> ⚠️</p>
+                            <p><strong>Shipping Status:</strong> <span class="status-badge completed">COMPLETED</span>
+                            </p>
+                            <div class="highlight-box error">
+                                <strong>❌ Issue:</strong> Order status NOT updated<br>
+                                <strong>Webhook:</strong> Updates <code class="code-inline">shipping.status</code>
+                                only<br>
+                                <strong>Main Status:</strong> Stays as PAID
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="arrow">↓</div>
+
+                    <div class="flow-step">
+                        <div class="step-number">7</div>
+                        <div class="step-title">👤 Manual Status Update Required</div>
+                        <div class="step-content">
+                            <p><strong>Order Status:</strong> <span class="status-badge paid">PAID</span></p>
+                            <div class="highlight-box error">
+                                <strong>⚠️ Manual Action Needed:</strong><br>
+                                Store owner must manually update status to DELIVERED
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Proposed Flow -->
+                <div class="flow-column proposed">
+                    <div class="flow-header proposed">
+                        ✅ Industry Standard Flow (Shopee/Lazada)
+                    </div>
+
+                    <div class="flow-step">
+                        <div class="step-number">1</div>
+                        <div class="step-title">🛒 Customer Places Order</div>
+                        <div class="step-content">
+                            <p><strong>Order Status:</strong> <span
+                                    class="status-badge order-placed">ORDER_PLACED</span></p>
+                            <p><strong>Payment Status:</strong> <span class="status-badge pending">pending</span></p>
+                            <p><strong>isPaid:</strong> <code class="code-inline">false</code></p>
+                            <div class="highlight-box">
+                                <strong>Action:</strong> Order created in database
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="arrow">↓</div>
+
+                    <div class="flow-step">
+                        <div class="step-number">2</div>
+                        <div class="step-title">💳 Customer Pays with GCash</div>
+                        <div class="step-content">
+                            <p><strong>Order Status:</strong> <span
+                                    class="status-badge order-placed">ORDER_PLACED</span></p>
+                            <p><strong>Payment Status:</strong> <span class="status-badge processing">processing</span>
+                            </p>
+                            <div class="highlight-box">
+                                <strong>Action:</strong> PayMongo processes payment
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="arrow">↓</div>
+
+                    <div class="flow-step">
+                        <div class="step-number">3</div>
+                        <div class="step-title">✅ PayMongo Webhook - Payment Confirmed</div>
+                        <div class="step-content">
+                            <p><strong>Order Status:</strong> <span class="status-badge paid">PAID</span> ✅</p>
+                            <p><strong>Payment Status:</strong> <span class="status-badge paid">paid</span></p>
+                            <p><strong>isPaid:</strong> <code class="code-inline">true</code></p>
+                            <div class="highlight-box success">
+                                <strong>✅ Automatic:</strong> Seller wallet credited<br>
+                                <strong>Amount:</strong> Total - 10% commission<br>
+                                <strong>Notification:</strong> Customer notified
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="arrow">↓</div>
+
+                    <div class="flow-step">
+                        <div class="step-number">4</div>
+                        <div class="step-title">🚚 Store Owner Books Lalamove</div>
+                        <div class="step-content">
+                            <p><strong>Order Status:</strong> <span class="status-badge processing">PROCESSING</span> ✅
+                            </p>
+                            <p><strong>Shipping Status:</strong> <span class="status-badge">ASSIGNING_DRIVER</span></p>
+                            <div class="highlight-box success">
+                                <strong>✅ Automatic:</strong> Status updated to PROCESSING<br>
+                                <strong>Action:</strong> Lalamove order created<br>
+                                <strong>Notification:</strong> Customer notified
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="arrow">↓</div>
+
+                    <div class="flow-step">
+                        <div class="step-number">5</div>
+                        <div class="step-title">👨‍✈️ Driver Assigned & Picks Up</div>
+                        <div class="step-content">
+                            <p><strong>Order Status:</strong> <span class="status-badge shipped">SHIPPED</span> ✅</p>
+                            <p><strong>Shipping Status:</strong> <span class="status-badge">PICKED_UP</span></p>
+                            <div class="highlight-box success">
+                                <strong>✅ Automatic:</strong> Webhook updates order status<br>
+                                <strong>Updates:</strong> <code class="code-inline">order.status</code> → SHIPPED<br>
+                                <strong>Notification:</strong> Customer gets tracking info
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="arrow">↓</div>
+
+                    <div class="flow-step">
+                        <div class="step-number">6</div>
+                        <div class="step-title">📦 Delivery Completed</div>
+                        <div class="step-content">
+                            <p><strong>Order Status:</strong> <span class="status-badge delivered">DELIVERED</span> ✅
+                            </p>
+                            <p><strong>Shipping Status:</strong> <span class="status-badge completed">COMPLETED</span>
+                            </p>
+                            <div class="highlight-box success">
+                                <strong>✅ Automatic:</strong> Webhook updates order status<br>
+                                <strong>Updates:</strong> <code class="code-inline">order.status</code> → DELIVERED<br>
+                                <strong>Notification:</strong> Customer notified of delivery
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="arrow">↓</div>
+
+                    <div class="flow-step">
+                        <div class="step-number">7</div>
+                        <div class="step-title">⏰ Buyer Confirmation Period (7 days)</div>
+                        <div class="step-content">
+                            <p><strong>Order Status:</strong> <span class="status-badge delivered">DELIVERED</span></p>
+                            <div class="highlight-box success">
+                                <strong>✅ Automatic:</strong> After 7 days or buyer confirms<br>
+                                <strong>Updates:</strong> <code class="code-inline">order.status</code> → COMPLETED<br>
+                                <strong>Allows:</strong> Time for disputes/returns
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="arrow">↓</div>
+
+                    <div class="flow-step">
+                        <div class="step-number">8</div>
+                        <div class="step-title">🎉 Order Completed</div>
+                        <div class="step-content">
+                            <p><strong>Order Status:</strong> <span class="status-badge completed">COMPLETED</span> ✅
+                            </p>
+                            <div class="highlight-box success">
+                                <strong>✅ Fully Automated:</strong> No manual intervention<br>
+                                <strong>Customer Experience:</strong> Clear status progression
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Key Differences -->
+            <div class="key-differences">
+                <h2><span class="icon">🔍</span> Key Differences</h2>
+
+                <div class="diff-grid">
+                    <div class="diff-card current">
+                        <h3>❌ Current Budolshap</h3>
+                        <ul>
+                            <li><strong>Status Stops at:</strong> PAID</li>
+                            <li><strong>After Delivery:</strong> Still shows PAID</li>
+                            <li><strong>Webhook Updates:</strong> Only <code class="code-inline">shipping.status</code>
+                            </li>
+                            <li><strong>Main Status:</strong> NOT updated automatically</li>
+                            <li><strong>Manual Action:</strong> Required to mark as delivered</li>
+                            <li><strong>Customer View:</strong> Confusing (PAID vs COMPLETED)</li>
+                            <li><strong>Notifications:</strong> Partial automation</li>
+                            <li><strong>Industry Alignment:</strong> ⚠️ Not standard</li>
+                        </ul>
+                    </div>
+
+                    <div class="diff-card proposed">
+                        <h3>✅ Industry Standard (Shopee/Lazada)</h3>
+                        <ul>
+                            <li><strong>Status Progresses:</strong> PAID → PROCESSING → SHIPPED → DELIVERED → COMPLETED
+                            </li>
+                            <li><strong>After Delivery:</strong> Shows DELIVERED</li>
+                            <li><strong>Webhook Updates:</strong> Both <code class="code-inline">shipping.status</code>
+                                AND <code class="code-inline">order.status</code></li>
+                            <li><strong>Main Status:</strong> Updated automatically</li>
+                            <li><strong>Manual Action:</strong> Not required</li>
+                            <li><strong>Customer View:</strong> Clear and accurate</li>
+                            <li><strong>Notifications:</strong> Fully automated at each stage</li>
+                            <li><strong>Industry Alignment:</strong> ✅ Standard practice</li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Implementation Summary -->
+            <div class="legend">
+                <h3><span class="icon">💻</span> Implementation Changes Required</h3>
+
+                <h4 style="color: #667eea; margin: 20px 0 15px 0;">File: <code
+                        class="code-inline">/app/api/webhooks/lalamove/route.js</code></h4>
+
+                <div
+                    style="background: #2d2d2d; color: #f8f8f2; padding: 25px; border-radius: 10px; font-family: 'Courier New', monospace; line-height: 1.6; overflow-x: auto;">
+                    <span style="color: #6a9955;">// Current Implementation (Lines 166-170)</span>
+                    <span style="color: #569cd6;">case</span> <span style="color: #ce9178;">'COMPLETED'</span>:
+                    console.<span style="color: #dcdcaa;">log</span>(<span style="color: #ce9178;">`Order ${order.id}
+                        delivered successfully`</span>)
+                    <span style="color: #6a9955;">// TODO: Update order status to 'delivered' ← ❌ NOT IMPLEMENTED</span>
+                    <span style="color: #569cd6;">break</span>
+
+                    <span style="color: #6a9955;">// ========================================</span>
+                    <span style="color: #6a9955;">// Proposed Implementation (Industry Standard)</span>
+                    <span style="color: #6a9955;">// ========================================</span>
+
+                    <span style="color: #569cd6;">case</span> <span style="color: #ce9178;">'PICKED_UP'</span>:
+                    <span style="color: #6a9955;">// ✅ Auto-update to SHIPPED when driver picks up</span>
+                    <span style="color: #569cd6;">await</span> prisma.order.<span
+                        style="color: #dcdcaa;">update</span>({
+                    <span style="color: #9cdcfe;">where</span>: { id: order.id },
+                    <span style="color: #9cdcfe;">data</span>: {
+                    <span style="color: #9cdcfe;">status</span>: <span style="color: #ce9178;">'SHIPPED'</span>,
+                    <span style="color: #9cdcfe;">shippedAt</span>: <span style="color: #569cd6;">new</span> <span
+                        style="color: #dcdcaa;">Date</span>()
+                    }
+                    })
+                    <span style="color: #569cd6;">await</span> <span
+                        style="color: #dcdcaa;">sendShippedNotification</span>(order)
+                    <span style="color: #569cd6;">break</span>
+
+                    <span style="color: #569cd6;">case</span> <span style="color: #ce9178;">'COMPLETED'</span>:
+                    <span style="color: #6a9955;">// ✅ Auto-update to DELIVERED when delivery completes</span>
+                    <span style="color: #569cd6;">await</span> prisma.order.<span
+                        style="color: #dcdcaa;">update</span>({
+                    <span style="color: #9cdcfe;">where</span>: { id: order.id },
+                    <span style="color: #9cdcfe;">data</span>: {
+                    <span style="color: #9cdcfe;">status</span>: <span style="color: #ce9178;">'DELIVERED'</span>,
+                    <span style="color: #9cdcfe;">deliveredAt</span>: actualDeliveryTime || <span
+                        style="color: #569cd6;">new</span> <span style="color: #dcdcaa;">Date</span>()
+                    }
+                    })
+                    <span style="color: #569cd6;">await</span> <span
+                        style="color: #dcdcaa;">sendDeliveredNotification</span>(order)
+
+                    <span style="color: #6a9955;">// ✅ Schedule auto-completion after 7 days</span>
+                    <span style="color: #569cd6;">await</span> <span
+                        style="color: #dcdcaa;">scheduleAutoComplete</span>(order.id, <span
+                        style="color: #b5cea8;">7</span>)
+                    <span style="color: #569cd6;">break</span>
+                </div>
+
+                <h4 style="color: #667eea; margin: 30px 0 15px 0;">Additional Changes:</h4>
+                <ul style="line-height: 2;">
+                    <li>Add <code class="code-inline">PROCESSING</code> status when Lalamove booking is created</li>
+                    <li>Add <code class="code-inline">SHIPPED</code> status when package is picked up</li>
+                    <li>Add <code class="code-inline">DELIVERED</code> status when delivery completes</li>
+                    <li>Implement buyer confirmation period (7 days)</li>
+                    <li>Add auto-completion to <code class="code-inline">COMPLETED</code> status</li>
+                    <li>Send automated notifications at each stage</li>
+                </ul>
+            </div>
+
+            <!-- Benefits -->
+            <div class="legend">
+                <h3><span class="icon">🎁</span> Benefits of Industry Standard Approach</h3>
+
+                <div class="diff-grid">
+                    <div class="diff-card proposed">
+                        <h3>👥 For Customers</h3>
+                        <ul>
+                            <li>✅ Clear, accurate order status</li>
+                            <li>✅ Real-time updates at each stage</li>
+                            <li>✅ Automated notifications</li>
+                            <li>✅ No confusion about order state</li>
+                            <li>✅ Better tracking experience</li>
+                        </ul>
+                    </div>
+
+                    <div class="diff-card proposed">
+                        <h3>🏪 For Store Owners</h3>
+                        <ul>
+                            <li>✅ No manual status updates needed</li>
+                            <li>✅ Reduced workload</li>
+                            <li>✅ Fewer customer inquiries</li>
+                            <li>✅ Professional appearance</li>
+                            <li>✅ Aligned with industry standards</li>
+                        </ul>
+                    </div>
+                </div>
+
+                <div class="diff-card proposed" style="margin-top: 20px;">
+                    <h3>💼 For the Platform</h3>
+                    <ul>
+                        <li>✅ Improved user experience</li>
+                        <li>✅ Reduced support tickets</li>
+                        <li>✅ Better customer satisfaction</li>
+                        <li>✅ Competitive with major platforms</li>
+                        <li>✅ Scalable automation</li>
+                        <li>✅ Industry-standard practices</li>
+                    </ul>
+                </div>
+            </div>
+
+            <!-- Summary -->
+            <div class="intro">
+                <h2><span class="icon">📝</span> Summary</h2>
+                <p><strong>Current Budolshap:</strong> Order status stops at "PAID" and requires manual updates after
+                    delivery.</p>
+                <p style="margin-top: 10px;"><strong>Industry Standard (Shopee/Lazada):</strong> Order status
+                    automatically progresses through PAID → PROCESSING → SHIPPED → DELIVERED → COMPLETED based on
+                    delivery events.</p>
+                <p style="margin-top: 15px; font-size: 1.1em;"><strong>Recommendation:</strong> Implement automatic
+                    status updates to match industry standards and improve user experience for both customers and store
+                    owners.</p>
+            </div>
+        </div>
+
+        <div class="footer">
+            <p><strong>Document Created:</strong> December 3, 2025</p>
+            <p><strong>Comparison:</strong> Current Budolshap vs Industry Standard (Shopee/Lazada)</p>
+            <p><strong>Recommendation:</strong> Implement automatic order status updates</p>
+            <p style="margin-top: 15px;">
+                <a href="index.html">← Back to Documentation Index</a> |
+                <a href="order-status-flow-explanation.html">Detailed Flow Explanation →</a> |
+                <a href="industry-standard-order-status.html">Industry Standards →</a>
+            </p>
+        </div>
+    </div>
+</body>
+
+</html>

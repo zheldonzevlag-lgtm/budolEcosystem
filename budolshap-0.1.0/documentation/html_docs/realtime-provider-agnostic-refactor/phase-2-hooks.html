@@ -1,0 +1,91 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Phase 2: Provider-Agnostic Hooks</title>
+    <style>
+        body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; line-height: 1.6; color: #333; max-width: 1000px; margin: 0 auto; padding: 20px; }
+        h1, h2, h3 { color: #2c3e50; }
+        .nav { background: #f8f9fa; padding: 10px; border-radius: 5px; margin-bottom: 20px; }
+        .nav a { margin-right: 15px; text-decoration: none; color: #007bff; }
+        code { background: #f4f4f4; padding: 2px 5px; border-radius: 3px; font-family: monospace; }
+        pre { background: #f4f4f4; padding: 15px; border-radius: 5px; overflow-x: auto; border: 1px solid #ddd; }
+        .success { color: #28a745; font-weight: bold; }
+        table { width: 100%; border-collapse: collapse; margin: 20px 0; }
+        th, td { padding: 12px; border: 1px solid #dee2e6; text-align: left; }
+        th { background: #f8f9fa; }
+    </style>
+</head>
+<body>
+    <div class="nav">
+        <a href="index.html">Main Index</a>
+        <a href="phase-1-infrastructure.html">Phase 1: Infrastructure</a>
+        <a href="phase-2-hooks.html">Phase 2: Hooks</a>
+        <a href="phase-3-refactor.html">Phase 3: Refactoring</a>
+    </div>
+
+    <h1>Phase 2: Provider-Agnostic Hooks</h1>
+    
+    <h2>Overview</h2>
+    <p>To prevent vendor lock-in and simplify component logic, we introduced a suite of reusable React hooks. These hooks encapsulate the complexity of switching between Polling, Pusher, and Socket.io.</p>
+
+    <h2>Newly Created Hooks</h2>
+    <table>
+        <thead>
+            <tr>
+                <th>Hook</th>
+                <th>Target Data</th>
+                <th>Realtime Channels</th>
+            </tr>
+        </thead>
+        <tbody>
+            <tr>
+                <td><code>useRealtimeReturns</code></td>
+                <td>Store return requests</td>
+                <td><code>store-{storeId}</code></td>
+            </tr>
+            <tr>
+                <td><code>useRealtimeUser</code></td>
+                <td>User-specific updates (status, etc.)</td>
+                <td><code>user-{userId}</code></td>
+            </tr>
+            <tr>
+                <td><code>useRealtimeOrderDetail</code></td>
+                <td>Specific order status/tracking</td>
+                <td><code>user-{userId}</code></td>
+            </tr>
+            <tr>
+                <td><code>useRealtimeOrders</code></td>
+                <td>Seller order list</td>
+                <td><code>store-{storeId}</code></td>
+            </tr>
+        </tbody>
+    </table>
+
+    <h2>Example Implementation Pattern</h2>
+    <pre><code>export function useRealtimeReturns({ storeId }) {
+    const { data: config } = useSWR('/api/system/realtime', fetcher);
+    const { data, mutate } = useSWR('/api/returns', fetcher, {
+        refreshInterval: config?.provider === 'POLLING' ? 5000 : 0
+    });
+
+    useEffect(() => {
+        if (config?.provider === 'PUSHER') {
+            const channel = pusher.subscribe(`store-${storeId}`);
+            channel.bind('return-requested', mutate);
+        }
+        // ... Socket.io logic
+    }, [config, mutate]);
+
+    return { returns: data, mutate };
+}</code></pre>
+
+    <h2>Testing Protocol</h2>
+    <ul>
+        <li>[ ] <strong>Polling Test:</strong> Set provider to POLLING and verify 5s refresh in Network tab.</li>
+        <li>[ ] <strong>Pusher Test:</strong> Set provider to PUSHER and verify WebSocket frames for <code>return-requested</code>.</li>
+        <li>[ ] <strong>Socket.io Test:</strong> Set provider to SOCKET_IO and verify event propagation.</li>
+    </ul>
+</body>
+</html>

@@ -1,0 +1,62 @@
+/**
+ * Centralized configuration for Shipping Providers and Tracking Stages
+ */
+
+export const SHIPPING_PROVIDERS = {
+    STANDARD: 'standard',
+    LALAMOVE: 'lalamove',
+    // Future providers can be added here, e.g., GRAB: 'grab'
+};
+
+export const PROVIDER_STAGES = {
+    [SHIPPING_PROVIDERS.LALAMOVE]: [
+        { label: 'Placed', status: 'ORDER_PLACED', icon: '📝' },
+        { label: 'Paid', status: 'PAID', icon: '💳' },
+        { label: 'Needs Booking', status: 'PROCESSING', icon: '📦' },
+        { label: 'Booked', status: 'PROCESSING', specificStatus: 'ASSIGNING_DRIVER', icon: '📑' },
+        {
+            label: 'In Transit',
+            status: 'IN_TRANSIT',
+            specificStatus: ['PICKED_UP', 'IN_TRANSIT', 'ON_GOING'],
+            icon: '🚚'
+        },
+        { label: 'Delivered', status: 'DELIVERED', specificStatus: 'COMPLETED', icon: '✅' }
+    ],
+    [SHIPPING_PROVIDERS.STANDARD]: [
+        { label: 'Placed', status: 'ORDER_PLACED', icon: '📝' },
+        { label: 'Paid', status: 'PAID', icon: '💳' },
+        { label: 'Needs Booking', status: 'PROCESSING', icon: '📦' },
+        { label: 'Booked', status: 'PROCESSING', icon: '📑' },
+        { label: 'In Transit', status: 'IN_TRANSIT', icon: '🚚' },
+        { label: 'Delivered', status: 'DELIVERED', icon: '✅' }
+    ]
+};
+
+export const TRACKING_REMARKS = {
+    [SHIPPING_PROVIDERS.LALAMOVE]: {
+        IN_TRANSIT: "Driver has picked up your package. Package is on the way.",
+        DRIVER_ASSIGNED: "A driver has been assigned to your delivery."
+    }
+};
+
+export const PROVIDER_TIMELINE_EVENTS = {
+    [SHIPPING_PROVIDERS.LALAMOVE]: {
+        PROCESSING: { title: 'Order Booked', description: 'A driver has been assigned to your delivery' },
+        SHIPPED: { title: 'Package Picked Up', description: 'Driver has picked up your package' },
+        IN_TRANSIT: {
+            title: 'In Transit',
+            description: 'Your package is on the way to your location',
+            // Allow these specific statuses to trigger "current" state even if main order status is different
+            triggerStatuses: ['PICKED_UP', 'IN_TRANSIT']
+        }
+    },
+    [SHIPPING_PROVIDERS.STANDARD]: {
+        PROCESSING: { title: 'Needs Booking', description: 'Your order is being prepared for shipment' },
+        SHIPPED: { title: 'Package Shipped', description: 'Your package has been shipped and is on its way' },
+        IN_TRANSIT: {
+            title: 'In Transit',
+            description: 'Package is out for delivery',
+            triggerStatuses: []
+        }
+    }
+};

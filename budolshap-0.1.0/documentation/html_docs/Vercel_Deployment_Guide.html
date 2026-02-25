@@ -1,0 +1,292 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Budolshap Vercel Deployment Guide</title>
+  <style>
+    :root {
+      --primary-color: #0070f3;
+      --secondary-color: #000;
+      --background-color: #fafafa;
+      --text-color: #333;
+      --code-bg: #f5f5f5;
+      --success-color: #10b981;
+      --warning-color: #f59e0b;
+      --error-color: #ef4444;
+      --border-radius: 8px;
+      --box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+    }
+
+    @media (prefers-color-scheme: dark) {
+      :root {
+        --primary-color: #3291ff;
+        --secondary-color: #fff;
+        --background-color: #111;
+        --text-color: #eaeaea;
+        --code-bg: #333;
+      }
+    }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, 'Open Sans', 'Helvetica Neue', sans-serif;
+      line-height: 1.6;
+      color: var(--text-color);
+      background-color: var(--background-color);
+      margin: 0;
+      padding: 0;
+    }
+
+    .container {
+      max-width: 800px;
+      margin: 0 auto;
+      padding: 2rem;
+    }
+
+    header {
+      text-align: center;
+      margin-bottom: 3rem;
+      padding-bottom: 2rem;
+      border-bottom: 1px solid #eaeaea;
+    }
+
+    h1 {
+      font-size: 2.5rem;
+      margin-bottom: 0.5rem;
+      background: linear-gradient(90deg, var(--primary-color), #7928ca);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+    }
+
+    h2 {
+      margin-top: 2rem;
+      font-size: 1.8rem;
+      border-bottom: 1px solid #eaeaea;
+      padding-bottom: 0.5rem;
+    }
+
+    h3 {
+      margin-top: 1.5rem;
+      font-size: 1.4rem;
+    }
+
+    p {
+      margin-bottom: 1rem;
+    }
+
+    ul,
+    ol {
+      margin-bottom: 1rem;
+      padding-left: 1.5rem;
+    }
+
+    li {
+      margin-bottom: 0.5rem;
+    }
+
+    code {
+      background-color: var(--code-bg);
+      padding: 0.2rem 0.4rem;
+      border-radius: 4px;
+      font-family: 'SFMono-Regular', Consolas, 'Liberation Mono', Menlo, Courier, monospace;
+      font-size: 0.9em;
+    }
+
+    pre {
+      background-color: var(--code-bg);
+      padding: 1rem;
+      border-radius: var(--border-radius);
+      overflow-x: auto;
+      margin-bottom: 1.5rem;
+    }
+
+    pre code {
+      background-color: transparent;
+      padding: 0;
+    }
+
+    .card {
+      background: var(--secondary-color);
+      color: var(--background-color);
+      padding: 1.5rem;
+      border-radius: var(--border-radius);
+      margin-bottom: 1.5rem;
+      box-shadow: var(--box-shadow);
+    }
+
+    @media (prefers-color-scheme: dark) {
+      .card {
+        background: #222;
+        color: var(--text-color);
+        border: 1px solid #333;
+      }
+    }
+
+    .checklist-item {
+      display: flex;
+      align-items: flex-start;
+      margin-bottom: 0.8rem;
+    }
+
+    .checklist-item input[type="checkbox"] {
+      margin-right: 10px;
+      margin-top: 6px;
+      transform: scale(1.2);
+    }
+
+    .btn {
+      display: inline-block;
+      background-color: var(--primary-color);
+      color: white;
+      padding: 0.8rem 1.5rem;
+      text-decoration: none;
+      border-radius: var(--border-radius);
+      font-weight: bold;
+      transition: background-color 0.2s;
+      text-align: center;
+    }
+
+    .btn:hover {
+      opacity: 0.9;
+    }
+
+    .status-badge {
+      display: inline-block;
+      padding: 0.25rem 0.5rem;
+      border-radius: 4px;
+      font-size: 0.8rem;
+      font-weight: bold;
+      text-transform: uppercase;
+    }
+
+    .status-success {
+      background-color: rgba(16, 185, 129, 0.2);
+      color: var(--success-color);
+    }
+
+    .status-warning {
+      background-color: rgba(245, 158, 11, 0.2);
+      color: var(--warning-color);
+    }
+
+    footer {
+      margin-top: 4rem;
+      text-align: center;
+      font-size: 0.9rem;
+      color: #666;
+    }
+  </style>
+</head>
+
+<body>
+  <div class="container">
+    <header>
+      <h1>Budolshap Deployment Guide</h1>
+      <p>A step-by-step guide to deploying your application to Vercel with Postgres.</p>
+    </header>
+
+    <section id="pre-deployment">
+      <h2>✅ Pre-Deployment Checklist</h2>
+      <div class="card">
+        <p>Ensure these items are completed before running the deployment script.</p>
+
+        <h3>1. Database Setup</h3>
+        <div class="checklist-item">
+          <input type="checkbox" checked disabled>
+          <label>Created Vercel Postgres database (<code>budolshap-db</code>)</label>
+        </div>
+        <div class="checklist-item">
+          <input type="checkbox" checked disabled>
+          <label>Connected database to project</label>
+        </div>
+
+        <h3>2. Environment Variables (Vercel Dashboard)</h3>
+        <p>Go to <strong>Settings → Environment Variables</strong> and add:</p>
+        <ul>
+          <li><code>DATABASE_URL</code> (from Vercel Postgres)</li>
+          <li><code>DIRECT_URL</code> (from Vercel Postgres)</li>
+          <li><code>JWT_SECRET</code></li>
+          <li><code>NEXT_PUBLIC_APP_URL</code></li>
+          <li><code>NEXT_PUBLIC_SITE_URL</code></li>
+          <li><code>NEXT_PUBLIC_BASE_URL</code></li>
+          <li><code>NEXT_PUBLIC_CURRENCY_SYMBOL</code></li>
+        </ul>
+
+        <h3>3. Code Changes</h3>
+        <div class="checklist-item">
+          <input type="checkbox" checked disabled>
+          <label>Updated <code>package.json</code> build script</label>
+        </div>
+        <div class="checklist-item">
+          <input type="checkbox" checked disabled>
+          <label>Prisma schema configured for PostgreSQL</label>
+        </div>
+      </div>
+    </section>
+
+    <section id="deployment-steps">
+      <h2>🚀 Deployment Steps</h2>
+
+      <h3>Option A: Automated Script (Recommended)</h3>
+      <p>Run the included PowerShell script to handle everything automatically.</p>
+      <pre><code>.\deploy-vercel.ps1</code></pre>
+      <p>This script will:</p>
+      <ol>
+        <li>Check Vercel login status</li>
+        <li>Link the project</li>
+        <li>Pull environment variables</li>
+        <li>Run database migrations</li>
+        <li>Deploy to production</li>
+      </ol>
+
+      <h3>Option B: Manual Steps</h3>
+      <pre><code># 1. Login to Vercel
+vercel login
+
+# 2. Link project
+vercel link
+
+# 3. Pull environment variables
+vercel env pull .env.production
+
+# 4. Run migration
+npx dotenv -e .env.production -- npx prisma db push
+
+# 5. Deploy
+vercel --prod</code></pre>
+    </section>
+
+    <section id="troubleshooting">
+      <h2>🔧 Troubleshooting</h2>
+
+      <div class="checklist-item">
+        <span class="status-badge status-warning">Migration Fails</span>
+      </div>
+      <p>Check if <code>DATABASE_URL</code> and <code>DIRECT_URL</code> are correctly set in Vercel. Try running
+        migration manually.</p>
+
+      <div class="checklist-item">
+        <span class="status-badge status-warning">Build Fails</span>
+      </div>
+      <p>Verify all required environment variables are set and the Prisma schema is valid. Check deployment logs.</p>
+    </section>
+
+    <section id="success-criteria">
+      <h2>🎉 Success Criteria</h2>
+      <ul>
+        <li>✅ Build completes without errors</li>
+        <li>✅ Database migrations run successfully</li>
+        <li>✅ Application loads at your Vercel URL</li>
+        <li>✅ You can register/login</li>
+        <li>✅ Products display correctly</li>
+      </ul>
+    </section>
+
+    <footer>
+      <p>Generated by Antigravity for Budolshap Project</p>
+    </footer>
+  </div>
+</body>
+
+</html>

@@ -1,0 +1,57 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Phase 2: Refactoring & Fix</title>
+    <style>
+        body { font-family: sans-serif; line-height: 1.6; color: #333; max-width: 900px; margin: 0 auto; padding: 20px; background: #f4f7f6; }
+        header { background: #27ae60; color: white; padding: 20px; border-radius: 8px; margin-bottom: 30px; }
+        .content { background: white; padding: 30px; border-radius: 8px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); }
+        code { background: #f8f8f8; padding: 2px 5px; border-radius: 4px; font-family: monospace; }
+        pre { background: #2d3436; color: #dfe6e9; padding: 15px; border-radius: 8px; overflow-x: auto; }
+        .back-link { display: inline-block; margin-top: 20px; color: #3498db; text-decoration: none; }
+    </style>
+</head>
+<body>
+    <header>
+        <h1>Phase 2: Refactoring & Fix</h1>
+        <p>Implementation of robust state management and side-effect handling.</p>
+    </header>
+    <div class="content">
+        <h2>Key Changes</h2>
+        
+        <h3>1. Decoupling Side Effects from State Updaters</h3>
+        <p>The <code>toggleProvider</code> function was refactored to perform checks and side effects <em>before</em> calling the state updater:</p>
+        <pre><code>const toggleProvider = (id) => {
+    const isEnabled = settings.enabledMapProviders.includes(id);
+    if (isEnabled && settings.enabledMapProviders.length === 1) {
+        toast.error("At least one provider must be enabled.");
+        return; // Exit early
+    }
+    setSettings(prev => ({ ...prev, ...newData }));
+}</code></pre>
+
+        <h3>2. Safer Effect Hooks</h3>
+        <p>Added <code>isMounted</code> tracking to <code>useEffect</code> to prevent state updates on unmounted components and handle race conditions during data fetching.</p>
+        <pre><code>useEffect(() => {
+    let isMounted = true;
+    fetch('/api/...').then(res => {
+        if (isMounted) {
+            setSettings(data);
+        }
+    });
+    return () => { isMounted = false; };
+}, []);</code></pre>
+
+        <h3>3. Structural Optimizations</h3>
+        <ul>
+            <li>Moved static data (<code>MAP_PROVIDERS</code>) outside the component to prevent unnecessary object re-creation on every render.</li>
+            <li>Implemented proper error handling in fetch calls with <code>res.ok</code> checks.</li>
+            <li>Switched all form input <code>onChange</code> handlers to use functional state updaters (<code>prev => ...</code>) for better reliability.</li>
+        </ul>
+        
+        <a href="index.html" class="back-link">← Back to Index</a>
+    </div>
+</body>
+</html>

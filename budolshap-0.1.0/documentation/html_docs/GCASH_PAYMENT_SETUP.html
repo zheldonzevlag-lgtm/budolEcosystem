@@ -1,0 +1,390 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>GCash Payment Integration Guide (PayMongo)</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet" />
+    <style>
+        body {
+            margin: 0;
+            font-family: 'Inter', sans-serif;
+            background: linear-gradient(135deg, #f0f4ff, #e6eaff);
+            color: #333;
+            line-height: 1.6;
+        }
+
+        .container {
+            max-width: 960px;
+            margin: 2rem auto;
+            background: #fff;
+            padding: 2rem 2.5rem;
+            border-radius: 12px;
+            box-shadow: 0 8px 24px rgba(0, 0, 0, 0.08);
+        }
+
+        h1,
+        h2,
+        h3,
+        h4 {
+            color: #1a237e;
+            margin-top: 1.5rem;
+        }
+
+        h1 {
+            font-size: 2.2rem;
+            font-weight: 700;
+        }
+
+        h2 {
+            font-size: 1.8rem;
+            font-weight: 600;
+        }
+
+        h3 {
+            font-size: 1.5rem;
+            font-weight: 600;
+        }
+
+        a {
+            color: #1565c0;
+            text-decoration: none;
+        }
+
+        a:hover {
+            text-decoration: underline;
+        }
+
+        pre {
+            background: #f5f7fa;
+            padding: 1rem;
+            overflow-x: auto;
+            border-radius: 6px;
+            border: 1px solid #e0e0e0;
+        }
+
+        code {
+            font-family: 'Source Code Pro', monospace;
+            font-size: 0.95rem;
+        }
+
+        ul,
+        ol {
+            margin-left: 1.5rem;
+        }
+
+        .section {
+            margin-bottom: 2rem;
+        }
+
+        .toc a {
+            display: block;
+            margin: 0.3rem 0;
+        }
+
+        .checklist {
+            list-style: none;
+            padding-left: 0;
+        }
+
+        .checklist li::before {
+            content: "☐";
+            margin-right: 0.5rem;
+            color: #757575;
+        }
+
+        .footer {
+            text-align: center;
+            font-size: 0.9rem;
+            color: #777;
+            margin-top: 3rem;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="container">
+        <h1>GCash Payment Integration Guide (PayMongo)</h1>
+        <section class="section">
+            <h2>📋 Table of Contents</h2>
+            <nav class="toc">
+                <a href="#prerequisites">1. Prerequisites</a>
+                <a href="#paymongo-account-setup">2. PayMongo Account Setup</a>
+                <a href="#environment-configuration">3. Environment Configuration</a>
+                <a href="#webhook-setup">4. Webhook Setup</a>
+                <a href="#testing">5. Testing</a>
+                <a href="#going-live">6. Going Live</a>
+                <a href="#troubleshooting">7. Troubleshooting</a>
+                <a href="#payment-flow-diagram">8. Payment Flow Diagram</a>
+                <a href="#security-best-practices">9. Security Best Practices</a>
+                <a href="#support">10. Support</a>
+                <a href="#checklist">11. Checklist</a>
+            </nav>
+        </section>
+
+        <section class="section" id="prerequisites">
+            <h2>🎯 Prerequisites</h2>
+            <ul>
+                <li>Active PayMongo account</li>
+                <li>GCash business account (for production)</li>
+                <li>SSL certificate (required for webhooks in production)</li>
+                <li>Node.js and npm installed</li>
+            </ul>
+        </section>
+
+        <section class="section" id="paymongo-account-setup">
+            <h2>🏦 PayMongo Account Setup</h2>
+            <h3>Step 1: Create PayMongo Account</h3>
+            <ol>
+                <li>Visit <a href="https://dashboard.paymongo.com/signup"
+                        target="_blank">dashboard.paymongo.com/signup</a></li>
+                <li>Sign up with your business email</li>
+                <li>Complete the verification process</li>
+                <li>Submit required business documents (for production)</li>
+            </ol>
+            <h3>Step 2: Get API Keys</h3>
+            <ol>
+                <li>Log in to <a href="https://dashboard.paymongo.com" target="_blank">PayMongo Dashboard</a></li>
+                <li>Navigate to <strong>Developers → API Keys</strong></li>
+                <li>Copy your <strong>Secret Key</strong> (starts with <code>sk_test_</code> for test mode)</li>
+                <li>Store keys securely – never commit them to Git!</li>
+            </ol>
+        </section>
+
+        <section class="section" id="environment-configuration">
+            <h2>⚙️ Environment Configuration</h2>
+            <h3>Step 1: Add Environment Variables</h3>
+            <pre><code># PayMongo API Keys
+PAYMONGO_SECRET_KEY=sk_test_your_secret_key_here
+PAYMONGO_WEBHOOK_SECRET=whsec_your_webhook_secret_here
+
+# Application URL
+NEXT_PUBLIC_BASE_URL=http://localhost:3000</code></pre>
+            <h3>Step 2: Verify Installation</h3>
+            <p>The following packages should already be installed:</p>
+            <ul>
+                <li><code>paymongo</code> – PayMongo Node.js SDK</li>
+            </ul>
+            <p>If not, run:</p>
+            <pre><code>npm install paymongo</code></pre>
+        </section>
+
+        <section class="section" id="webhook-setup">
+            <h2>🔗 Webhook Setup</h2>
+            <p>Webhooks are <strong>critical</strong> for payment confirmation. Without them, payments won't be marked
+                as paid.</p>
+            <h3>Step 1: Expose Local Server (Development)</h3>
+            <pre><code># Install ngrok
+npm install -g ngrok
+
+# Expose port 3000
+ngrok http 3000</code></pre>
+            <p>ngrok will provide a URL like <code>https://abc123.ngrok.io</code>.</p>
+            <h3>Step 2: Create Webhook in PayMongo</h3>
+            <ol>
+                <li>Go to PayMongo Dashboard → <strong>Developers → Webhooks</strong></li>
+                <li>Click <strong>Create Webhook</strong></li>
+                <li>Enter your webhook URL:
+                    <ul>
+                        <li><strong>Development:</strong>
+                            <code>https://your-ngrok-url.ngrok.io/api/webhooks/paymongo</code></li>
+                        <li><strong>Production:</strong> <code>https://yourdomain.com/api/webhooks/paymongo</code></li>
+                    </ul>
+                </li>
+                <li>Select events:
+                    <ul>
+                        <li>✅ <code>source.chargeable</code> – when user authorizes GCash payment</li>
+                        <li>✅ <code>payment.paid</code> – when payment is successful</li>
+                        <li>✅ <code>payment.failed</code> – when payment fails</li>
+                    </ul>
+                </li>
+                <li>Click <strong>Create</strong> and copy the **Webhook Secret** (starts with <code>whsec_</code>)</li>
+                <li>Add it to your <code>.env</code> as <code>PAYMONGO_WEBHOOK_SECRET</code></li>
+            </ol>
+            <h3>Step 3: Verify Webhook</h3>
+            <p>PayMongo will send a test event. Check your server logs to confirm receipt.</p>
+        </section>
+
+        <section class="section" id="testing">
+            <h2>🧪 Testing</h2>
+            <h3>Test GCash Payment Flow</h3>
+            <ol>
+                <li>Start your development server:
+                    <pre><code>npm run dev</code></pre>
+                </li>
+                <li>Start ngrok in a separate terminal:
+                    <pre><code>ngrok http 3000</code></pre>
+                </li>
+                <li>Create a test order:
+                    <ul>
+                        <li>Add products to cart</li>
+                        <li>Proceed to checkout</li>
+                        <li>Select <strong>GCash</strong> as payment method</li>
+                        <li>Complete the order</li>
+                    </ul>
+                </li>
+                <li>Process payment:
+                    <ul>
+                        <li>You’ll be redirected to GCash checkout</li>
+                        <li>In test mode, use PayMongo’s test GCash flow</li>
+                        <li>Authorize the payment</li>
+                    </ul>
+                </li>
+                <li>Verify webhook:
+                    <ul>
+                        <li>Check server logs for webhook events</li>
+                        <li>Order should be marked as <code>PAID</code></li>
+                        <li>Seller wallet should be credited</li>
+                    </ul>
+                </li>
+            </ol>
+            <h3>Test Credentials (Test Mode Only)</h3>
+            <p>PayMongo test mode simulates GCash payments – no real credentials required.</p>
+        </section>
+
+        <section class="section" id="going-live">
+            <h2>🚀 Going Live</h2>
+            <h3>Step 1: Complete PayMongo Verification</h3>
+            <ul>
+                <li>Submit all required business documents</li>
+                <li>Wait for PayMongo approval (1‑3 business days)</li>
+                <li>Get approved for GCash payments</li>
+            </ul>
+            <h3>Step 2: Update Environment Variables</h3>
+            <pre><code>PAYMONGO_SECRET_KEY=sk_live_your_live_secret_key
+PAYMONGO_WEBHOOK_SECRET=whsec_your_live_webhook_secret
+NEXT_PUBLIC_BASE_URL=https://yourdomain.com</code></pre>
+            <h3>Step 3: Update Webhook URL</h3>
+            <p>In PayMongo Dashboard → Webhooks, change the URL to your production domain:</p>
+            <pre><code>https://yourdomain.com/api/webhooks/paymongo</code></pre>
+            <h3>Step 4: Test in Production</h3>
+            <ul>
+                <li>Create a small test order</li>
+                <li>Complete payment with a real GCash account</li>
+                <li>Verify order is marked as paid and seller wallet credited</li>
+            </ul>
+        </section>
+
+        <section class="section" id="troubleshooting">
+            <h2>🔍 Troubleshooting</h2>
+            <h3>Issue: Webhook not receiving events</h3>
+            <ul>
+                <li>✅ Verify ngrok is running (development)</li>
+                <li>✅ Check webhook URL is correct in PayMongo dashboard</li>
+                <li>✅ Ensure your server is accessible from the internet</li>
+                <li>✅ Review server logs for errors</li>
+                <li>✅ Verify <code>PAYMONGO_WEBHOOK_SECRET</code> is correct</li>
+            </ul>
+            <h3>Issue: Payment not marked as paid</h3>
+            <ul>
+                <li>✅ Ensure webhook is properly configured</li>
+                <li>✅ Verify <code>source.chargeable</code> and <code>payment.paid</code> events are enabled</li>
+                <li>✅ Check server logs for webhook processing errors</li>
+                <li>✅ Confirm database migration succeeded</li>
+            </ul>
+            <h3>Issue: Signature verification failed</h3>
+            <ul>
+                <li>✅ Confirm <code>PAYMONGO_WEBHOOK_SECRET</code> matches the dashboard value</li>
+                <li>✅ Ensure the secret starts with <code>whsec_</code></li>
+                <li>✅ Remove any extra spaces in <code>.env</code></li>
+            </ul>
+            <h3>Issue: Order created but no payment link</h3>
+            <ul>
+                <li>✅ Verify <code>PAYMONGO_SECRET_KEY</code> is correct</li>
+                <li>✅ Check API key mode (test/live)</li>
+                <li>✅ Review server logs for API errors</li>
+                <li>✅ Ensure billing details are complete</li>
+            </ul>
+        </section>
+
+        <section class="section" id="payment-flow-diagram">
+            <h2>📊 Payment Flow Diagram</h2>
+            <pre><code>User Checkout
+    ↓
+Order Created (isPaid: false, status: ORDER_PLACED)
+    ↓
+GCash Payment Link Generated
+    ↓
+User Redirected to GCash
+    ↓
+User Authorizes Payment
+    ↓
+PayMongo sends "source.chargeable" webhook
+    ↓
+Server creates payment
+    ↓
+PayMongo sends "payment.paid" webhook
+    ↓
+Server updates order (isPaid: true, status: PAID)
+    ↓
+Seller wallet credited
+    ↓
+User redirected to success page</code></pre>
+        </section>
+
+        <section class="section" id="security-best-practices">
+            <h2>🔐 Security Best Practices</h2>
+            <ol>
+                <li><strong>Never expose API keys:</strong>
+                    <ul>
+                        <li>Keep <code>.env</code> in <code>.gitignore</code></li>
+                        <li>Use environment variables in production</li>
+                        <li>Rotate keys if compromised</li>
+                    </ul>
+                </li>
+                <li><strong>Always verify webhook signatures:</strong>
+                    <ul>
+                        <li>Our implementation includes signature verification</li>
+                        <li>Never skip this step!</li>
+                    </ul>
+                </li>
+                <li><strong>Use HTTPS in production:</strong>
+                    <ul>
+                        <li>Required for webhooks</li>
+                        <li>Protects sensitive data</li>
+                    </ul>
+                </li>
+                <li><strong>Validate payment amounts:</strong>
+                    <ul>
+                        <li>Confirm payment amount matches order total</li>
+                        <li>Check currency is PHP</li>
+                    </ul>
+                </li>
+            </ol>
+        </section>
+
+        <section class="section" id="support">
+            <h2>📞 Support</h2>
+            <ul>
+                <li>PayMongo Support: <a href="mailto:support@paymongo.com">support@paymongo.com</a></li>
+                <li>PayMongo Documentation: <a href="https://developers.paymongo.com"
+                        target="_blank">developers.paymongo.com</a></li>
+                <li>PayMongo Dashboard: <a href="https://dashboard.paymongo.com"
+                        target="_blank">dashboard.paymongo.com</a></li>
+            </ul>
+        </section>
+
+        <section class="section" id="checklist">
+            <h2>✅ Checklist</h2>
+            <ul class="checklist">
+                <li>PayMongo account verified</li>
+                <li>Business documents submitted and approved</li>
+                <li>Live API keys obtained</li>
+                <li>Webhook configured with production URL</li>
+                <li>SSL certificate installed</li>
+                <li>Test payment completed successfully</li>
+                <li>Environment variables updated for production</li>
+                <li>Webhook signature verification working</li>
+                <li>Order status updates correctly</li>
+                <li>Seller wallet credits correctly</li>
+            </ul>
+        </section>
+
+        <footer class="footer">
+            <p>Last Updated: November 23, 2024</p>
+        </footer>
+    </div>
+</body>
+
+</html>

@@ -1,0 +1,1393 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>BudolShap Microservices Migration Plan</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+            line-height: 1.6;
+            color: #333;
+            background: #f5f5f5;
+            padding: 20px;
+        }
+        
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            background: white;
+            padding: 40px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+            border-radius: 8px;
+        }
+        
+        h1 {
+            color: #2c3e50;
+            border-bottom: 4px solid #3498db;
+            padding-bottom: 10px;
+            margin-bottom: 30px;
+            font-size: 2.5em;
+        }
+        
+        h2 {
+            color: #34495e;
+            margin-top: 40px;
+            margin-bottom: 20px;
+            padding-left: 15px;
+            border-left: 5px solid #3498db;
+            font-size: 1.8em;
+        }
+        
+        h3 {
+            color: #555;
+            margin-top: 30px;
+            margin-bottom: 15px;
+            font-size: 1.4em;
+        }
+        
+        h4 {
+            color: #666;
+            margin-top: 20px;
+            margin-bottom: 10px;
+            font-size: 1.2em;
+        }
+        
+        p {
+            margin-bottom: 15px;
+            text-align: justify;
+        }
+        
+        ul, ol {
+            margin-left: 30px;
+            margin-bottom: 20px;
+        }
+        
+        li {
+            margin-bottom: 10px;
+        }
+        
+        code {
+            background: #f4f4f4;
+            padding: 2px 6px;
+            border-radius: 3px;
+            font-family: 'Courier New', monospace;
+            color: #e74c3c;
+            font-size: 0.9em;
+        }
+        
+        pre {
+            background: #2c3e50;
+            color: #ecf0f1;
+            padding: 20px;
+            border-radius: 5px;
+            overflow-x: auto;
+            margin: 20px 0;
+        }
+        
+        pre code {
+            background: transparent;
+            color: inherit;
+            padding: 0;
+        }
+        
+        .highlight {
+            background: #fff3cd;
+            padding: 15px;
+            border-left: 4px solid #ffc107;
+            margin: 20px 0;
+            border-radius: 4px;
+        }
+        
+        .warning {
+            background: #f8d7da;
+            padding: 15px;
+            border-left: 4px solid #dc3545;
+            margin: 20px 0;
+            border-radius: 4px;
+        }
+        
+        .success {
+            background: #d4edda;
+            padding: 15px;
+            border-left: 4px solid #28a745;
+            margin: 20px 0;
+            border-radius: 4px;
+        }
+        
+        .info {
+            background: #d1ecf1;
+            padding: 15px;
+            border-left: 4px solid #17a2b8;
+            margin: 20px 0;
+            border-radius: 4px;
+        }
+        
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 20px 0;
+        }
+        
+        th, td {
+            padding: 12px;
+            text-align: left;
+            border-bottom: 1px solid #ddd;
+        }
+        
+        th {
+            background: #3498db;
+            color: white;
+            font-weight: bold;
+        }
+        
+        tr:hover {
+            background: #f5f5f5;
+        }
+        
+        .service-box {
+            background: #f8f9fa;
+            border: 2px solid #dee2e6;
+            border-radius: 8px;
+            padding: 20px;
+            margin: 20px 0;
+        }
+        
+        .service-box h3 {
+            color: #3498db;
+            margin-top: 0;
+        }
+        
+        .phase-box {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 25px;
+            border-radius: 8px;
+            margin: 25px 0;
+        }
+        
+        .phase-box h3 {
+            color: white;
+            margin-top: 0;
+        }
+        
+        .toc {
+            background: #e9ecef;
+            padding: 20px;
+            border-radius: 8px;
+            margin-bottom: 30px;
+        }
+        
+        .toc ul {
+            list-style: none;
+            margin-left: 0;
+        }
+        
+        .toc li {
+            margin: 8px 0;
+        }
+        
+        .toc a {
+            color: #3498db;
+            text-decoration: none;
+        }
+        
+        .toc a:hover {
+            text-decoration: underline;
+        }
+        
+        .badge {
+            display: inline-block;
+            padding: 4px 8px;
+            border-radius: 4px;
+            font-size: 0.85em;
+            font-weight: bold;
+            margin-left: 10px;
+        }
+        
+        .badge-primary {
+            background: #3498db;
+            color: white;
+        }
+        
+        .badge-success {
+            background: #28a745;
+            color: white;
+        }
+        
+        .badge-warning {
+            background: #ffc107;
+            color: #333;
+        }
+        
+        .badge-danger {
+            background: #dc3545;
+            color: white;
+        }
+        
+        .architecture-diagram {
+            text-align: center;
+            margin: 30px 0;
+            padding: 20px;
+            background: #f8f9fa;
+            border-radius: 8px;
+        }
+        
+        .footer {
+            margin-top: 50px;
+            padding-top: 20px;
+            border-top: 2px solid #dee2e6;
+            text-align: center;
+            color: #6c757d;
+            font-size: 0.9em;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🚀 BudolShap Microservices Migration Plan</h1>
+        <p style="font-size: 1.1em; color: #666; margin-bottom: 30px;">
+            <strong>Document Version:</strong> 1.0<br>
+            <strong>Date:</strong> January 2025<br>
+            <strong>Status:</strong> Planning Phase
+        </p>
+
+        <div class="toc">
+            <h3>📑 Table of Contents</h3>
+            <ul>
+                <li><a href="#overview">1. Executive Overview</a></li>
+                <li><a href="#current-state">2. Current Architecture Analysis</a></li>
+                <li><a href="#target-architecture">3. Target Microservices Architecture</a></li>
+                <li><a href="#services">4. Proposed Services Breakdown</a></li>
+                <li><a href="#communication">5. Communication Patterns</a></li>
+                <li><a href="#migration-plan">6. Step-by-Step Migration Plan</a></li>
+                <li><a href="#vercel">7. Vercel Deployment Strategy</a></li>
+                <li><a href="#recommendations">8. Practical Recommendations</a></li>
+                <li><a href="#risks">9. Risks & Mitigation</a></li>
+                <li><a href="#timeline">10. Timeline & Milestones</a></li>
+            </ul>
+        </div>
+
+        <section id="overview">
+            <h2>1. Executive Overview</h2>
+            <p>
+                This document outlines a comprehensive plan to migrate BudolShap from its current 
+                <strong>modular monolith</strong> architecture to a <strong>microservices architecture</strong> 
+                while maintaining deployment compatibility with Vercel and ensuring minimal disruption to 
+                existing functionality.
+            </p>
+            
+            <div class="highlight">
+                <strong>🎯 Key Objectives:</strong>
+                <ul>
+                    <li>Improve scalability and independent deployment of services</li>
+                    <li>Enable team autonomy and faster feature development</li>
+                    <li>Maintain compatibility with Vercel serverless platform</li>
+                    <li>Minimize risk through incremental migration</li>
+                    <li>Preserve existing functionality during transition</li>
+                </ul>
+            </div>
+
+            <div class="info">
+                <strong>📊 Current State:</strong> Next.js 16 monolith with 80+ API routes, Prisma ORM, 
+                separate WebSocket server, deployed on Vercel with external PostgreSQL database.
+            </div>
+        </section>
+
+        <section id="current-state">
+            <h2>2. Current Architecture Analysis</h2>
+            
+            <h3>2.1 Technology Stack</h3>
+            <table>
+                <tr>
+                    <th>Component</th>
+                    <th>Technology</th>
+                    <th>Location/Deployment</th>
+                </tr>
+                <tr>
+                    <td>Frontend Framework</td>
+                    <td>Next.js 16 (App Router)</td>
+                    <td>Vercel</td>
+                </tr>
+                <tr>
+                    <td>Backend API</td>
+                    <td>Next.js API Routes (80+ endpoints)</td>
+                    <td>Vercel Serverless Functions</td>
+                </tr>
+                <tr>
+                    <td>Database</td>
+                    <td>PostgreSQL (via Prisma)</td>
+                    <td>External Provider (PlanetScale/Neon/Supabase)</td>
+                </tr>
+                <tr>
+                    <td>Realtime</td>
+                    <td>Socket.io + Pusher (configurable)</td>
+                    <td>Separate container + Vercel</td>
+                </tr>
+                <tr>
+                    <td>Payment Gateway</td>
+                    <td>PayMongo (GCash, Maya, GrabPay, QRPH)</td>
+                    <td>External API</td>
+                </tr>
+                <tr>
+                    <td>Shipping Provider</td>
+                    <td>Lalamove API</td>
+                    <td>External API</td>
+                </tr>
+                <tr>
+                    <td>File Storage</td>
+                    <td>Cloudinary</td>
+                    <td>External Service</td>
+                </tr>
+            </table>
+
+            <h3>2.2 Current Domain Boundaries</h3>
+            <p>The application already shows some domain separation:</p>
+            
+            <div class="service-box">
+                <h4>🔐 Authentication & User Management</h4>
+                <ul>
+                    <li><code>app/api/auth/*</code> - Login, register, password reset, email verification</li>
+                    <li><code>app/api/users/*</code> - User CRUD operations</li>
+                    <li><code>app/api/addresses/*</code> - User address management</li>
+                    <li><code>lib/auth.js</code>, <code>lib/token.js</code>, <code>lib/adminAuth.js</code></li>
+                    <li><code>lib/settings.js</code>, <code>lib/rate-limit.js</code></li>
+                </ul>
+            </div>
+
+            <div class="service-box">
+                <h4>🛍️ Catalog & Store Management</h4>
+                <ul>
+                    <li><code>app/api/stores/*</code> - Store CRUD, verification, geocoding</li>
+                    <li><code>app/api/products/*</code> - Product management</li>
+                    <li><code>app/api/coupons/*</code> - Coupon system</li>
+                    <li><code>app/api/admin/stores/*</code>, <code>app/api/admin/products/*</code></li>
+                </ul>
+            </div>
+
+            <div class="service-box">
+                <h4>📦 Orders & Cart</h4>
+                <ul>
+                    <li><code>app/api/cart/*</code> - Shopping cart operations</li>
+                    <li><code>app/api/orders/*</code> - Order creation, status updates, cancellation</li>
+                    <li><code>app/api/ratings/*</code> - Product ratings</li>
+                    <li><code>app/api/returns/*</code> - Return requests</li>
+                    <li><code>lib/orderAutoComplete.js</code>, <code>lib/escrow.js</code></li>
+                </ul>
+            </div>
+
+            <div class="service-box">
+                <h4>💳 Payment Processing</h4>
+                <ul>
+                    <li><code>app/api/payment/*</code> - Unified checkout, GCash creation</li>
+                    <li><code>app/api/paymongo/*</code> - Payment intent creation, status checks</li>
+                    <li><code>app/api/webhooks/paymongo/*</code> - Payment webhook handler</li>
+                    <li><code>lib/paymongo.js</code>, <code>lib/payment/service.js</code></li>
+                </ul>
+            </div>
+
+            <div class="service-box">
+                <h4>🚚 Shipping & Logistics</h4>
+                <ul>
+                    <li><code>app/api/shipping/lalamove/*</code> - Booking, quotes, tracking</li>
+                    <li><code>app/api/shipping/manual/*</code> - Manual shipping booking</li>
+                    <li><code>app/api/webhooks/lalamove/*</code> - Shipping webhook handler</li>
+                    <li><code>services/lalamove.js</code>, <code>services/shippingFactory.js</code></li>
+                    <li><code>app/api/cron/sync-orders/*</code> - Scheduled order synchronization</li>
+                </ul>
+            </div>
+
+            <div class="service-box">
+                <h4>👨‍💼 Admin & Analytics</h4>
+                <ul>
+                    <li><code>app/api/admin/*</code> - Analytics, payouts, memberships, audit logs</li>
+                    <li><code>app/api/dashboard/*</code> - Dashboard data aggregation</li>
+                    <li><code>lib/adminAccess.js</code>, <code>lib/audit.js</code></li>
+                </ul>
+            </div>
+
+            <div class="service-box">
+                <h4>⚡ Realtime Communication</h4>
+                <ul>
+                    <li><code>websocket-server/</code> - Separate Socket.io server (Docker-ready)</li>
+                    <li><code>lib/realtime.js</code> - Supports POLLING, PUSHER, SOCKET_IO modes</li>
+                    <li><code>app/api/system/realtime/*</code> - Realtime configuration</li>
+                </ul>
+            </div>
+        </section>
+
+        <section id="target-architecture">
+            <h2>3. Target Microservices Architecture</h2>
+            
+            <div class="architecture-diagram">
+                <h3>High-Level Architecture Diagram</h3>
+                <pre>
+┌─────────────────────────────────────────────────────────────┐
+│                    API Gateway / BFF                         │
+│              (Next.js Frontend + Composition APIs)            │
+│                      Deployed on Vercel                       │
+└───────────────────────┬───────────────────────────────────────┘
+                        │
+        ┌───────────────┼───────────────┐
+        │               │               │
+        ▼               ▼               ▼
+┌──────────────┐ ┌──────────────┐ ┌──────────────┐
+│   Auth       │ │   Catalog    │ │    Orders    │
+│   Service    │ │   Service    │ │   Service    │
+└──────────────┘ └──────────────┘ └──────────────┘
+        │               │               │
+        └───────────────┼───────────────┘
+                        │
+        ┌───────────────┼───────────────┐
+        │               │               │
+        ▼               ▼               ▼
+┌──────────────┐ ┌──────────────┐ ┌──────────────┐
+│  Payment     │ │  Shipping    │ │   Admin      │
+│  Service     │ │  Service     │ │   Service    │
+└──────────────┘ └──────────────┘ └──────────────┘
+        │               │
+        └───────────────┘
+                │
+        ┌───────▼────────┐
+        │   Realtime     │
+        │   Service      │
+        │ (Pusher/Socket)│
+        └────────────────┘
+                │
+        ┌───────▼────────┐
+        │   Database     │
+        │  (PostgreSQL)  │
+        └────────────────┘
+                </pre>
+            </div>
+
+            <h3>3.1 Architecture Principles</h3>
+            <ul>
+                <li><strong>Single Responsibility:</strong> Each service owns one business domain</li>
+                <li><strong>Independent Deployment:</strong> Services can be deployed separately</li>
+                <li><strong>API-First:</strong> Services communicate via well-defined REST APIs</li>
+                <li><strong>Database per Service:</strong> Eventually, but start with logical separation</li>
+                <li><strong>Fail-Safe:</strong> Services degrade gracefully when dependencies fail</li>
+            </ul>
+        </section>
+
+        <section id="services">
+            <h2>4. Proposed Services Breakdown</h2>
+
+            <div class="service-box">
+                <h3>1. API Gateway / BFF (Backend for Frontend)</h3>
+                <p><strong>Purpose:</strong> Serves React UI and provides composition endpoints that aggregate data from multiple services.</p>
+                
+                <h4>Responsibilities:</h4>
+                <ul>
+                    <li>Serve all React pages (buyer, store, admin)</li>
+                    <li>Handle authentication cookies/tokens for browser clients</li>
+                    <li>Compose data from multiple services for specific UI needs</li>
+                    <li>Route requests to appropriate microservices</li>
+                </ul>
+                
+                <h4>Current Code:</h4>
+                <ul>
+                    <li>All <code>app/(public)/</code>, <code>app/admin/</code>, <code>app/store/</code> React pages</li>
+                    <li>Thin composition endpoints in <code>app/api/*</code> (will become proxies)</li>
+                </ul>
+                
+                <h4>Deployment:</h4>
+                <p><span class="badge badge-success">Vercel Compatible</span> Main Next.js app on Vercel</p>
+            </div>
+
+            <div class="service-box">
+                <h3>2. Auth & Identity Service</h3>
+                <p><strong>Purpose:</strong> Handles all authentication, authorization, and user identity management.</p>
+                
+                <h4>Responsibilities:</h4>
+                <ul>
+                    <li>User registration, login, logout</li>
+                    <li>Password reset, email verification</li>
+                    <li>Admin authentication checks</li>
+                    <li>Session management and JWT token issuance</li>
+                    <li>Rate limiting for auth endpoints</li>
+                    <li>Audit logging for security events</li>
+                </ul>
+                
+                <h4>Current Code to Extract:</h4>
+                <ul>
+                    <li><code>app/api/auth/*</code> - All auth endpoints</li>
+                    <li><code>app/api/users/route.js</code> - User CRUD</li>
+                    <li><code>app/api/addresses/*</code> - User addresses</li>
+                    <li><code>lib/auth.js</code>, <code>lib/adminAuth.js</code>, <code>lib/token.js</code></li>
+                    <li><code>lib/settings.js</code>, <code>lib/rate-limit.js</code>, <code>lib/audit.js</code></li>
+                </ul>
+                
+                <h4>Proposed API Endpoints:</h4>
+                <pre><code>POST   /auth/register
+POST   /auth/login
+POST   /auth/logout
+GET    /auth/me
+POST   /auth/forgot-password
+POST   /auth/reset-password
+POST   /auth/verify-email
+GET    /auth/admin/check
+GET    /users/:id
+POST   /users
+PATCH  /users/:id
+GET    /users/:id/addresses
+POST   /users/:id/addresses</code></pre>
+                
+                <h4>Database Tables Owned:</h4>
+                <ul>
+                    <li><code>User</code>, <code>Session</code>, <code>Address</code></li>
+                    <li><code>SystemSettings</code> (auth-related settings)</li>
+                    <li><code>AuditLog</code> (security events)</li>
+                </ul>
+                
+                <h4>Deployment:</h4>
+                <p><span class="badge badge-success">Vercel Compatible</span> Separate Vercel project or serverless functions</p>
+            </div>
+
+            <div class="service-box">
+                <h3>3. Catalog & Store Service</h3>
+                <p><strong>Purpose:</strong> Manages stores, products, coupons, and store-related operations.</p>
+                
+                <h4>Responsibilities:</h4>
+                <ul>
+                    <li>Store CRUD operations and verification</li>
+                    <li>Product management (create, update, delete, inventory)</li>
+                    <li>Store address and geocoding management</li>
+                    <li>Coupon creation and validation</li>
+                    <li>Store wallet and payout information</li>
+                </ul>
+                
+                <h4>Current Code to Extract:</h4>
+                <ul>
+                    <li><code>app/api/stores/*</code> - Store operations</li>
+                    <li><code>app/api/products/*</code> - Product CRUD</li>
+                    <li><code>app/api/coupons/*</code> - Coupon management</li>
+                    <li><code>app/api/store/*</code> - Store-specific endpoints (wallet, payouts, shipping)</li>
+                    <li><code>app/api/admin/stores/*</code>, <code>app/api/admin/products/*</code></li>
+                    <li><code>lib/store.js</code></li>
+                </ul>
+                
+                <h4>Proposed API Endpoints:</h4>
+                <pre><code>GET    /stores
+GET    /stores/:id
+POST   /stores
+PATCH  /stores/:id
+POST   /stores/:id/approve
+GET    /stores/:id/products
+POST   /products
+GET    /products/:id
+PATCH  /products/:id
+DELETE /products/:id
+GET    /coupons
+POST   /coupons
+GET    /coupons/:code
+POST   /coupons/validate</code></pre>
+                
+                <h4>Database Tables Owned:</h4>
+                <ul>
+                    <li><code>Store</code>, <code>Product</code>, <code>Coupon</code></li>
+                    <li><code>StoreAddress</code> (or part of Address table)</li>
+                </ul>
+                
+                <h4>Deployment:</h4>
+                <p><span class="badge badge-success">Vercel Compatible</span> Separate Vercel project</p>
+            </div>
+
+            <div class="service-box">
+                <h3>4. Order & Cart Service</h3>
+                <p><strong>Purpose:</strong> Manages shopping carts, order lifecycle, ratings, and returns.</p>
+                
+                <h4>Responsibilities:</h4>
+                <ul>
+                    <li>Shopping cart operations</li>
+                    <li>Order creation from cart items</li>
+                    <li>Order status updates and cancellation</li>
+                    <li>Order synchronization with shipping providers</li>
+                    <li>Product ratings and return requests</li>
+                    <li>Order dashboards for buyers and sellers</li>
+                    <li>Escrow balance management (coordination with Payment Service)</li>
+                </ul>
+                
+                <h4>Current Code to Extract:</h4>
+                <ul>
+                    <li><code>app/api/cart/route.js</code> - Cart operations</li>
+                    <li><code>app/api/orders/*</code> - All order endpoints</li>
+                    <li><code>app/api/ratings/*</code> - Rating system</li>
+                    <li><code>app/api/returns/*</code> - Return requests</li>
+                    <li><code>app/api/dashboard/store/*</code> - Store dashboard</li>
+                    <li><code>lib/orderAutoComplete.js</code></li>
+                    <li><code>lib/escrow.js</code> (or coordinate with Payment Service)</li>
+                </ul>
+                
+                <h4>Proposed API Endpoints:</h4>
+                <pre><code>GET    /cart
+POST   /cart
+DELETE /cart/:itemId
+POST   /orders
+GET    /orders?userId=:id&storeId=:id
+GET    /orders/:id
+POST   /orders/:id/cancel
+PUT    /orders/:id/status
+POST   /orders/:id/sync
+POST   /ratings
+GET    /ratings?productId=:id
+POST   /returns
+GET    /returns/:id</code></pre>
+                
+                <h4>Database Tables Owned:</h4>
+                <ul>
+                    <li><code>Order</code>, <code>OrderItem</code>, <code>Cart</code></li>
+                    <li><code>Rating</code>, <code>Return</code></li>
+                </ul>
+                
+                <h4>Deployment:</h4>
+                <p><span class="badge badge-success">Vercel Compatible</span> Separate Vercel project</p>
+            </div>
+
+            <div class="service-box">
+                <h3>5. Payment Service</h3>
+                <p><strong>Purpose:</strong> Handles all payment processing, payment gateway integrations, and escrow management.</p>
+                
+                <h4>Responsibilities:</h4>
+                <ul>
+                    <li>Payment initiation (PayMongo, GCash, Maya, GrabPay, QRPH)</li>
+                    <li>Payment status tracking</li>
+                    <li>Payment webhook handling (PayMongo)</li>
+                    <li>Escrow balance crediting to sellers</li>
+                    <li>Payment method abstraction layer</li>
+                </ul>
+                
+                <h4>Current Code to Extract:</h4>
+                <ul>
+                    <li><code>app/api/payment/checkout/route.js</code> - Unified checkout</li>
+                    <li><code>app/api/payment/gcash/create/route.js</code> - GCash creation</li>
+                    <li><code>app/api/paymongo/*</code> - PayMongo operations</li>
+                    <li><code>app/api/webhooks/paymongo/route.js</code> - Payment webhooks</li>
+                    <li><code>lib/paymongo.js</code> - PayMongo client</li>
+                    <li><code>lib/payment/service.js</code> - Payment abstraction</li>
+                    <li><code>lib/payment/adapters/*</code> - Payment adapter pattern</li>
+                    <li><code>lib/escrow.js</code> - Escrow management</li>
+                </ul>
+                
+                <h4>Proposed API Endpoints:</h4>
+                <pre><code>POST   /payments/checkout
+POST   /payments/gcash/create
+POST   /payments/paymongo/create-intent
+GET    /payments/paymongo/status/:intentId
+POST   /payments/webhooks/paymongo
+POST   /payments/escrow/credit</code></pre>
+                
+                <h4>Interactions:</h4>
+                <ul>
+                    <li>Calls <strong>Order Service</strong> to mark orders as paid</li>
+                    <li>Calls <strong>Catalog Service</strong> to credit seller wallets</li>
+                    <li>Receives webhooks from PayMongo</li>
+                </ul>
+                
+                <h4>Deployment:</h4>
+                <p><span class="badge badge-success">Vercel Compatible</span> Separate Vercel project (high priority for isolation)</p>
+            </div>
+
+            <div class="service-box">
+                <h3>6. Shipping & Logistics Service</h3>
+                <p><strong>Purpose:</strong> Manages shipping providers (Lalamove, manual), booking, tracking, and webhooks.</p>
+                
+                <h4>Responsibilities:</h4>
+                <ul>
+                    <li>Shipping quote generation (Lalamove)</li>
+                    <li>Shipping booking and order creation</li>
+                    <li>Order tracking and status updates</li>
+                    <li>Shipping webhook handling (Lalamove)</li>
+                    <li>Scheduled order synchronization (cron jobs)</li>
+                    <li>Manual shipping booking</li>
+                </ul>
+                
+                <h4>Current Code to Extract:</h4>
+                <ul>
+                    <li><code>services/lalamove.js</code> - Lalamove client</li>
+                    <li><code>services/shippingFactory.js</code> - Shipping provider factory</li>
+                    <li><code>services/shippingProvider.js</code> - Base shipping interface</li>
+                    <li><code>services/shippingOrderUpdater.js</code> - Order update logic</li>
+                    <li><code>app/api/shipping/lalamove/*</code> - Lalamove endpoints</li>
+                    <li><code>app/api/shipping/manual/*</code> - Manual shipping</li>
+                    <li><code>app/api/webhooks/lalamove/route.js</code> - Shipping webhooks</li>
+                    <li><code>app/api/cron/sync-orders/route.js</code> - Scheduled sync</li>
+                </ul>
+                
+                <h4>Proposed API Endpoints:</h4>
+                <pre><code>POST   /shipping/lalamove/quote
+POST   /shipping/lalamove/book
+POST   /shipping/lalamove/cancel/:orderId
+GET    /shipping/lalamove/track/:orderId
+POST   /shipping/lalamove/webhook
+POST   /shipping/manual/book
+POST   /shipping/sync/:orderId</code></pre>
+                
+                <h4>Interactions:</h4>
+                <ul>
+                    <li>Reads orders from <strong>Order Service</strong></li>
+                    <li>Updates order status via <strong>Order Service</strong> API</li>
+                    <li>Triggers realtime events via <strong>Realtime Service</strong></li>
+                    <li>Receives webhooks from Lalamove</li>
+                </ul>
+                
+                <h4>Deployment:</h4>
+                <p><span class="badge badge-success">Vercel Compatible</span> Separate Vercel project (cron jobs supported)</p>
+            </div>
+
+            <div class="service-box">
+                <h3>7. Admin & Analytics Service</h3>
+                <p><strong>Purpose:</strong> Provides admin-only functionality, analytics, and system management.</p>
+                
+                <h4>Responsibilities:</h4>
+                <ul>
+                    <li>Admin dashboard analytics</li>
+                    <li>User management (admin view)</li>
+                    <li>Payout management</li>
+                    <li>Membership management</li>
+                    <li>Webhook retry and simulation</li>
+                    <li>Escrow dashboard</li>
+                </ul>
+                
+                <h4>Current Code to Extract:</h4>
+                <ul>
+                    <li><code>app/api/admin/*</code> - All admin endpoints</li>
+                    <li><code>app/api/dashboard/admin/*</code> - Admin dashboard</li>
+                    <li><code>lib/adminAccess.js</code> - Admin authorization</li>
+                </ul>
+                
+                <h4>Proposed API Endpoints:</h4>
+                <pre><code>GET    /admin/analytics
+GET    /admin/users
+GET    /admin/stores
+GET    /admin/payouts
+POST   /admin/payouts
+GET    /admin/memberships
+POST   /admin/webhooks/retry
+POST   /admin/webhooks/simulate</code></pre>
+                
+                <h4>Deployment:</h4>
+                <p><span class="badge badge-success">Vercel Compatible</span> Separate Vercel project or part of API Gateway</p>
+            </div>
+
+            <div class="service-box">
+                <h3>8. Realtime Service</h3>
+                <p><strong>Purpose:</strong> Handles real-time notifications and event broadcasting.</p>
+                
+                <h4>Current State:</h4>
+                <ul>
+                    <li><code>websocket-server/</code> - Separate Socket.io server (already microservice-ready!)</li>
+                    <li><code>lib/realtime.js</code> - Supports POLLING, PUSHER, SOCKET_IO modes</li>
+                </ul>
+                
+                <h4>Options:</h4>
+                <div class="info">
+                    <strong>Option A: Use Pusher (Recommended for Vercel)</strong>
+                    <ul>
+                        <li>Set <code>realtimeProvider = 'PUSHER'</code> in system settings</li>
+                        <li>Configure Pusher credentials</li>
+                        <li>Remove need for separate WebSocket server</li>
+                        <li><span class="badge badge-success">100% Vercel Compatible</span></li>
+                    </ul>
+                </div>
+                
+                <div class="info">
+                    <strong>Option B: Keep Socket.io Server</strong>
+                    <ul>
+                        <li>Deploy <code>websocket-server/</code> to container platform (Railway, Fly.io, Render)</li>
+                        <li>Set <code>realtimeProvider = 'SOCKET_IO'</code></li>
+                        <li>Configure <code>socketUrl</code> to point to deployed server</li>
+                        <li><span class="badge badge-warning">Requires External Platform</span></li>
+                    </ul>
+                </div>
+                
+                <h4>Deployment:</h4>
+                <p><strong>Recommended:</strong> <span class="badge badge-success">Pusher (Vercel Compatible)</span></p>
+                <p><strong>Alternative:</strong> <span class="badge badge-warning">Socket.io Server on Railway/Fly.io/Render</span></p>
+            </div>
+        </section>
+
+        <section id="communication">
+            <h2>5. Communication Patterns</h2>
+
+            <h3>5.1 Synchronous Communication (REST APIs)</h3>
+            <p>Services communicate via <strong>REST over HTTPS</strong>:</p>
+            <ul>
+                <li><strong>API Gateway → Services:</strong> Direct HTTP calls to service endpoints</li>
+                <li><strong>Service → Service:</strong> Direct HTTP calls (minimize cross-service calls)</li>
+                <li><strong>External → Services:</strong> Webhooks (PayMongo, Lalamove) hit service endpoints directly</li>
+            </ul>
+
+            <div class="highlight">
+                <strong>Example Flow:</strong><br>
+                User clicks "Checkout" → API Gateway → Order Service (creates order) → Payment Service (initiates payment) → Returns redirect URL to client
+            </div>
+
+            <h3>5.2 Asynchronous Communication (Events)</h3>
+            <p>For real-time updates and cross-service notifications:</p>
+            
+            <h4>Current Approach:</h4>
+            <ul>
+                <li><code>lib/realtime.js</code> triggers events via Pusher or Socket.io</li>
+                <li>Clients subscribe to channels (e.g., <code>store-{storeId}</code>, <code>user-{userId}</code>)</li>
+            </ul>
+
+            <h4>Future Enhancement (Optional):</h4>
+            <ul>
+                <li>Introduce event bus (Redis Pub/Sub, RabbitMQ, or AWS EventBridge)</li>
+                <li>Services publish events when state changes</li>
+                <li>Other services subscribe to relevant events</li>
+                <li><strong>Note:</strong> Not required initially; direct REST calls are sufficient</li>
+            </ul>
+
+            <h3>5.3 Database Strategy</h3>
+            
+            <div class="phase-box">
+                <h3>Phase 1-2: Shared Database (Logical Separation)</h3>
+                <ul>
+                    <li>Keep single PostgreSQL database</li>
+                    <li>Each service only accesses its "owned" tables (enforced by code)</li>
+                    <li>Use Prisma with separate schema files per service</li>
+                    <li>Simpler to start, easier to migrate</li>
+                </ul>
+            </div>
+
+            <div class="phase-box">
+                <h3>Phase 3+: Database per Service (Strict Microservices)</h3>
+                <ul>
+                    <li>Each service has its own database schema</li>
+                    <li>Services communicate only via APIs</li>
+                    <li>Event-driven consistency for cross-service data</li>
+                    <li><strong>Note:</strong> This is optional and adds significant complexity</li>
+                </ul>
+            </div>
+
+            <div class="warning">
+                <strong>⚠️ Recommendation:</strong> Start with shared database (logical separation). Only split databases if you have strong organizational or scaling reasons.
+            </div>
+        </section>
+
+        <section id="migration-plan">
+            <h2>6. Step-by-Step Migration Plan</h2>
+
+            <div class="phase-box">
+                <h3>Phase 1: Modularize Inside Monolith (Weeks 1-2)</h3>
+                <p><strong>Goal:</strong> Clean separation of domains within existing Next.js app</p>
+                
+                <h4>Actions:</h4>
+                <ol>
+                    <li><strong>Create Service Layer:</strong>
+                        <ul>
+                            <li>Create <code>lib/services/</code> directory</li>
+                            <li>Extract business logic from API routes into service modules:
+                                <ul>
+                                    <li><code>lib/services/ordersService.js</code></li>
+                                    <li><code>lib/services/paymentService.js</code></li>
+                                    <li><code>lib/services/shippingService.js</code></li>
+                                    <li><code>lib/services/authService.js</code></li>
+                                    <li><code>lib/services/catalogService.js</code></li>
+                                </ul>
+                            </li>
+                            <li>API routes become thin controllers that call services</li>
+                        </ul>
+                    </li>
+                    <li><strong>Standardize Responses:</strong>
+                        <ul>
+                            <li>Create common response format</li>
+                            <li>Standardize error handling</li>
+                            <li>Add request/response logging</li>
+                        </ul>
+                    </li>
+                    <li><strong>Enforce Domain Boundaries:</strong>
+                        <ul>
+                            <li>Each service module only touches its own Prisma models</li>
+                            <li>No direct cross-domain database access</li>
+                            <li>Use service methods for cross-domain operations</li>
+                        </ul>
+                    </li>
+                    <li><strong>Decide on Realtime:</strong>
+                        <ul>
+                            <li>Choose Pusher (recommended) or keep Socket.io server</li>
+                            <li>Update system settings accordingly</li>
+                        </ul>
+                    </li>
+                </ol>
+                
+                <h4>Deliverables:</h4>
+                <ul>
+                    <li>✅ Service layer modules created</li>
+                    <li>✅ API routes refactored to use services</li>
+                    <li>✅ Domain boundaries enforced</li>
+                    <li>✅ All tests passing</li>
+                </ul>
+            </div>
+
+            <div class="phase-box">
+                <h3>Phase 2: Introduce Internal Service Boundaries (Weeks 3-4)</h3>
+                <p><strong>Goal:</strong> Treat domains as separate services, but still in one codebase</p>
+                
+                <h4>Actions:</h4>
+                <ol>
+                    <li><strong>Rename API Routes:</strong>
+                        <ul>
+                            <li>Create <code>app/api/internal/</code> directory structure</li>
+                            <li>Move domain routes to <code>app/api/internal/{service}/*</code></li>
+                            <li>Keep public-facing routes in <code>app/api/public/*</code> or root <code>app/api/*</code></li>
+                        </ul>
+                    </li>
+                    <li><strong>Define Service Interfaces:</strong>
+                        <ul>
+                            <li>Document expected request/response formats</li>
+                            <li>Create TypeScript types or JSDoc comments</li>
+                            <li>Define error codes and status codes</li>
+                        </ul>
+                    </li>
+                    <li><strong>Implement Service-to-Service Calls:</strong>
+                        <ul>
+                            <li>Services call each other via HTTP (even if internal)</li>
+                            <li>Use environment variables for service URLs</li>
+                            <li>In development, use <code>http://localhost:3000/api/internal/...</code></li>
+                            <li>In production, use same URLs (still internal to Vercel)</li>
+                        </ul>
+                    </li>
+                    <li><strong>Add Service Health Checks:</strong>
+                        <ul>
+                            <li>Create <code>GET /api/internal/{service}/health</code> endpoints</li>
+                            <li>Monitor service availability</li>
+                        </ul>
+                    </li>
+                </ol>
+                
+                <h4>Deliverables:</h4>
+                <ul>
+                    <li>✅ Internal service structure defined</li>
+                    <li>✅ Service interfaces documented</li>
+                    <li>✅ Cross-service calls implemented via HTTP</li>
+                    <li>✅ Health checks in place</li>
+                </ul>
+            </div>
+
+            <div class="phase-box">
+                <h3>Phase 3: Extract First Microservice - Payment Service (Weeks 5-6)</h3>
+                <p><strong>Goal:</strong> Extract Payment Service as separate deployable unit</p>
+                
+                <h4>Why Payment First?</h4>
+                <ul>
+                    <li>High isolation value (security, compliance)</li>
+                    <li>Clear boundaries (webhooks, external APIs)</li>
+                    <li>Independent scaling needs</li>
+                    <li>Minimal dependencies on other services</li>
+                </ul>
+                
+                <h4>Actions:</h4>
+                <ol>
+                    <li><strong>Create New Vercel Project:</strong>
+                        <ul>
+                            <li>Create <code>budolshap-payment-service</code> repository</li>
+                            <li>Copy payment-related code</li>
+                            <li>Set up Prisma (shared DB or separate schema)</li>
+                            <li>Configure environment variables</li>
+                        </ul>
+                    </li>
+                    <li><strong>Deploy Payment Service:</strong>
+                        <ul>
+                            <li>Deploy to Vercel: <code>payment.budolshap.com</code></li>
+                            <li>Set up webhook endpoints</li>
+                            <li>Configure PayMongo webhook URL</li>
+                        </ul>
+                    </li>
+                    <li><strong>Update Main App:</strong>
+                        <ul>
+                            <li>Replace local payment code with HTTP calls to payment service</li>
+                            <li>Update <code>app/api/payment/*</code> to proxy to payment service</li>
+                            <li>Update <code>lib/payment/service.js</code> to call external API</li>
+                        </ul>
+                    </li>
+                    <li><strong>Test Thoroughly:</strong>
+                        <ul>
+                            <li>Test payment flow end-to-end</li>
+                            <li>Verify webhooks work</li>
+                            <li>Test error scenarios</li>
+                        </ul>
+                    </li>
+                </ol>
+                
+                <h4>Deliverables:</h4>
+                <ul>
+                    <li>✅ Payment service deployed independently</li>
+                    <li>✅ Main app calls payment service via HTTP</li>
+                    <li>✅ All payment tests passing</li>
+                    <li>✅ Webhooks functioning correctly</li>
+                </ul>
+            </div>
+
+            <div class="phase-box">
+                <h3>Phase 4: Extract Shipping Service (Weeks 7-8)</h3>
+                <p><strong>Goal:</strong> Extract Shipping Service as separate deployable unit</p>
+                
+                <h4>Actions:</h4>
+                <ol>
+                    <li><strong>Create Shipping Service:</strong>
+                        <ul>
+                            <li>Create <code>budolshap-shipping-service</code> repository</li>
+                            <li>Copy shipping-related code</li>
+                            <li>Set up Lalamove API client</li>
+                            <li>Configure webhook endpoints</li>
+                        </ul>
+                    </li>
+                    <li><strong>Deploy Shipping Service:</strong>
+                        <ul>
+                            <li>Deploy to Vercel: <code>shipping.budolshap.com</code></li>
+                            <li>Set up Lalamove webhook URL</li>
+                            <li>Configure cron jobs for order sync</li>
+                        </ul>
+                    </li>
+                    <li><strong>Update Main App:</strong>
+                        <ul>
+                            <li>Replace local shipping code with HTTP calls</li>
+                            <li>Update Order Service to call Shipping Service</li>
+                        </ul>
+                    </li>
+                    <li><strong>Update Order Service:</strong>
+                        <ul>
+                            <li>Shipping Service calls Order Service to update order status</li>
+                            <li>Implement order update endpoint in Order Service</li>
+                        </ul>
+                    </li>
+                </ol>
+                
+                <h4>Deliverables:</h4>
+                <ul>
+                    <li>✅ Shipping service deployed independently</li>
+                    <li>✅ Order-to-Shipping integration working</li>
+                    <li>✅ Webhooks and cron jobs functioning</li>
+                </ul>
+            </div>
+
+            <div class="phase-box">
+                <h3>Phase 5: Extract Remaining Services (Weeks 9-12)</h3>
+                <p><strong>Goal:</strong> Extract Auth, Orders, Catalog, Admin services</p>
+                
+                <h4>Extraction Order:</h4>
+                <ol>
+                    <li><strong>Auth Service</strong> (Week 9)</li>
+                    <li><strong>Order Service</strong> (Week 10)</li>
+                    <li><strong>Catalog Service</strong> (Week 11)</li>
+                    <li><strong>Admin Service</strong> (Week 12, or keep in API Gateway)</li>
+                </ol>
+                
+                <h4>Pattern for Each Service:</h4>
+                <ol>
+                    <li>Create new Vercel project</li>
+                    <li>Copy service code</li>
+                    <li>Deploy to subdomain</li>
+                    <li>Update main app to call service</li>
+                    <li>Test thoroughly</li>
+                </ol>
+            </div>
+
+            <div class="success">
+                <strong>✅ Migration Complete:</strong> All services extracted, main app is now API Gateway/BFF
+            </div>
+        </section>
+
+        <section id="vercel">
+            <h2>7. Vercel Deployment Strategy</h2>
+
+            <h3>7.1 What Works on Vercel</h3>
+            <table>
+                <tr>
+                    <th>Service Type</th>
+                    <th>Vercel Compatibility</th>
+                    <th>Notes</th>
+                </tr>
+                <tr>
+                    <td>Next.js BFF/API Gateway</td>
+                    <td><span class="badge badge-success">✅ Perfect</span></td>
+                    <td>Native Next.js deployment</td>
+                </tr>
+                <tr>
+                    <td>REST API Services</td>
+                    <td><span class="badge badge-success">✅ Excellent</span></td>
+                    <td>Serverless functions, separate Vercel projects</td>
+                </tr>
+                <tr>
+                    <td>Webhook Handlers</td>
+                    <td><span class="badge badge-success">✅ Excellent</span></td>
+                    <td>Stable HTTPS URLs, perfect for webhooks</td>
+                </tr>
+                <tr>
+                    <td>Cron Jobs</td>
+                    <td><span class="badge badge-success">✅ Supported</span></td>
+                    <td>Vercel Cron (already using)</td>
+                </tr>
+                <tr>
+                    <td>Payment Service</td>
+                    <td><span class="badge badge-success">✅ Excellent</span></td>
+                    <td>Serverless, scales automatically</td>
+                </tr>
+                <tr>
+                    <td>Shipping Service</td>
+                    <td><span class="badge badge-success">✅ Excellent</span></td>
+                    <td>Webhooks + cron jobs supported</td>
+                </tr>
+                <tr>
+                    <td>Auth Service</td>
+                    <td><span class="badge badge-success">✅ Excellent</span></td>
+                    <td>Stateless JWT, perfect for serverless</td>
+                </tr>
+            </table>
+
+            <h3>7.2 What Doesn't Work on Vercel</h3>
+            <table>
+                <tr>
+                    <th>Component</th>
+                    <th>Issue</th>
+                    <th>Solution</th>
+                </tr>
+                <tr>
+                    <td>Long-lived WebSocket Server</td>
+                    <td><span class="badge badge-danger">❌ Not Supported</span></td>
+                    <td>Use Pusher (recommended) or deploy Socket.io server to Railway/Fly.io/Render</td>
+                </tr>
+                <tr>
+                    <td>Database</td>
+                    <td><span class="badge badge-warning">⚠️ External Required</span></td>
+                    <td>Already using external DB (PostgreSQL), continue with same approach</td>
+                </tr>
+            </table>
+
+            <h3>7.3 Deployment Architecture on Vercel</h3>
+            
+            <div class="info">
+                <h4>Option A: Multiple Vercel Projects (Recommended)</h4>
+                <ul>
+                    <li><strong>Main App:</strong> <code>budolshap-v3</code> → <code>budolshap.com</code></li>
+                    <li><strong>Payment Service:</strong> <code>budolshap-payment-service</code> → <code>payment.budolshap.com</code></li>
+                    <li><strong>Shipping Service:</strong> <code>budolshap-shipping-service</code> → <code>shipping.budolshap.com</code></li>
+                    <li><strong>Auth Service:</strong> <code>budolshap-auth-service</code> → <code>auth.budolshap.com</code></li>
+                    <li><strong>Order Service:</strong> <code>budolshap-order-service</code> → <code>orders.budolshap.com</code></li>
+                    <li><strong>Catalog Service:</strong> <code>budolshap-catalog-service</code> → <code>catalog.budolshap.com</code></li>
+                </ul>
+                <p><strong>Benefits:</strong> Independent deployments, separate scaling, team autonomy</p>
+            </div>
+
+            <div class="info">
+                <h4>Option B: Monorepo with Vercel Workspaces</h4>
+                <ul>
+                    <li>Single repository with multiple Next.js apps</li>
+                    <li>Vercel detects and deploys each app separately</li>
+                    <li>Shared code in <code>packages/</code> directory</li>
+                </ul>
+                <p><strong>Benefits:</strong> Code sharing, unified versioning, easier local development</p>
+            </div>
+
+            <h3>7.4 Environment Variables Strategy</h3>
+            <ul>
+                <li><strong>Per-Service Variables:</strong> Each Vercel project has its own environment variables</li>
+                <li><strong>Shared Secrets:</strong> Use Vercel's shared environment variables or secrets manager</li>
+                <li><strong>Database Connection:</strong> Each service connects to same DB (Phase 1-2) or separate DBs (Phase 3+)</li>
+                <li><strong>Service URLs:</strong> Store service URLs in environment variables for service-to-service calls</li>
+            </ul>
+
+            <h3>7.5 Realtime Strategy for Vercel</h3>
+            <div class="success">
+                <strong>✅ Recommended: Use Pusher</strong>
+                <ul>
+                    <li>Set <code>realtimeProvider = 'PUSHER'</code> in system settings</li>
+                    <li>Configure Pusher credentials in Vercel environment variables</li>
+                    <li>Remove need for separate WebSocket server</li>
+                    <li>100% compatible with Vercel serverless architecture</li>
+                    <li>Scales automatically, no infrastructure management</li>
+                </ul>
+            </div>
+
+            <div class="warning">
+                <strong>Alternative: External Socket.io Server</strong>
+                <ul>
+                    <li>Deploy <code>websocket-server/</code> to Railway, Fly.io, or Render</li>
+                    <li>Set <code>socketUrl</code> environment variable</li>
+                    <li>More infrastructure to manage, but gives you full control</li>
+                </ul>
+            </div>
+        </section>
+
+        <section id="recommendations">
+            <h2>8. Practical Recommendations</h2>
+
+            <h3>8.1 Start Small, Iterate</h3>
+            <ul>
+                <li>Don't try to extract all services at once</li>
+                <li>Start with Phase 1 (modularization) - this alone provides significant value</li>
+                <li>Extract services one at a time, starting with Payment Service</li>
+                <li>Test thoroughly after each extraction</li>
+            </ul>
+
+            <h3>8.2 Keep Database Shared Initially</h3>
+            <ul>
+                <li>Start with logical separation (services own specific tables)</li>
+                <li>Only split databases if you have strong reasons (compliance, scaling, team boundaries)</li>
+                <li>Splitting databases adds significant complexity (distributed transactions, eventual consistency)</li>
+            </ul>
+
+            <h3>8.3 Use Pusher for Realtime</h3>
+            <ul>
+                <li>Simplest path for Vercel deployment</li>
+                <li>No infrastructure to manage</li>
+                <li>Already integrated in your codebase</li>
+                <li>Scales automatically</li>
+            </ul>
+
+            <h3>8.4 Implement Service Health Checks</h3>
+            <ul>
+                <li>Each service should expose <code>GET /health</code> endpoint</li>
+                <li>Monitor service availability</li>
+                <li>Implement circuit breakers for service-to-service calls</li>
+                <li>Add retry logic with exponential backoff</li>
+            </ul>
+
+            <h3>8.5 Add Observability</h3>
+            <ul>
+                <li>Centralized logging (e.g., Vercel Logs, Datadog, Sentry)</li>
+                <li>Request tracing across services</li>
+                <li>Performance monitoring</li>
+                <li>Error tracking and alerting</li>
+            </ul>
+
+            <h3>8.6 API Versioning</h3>
+            <ul>
+                <li>Version your service APIs from the start: <code>/api/v1/orders</code></li>
+                <li>Allows backward compatibility during migrations</li>
+                <li>Easier to deprecate old endpoints</li>
+            </ul>
+
+            <h3>8.7 Documentation</h3>
+            <ul>
+                <li>Document each service's API (OpenAPI/Swagger)</li>
+                <li>Maintain service dependency diagram</li>
+                <li>Document deployment procedures</li>
+                <li>Keep runbooks for common operations</li>
+            </ul>
+        </section>
+
+        <section id="risks">
+            <h2>9. Risks & Mitigation</h2>
+
+            <table>
+                <tr>
+                    <th>Risk</th>
+                    <th>Impact</th>
+                    <th>Mitigation</th>
+                </tr>
+                <tr>
+                    <td>Service communication failures</td>
+                    <td>High</td>
+                    <td>Implement retries, circuit breakers, graceful degradation</td>
+                </tr>
+                <tr>
+                    <td>Database connection limits</td>
+                    <td>Medium</td>
+                    <td>Use connection pooling, consider separate DBs if needed</td>
+                </tr>
+                <tr>
+                    <td>Increased latency</td>
+                    <td>Medium</td>
+                    <td>Optimize service calls, use caching, minimize cross-service calls</td>
+                </tr>
+                <tr>
+                    <td>Deployment complexity</td>
+                    <td>Medium</td>
+                    <td>Use CI/CD pipelines, automate deployments, test thoroughly</td>
+                </tr>
+                <tr>
+                    <td>Data consistency issues</td>
+                    <td>High</td>
+                    <td>Start with shared DB, implement idempotency, use transactions where possible</td>
+                </tr>
+                <tr>
+                    <td>Debugging complexity</td>
+                    <td>Medium</td>
+                    <td>Implement distributed tracing, centralized logging, request IDs</td>
+                </tr>
+                <tr>
+                    <td>Cost increase</td>
+                    <td>Low</td>
+                    <td>Vercel serverless scales efficiently, monitor usage</td>
+                </tr>
+            </table>
+        </section>
+
+        <section id="timeline">
+            <h2>10. Timeline & Milestones</h2>
+
+            <h3>10.1 Phase 1: Modularization (Weeks 1-2)</h3>
+            <ul>
+                <li><strong>Week 1:</strong> Create service layer, extract business logic</li>
+                <li><strong>Week 2:</strong> Refactor API routes, enforce boundaries, testing</li>
+                <li><strong>Milestone:</strong> ✅ Modular monolith with clear service boundaries</li>
+            </ul>
+
+            <h3>10.2 Phase 2: Internal Service Boundaries (Weeks 3-4)</h3>
+            <ul>
+                <li><strong>Week 3:</strong> Restructure API routes, define interfaces</li>
+                <li><strong>Week 4:</strong> Implement service-to-service HTTP calls, health checks</li>
+                <li><strong>Milestone:</strong> ✅ Services communicate via HTTP (internal)</li>
+            </ul>
+
+            <h3>10.3 Phase 3: Payment Service Extraction (Weeks 5-6)</h3>
+            <ul>
+                <li><strong>Week 5:</strong> Create payment service, deploy to Vercel</li>
+                <li><strong>Week 6:</strong> Update main app, test payment flows</li>
+                <li><strong>Milestone:</strong> ✅ Payment service independently deployed</li>
+            </ul>
+
+            <h3>10.4 Phase 4: Shipping Service Extraction (Weeks 7-8)</h3>
+            <ul>
+                <li><strong>Week 7:</strong> Create shipping service, deploy to Vercel</li>
+                <li><strong>Week 8:</strong> Integrate with order service, test webhooks</li>
+                <li><strong>Milestone:</strong> ✅ Shipping service independently deployed</li>
+            </ul>
+
+            <h3>10.5 Phase 5: Remaining Services (Weeks 9-12)</h3>
+            <ul>
+                <li><strong>Week 9:</strong> Extract Auth Service</li>
+                <li><strong>Week 10:</strong> Extract Order Service</li>
+                <li><strong>Week 11:</strong> Extract Catalog Service</li>
+                <li><strong>Week 12:</strong> Extract Admin Service (or keep in gateway)</li>
+                <li><strong>Milestone:</strong> ✅ Full microservices architecture</li>
+            </ul>
+
+            <div class="highlight">
+                <strong>Total Timeline:</strong> 12 weeks (3 months) for complete migration<br>
+                <strong>Note:</strong> Timeline can be adjusted based on team size and priorities. Phases 1-2 provide immediate value even if you stop there.
+            </div>
+        </section>
+
+        <section>
+            <h2>11. Next Steps</h2>
+            <ol>
+                <li><strong>Review this plan</strong> with your team</li>
+                <li><strong>Decide on realtime strategy</strong> (Pusher recommended)</li>
+                <li><strong>Set up service layer structure</strong> (Phase 1)</li>
+                <li><strong>Create service documentation templates</strong></li>
+                <li><strong>Set up monitoring and logging</strong></li>
+                <li><strong>Begin Phase 1 implementation</strong></li>
+            </ol>
+        </section>
+
+        <div class="footer">
+            <p><strong>BudolShap Microservices Migration Plan</strong></p>
+            <p>Document Version 1.0 | Generated January 2025</p>
+            <p>For questions or updates, please refer to the project repository.</p>
+        </div>
+    </div>
+</body>
+</html>
+

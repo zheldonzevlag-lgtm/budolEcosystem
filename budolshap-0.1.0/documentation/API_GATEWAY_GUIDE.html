@@ -1,0 +1,471 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>API Gateway & Microservices Guide | Vercel Edition</title>
+    <style>
+        :root {
+            --primary: #0070f3;
+            --secondary: #666;
+            --background: #ffffff;
+            --surface: #fafafa;
+            --surface-hover: #f1f1f1;
+            --text: #111;
+            --border: #eaeaea;
+            --success: #0070f3;
+            --error: #e00;
+            --warning: #f5a623;
+        }
+
+        @media (prefers-color-scheme: dark) {
+            :root {
+                --primary: #3291ff;
+                --secondary: #888;
+                --background: #000000;
+                --surface: #111;
+                --surface-hover: #333;
+                --text: #fff;
+                --border: #333;
+            }
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, 'Open Sans', 'Helvetica Neue', sans-serif;
+            background-color: var(--background);
+            color: var(--text);
+            line-height: 1.6;
+            margin: 0;
+            padding: 0;
+        }
+
+        .container {
+            max-width: 900px;
+            margin: 0 auto;
+            padding: 2rem;
+        }
+
+        header {
+            margin-bottom: 3rem;
+            border-bottom: 1px solid var(--border);
+            padding-bottom: 2rem;
+        }
+
+        h1 {
+            font-size: 2.5rem;
+            margin-bottom: 0.5rem;
+            letter-spacing: -0.05em;
+        }
+
+        h2 {
+            font-size: 1.8rem;
+            margin-top: 3rem;
+            margin-bottom: 1.5rem;
+            letter-spacing: -0.03em;
+            border-bottom: 1px solid var(--border);
+            padding-bottom: 0.5rem;
+        }
+
+        h3 {
+            font-size: 1.4rem;
+            margin-top: 2rem;
+            margin-bottom: 1rem;
+        }
+
+        p {
+            margin-bottom: 1.5rem;
+            color: var(--secondary);
+        }
+
+        .card {
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            padding: 1.5rem;
+            margin-bottom: 1.5rem;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 2rem 0;
+        }
+
+        th,
+        td {
+            text-align: left;
+            padding: 1rem;
+            border-bottom: 1px solid var(--border);
+        }
+
+        th {
+            color: var(--secondary);
+            font-weight: 600;
+            font-size: 0.9rem;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+        }
+
+        td {
+            font-size: 1rem;
+        }
+
+        .badge {
+            display: inline-block;
+            padding: 0.25em 0.5em;
+            border-radius: 4px;
+            font-size: 0.85em;
+            font-weight: 600;
+        }
+
+        .badge-free {
+            background-color: var(--surface-hover);
+            color: var(--text);
+            border: 1px solid var(--border);
+        }
+
+        .badge-pro {
+            background-color: var(--primary);
+            color: white;
+        }
+
+        code {
+            background: var(--surface);
+            padding: 0.2em 0.4em;
+            border-radius: 3px;
+            font-family: 'SFMono-Regular', Consolas, 'Liberation Mono', Menlo, Courier, monospace;
+            font-size: 0.9em;
+        }
+
+        pre {
+            background: var(--surface);
+            padding: 1rem;
+            border-radius: 8px;
+            overflow-x: auto;
+            border: 1px solid var(--border);
+        }
+
+        pre code {
+            background: none;
+            padding: 0;
+            font-size: 0.9em;
+            color: var(--text);
+        }
+
+        .feature-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 1.5rem;
+            margin: 2rem 0;
+        }
+
+        .feature-item {
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            padding: 1.5rem;
+        }
+
+        .feature-icon {
+            font-size: 1.5rem;
+            margin-bottom: 1rem;
+            display: block;
+        }
+
+        .limit-value {
+            font-weight: 600;
+            color: var(--text);
+        }
+
+        .recommendation-box {
+            background: linear-gradient(180deg, rgba(0, 112, 243, 0.1) 0%, rgba(0, 0, 0, 0) 100%);
+            border: 1px solid var(--primary);
+            border-radius: 8px;
+            padding: 2rem;
+            margin: 2rem 0;
+        }
+
+        .db-box {
+            background: linear-gradient(180deg, rgba(235, 235, 235, 0.5) 0%, rgba(0, 0, 0, 0) 100%);
+            border: 1px solid var(--border);
+            border-left: 4px solid var(--text);
+        }
+
+        .check-list {
+            list-style: none;
+            padding: 0;
+        }
+
+        .check-list li {
+            margin-bottom: 0.5rem;
+            display: flex;
+            align-items: center;
+        }
+
+        .check-list li::before {
+            content: "✓";
+            color: var(--primary);
+            margin-right: 0.5rem;
+            font-weight: bold;
+        }
+
+        .cross-list li::before {
+            content: "✕";
+            color: var(--error);
+            margin-right: 0.5rem;
+            font-weight: bold;
+        }
+
+        .db-architecture {
+            display: flex;
+            flex-direction: column;
+            gap: 1rem;
+        }
+
+        .db-service-row {
+            display: flex;
+            align-items: center;
+            padding: 1rem;
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: 6px;
+        }
+
+        .db-name {
+            font-weight: bold;
+            min-width: 150px;
+            color: var(--primary);
+        }
+
+        .db-desc {
+            color: var(--secondary);
+            font-size: 0.95rem;
+        }
+
+        footer {
+            margin-top: 4rem;
+            border-top: 1px solid var(--border);
+            padding-top: 2rem;
+            color: var(--secondary);
+            font-size: 0.9rem;
+            text-align: center;
+        }
+
+        /* Navigation Bar */
+        .nav-bar {
+            background: #f0f0f0;
+            padding: 1rem;
+            border-radius: 8px;
+            margin-bottom: 2rem;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            border: 1px solid #ddd;
+        }
+
+        .nav-title {
+            font-weight: bold;
+            color: #555;
+        }
+
+        .nav-links {
+            display: flex;
+            gap: 10px;
+        }
+
+        .nav-btn {
+            text-decoration: none;
+            padding: 8px 16px;
+            border-radius: 4px;
+            font-size: 0.9rem;
+            font-weight: 600;
+        }
+
+        .nav-btn.active {
+            background: var(--primary);
+            color: white;
+            cursor: default;
+        }
+
+        .nav-btn.inactive {
+            background: white;
+            color: var(--secondary);
+            border: 1px solid var(--border);
+            transition: all 0.2s;
+        }
+
+        .nav-btn.inactive:hover {
+            background: #eef;
+            border-color: var(--secondary);
+        }
+    </style>
+</head>
+
+<body>
+    <div class="container">
+        <!-- Navigation Bar -->
+        <div class="nav-bar">
+            <span class="nav-title">Document View:</span>
+            <div class="nav-links">
+                <span class="nav-btn active">API Gateway Guide</span>
+                <a href="MICROSERVICES_STRATEGIC_PLAN.html" class="nav-btn inactive">Microservices Roadmap &rarr;</a>
+            </div>
+        </div>
+
+        <header>
+            <h1>API Gateway & Database Strategy</h1>
+            <p>Implementation Guide for BudolShap on Vercel</p>
+        </header>
+
+        <section id="executive-summary">
+            <div class="recommendation-box">
+                <h2>🏆 Core Strategy</h2>
+                <p>
+                    <strong>API Gateway:</strong> Use Next.js Middleware as your Edge Gateway. <br>
+                    <strong>Database:</strong> Use logic-separated databases (Database-per-Service) pattern.
+                </p>
+                <ul class="check-list">
+                    <li><strong>Gateway:</strong> Handles Auth & Routing at the Edge.</li>
+                    <li><strong>Microservices:</strong> Separate concerns (Orders, Products, Users).</li>
+                    <li><strong>Databases:</strong> Dedicated DBs for critical services to ensure scalability.</li>
+                </ul>
+            </div>
+        </section>
+
+        <section id="database-strategy">
+            <h2>Microservices Database Strategy</h2>
+            <p>You asked: <em>"Can we have separate databases on each service?"</em></p>
+            <p><strong>YES.</strong> This is the recommended "Database-per-Service" pattern. It prevents a single
+                monolithic database from becoming the bottleneck and ensures that an issue in the "Products" DB doesn't
+                bring down "User Auth".</p>
+
+            <div class="card db-box">
+                <h3>Recommended Database Split for BudolShap</h3>
+                <p>Based on your <code>schema.prisma</code>, here is the optimal separation:</p>
+
+                <div class="db-architecture">
+                    <div class="db-service-row">
+                        <div class="db-name">🆔 Identity DB</div>
+                        <div class="db-desc">
+                            <strong>Entities:</strong> User, Auth Tables<br>
+                            <strong>Why:</strong> High reliability required. If this goes down, no one can login. Should
+                            be isolated.
+                        </div>
+                    </div>
+                    <div class="db-service-row">
+                        <div class="db-name">🛒 Catalog DB</div>
+                        <div class="db-desc">
+                            <strong>Entities:</strong> Product, Store, Category, Rating<br>
+                            <strong>Why:</strong> High read volume (browsing). Needs aggressive caching and
+                            read-replicas.
+                        </div>
+                    </div>
+                    <div class="db-service-row">
+                        <div class="db-name">📦 Order DB</div>
+                        <div class="db-desc">
+                            <strong>Entities:</strong> Order, Cart, Shipping<br>
+                            <strong>Why:</strong> High write volume (transactions). Needs strict ACID compliance and row
+                            locking.
+                        </div>
+                    </div>
+                    <div class="db-service-row">
+                        <div class="db-name">💰 Payment DB</div>
+                        <div class="db-desc">
+                            <strong>Entities:</strong> Wallet, Payouts, AuditLog<br>
+                            <strong>Why:</strong> Financial data requires maximum security and separate backups for
+                            compliance.
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <h3>How to Implement on Vercel</h3>
+            <p>You can achieve this easily using <strong>Vercel Postgres (powered by Neon)</strong>:</p>
+            <ol>
+                <li><strong>Create Multiple Stores:</strong> In your Vercel dashboard, create separate Postgres stores
+                    (e.g., <code>budolshap-auth</code>, <code>budolshap-order</code>).</li>
+                <li><strong>Environment Variables:</strong> Connect each service to its specific DB.
+                    <pre><code># Service A (Auth)
+DATABASE_URL=postgres://user:pass@auth-db.neon.tech/main
+
+# Service B (Orders)
+DATABASE_URL=postgres://user:pass@order-db.neon.tech/main</code></pre>
+                </li>
+            </ol>
+            <p><em>Tip: On the Free Tier, you are limited to 1 Postgres store per project usually. To bypass this,
+                    simply create multiple "Projects" in Vercel (e.g., `budolshap-auth-service`,
+                    `budolshap-order-service`) or use an external provider like Neon directly which allows multiple
+                    branches/DBs.</em></p>
+        </section>
+
+        <section id="comparison">
+            <h2>Free vs. Pro: What Matters</h2>
+            <p>Resource limits for API Gateways and Databases on Vercel.</p>
+
+            <table>
+                <thead>
+                    <tr>
+                        <th>Feature</th>
+                        <th><span class="badge badge-free">Hobby (Free)</span></th>
+                        <th><span class="badge badge-pro">Pro ($20/mo)</span></th>
+                        <th>Impact</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td>Databases (Vercel KV/PG)</td>
+                        <td><span class="limit-value">1</span> per project</td>
+                        <td><span class="limit-value">Unlimited</span> (Pay-as-you-go)</td>
+                        <td>You need Pro for multiple specialized DBs within one Vercel Project, or manage them
+                            externally.</td>
+                    </tr>
+                    <tr>
+                        <td>Serverless Function Timeout</td>
+                        <td><span class="limit-value">10s</span></td>
+                        <td><span class="limit-value">15s</span> (up to 900s)</td>
+                        <td>Microservice communication overhead can risk 10s timeouts.</td>
+                    </tr>
+                    <tr>
+                        <td>Edge Middleware</td>
+                        <td><span class="limit-value">1 Million</span> inv/mo</td>
+                        <td><span class="limit-value">1 Million</span> + Paid</td>
+                        <td>Gateway limits logic.</td>
+                    </tr>
+                </tbody>
+            </table>
+        </section>
+
+        <section id="implementation">
+            <h2>Gateway Implementation Guide</h2>
+            <p>Code pattern for your <code>middleware.js</code>:</p>
+
+            <pre><code>import { NextResponse } from 'next/server'
+import { verifyTokenEdge } from './lib/token-edge'
+
+export async function middleware(request) {
+    const { pathname } = request.nextUrl
+    
+    // 1. API Gateway Logic - Routing to Microservices
+    if (pathname.startsWith('/api/orders')) {
+        // Authenticate
+        const token = request.cookies.get('token')?.value
+        if (!token) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+
+        // Rewrite to Order Service (internal or external URL)
+        // Ensure you have ORDER_SERVICE_URL in your .env
+        const targetUrl = new URL(request.nextUrl.pathname, process.env.ORDER_SERVICE_URL)
+        return NextResponse.rewrite(targetUrl)
+    }
+
+    return NextResponse.next()
+}</code></pre>
+        </section>
+
+        <footer>
+            <p>Generated by Antigravity Assitant • BudolShap Project</p>
+        </footer>
+    </div>
+</body>
+
+</html>

@@ -1,0 +1,127 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Budol Ecosystem - Developer Manual</title>
+    <style>
+        body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Oxygen, Ubuntu, "Fira Sans", "Droid Sans", "Helvetica Neue", sans-serif; margin: 0; padding: 0; display: flex; color: #172b4d; }
+        .sidebar { width: 260px; background: #f4f5f7; height: 100vh; padding: 20px; box-sizing: border-box; border-right: 1px solid #dfe1e6; position: fixed; overflow-y: auto; }
+        .content { margin-left: 260px; padding: 40px; max-width: 900px; line-height: 1.6; }
+        .sidebar h3 { color: #42526e; font-size: 12px; text-transform: uppercase; margin-bottom: 10px; font-weight: 700; letter-spacing: 0.5px; }
+        .sidebar a { display: block; padding: 8px 10px; color: #42526e; text-decoration: none; border-radius: 3px; margin-bottom: 2px; font-size: 14px; }
+        .sidebar a:hover { background: #ebecf0; color: #172b4d; }
+        .sidebar a.active { background: #e3fcef; color: #0052cc; font-weight: 500; }
+        h1 { color: #172b4d; margin-top: 0; font-size: 28px; font-weight: 600; }
+        h2 { color: #172b4d; border-bottom: 1px solid #dfe1e6; padding-bottom: 8px; margin-top: 32px; font-size: 20px; font-weight: 600; }
+        h3 { color: #172b4d; font-size: 16px; margin-top: 24px; font-weight: 600; }
+        code { background: #f4f5f7; padding: 2px 4px; border-radius: 3px; color: #cf222e; font-family: 'SFMono-Medium', 'SF Mono', 'Segoe UI Mono', 'Roboto Mono', 'Ubuntu Mono', monospace; font-size: 12px; }
+        pre { background: #f4f5f7; padding: 16px; border-radius: 3px; overflow-x: auto; border: 1px solid #dfe1e6; }
+        .code-header { background: #ebecf0; padding: 8px 16px; border-radius: 3px 3px 0 0; border: 1px solid #dfe1e6; border-bottom: none; font-size: 12px; font-weight: bold; color: #5e6c84; display: flex; justify-content: space-between; align-items: center; }
+        .code-block { margin-top: 0; border-top-left-radius: 0; border-top-right-radius: 0; }
+        .code-link { color: #0052cc; text-decoration: none; }
+        .code-link:hover { text-decoration: underline; }
+    </style>
+</head>
+<body>
+    <div class="sidebar">
+        <h3>Budol Docs v1 (2026-02-23)</h3>
+        <a href="index.html">Overview & Tasks</a>
+        <a href="developer_manual.html" class="active">Developer Manual</a>
+        <a href="system_admin_manual.html">System Admin Manual</a>
+        <a href="user_manual.html">User Manual</a>
+        <a href="risk_register.html">Risk Register</a>
+        <a href="mitigation.html">Mitigation Plan</a>
+        <a href="issues_fixes.html">Issues & Fixes</a>
+        <a href="test_results.html">Test Results</a>
+        <a href="future_recommendations.html">Future Recommendations</a>
+        <a href="knowledgebase.html">Knowledge Base</a>
+    </div>
+    <div class="content">
+        <h1>Developer Manual: Google Maps Integration</h1>
+        
+        <h2>Purpose</h2>
+        <p>To provide users with a native Google Maps experience, replacing the OpenStreetMap (OSM) fallback tiles when the Google Maps provider is selected. This ensures better accuracy, familiar UI, and access to Google's Places data.</p>
+
+        <h2>Technical Explanation</h2>
+        <p>The integration involves two main components:</p>
+        <ul>
+            <li><strong>GoogleMapView.jsx</strong>: A wrapper around the Google Maps JavaScript API. It handles script loading, map initialization, and exposes methods (zoom, flyTo) via a forward ref.</li>
+            <li><strong>MapPicker.jsx</strong>: The main container that conditionally renders either Leaflet (for OSM/Radar/Geoapify) or GoogleMapView based on the selected provider.</li>
+        </ul>
+
+        <h2>Code Reference</h2>
+
+        <h3>GoogleMapView Component</h3>
+        <p>Responsible for rendering the Google Map. It uses <code>useImperativeHandle</code> to expose control methods to the parent.</p>
+        <div class="code-header">
+            <span>GoogleMapView.jsx</span>
+            <a href="file:///d:/IT Projects/budolEcosystem/budolshap-0.1.0/components/address/GoogleMapView.jsx" class="code-link">Open File</a>
+        </div>
+        <pre class="code-block"><code>
+// Key implementation details:
+// 1. Script Loading: Asynchronously loads the Google Maps script with 'places' library.
+// 2. Ref Exposure: Exposes zoomIn, zoomOut, flyTo methods.
+// 3. Event Handling: Listens for 'idle' event to update parent center state.
+
+const GoogleMapView = forwardRef(({ center, onCenterChange, apiKey }, ref) => {
+    // ... implementation ...
+    
+    // Sync Center Prop -> Map
+    useEffect(() => {
+        if (mapInstanceRef.current && center) {
+            // ... checks distance to avoid loop ...
+            mapInstanceRef.current.panTo({ lat: center[0], lng: center[1] });
+        }
+    }, [center]);
+
+    // ...
+});
+        </code></pre>
+
+        <h3>MapPicker Integration</h3>
+        <p>Modified to conditionally render the map component.</p>
+        <div class="code-header">
+            <span>MapPicker.jsx</span>
+            <a href="file:///d:/IT Projects/budolEcosystem/budolshap-0.1.0/components/address/MapPicker.jsx" class="code-link">Open File</a>
+        </div>
+        <pre class="code-block"><code>
+// Conditional Rendering Logic
+const showGoogleMap = mapProvider === 'GOOGLE_MAPS';
+
+return (
+    &lt;div&gt;
+        {showGoogleMap ? (
+            &lt;GoogleMapView
+                ref={googleMapRef}
+                center={center}
+                onCenterChange={handleMoveEnd}
+                apiKey={googleMapsApiKey}
+            /&gt;
+        ) : (
+            &lt;MapContainer ... /&gt;
+        )}
+    &lt;/div&gt;
+);
+        </code></pre>
+
+        <h2>Dependencies</h2>
+        <ul>
+            <li><code>prop-types</code>: For runtime type checking.</li>
+            <li>Google Maps JavaScript API (loaded via script tag).</li>
+        </ul>
+
+        <h2>Tests</h2>
+        <p>Unit tests are located in <code>components/address/__tests__/GoogleMapView.test.jsx</code>. They verify:</p>
+        <ul>
+            <li>Script loading logic.</li>
+            <li>Map initialization with correct options.</li>
+            <li>Response to center prop updates.</li>
+            <li>Exposure of zoom methods.</li>
+        </ul>
+        <div class="code-header">
+            <span>GoogleMapView.test.jsx</span>
+            <a href="file:///d:/IT Projects/budolEcosystem/budolshap-0.1.0/components/address/__tests__/GoogleMapView.test.jsx" class="code-link">Open File</a>
+        </div>
+
+    </div>
+</body>
+</html>

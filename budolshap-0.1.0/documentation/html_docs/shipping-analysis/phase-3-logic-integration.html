@@ -1,0 +1,100 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Phase 3: Integration & Logic Design</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <header>
+        <h1>Phase 3: Integration & Logic Design</h1>
+        <p>API Flows for Quotations and Cost Allocation Engines</p>
+    </header>
+
+    <nav>
+        <a href="index.html">Home</a>
+        <a href="phase-1-research.html">Phase 1: Research</a>
+        <a href="phase-2-technical-specs.html">Phase 2: Specs</a>
+        <a href="phase-3-logic-integration.html">Phase 3: Logic</a>
+        <a href="phase-4-ui-ux.html">Phase 4: UI/UX</a>
+        <a href="phase-5-testing-protocol.html">Phase 5: Testing</a>
+        <a href="implementation-summary.html">Summary</a>
+    </nav>
+
+    <div class="container">
+        <h2>1. Lalamove Quotation Flow</h2>
+        <p>This flow occurs when a user enters their shipping address in the checkout page.</p>
+        
+        <div class="code-block">
+<pre>
+1. Frontend sends [Pickup_LatLong, Dropoff_LatLong, VehicleType] to Backend.
+2. Backend calls Lalamove API: POST /v3/quotations
+3. Lalamove returns: {
+     "totalFee": "150.00",
+     "distance": {"value": "12.5", "unit": "km"},
+     "surge": "1.2"
+   }
+4. Backend applies BudolShap Business Rules (Subsidies/Buffers).
+5. Backend returns final display_fee to Frontend.
+</pre>
+        </div>
+
+        <h2>2. Shopee-Style Cost Allocation Engine</h2>
+        <p>A central service determines the final cost distribution based on active promotions and store settings.</p>
+
+        <table class="spec-table">
+            <tr>
+                <th>Scenario</th>
+                <th>Logic Calculation</th>
+                <th>Who Pays?</th>
+            </tr>
+            <tr>
+                <td>Standard</td>
+                <td><code>Buyer_Pays = Quote_Fee</code></td>
+                <td>Buyer</td>
+            </tr>
+            <tr>
+                <td>Free Shipping Voucher</td>
+                <td><code>Buyer_Pays = max(0, Quote_Fee - Subsidy)</code></td>
+                <td>Platform (Subsidy)</td>
+            </tr>
+            <tr>
+                <td>Seller Discount</td>
+                <td><code>Buyer_Pays = Quote_Fee - Seller_Discount</code></td>
+                <td>Seller</td>
+            </tr>
+            <tr>
+                <td>Capped Shipping</td>
+                <td><code>Buyer_Pays = min(Quote_Fee, Max_Cap)</code></td>
+                <td>Platform/Seller (Difference)</td>
+            </tr>
+        </table>
+
+        <h2>3. Handling Price Variance (Post-Trip)</h2>
+        <p>Lalamove's final bill may differ from the initial quote due to real-world conditions.</p>
+        
+        <div class="phase-card">
+            <h3>Variance Resolution Policy</h3>
+            <ul>
+                <li><strong>Policy A (Platform Absorbs):</strong> Platform covers the difference if <code>Actual - Quoted < ₱50</code>.</li>
+                <li><strong>Policy B (Escrow Adjustment):</strong> Deduct the difference from the Seller's payout if the error was due to incorrect pickup location.</li>
+                <li><strong>Policy C (Buyer Surcharge):</strong> Charge the buyer's saved card (requires prior authorization) for significant toll/waiting fees.</li>
+            </ul>
+        </div>
+
+        <div class="success-criteria">
+            <h3>Phase 3 Success Criteria</h3>
+            <ul>
+                <li>Successful Lalamove quotation API integration.</li>
+                <li>Logic engine correctly calculates Buyer/Seller/Platform splits.</li>
+                <li>Webhook listener implemented for <code>ORDER_COMPLETED</code> to update final fees.</li>
+            </ul>
+        </div>
+    </div>
+
+    <footer>
+        <p>&copy; 2025 BudolShap Implementation Planning. All rights reserved.</p>
+    </footer>
+</body>
+</html>

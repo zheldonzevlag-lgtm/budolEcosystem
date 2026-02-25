@@ -1,0 +1,1368 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>BudolShap Deployment Documentation</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        :root {
+            --primary: #0070f3;
+            --primary-dark: #0051cc;
+            --success: #0070f0;
+            --warning: #f5a623;
+            --danger: #e74c3c;
+            --dark: #1a1a1a;
+            --gray: #666;
+            --light-gray: #f5f5f5;
+            --border: #e1e1e1;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+            line-height: 1.6;
+            color: #333;
+            background: #fff;
+        }
+
+        .header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 3rem 2rem;
+            text-align: center;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+        }
+
+        .header h1 {
+            font-size: 2.5rem;
+            margin-bottom: 0.5rem;
+        }
+
+        .header p {
+            font-size: 1.1rem;
+            opacity: 0.9;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 2rem;
+        }
+
+        .nav-tabs {
+            display: flex;
+            gap: 0.5rem;
+            border-bottom: 2px solid var(--border);
+            margin-bottom: 2rem;
+            flex-wrap: wrap;
+            position: sticky;
+            top: 0;
+            background: white;
+            z-index: 100;
+            padding: 1rem 0;
+        }
+
+        .nav-tab {
+            padding: 0.75rem 1.5rem;
+            background: white;
+            border: 2px solid var(--border);
+            border-bottom: none;
+            cursor: pointer;
+            transition: all 0.3s;
+            font-weight: 500;
+            border-radius: 8px 8px 0 0;
+        }
+
+        .nav-tab:hover {
+            background: var(--light-gray);
+        }
+
+        .nav-tab.active {
+            background: var(--primary);
+            color: white;
+            border-color: var(--primary);
+        }
+
+        .tab-content {
+            display: none;
+            animation: fadeIn 0.3s;
+        }
+
+        .tab-content.active {
+            display: block;
+        }
+
+        @keyframes fadeIn {
+            from {
+                opacity: 0;
+                transform: translateY(10px);
+            }
+
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .section {
+            margin-bottom: 2rem;
+            padding: 1.5rem;
+            background: white;
+            border-radius: 8px;
+            border: 1px solid var(--border);
+        }
+
+        .section h2 {
+            color: var(--primary);
+            margin-bottom: 1rem;
+            padding-bottom: 0.5rem;
+            border-bottom: 2px solid var(--primary);
+        }
+
+        .section h3 {
+            color: var(--dark);
+            margin: 1.5rem 0 1rem;
+        }
+
+        .code-block {
+            background: #1e1e1e;
+            color: #d4d4d4;
+            padding: 1rem;
+            border-radius: 6px;
+            overflow-x: auto;
+            margin: 1rem 0;
+            font-family: 'Courier New', monospace;
+            font-size: 0.9rem;
+        }
+
+        .code-inline {
+            background: var(--light-gray);
+            padding: 0.2rem 0.4rem;
+            border-radius: 3px;
+            font-family: 'Courier New', monospace;
+            font-size: 0.9em;
+            color: #e74c3c;
+        }
+
+        .alert {
+            padding: 1rem;
+            border-radius: 6px;
+            margin: 1rem 0;
+            border-left: 4px solid;
+        }
+
+        .alert-info {
+            background: #e3f2fd;
+            border-color: #2196f3;
+            color: #1565c0;
+        }
+
+        .alert-warning {
+            background: #fff3cd;
+            border-color: #f5a623;
+            color: #856404;
+        }
+
+        .alert-success {
+            background: #d4edda;
+            border-color: #28a745;
+            color: #155724;
+        }
+
+        .alert-danger {
+            background: #f8d7da;
+            border-color: #e74c3c;
+            color: #721c24;
+        }
+
+        .checklist {
+            list-style: none;
+            padding: 0;
+        }
+
+        .checklist li {
+            padding: 0.5rem;
+            margin: 0.5rem 0;
+            background: var(--light-gray);
+            border-radius: 4px;
+            padding-left: 2rem;
+            position: relative;
+        }
+
+        .checklist li:before {
+            content: "☐";
+            position: absolute;
+            left: 0.5rem;
+            font-size: 1.2rem;
+            color: var(--primary);
+        }
+
+        .command-list {
+            display: grid;
+            gap: 1rem;
+            margin: 1rem 0;
+        }
+
+        .command-item {
+            background: var(--light-gray);
+            padding: 1rem;
+            border-radius: 6px;
+            border-left: 4px solid var(--primary);
+        }
+
+        .command-item strong {
+            display: block;
+            color: var(--primary);
+            margin-bottom: 0.5rem;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 1rem 0;
+        }
+
+        th,
+        td {
+            padding: 0.75rem;
+            text-align: left;
+            border-bottom: 1px solid var(--border);
+        }
+
+        th {
+            background: var(--primary);
+            color: white;
+            font-weight: 600;
+        }
+
+        tr:hover {
+            background: var(--light-gray);
+        }
+
+        .btn {
+            display: inline-block;
+            padding: 0.75rem 1.5rem;
+            background: var(--primary);
+            color: white;
+            text-decoration: none;
+            border-radius: 6px;
+            transition: all 0.3s;
+            border: none;
+            cursor: pointer;
+            font-size: 1rem;
+        }
+
+        .btn:hover {
+            background: var(--primary-dark);
+            transform: translateY(-2px);
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+        }
+
+        .grid-2 {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 1.5rem;
+            margin: 1rem 0;
+        }
+
+        .card {
+            background: white;
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            padding: 1.5rem;
+            transition: all 0.3s;
+        }
+
+        .card:hover {
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+            transform: translateY(-4px);
+        }
+
+        .card h3 {
+            color: var(--primary);
+            margin-top: 0;
+        }
+
+        .footer {
+            background: var(--dark);
+            color: white;
+            text-align: center;
+            padding: 2rem;
+            margin-top: 3rem;
+        }
+
+        .badge {
+            display: inline-block;
+            padding: 0.25rem 0.5rem;
+            border-radius: 4px;
+            font-size: 0.85rem;
+            font-weight: 600;
+            margin: 0 0.25rem;
+        }
+
+        .badge-success {
+            background: #28a745;
+            color: white;
+        }
+
+        .badge-warning {
+            background: #f5a623;
+            color: white;
+        }
+
+        .badge-info {
+            background: #2196f3;
+            color: white;
+        }
+
+        .badge-danger {
+            background: #e74c3c;
+            color: white;
+        }
+
+        @media print {
+
+            .nav-tabs,
+            .btn {
+                display: none;
+            }
+
+            .tab-content {
+                display: block !important;
+            }
+        }
+
+        @media (max-width: 768px) {
+            .header h1 {
+                font-size: 1.8rem;
+            }
+
+            .container {
+                padding: 1rem;
+            }
+
+            .nav-tabs {
+                overflow-x: auto;
+            }
+
+            .grid-2 {
+                grid-template-columns: 1fr;
+            }
+        }
+    </style>
+</head>
+
+<body>
+    <div class="header">
+        <h1>🚀 BudolShap Deployment Documentation</h1>
+        <p>Complete Guide to Deploying Your Application to Vercel</p>
+        <p style="font-size: 0.9rem; margin-top: 1rem;">Last Updated: November 30, 2025</p>
+    </div>
+
+    <div class="container">
+        <div class="nav-tabs">
+            <button class="nav-tab active" onclick="showTab('quick-start')">Quick Start</button>
+            <button class="nav-tab" onclick="showTab('scripts')">Deployment Scripts</button>
+            <button class="nav-tab" onclick="showTab('environment')">Environment Variables</button>
+            <button class="nav-tab" onclick="showTab('database')">Database Setup</button>
+            <button class="nav-tab" onclick="showTab('troubleshooting')">Troubleshooting</button>
+            <button class="nav-tab" onclick="showTab('commands')">Quick Commands</button>
+            <button class="nav-tab" onclick="showTab('workflows')">Workflows</button>
+        </div>
+
+        <!-- Quick Start Tab -->
+        <div id="quick-start" class="tab-content active">
+            <div class="section">
+                <h2>🎯 Quick Start</h2>
+
+                <div class="alert alert-info">
+                    <strong>📌 One-Command Deployment</strong><br>
+                    The fastest way to deploy your application to Vercel.
+                </div>
+
+                <h3>Windows (PowerShell)</h3>
+                <div class="code-block">.\scripts\deploy.ps1 -Production</div>
+
+                <h3>Linux/Mac (Bash)</h3>
+                <div class="code-block">chmod +x scripts/deploy.sh && ./scripts/deploy.sh --production</div>
+
+                <h3>Using NPM Scripts</h3>
+                <div class="code-block">npm run deploy:prod</div>
+            </div>
+
+            <div class="section">
+                <h2>📋 Pre-Deployment Checklist</h2>
+                <ul class="checklist">
+                    <li>Node.js v18+ installed</li>
+                    <li>Vercel CLI installed (<code class="code-inline">npm install -g vercel</code>)</li>
+                    <li>Vercel account created</li>
+                    <li>Vercel Postgres database created</li>
+                    <li>All environment variables set in Vercel Dashboard</li>
+                    <li>Code committed to Git</li>
+                    <li>Local build test passed (<code class="code-inline">npm run build</code>)</li>
+                </ul>
+            </div>
+
+            <div class="section">
+                <h2>🔄 Deployment Flow</h2>
+                <div class="grid-2">
+                    <div class="card">
+                        <h3>1️⃣ Preparation</h3>
+                        <p>✅ Install dependencies<br>
+                            ✅ Generate Prisma client<br>
+                            ✅ Test build locally</p>
+                    </div>
+                    <div class="card">
+                        <h3>2️⃣ Configuration</h3>
+                        <p>✅ Set environment variables<br>
+                            ✅ Configure database<br>
+                            ✅ Link Vercel project</p>
+                    </div>
+                    <div class="card">
+                        <h3>3️⃣ Migration</h3>
+                        <p>✅ Pull env variables<br>
+                            ✅ Run database migrations<br>
+                            ✅ Verify schema</p>
+                    </div>
+                    <div class="card">
+                        <h3>4️⃣ Deployment</h3>
+                        <p>✅ Deploy to Vercel<br>
+                            ✅ Verify deployment<br>
+                            ✅ Test functionality</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Deployment Scripts Tab -->
+        <div id="scripts" class="tab-content">
+            <div class="section">
+                <h2>📜 Deployment Scripts</h2>
+
+                <h3>PowerShell Script (deploy.ps1)</h3>
+                <p>Comprehensive automated deployment script for Windows with full validation and safety checks.</p>
+
+                <div class="command-list">
+                    <div class="command-item">
+                        <strong>Production Deployment</strong>
+                        <div class="code-block">.\scripts\deploy.ps1 -Production</div>
+                    </div>
+                    <div class="command-item">
+                        <strong>Skip Pre-deployment Checks</strong>
+                        <div class="code-block">.\scripts\deploy.ps1 -Production -SkipChecks</div>
+                    </div>
+                    <div class="command-item">
+                        <strong>Skip Database Migration</strong>
+                        <div class="code-block">.\scripts\deploy.ps1 -Production -SkipMigration</div>
+                    </div>
+                    <div class="command-item">
+                        <strong>Quick Deploy (Skip All)</strong>
+                        <div class="code-block">.\scripts\deploy.ps1 -Production -SkipChecks -SkipMigration</div>
+                    </div>
+                </div>
+
+                <h3>Bash Script (deploy.sh)</h3>
+                <p>Cross-platform deployment script for Linux/Mac with identical features.</p>
+
+                <div class="command-list">
+                    <div class="command-item">
+                        <strong>Make Executable & Deploy</strong>
+                        <div class="code-block">chmod +x scripts/deploy.sh && ./scripts/deploy.sh --production</div>
+                    </div>
+                    <div class="command-item">
+                        <strong>Skip Checks</strong>
+                        <div class="code-block">./scripts/deploy.sh --production --skip-checks</div>
+                    </div>
+                    <div class="command-item">
+                        <strong>Skip Migration</strong>
+                        <div class="code-block">./scripts/deploy.sh --production --skip-migration</div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="section">
+                <h2>✨ Script Features</h2>
+                <div class="grid-2">
+                    <div class="card">
+                        <h3>Pre-deployment Checks</h3>
+                        <p>✅ Node.js & npm verification<br>
+                            ✅ Vercel CLI installation<br>
+                            ✅ Project structure validation<br>
+                            ✅ Prisma schema check</p>
+                    </div>
+                    <div class="card">
+                        <h3>Authentication</h3>
+                        <p>✅ Vercel login verification<br>
+                            ✅ Project linking<br>
+                            ✅ Automatic login prompt</p>
+                    </div>
+                    <div class="card">
+                        <h3>Environment Setup</h3>
+                        <p>✅ Variable validation<br>
+                            ✅ Environment pull from Vercel<br>
+                            ✅ Critical variable checks</p>
+                    </div>
+                    <div class="card">
+                        <h3>Database Management</h3>
+                        <p>✅ Migration confirmation<br>
+                            ✅ Prisma client generation<br>
+                            ✅ Error handling</p>
+                    </div>
+                    <div class="card">
+                        <h3>Build Verification</h3>
+                        <p>✅ Optional local build test<br>
+                            ✅ Dependency installation<br>
+                            ✅ Error detection</p>
+                    </div>
+                    <div class="card">
+                        <h3>Git Management</h3>
+                        <p>✅ Uncommitted changes check<br>
+                            ✅ Commit helper<br>
+                            ✅ Push to GitHub</p>
+                    </div>
+                </div>
+            </div>
+
+            <div class="section">
+                <h2>📦 NPM Script Shortcuts</h2>
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Command</th>
+                            <th>Description</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td><code class="code-inline">npm run deploy</code></td>
+                            <td>Deploy to preview environment</td>
+                        </tr>
+                        <tr>
+                            <td><code class="code-inline">npm run deploy:prod</code></td>
+                            <td>Deploy to production</td>
+                        </tr>
+                        <tr>
+                            <td><code class="code-inline">npm run deploy:script</code></td>
+                            <td>Run PowerShell deployment script</td>
+                        </tr>
+                        <tr>
+                            <td><code class="code-inline">npm run env:pull</code></td>
+                            <td>Pull environment variables from Vercel</td>
+                        </tr>
+                        <tr>
+                            <td><code class="code-inline">npm run env:list</code></td>
+                            <td>List all environment variables</td>
+                        </tr>
+                        <tr>
+                            <td><code class="code-inline">npm run migrate:deploy</code></td>
+                            <td>Deploy database migrations</td>
+                        </tr>
+                        <tr>
+                            <td><code class="code-inline">npm run migrate:status</code></td>
+                            <td>Check migration status</td>
+                        </tr>
+                        <tr>
+                            <td><code class="code-inline">npm run vercel:logs</code></td>
+                            <td>View deployment logs</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- Environment Variables Tab -->
+        <div id="environment" class="tab-content">
+            <div class="section">
+                <h2>🔐 Environment Variables</h2>
+
+                <div class="alert alert-warning">
+                    <strong>⚠️ Important:</strong> All environment variables must be set in the Vercel Dashboard before
+                    deployment.
+                    <br><br>
+                    <strong>Dashboard URL:</strong> <a
+                        href="https://vercel.com/derflanoj2s-projects/budolshap/settings/environment-variables"
+                        target="_blank">Environment Variables Settings</a>
+                </div>
+
+                <h3>Critical Variables (Required)</h3>
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Variable</th>
+                            <th>Value</th>
+                            <th>Description</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td><code class="code-inline">DATABASE_PROVIDER</code></td>
+                            <td>postgresql</td>
+                            <td>Database type</td>
+                        </tr>
+                        <tr>
+                            <td><code class="code-inline">POSTGRES_PRISMA_URL</code></td>
+                            <td>Auto-provided by Vercel</td>
+                            <td>Prisma connection URL</td>
+                        </tr>
+                        <tr>
+                            <td><code class="code-inline">POSTGRES_URL_NON_POOLING</code></td>
+                            <td>Auto-provided by Vercel</td>
+                            <td>Direct database connection</td>
+                        </tr>
+                        <tr>
+                            <td><code class="code-inline">JWT_SECRET</code></td>
+                            <td>Random 64-char string</td>
+                            <td>JWT token encryption</td>
+                        </tr>
+                        <tr>
+                            <td><code class="code-inline">NEXT_PUBLIC_BASE_URL</code></td>
+                            <td>https://your-app.vercel.app</td>
+                            <td>Application base URL</td>
+                        </tr>
+                        <tr>
+                            <td><code class="code-inline">NEXT_PUBLIC_CURRENCY_SYMBOL</code></td>
+                            <td>₱</td>
+                            <td>Currency symbol</td>
+                        </tr>
+                    </tbody>
+                </table>
+
+                <h3>Cloudinary (Image Storage)</h3>
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Variable</th>
+                            <th>Description</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td><code class="code-inline">NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME</code></td>
+                            <td>Your Cloudinary cloud name</td>
+                        </tr>
+                        <tr>
+                            <td><code class="code-inline">CLOUDINARY_API_KEY</code></td>
+                            <td>Cloudinary API key</td>
+                        </tr>
+                        <tr>
+                            <td><code class="code-inline">CLOUDINARY_API_SECRET</code></td>
+                            <td>Cloudinary API secret</td>
+                        </tr>
+                    </tbody>
+                </table>
+
+                <h3>PayMongo (Payment Processing)</h3>
+                <div class="alert alert-danger">
+                    <strong>🔴 Use LIVE keys for production!</strong><br>
+                    Test keys (sk_test_..., pk_test_...) will NOT work in production.
+                </div>
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Variable</th>
+                            <th>Value Format</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td><code class="code-inline">PAYMONGO_SECRET_KEY</code></td>
+                            <td>sk_live_xxxxxxxxxxxxx</td>
+                        </tr>
+                        <tr>
+                            <td><code class="code-inline">PAYMONGO_PUBLIC_KEY</code></td>
+                            <td>pk_live_xxxxxxxxxxxxx</td>
+                        </tr>
+                        <tr>
+                            <td><code class="code-inline">NEXT_PUBLIC_PAYMONGO_PUBLIC_KEY</code></td>
+                            <td>pk_live_xxxxxxxxxxxxx</td>
+                        </tr>
+                    </tbody>
+                </table>
+
+                <h3>Lalamove (Delivery Service)</h3>
+                <div class="alert alert-danger">
+                    <strong>🔴 Use production credentials!</strong><br>
+                    Sandbox credentials will NOT work in production.
+                </div>
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Variable</th>
+                            <th>Value</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td><code class="code-inline">LALAMOVE_API_KEY</code></td>
+                            <td>Production API key</td>
+                        </tr>
+                        <tr>
+                            <td><code class="code-inline">LALAMOVE_API_SECRET</code></td>
+                            <td>Production API secret</td>
+                        </tr>
+                        <tr>
+                            <td><code class="code-inline">LALAMOVE_ENVIRONMENT</code></td>
+                            <td>production</td>
+                        </tr>
+                    </tbody>
+                </table>
+
+                <h3>Email (Nodemailer)</h3>
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Variable</th>
+                            <th>Value</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td><code class="code-inline">EMAIL_HOST</code></td>
+                            <td>smtp.gmail.com</td>
+                        </tr>
+                        <tr>
+                            <td><code class="code-inline">EMAIL_PORT</code></td>
+                            <td>587</td>
+                        </tr>
+                        <tr>
+                            <td><code class="code-inline">EMAIL_USER</code></td>
+                            <td>your-email@gmail.com</td>
+                        </tr>
+                        <tr>
+                            <td><code class="code-inline">EMAIL_PASSWORD</code></td>
+                            <td>App password (not regular password)</td>
+                        </tr>
+                        <tr>
+                            <td><code class="code-inline">EMAIL_FROM</code></td>
+                            <td>noreply@budolshap.com</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+
+            <div class="section">
+                <h2>🔑 Generate Secure Secrets</h2>
+
+                <h3>JWT_SECRET</h3>
+                <div class="command-list">
+                    <div class="command-item">
+                        <strong>Node.js</strong>
+                        <div class="code-block">node -e "console.log(require('crypto').randomBytes(64).toString('hex'))"
+                        </div>
+                    </div>
+                    <div class="command-item">
+                        <strong>OpenSSL</strong>
+                        <div class="code-block">openssl rand -hex 64</div>
+                    </div>
+                    <div class="command-item">
+                        <strong>PowerShell</strong>
+                        <div class="code-block">[Convert]::ToBase64String((1..64 | ForEach-Object { Get-Random -Minimum
+                            0 -Maximum 256 }))</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Database Setup Tab -->
+        <div id="database" class="tab-content">
+            <div class="section">
+                <h2>🗄️ Database Setup</h2>
+
+                <h3>Step 1: Create Vercel Postgres Database</h3>
+                <ol style="line-height: 2;">
+                    <li>Go to <a href="https://vercel.com/derflanoj2s-projects/budolshap" target="_blank">Vercel Project
+                            Dashboard</a></li>
+                    <li>Click on <strong>Storage</strong> tab</li>
+                    <li>Click <strong>Create Database</strong></li>
+                    <li>Select <strong>Postgres</strong></li>
+                    <li>Enter database name: <code class="code-inline">budolshap-db</code></li>
+                    <li>Select region (choose closest to your users)</li>
+                    <li>Click <strong>Create</strong></li>
+                </ol>
+
+                <h3>Step 2: Configure Database Connection</h3>
+                <p>After creating the database:</p>
+                <ol style="line-height: 2;">
+                    <li>Go to the <strong>.env.local</strong> tab in Vercel Postgres</li>
+                    <li>Copy the environment variables (automatically added to your project)</li>
+                    <li>Verify these variables are set:
+                        <ul>
+                            <li><code class="code-inline">POSTGRES_URL</code></li>
+                            <li><code class="code-inline">POSTGRES_PRISMA_URL</code></li>
+                            <li><code class="code-inline">POSTGRES_URL_NON_POOLING</code></li>
+                        </ul>
+                    </li>
+                </ol>
+
+                <h3>Step 3: Run Migrations</h3>
+                <div class="alert alert-info">
+                    The deployment script will handle this automatically, or you can run manually:
+                </div>
+
+                <div class="command-list">
+                    <div class="command-item">
+                        <strong>Pull Environment Variables</strong>
+                        <div class="code-block">vercel env pull .env.production</div>
+                    </div>
+                    <div class="command-item">
+                        <strong>Run Migrations</strong>
+                        <div class="code-block">npx dotenv -e .env.production -- npx prisma migrate deploy</div>
+                    </div>
+                    <div class="command-item">
+                        <strong>Or Use NPM Script</strong>
+                        <div class="code-block">npm run migrate:deploy</div>
+                    </div>
+                </div>
+
+                <h3>Step 4: Seed Initial Data (Optional)</h3>
+                <div class="command-list">
+                    <div class="command-item">
+                        <strong>Create Admin Account</strong>
+                        <div class="code-block">npm run create-admin</div>
+                    </div>
+                    <div class="command-item">
+                        <strong>Seed Test Data</strong>
+                        <div class="code-block">npm run db:seed</div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="section">
+                <h2>🔧 Database Management Commands</h2>
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Command</th>
+                            <th>Description</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td><code class="code-inline">npx prisma studio</code></td>
+                            <td>Open Prisma Studio (database GUI)</td>
+                        </tr>
+                        <tr>
+                            <td><code class="code-inline">npx prisma migrate status</code></td>
+                            <td>Check migration status</td>
+                        </tr>
+                        <tr>
+                            <td><code class="code-inline">npx prisma migrate deploy</code></td>
+                            <td>Apply pending migrations</td>
+                        </tr>
+                        <tr>
+                            <td><code class="code-inline">npx prisma db push</code></td>
+                            <td>Push schema changes (no migration)</td>
+                        </tr>
+                        <tr>
+                            <td><code class="code-inline">npx prisma generate</code></td>
+                            <td>Generate Prisma client</td>
+                        </tr>
+                        <tr>
+                            <td><code class="code-inline">npm run db:backup</code></td>
+                            <td>Backup database</td>
+                        </tr>
+                        <tr>
+                            <td><code class="code-inline">npm run db:restore</code></td>
+                            <td>Restore from backup</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- Troubleshooting Tab -->
+        <div id="troubleshooting" class="tab-content">
+            <div class="section">
+                <h2>🔧 Troubleshooting</h2>
+
+                <h3>Build Errors</h3>
+                <div class="card">
+                    <p><strong>Error:</strong> Module not found or Cannot find module</p>
+                    <div class="code-block">npm install
+                        npx prisma generate
+                        npm run build</div>
+                </div>
+
+                <div class="card">
+                    <p><strong>Error:</strong> Prisma Client not generated</p>
+                    <div class="code-block">npx prisma generate</div>
+                </div>
+
+                <h3>Database Connection Issues</h3>
+                <div class="card">
+                    <p><strong>Error:</strong> Can't reach database server (P1001)</p>
+                    <div class="code-block">vercel env ls
+                        vercel env pull .env.production</div>
+                    <p>Verify <code class="code-inline">POSTGRES_PRISMA_URL</code> is set correctly</p>
+                </div>
+
+                <h3>Environment Variable Issues</h3>
+                <div class="card">
+                    <p><strong>Error:</strong> Variables not loading</p>
+                    <div class="code-block">vercel env pull .env.production
+                        vercel --prod</div>
+                    <p>Always redeploy after adding/updating environment variables</p>
+                </div>
+
+                <h3>Migration Errors</h3>
+                <div class="card">
+                    <p><strong>Error:</strong> Migration failed</p>
+                    <div class="alert alert-warning">
+                        <strong>⚠️ Warning:</strong> This will delete all data!
+                    </div>
+                    <div class="code-block">npx dotenv -e .env.production -- npx prisma db push</div>
+                </div>
+
+                <h3>PayMongo Integration Issues</h3>
+                <div class="card">
+                    <p><strong>Error:</strong> Payment not processing</p>
+                    <ul>
+                        <li>✅ Verify using LIVE keys (sk_live_..., pk_live_...)</li>
+                        <li>✅ Check <code class="code-inline">NEXT_PUBLIC_BASE_URL</code> matches deployment URL</li>
+                        <li>✅ Verify webhook URLs if using webhooks</li>
+                    </ul>
+                </div>
+
+                <h3>Lalamove Integration Issues</h3>
+                <div class="card">
+                    <p><strong>Error:</strong> Booking failed</p>
+                    <ul>
+                        <li>✅ Ensure <code class="code-inline">LALAMOVE_ENVIRONMENT=production</code></li>
+                        <li>✅ Verify API credentials are for production</li>
+                        <li>✅ Check phone numbers are in E.164 format (+639...)</li>
+                    </ul>
+                </div>
+
+                <h3>Image Upload Issues</h3>
+                <div class="card">
+                    <p><strong>Error:</strong> Failed to upload to Cloudinary</p>
+                    <ul>
+                        <li>✅ Verify Cloudinary credentials</li>
+                        <li>✅ Check <code class="code-inline">NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME</code></li>
+                        <li>✅ Ensure API key and secret are correct</li>
+                    </ul>
+                </div>
+            </div>
+
+            <div class="section">
+                <h2>🆘 Debug Commands</h2>
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Command</th>
+                            <th>Purpose</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td><code class="code-inline">vercel logs</code></td>
+                            <td>View deployment logs</td>
+                        </tr>
+                        <tr>
+                            <td><code class="code-inline">vercel logs --follow</code></td>
+                            <td>Stream live logs</td>
+                        </tr>
+                        <tr>
+                            <td><code class="code-inline">vercel env ls</code></td>
+                            <td>List environment variables</td>
+                        </tr>
+                        <tr>
+                            <td><code class="code-inline">npx prisma db pull</code></td>
+                            <td>Test database connection</td>
+                        </tr>
+                        <tr>
+                            <td><code class="code-inline">npm run build</code></td>
+                            <td>Test build locally</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+
+            <div class="section">
+                <h2>🔄 Emergency Rollback</h2>
+
+                <h3>Option 1: Vercel Dashboard</h3>
+                <ol style="line-height: 2;">
+                    <li>Go to <strong>Deployments</strong></li>
+                    <li>Find previous working deployment</li>
+                    <li>Click <strong>Promote to Production</strong></li>
+                </ol>
+
+                <h3>Option 2: CLI</h3>
+                <div class="code-block">vercel rollback</div>
+
+                <h3>Option 3: Git</h3>
+                <div class="code-block">git revert HEAD
+                    git push origin main</div>
+            </div>
+        </div>
+
+        <!-- Quick Commands Tab -->
+        <div id="commands" class="tab-content">
+            <div class="section">
+                <h2>⚡ Quick Commands Reference</h2>
+
+                <h3>Deployment Commands</h3>
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Command</th>
+                            <th>Description</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td><code class="code-inline">vercel</code></td>
+                            <td>Deploy to preview</td>
+                        </tr>
+                        <tr>
+                            <td><code class="code-inline">vercel --prod</code></td>
+                            <td>Deploy to production</td>
+                        </tr>
+                        <tr>
+                            <td><code class="code-inline">vercel login</code></td>
+                            <td>Login to Vercel</td>
+                        </tr>
+                        <tr>
+                            <td><code class="code-inline">vercel link</code></td>
+                            <td>Link project to Vercel</td>
+                        </tr>
+                        <tr>
+                            <td><code class="code-inline">vercel logs</code></td>
+                            <td>View deployment logs</td>
+                        </tr>
+                        <tr>
+                            <td><code class="code-inline">vercel rollback</code></td>
+                            <td>Rollback to previous deployment</td>
+                        </tr>
+                        <tr>
+                            <td><code class="code-inline">vercel open</code></td>
+                            <td>Open project in browser</td>
+                        </tr>
+                    </tbody>
+                </table>
+
+                <h3>Environment Commands</h3>
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Command</th>
+                            <th>Description</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td><code class="code-inline">vercel env pull</code></td>
+                            <td>Pull environment variables</td>
+                        </tr>
+                        <tr>
+                            <td><code class="code-inline">vercel env ls</code></td>
+                            <td>List environment variables</td>
+                        </tr>
+                        <tr>
+                            <td><code class="code-inline">vercel env add</code></td>
+                            <td>Add environment variable</td>
+                        </tr>
+                        <tr>
+                            <td><code class="code-inline">vercel env rm</code></td>
+                            <td>Remove environment variable</td>
+                        </tr>
+                    </tbody>
+                </table>
+
+                <h3>Database Commands</h3>
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Command</th>
+                            <th>Description</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td><code class="code-inline">npx prisma studio</code></td>
+                            <td>Open database GUI</td>
+                        </tr>
+                        <tr>
+                            <td><code class="code-inline">npx prisma migrate deploy</code></td>
+                            <td>Deploy migrations</td>
+                        </tr>
+                        <tr>
+                            <td><code class="code-inline">npx prisma migrate status</code></td>
+                            <td>Check migration status</td>
+                        </tr>
+                        <tr>
+                            <td><code class="code-inline">npx prisma db push</code></td>
+                            <td>Push schema changes</td>
+                        </tr>
+                        <tr>
+                            <td><code class="code-inline">npx prisma generate</code></td>
+                            <td>Generate Prisma client</td>
+                        </tr>
+                        <tr>
+                            <td><code class="code-inline">npm run db:backup</code></td>
+                            <td>Backup database</td>
+                        </tr>
+                        <tr>
+                            <td><code class="code-inline">npm run db:restore</code></td>
+                            <td>Restore database</td>
+                        </tr>
+                    </tbody>
+                </table>
+
+                <h3>NPM Scripts</h3>
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Command</th>
+                            <th>Description</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td><code class="code-inline">npm run dev</code></td>
+                            <td>Start development server</td>
+                        </tr>
+                        <tr>
+                            <td><code class="code-inline">npm run build</code></td>
+                            <td>Build for production</td>
+                        </tr>
+                        <tr>
+                            <td><code class="code-inline">npm run start</code></td>
+                            <td>Start production server</td>
+                        </tr>
+                        <tr>
+                            <td><code class="code-inline">npm run deploy:prod</code></td>
+                            <td>Deploy to production</td>
+                        </tr>
+                        <tr>
+                            <td><code class="code-inline">npm run create-admin</code></td>
+                            <td>Create admin account</td>
+                        </tr>
+                        <tr>
+                            <td><code class="code-inline">npm run db:seed</code></td>
+                            <td>Seed test data</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- Workflows Tab -->
+        <div id="workflows" class="tab-content">
+            <div class="section">
+                <h2>🔄 Deployment Workflows</h2>
+
+                <h3>First-Time Deployment</h3>
+                <ol style="line-height: 2.5;">
+                    <li><strong>Create Vercel Account</strong>
+                        <ul>
+                            <li>Sign up at <a href="https://vercel.com" target="_blank">vercel.com</a></li>
+                        </ul>
+                    </li>
+                    <li><strong>Install Vercel CLI</strong>
+                        <div class="code-block">npm install -g vercel</div>
+                    </li>
+                    <li><strong>Create Postgres Database</strong>
+                        <ul>
+                            <li>Dashboard → Storage → Create Database → Postgres</li>
+                        </ul>
+                    </li>
+                    <li><strong>Set Environment Variables</strong>
+                        <ul>
+                            <li>Dashboard → Settings → Environment Variables</li>
+                        </ul>
+                    </li>
+                    <li><strong>Run Deployment Script</strong>
+                        <div class="code-block">.\scripts\deploy.ps1 -Production</div>
+                    </li>
+                    <li><strong>Verify Deployment</strong>
+                        <ul>
+                            <li>Test all functionality on live site</li>
+                        </ul>
+                    </li>
+                </ol>
+
+                <h3>Regular Deployment (After Changes)</h3>
+                <ol style="line-height: 2.5;">
+                    <li><strong>Test Locally</strong>
+                        <div class="code-block">npm run build
+                            npm start</div>
+                    </li>
+                    <li><strong>Commit Changes</strong>
+                        <div class="code-block">git add .
+                            git commit -m "Your changes"
+                            git push origin main</div>
+                    </li>
+                    <li><strong>Deploy</strong>
+                        <div class="code-block">npm run deploy:prod</div>
+                    </li>
+                </ol>
+
+                <h3>Database Migration Workflow</h3>
+                <ol style="line-height: 2.5;">
+                    <li><strong>Create Migration Locally</strong>
+                        <div class="code-block">npx prisma migrate dev --name your_migration_name</div>
+                    </li>
+                    <li><strong>Test Migration</strong>
+                        <div class="code-block">npm run dev</div>
+                    </li>
+                    <li><strong>Commit Migration Files</strong>
+                        <div class="code-block">git add prisma/migrations
+                            git commit -m "Add migration: your_migration_name"
+                            git push</div>
+                    </li>
+                    <li><strong>Deploy to Production</strong>
+                        <div class="code-block">.\scripts\deploy.ps1 -Production</div>
+                        <p>The script will automatically run migrations</p>
+                    </li>
+                </ol>
+
+                <h3>Rollback Workflow</h3>
+                <ol style="line-height: 2.5;">
+                    <li><strong>Identify Issue</strong>
+                        <div class="code-block">vercel logs</div>
+                    </li>
+                    <li><strong>Rollback via Dashboard</strong>
+                        <ul>
+                            <li>Deployments → Find working version → Promote to Production</li>
+                        </ul>
+                    </li>
+                    <li><strong>Or Rollback via CLI</strong>
+                        <div class="code-block">vercel rollback</div>
+                    </li>
+                    <li><strong>Fix Issue Locally</strong>
+                        <ul>
+                            <li>Debug and fix the problem</li>
+                        </ul>
+                    </li>
+                    <li><strong>Redeploy</strong>
+                        <div class="code-block">npm run deploy:prod</div>
+                    </li>
+                </ol>
+            </div>
+
+            <div class="section">
+                <h2>✅ Post-Deployment Verification</h2>
+                <ul class="checklist">
+                    <li>Application loads without errors</li>
+                    <li>User registration/login works</li>
+                    <li>Product listings display correctly</li>
+                    <li>Cart functionality works</li>
+                    <li>Checkout process completes</li>
+                    <li>Admin panel is accessible</li>
+                    <li>PayMongo payments work</li>
+                    <li>Lalamove integration works</li>
+                    <li>Email notifications are sent</li>
+                    <li>Images load from Cloudinary</li>
+                </ul>
+            </div>
+
+            <div class="section">
+                <h2>📊 Monitoring & Maintenance</h2>
+
+                <h3>Regular Checks</h3>
+                <ul style="line-height: 2;">
+                    <li>✅ Monitor Vercel Analytics (Dashboard → Analytics)</li>
+                    <li>✅ Check database usage (Dashboard → Storage)</li>
+                    <li>✅ Review deployment logs regularly</li>
+                    <li>✅ Monitor function execution times</li>
+                    <li>✅ Check error rates</li>
+                </ul>
+
+                <h3>Free Tier Limits</h3>
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Resource</th>
+                            <th>Limit</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td>Bandwidth</td>
+                            <td>100 GB/month</td>
+                        </tr>
+                        <tr>
+                            <td>Function Execution</td>
+                            <td>100 GB-hours</td>
+                        </tr>
+                        <tr>
+                            <td>Database Storage</td>
+                            <td>256 MB</td>
+                        </tr>
+                        <tr>
+                            <td>Database Compute</td>
+                            <td>60 hours/month</td>
+                        </tr>
+                        <tr>
+                            <td>Concurrent Builds</td>
+                            <td>1</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <div class="footer">
+        <p><strong>BudolShap Deployment Documentation</strong></p>
+        <p>Last Updated: November 30, 2025</p>
+        <p style="margin-top: 1rem;">
+            <a href="https://vercel.com/derflanoj2s-projects/budolshap" target="_blank"
+                style="color: white; margin: 0 1rem;">Vercel Dashboard</a> |
+            <a href="https://vercel.com/docs" target="_blank" style="color: white; margin: 0 1rem;">Vercel Docs</a> |
+            <a href="https://nextjs.org/docs" target="_blank" style="color: white; margin: 0 1rem;">Next.js Docs</a>
+        </p>
+    </div>
+
+    <script>
+        function showTab(tabId) {
+            // Hide all tabs
+            const tabs = document.querySelectorAll('.tab-content');
+            tabs.forEach(tab => tab.classList.remove('active'));
+
+            // Remove active class from all nav tabs
+            const navTabs = document.querySelectorAll('.nav-tab');
+            navTabs.forEach(tab => tab.classList.remove('active'));
+
+            // Show selected tab
+            document.getElementById(tabId).classList.add('active');
+
+            // Add active class to clicked nav tab
+            event.target.classList.add('active');
+
+            // Scroll to top
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+        }
+
+        // Add copy functionality to code blocks
+        document.querySelectorAll('.code-block').forEach(block => {
+            block.style.cursor = 'pointer';
+            block.title = 'Click to copy';
+            block.addEventListener('click', function () {
+                const text = this.textContent;
+                navigator.clipboard.writeText(text).then(() => {
+                    const original = this.style.background;
+                    this.style.background = '#2d5016';
+                    setTimeout(() => {
+                        this.style.background = original;
+                    }, 200);
+                });
+            });
+        });
+
+        // Print functionality
+        function printDoc() {
+            window.print();
+        }
+    </script>
+</body>
+
+</html>

@@ -1,0 +1,520 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Multiple Store Addresses - Implementation Guide</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            line-height: 1.6;
+            color: #333;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 20px;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+            overflow: hidden;
+        }
+
+        header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 40px;
+            text-align: center;
+        }
+
+        header h1 {
+            font-size: 2.5em;
+            margin-bottom: 10px;
+            text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.2);
+        }
+
+        .content {
+            padding: 40px;
+        }
+
+        h2 {
+            color: #667eea;
+            margin: 30px 0 20px 0;
+            padding-bottom: 10px;
+            border-bottom: 3px solid #667eea;
+        }
+
+        h3 {
+            color: #764ba2;
+            margin: 25px 0 15px 0;
+        }
+
+        .section {
+            margin-bottom: 40px;
+            padding: 25px;
+            background: #f8f9fa;
+            border-radius: 10px;
+            border-left: 5px solid #667eea;
+        }
+
+        .code-block {
+            background: #2d2d2d;
+            color: #f8f8f2;
+            padding: 20px;
+            border-radius: 8px;
+            overflow-x: auto;
+            margin: 15px 0;
+            font-family: 'Courier New', monospace;
+        }
+
+        .badge {
+            display: inline-block;
+            padding: 5px 12px;
+            border-radius: 20px;
+            font-size: 0.85em;
+            font-weight: bold;
+            margin-right: 8px;
+        }
+
+        .badge-success {
+            background: #28a745;
+            color: white;
+        }
+
+        .badge-new {
+            background: #17a2b8;
+            color: white;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 20px 0;
+            background: white;
+            border-radius: 8px;
+            overflow: hidden;
+        }
+
+        th {
+            background: #667eea;
+            color: white;
+            padding: 15px;
+            text-align: left;
+        }
+
+        td {
+            padding: 12px 15px;
+            border-bottom: 1px solid #e0e0e0;
+        }
+
+        ul,
+        ol {
+            margin: 15px 0 15px 30px;
+        }
+
+        li {
+            margin: 8px 0;
+        }
+
+        .note {
+            background: #e7f3ff;
+            border-left: 5px solid #2196F3;
+            padding: 15px;
+            margin: 20px 0;
+            border-radius: 5px;
+        }
+
+        .warning {
+            background: #fff3cd;
+            border-left: 5px solid #ffc107;
+            padding: 15px;
+            margin: 20px 0;
+            border-radius: 5px;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="container">
+        <header>
+            <h1>📍 Multiple Store Addresses</h1>
+            <p>Implementation Guide & Documentation</p>
+            <p style="font-size: 0.9em; margin-top: 10px;">BudolShap E-Commerce Platform</p>
+        </header>
+
+        <div class="content">
+            <div class="section">
+                <h2>🎯 Overview</h2>
+                <p>This feature allows stores to manage up to 3 addresses with the ability to set a default address.
+                    This is essential for stores with multiple branches or locations.</p>
+
+                <h3>Key Features</h3>
+                <ul>
+                    <li><span class="badge badge-success">✓</span> Support for up to 3 addresses per store</li>
+                    <li><span class="badge badge-success">✓</span> Default address selection</li>
+                    <li><span class="badge badge-success">✓</span> Add, edit, and delete addresses</li>
+                    <li><span class="badge badge-success">✓</span> Structured address input with validation</li>
+                    <li><span class="badge badge-success">✓</span> Geocoding support for delivery optimization</li>
+                </ul>
+            </div>
+
+            <div class="section">
+                <h2>🗄️ Database Schema</h2>
+
+                <h3>StoreAddress Model</h3>
+                <div class="code-block">model StoreAddress {
+                    id String @id @default(cuid())
+                    storeId String
+
+                    // Address fields
+                    phone String
+                    district String // Region
+                    province String?
+                    city String
+                    barangay String
+                    detailedAddress String @db.Text
+                    zip String
+                    country String @default("Philippines")
+                    notes String? @db.Text
+
+                    // Geocoding cache
+                    latitude Float?
+                    longitude Float?
+
+                    // Default address flag
+                    isDefault Boolean @default(false)
+
+                    createdAt DateTime @default(now())
+                    updatedAt DateTime @updatedAt
+
+                    // Relations
+                    store Store @relation(fields: [storeId], references: [id], onDelete: Cascade)
+
+                    @@index([storeId])
+                    }</div>
+
+                <h3>Store Model Update</h3>
+                <p>Added relation to StoreAddress:</p>
+                <div class="code-block">model Store {
+                    // ... existing fields
+                    addresses StoreAddress[]
+                    // ... rest of fields
+                    }</div>
+            </div>
+
+            <div class="section">
+                <h2>🔌 API Endpoints</h2>
+
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Method</th>
+                            <th>Endpoint</th>
+                            <th>Description</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td><span class="badge badge-new">GET</span></td>
+                            <td><code>/api/stores/[storeId]/addresses</code></td>
+                            <td>Get all addresses for a store</td>
+                        </tr>
+                        <tr>
+                            <td><span class="badge badge-new">POST</span></td>
+                            <td><code>/api/stores/[storeId]/addresses</code></td>
+                            <td>Create a new address (max 3)</td>
+                        </tr>
+                        <tr>
+                            <td><span class="badge badge-new">GET</span></td>
+                            <td><code>/api/stores/[storeId]/addresses/[addressId]</code></td>
+                            <td>Get a specific address</td>
+                        </tr>
+                        <tr>
+                            <td><span class="badge badge-new">PUT</span></td>
+                            <td><code>/api/stores/[storeId]/addresses/[addressId]</code></td>
+                            <td>Update an address</td>
+                        </tr>
+                        <tr>
+                            <td><span class="badge badge-new">DELETE</span></td>
+                            <td><code>/api/stores/[storeId]/addresses/[addressId]</code></td>
+                            <td>Delete an address</td>
+                        </tr>
+                    </tbody>
+                </table>
+
+                <h3>API Features</h3>
+                <ul>
+                    <li><strong>Automatic Default Management:</strong> First address is automatically set as default
+                    </li>
+                    <li><strong>Default Address Switching:</strong> When setting a new default, previous default is
+                        automatically unset</li>
+                    <li><strong>Smart Deletion:</strong> When deleting default address, another address is automatically
+                        promoted</li>
+                    <li><strong>3-Address Limit:</strong> API enforces maximum of 3 addresses per store</li>
+                </ul>
+            </div>
+
+            <div class="section">
+                <h2>🎨 UI Components</h2>
+
+                <h3>1. StoreAddressesManager</h3>
+                <p><strong>File:</strong> <code>components/StoreAddressesManager.jsx</code></p>
+                <p>Main component for managing multiple store addresses.</p>
+
+                <h4>Features:</h4>
+                <ul>
+                    <li>List all store addresses</li>
+                    <li>Add new address (up to 3)</li>
+                    <li>Edit existing addresses</li>
+                    <li>Delete addresses</li>
+                    <li>Set default address</li>
+                    <li>Visual indicator for default address</li>
+                </ul>
+
+                <h4>Usage:</h4>
+                <div class="code-block">&lt;StoreAddressesManager
+                    storeId={storeId}
+                    onClose={() => setShowManager(false)}
+                    onSave={() => fetchUpdatedData()}
+                    /&gt;</div>
+
+                <h3>2. StoreAddressModal (Enhanced)</h3>
+                <p><strong>File:</strong> <code>components/StoreAddressModal.jsx</code></p>
+                <p>Enhanced to support both single address (backward compatible) and multiple addresses.</p>
+
+                <h4>New Features:</h4>
+                <ul>
+                    <li>"Set as Default" checkbox</li>
+                    <li>Support for structured address objects</li>
+                    <li>Backward compatible with formatted address strings</li>
+                </ul>
+            </div>
+
+            <div class="section">
+                <h2>📝 Implementation Details</h2>
+
+                <h3>Store Settings Page Updates</h3>
+                <p><strong>File:</strong> <code>app/store/settings/page.jsx</code></p>
+
+                <h4>Changes Made:</h4>
+                <ol>
+                    <li>Replaced single address display with "Manage Addresses" button</li>
+                    <li>Shows default address preview</li>
+                    <li>Opens StoreAddressesManager on click</li>
+                    <li>Fetches and displays default address</li>
+                </ol>
+
+                <div class="code-block">// Fetch default address
+                    const addressesResponse = await fetch(`/api/stores/${store.id}/addresses`)
+                    if (addressesResponse.ok) {
+                    const addresses = await addressesResponse.json()
+                    const defaultAddr = addresses.find(addr => addr.isDefault)
+                    setDefaultAddress(defaultAddr || null)
+                    }</div>
+
+                <h3>Default Address Logic</h3>
+                <ul>
+                    <li><strong>First Address:</strong> Automatically set as default</li>
+                    <li><strong>Setting New Default:</strong> Previous default is automatically unset</li>
+                    <li><strong>Deleting Default:</strong> Next available address becomes default</li>
+                    <li><strong>Only One Default:</strong> System ensures only one default address exists</li>
+                </ul>
+            </div>
+
+            <div class="section">
+                <h2>🚀 Migration Guide</h2>
+
+                <h3>Database Migration</h3>
+                <p><strong>File:</strong> <code>scripts/migrations/add-store-addresses.sql</code></p>
+
+                <div class="warning">
+                    <strong>⚠️ Important:</strong> Run this migration before deploying to production!
+                </div>
+
+                <h4>Migration Steps:</h4>
+                <ol>
+                    <li>Creates <code>StoreAddress</code> table</li>
+                    <li>Adds foreign key constraint to <code>Store</code> table</li>
+                    <li>Creates index on <code>storeId</code> for performance</li>
+                    <li>Migrates existing store addresses to new table</li>
+                </ol>
+
+                <h4>Running the Migration:</h4>
+                <div class="code-block"># Connect to your database and run:
+                    psql $DATABASE_URL -f scripts/migrations/add-store-addresses.sql</div>
+
+                <div class="note">
+                    <strong>Note:</strong> The migration creates a default address for each existing store using their
+                    current address and contact information. Store owners should update these addresses through the UI
+                    for accuracy.
+                </div>
+            </div>
+
+            <div class="section">
+                <h2>🧪 Testing Checklist</h2>
+
+                <h3>Functional Tests</h3>
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Test Case</th>
+                            <th>Expected Result</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td>Add first address</td>
+                            <td>Automatically set as default</td>
+                        </tr>
+                        <tr>
+                            <td>Add second address</td>
+                            <td>Successfully added, first remains default</td>
+                        </tr>
+                        <tr>
+                            <td>Add third address</td>
+                            <td>Successfully added</td>
+                        </tr>
+                        <tr>
+                            <td>Try to add fourth address</td>
+                            <td>Error: Maximum 3 addresses allowed</td>
+                        </tr>
+                        <tr>
+                            <td>Set second address as default</td>
+                            <td>Second becomes default, first loses default status</td>
+                        </tr>
+                        <tr>
+                            <td>Edit default address</td>
+                            <td>Changes saved, remains default</td>
+                        </tr>
+                        <tr>
+                            <td>Delete non-default address</td>
+                            <td>Address deleted, default unchanged</td>
+                        </tr>
+                        <tr>
+                            <td>Delete default address</td>
+                            <td>Address deleted, another address becomes default</td>
+                        </tr>
+                        <tr>
+                            <td>Delete last remaining address</td>
+                            <td>Address deleted, no default address</td>
+                        </tr>
+                    </tbody>
+                </table>
+
+                <h3>UI Tests</h3>
+                <ul>
+                    <li>Verify "Manage Addresses" button appears in settings</li>
+                    <li>Verify default address preview shows correct information</li>
+                    <li>Verify StoreAddressesManager modal opens correctly</li>
+                    <li>Verify address list displays all addresses</li>
+                    <li>Verify default badge appears on default address</li>
+                    <li>Verify "+ Add New Address (X/3)" counter is accurate</li>
+                    <li>Verify "Set as Default" checkbox works</li>
+                    <li>Verify edit/delete buttons function correctly</li>
+                </ul>
+            </div>
+
+            <div class="section">
+                <h2>📊 Benefits</h2>
+
+                <h3>For Store Owners</h3>
+                <ul>
+                    <li>✅ Manage multiple branch locations</li>
+                    <li>✅ Set primary/default address for orders</li>
+                    <li>✅ Organize warehouse and retail locations</li>
+                    <li>✅ Better delivery coordination</li>
+                </ul>
+
+                <h3>For Platform</h3>
+                <ul>
+                    <li>✅ More accurate geocoding data</li>
+                    <li>✅ Better delivery route optimization</li>
+                    <li>✅ Improved Lalamove integration</li>
+                    <li>✅ Enhanced user experience</li>
+                </ul>
+            </div>
+
+            <div class="section">
+                <h2>🔮 Future Enhancements</h2>
+
+                <ol>
+                    <li><strong>Address Labels:</strong> Allow custom labels (e.g., "Main Branch", "Warehouse")</li>
+                    <li><strong>Operating Hours:</strong> Add operating hours per address</li>
+                    <li><strong>Address-Specific Inventory:</strong> Track inventory per location</li>
+                    <li><strong>Pickup Points:</strong> Designate addresses as customer pickup points</li>
+                    <li><strong>Address Verification:</strong> Integrate with address verification services</li>
+                    <li><strong>Bulk Import:</strong> Allow CSV import of multiple addresses</li>
+                </ol>
+            </div>
+
+            <div class="section">
+                <h2>📚 Files Modified/Created</h2>
+
+                <table>
+                    <thead>
+                        <tr>
+                            <th>File</th>
+                            <th>Status</th>
+                            <th>Description</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td><code>prisma/schema.prisma</code></td>
+                            <td><span class="badge badge-new">MODIFIED</span></td>
+                            <td>Added StoreAddress model and relation</td>
+                        </tr>
+                        <tr>
+                            <td><code>components/StoreAddressesManager.jsx</code></td>
+                            <td><span class="badge badge-success">NEW</span></td>
+                            <td>Main address management component</td>
+                        </tr>
+                        <tr>
+                            <td><code>components/StoreAddressModal.jsx</code></td>
+                            <td><span class="badge badge-new">MODIFIED</span></td>
+                            <td>Enhanced with isDefault support</td>
+                        </tr>
+                        <tr>
+                            <td><code>app/api/stores/[storeId]/addresses/route.js</code></td>
+                            <td><span class="badge badge-success">NEW</span></td>
+                            <td>List and create addresses API</td>
+                        </tr>
+                        <tr>
+                            <td><code>app/api/stores/[storeId]/addresses/[addressId]/route.js</code></td>
+                            <td><span class="badge badge-success">NEW</span></td>
+                            <td>Get, update, delete address API</td>
+                        </tr>
+                        <tr>
+                            <td><code>app/store/settings/page.jsx</code></td>
+                            <td><span class="badge badge-new">MODIFIED</span></td>
+                            <td>Integrated StoreAddressesManager</td>
+                        </tr>
+                        <tr>
+                            <td><code>scripts/migrations/add-store-addresses.sql</code></td>
+                            <td><span class="badge badge-success">NEW</span></td>
+                            <td>Database migration script</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <div
+            style="background: #f8f9fa; padding: 30px; text-align: center; color: #666; border-top: 3px solid #667eea;">
+            <p><strong>BudolShap E-Commerce Platform</strong></p>
+            <p>Multiple Store Addresses Feature Documentation</p>
+            <p>Generated: November 30, 2025</p>
+        </div>
+    </div>
+</body>
+
+</html>

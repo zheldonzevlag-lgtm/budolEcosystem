@@ -1,0 +1,606 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Lalamove Integration - TODO Checklist</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 2rem;
+        }
+
+        .container {
+            max-width: 900px;
+            margin: 0 auto;
+            background: #fff;
+            border-radius: 12px;
+            box-shadow: 0 10px 40px rgba(0, 0, 0, 0.2);
+            overflow: hidden;
+        }
+
+        .header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: #fff;
+            padding: 2rem;
+            text-align: center;
+        }
+
+        .header h1 {
+            font-size: 2rem;
+            margin-bottom: 0.5rem;
+        }
+
+        .header p {
+            opacity: 0.9;
+            font-size: 1rem;
+        }
+
+        .content {
+            padding: 2rem;
+        }
+
+        .phase {
+            margin-bottom: 2rem;
+            border-left: 4px solid #667eea;
+            padding-left: 1rem;
+        }
+
+        .phase-title {
+            font-size: 1.4rem;
+            color: #2c3e50;
+            margin-bottom: 1rem;
+            font-weight: 600;
+        }
+
+        .task-list {
+            list-style: none;
+        }
+
+        .task-item {
+            background: #f8f9fa;
+            margin-bottom: 0.8rem;
+            padding: 1rem;
+            border-radius: 8px;
+            display: flex;
+            align-items: flex-start;
+            transition: all 0.3s ease;
+        }
+
+        .task-item:hover {
+            background: #e9ecef;
+            transform: translateX(5px);
+        }
+
+        .task-checkbox {
+            width: 20px;
+            height: 20px;
+            min-width: 20px;
+            border: 2px solid #667eea;
+            border-radius: 4px;
+            margin-right: 1rem;
+            cursor: pointer;
+            position: relative;
+            margin-top: 2px;
+        }
+
+        .task-checkbox:hover {
+            background: #f0f0ff;
+        }
+
+        .task-checkbox.checked {
+            background: #667eea;
+            border-color: #667eea;
+        }
+
+        .task-checkbox.checked::after {
+            content: '✓';
+            color: #fff;
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            font-size: 14px;
+            font-weight: bold;
+        }
+
+        .task-content {
+            flex: 1;
+            color: #2c3e50;
+        }
+
+        .task-title {
+            font-weight: 500;
+            margin-bottom: 0.3rem;
+            color: #1a1a1a;
+        }
+
+        .task-desc {
+            font-size: 0.9rem;
+            color: #666;
+            line-height: 1.5;
+        }
+
+        .task-code {
+            background: #2d2d2d;
+            color: #fff;
+            padding: 2px 6px;
+            border-radius: 4px;
+            font-family: monospace;
+            font-size: 0.85rem;
+        }
+
+        .progress-bar {
+            background: #e9ecef;
+            height: 8px;
+            border-radius: 4px;
+            margin: 1.5rem 0;
+            overflow: hidden;
+        }
+
+        .progress-fill {
+            background: linear-gradient(90deg, #667eea 0%, #764ba2 100%);
+            height: 100%;
+            width: 0%;
+            transition: width 0.5s ease;
+        }
+
+        .progress-text {
+            text-align: center;
+            color: #666;
+            font-size: 0.9rem;
+            margin-bottom: 1rem;
+        }
+
+        .footer {
+            background: #f8f9fa;
+            padding: 1.5rem;
+            text-align: center;
+            color: #666;
+            font-size: 0.9rem;
+            border-top: 1px solid #e9ecef;
+        }
+
+        .priority-high {
+            border-left-color: #e74c3c;
+        }
+
+        .priority-medium {
+            border-left-color: #f39c12;
+        }
+
+        .priority-low {
+            border-left-color: #27ae60;
+        }
+
+        .badge {
+            display: inline-block;
+            padding: 2px 8px;
+            border-radius: 12px;
+            font-size: 0.75rem;
+            font-weight: 600;
+            margin-left: 0.5rem;
+        }
+
+        .badge-high {
+            background: #fee;
+            color: #e74c3c;
+        }
+
+        .badge-medium {
+            background: #fef5e7;
+            color: #f39c12;
+        }
+
+        .badge-low {
+            background: #eafaf1;
+            color: #27ae60;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🚚 Lalamove Integration</h1>
+            <p>Complete TODO Checklist for Budolshap Shipping Integration</p>
+        </div>
+
+        <div class="content">
+            <div class="progress-text">Overall Progress: <strong><span id="progress-percent">0</span>%</strong></div>
+            <div class="progress-bar">
+                <div class="progress-fill" id="progress-fill"></div>
+            </div>
+
+            <!-- Phase 1: Core Architecture -->
+            <div class="phase priority-high">
+                <h2 class="phase-title">Phase 1: Core Architecture Setup <span class="badge badge-high">Critical</span>
+                </h2>
+                <ul class="task-list">
+                    <li class="task-item">
+                        <div class="task-checkbox" onclick="toggleTask(this)"></div>
+                        <div class="task-content">
+                            <div class="task-title">Create provider interface</div>
+                            <div class="task-desc">Create <span class="task-code">services/shippingProvider.js</span>
+                                with base methods: getQuote(), createOrder(), trackOrder(), cancelOrder()</div>
+                        </div>
+                    </li>
+                    <li class="task-item">
+                        <div class="task-checkbox" onclick="toggleTask(this)"></div>
+                        <div class="task-content">
+                            <div class="task-title">Implement Lalamove service wrapper</div>
+                            <div class="task-desc">Create <span class="task-code">services/lalamove.js</span> extending
+                                the interface. Implement OAuth2 authentication, quote API, order creation, tracking, and
+                                cancellation.</div>
+                        </div>
+                    </li>
+                    <li class="task-item">
+                        <div class="task-checkbox" onclick="toggleTask(this)"></div>
+                        <div class="task-content">
+                            <div class="task-title">Create service factory</div>
+                            <div class="task-desc">Create <span class="task-code">services/shippingFactory.js</span> to
+                                dynamically load providers (Lalamove, future: J&T, 2GO, etc.)</div>
+                        </div>
+                    </li>
+                    <li class="task-item">
+                        <div class="task-checkbox" onclick="toggleTask(this)"></div>
+                        <div class="task-content">
+                            <div class="task-title">Update database schema</div>
+                            <div class="task-desc">Add <span class="task-code">shipping Json?</span> field to Order
+                                model in Prisma schema. Run migration: <span class="task-code">npx prisma migrate
+                                    dev</span></div>
+                        </div>
+                    </li>
+                    <li class="task-item">
+                        <div class="task-checkbox" onclick="toggleTask(this)"></div>
+                        <div class="task-content">
+                            <div class="task-title">Configure environment variables</div>
+                            <div class="task-desc">Add to <span class="task-code">.env</span>: LALAMOVE_CLIENT_ID,
+                                LALAMOVE_CLIENT_SECRET, LALAMOVE_WEBHOOK_SECRET, LALAMOVE_ENV (sandbox/production)</div>
+                        </div>
+                    </li>
+                </ul>
+            </div>
+
+            <!-- Phase 2: Backend API -->
+            <div class="phase priority-high">
+                <h2 class="phase-title">Phase 2: Backend API Endpoints <span class="badge badge-high">Critical</span>
+                </h2>
+                <ul class="task-list">
+                    <li class="task-item">
+                        <div class="task-checkbox" onclick="toggleTask(this)"></div>
+                        <div class="task-content">
+                            <div class="task-title">Create quote endpoint</div>
+                            <div class="task-desc">Implement <span class="task-code">GET
+                                    /api/shipping/lalamove/quote</span> - accepts address, weight, dimensions, returns
+                                price & ETA</div>
+                        </div>
+                    </li>
+                    <li class="task-item">
+                        <div class="task-checkbox" onclick="toggleTask(this)"></div>
+                        <div class="task-content">
+                            <div class="task-title">Create booking endpoint</div>
+                            <div class="task-desc">Implement <span class="task-code">POST
+                                    /api/shipping/lalamove/book</span> - creates delivery order, stores bookingId in
+                                database</div>
+                        </div>
+                    </li>
+                    <li class="task-item">
+                        <div class="task-checkbox" onclick="toggleTask(this)"></div>
+                        <div class="task-content">
+                            <div class="task-title">Create tracking endpoint</div>
+                            <div class="task-desc">Implement <span class="task-code">GET
+                                    /api/shipping/lalamove/track/:orderId</span> - returns current delivery status and
+                                driver info</div>
+                        </div>
+                    </li>
+                    <li class="task-item">
+                        <div class="task-checkbox" onclick="toggleTask(this)"></div>
+                        <div class="task-content">
+                            <div class="task-title">Create cancel endpoint</div>
+                            <div class="task-desc">Implement <span class="task-code">POST
+                                    /api/shipping/lalamove/cancel/:orderId</span> - cancels pending delivery (if within
+                                window)</div>
+                        </div>
+                    </li>
+                    <li class="task-item">
+                        <div class="task-checkbox" onclick="toggleTask(this)"></div>
+                        <div class="task-content">
+                            <div class="task-title">Create webhook receiver</div>
+                            <div class="task-desc">Implement <span class="task-code">POST /api/webhooks/lalamove</span>
+                                with HMAC signature verification. Update order status on delivery events.</div>
+                        </div>
+                    </li>
+                </ul>
+            </div>
+
+            <!-- Phase 3: Frontend UI -->
+            <div class="phase priority-medium">
+                <h2 class="phase-title">Phase 3: Frontend Checkout Flow <span
+                        class="badge badge-medium">Important</span></h2>
+                <ul class="task-list">
+                    <li class="task-item">
+                        <div class="task-checkbox" onclick="toggleTask(this)"></div>
+                        <div class="task-content">
+                            <div class="task-title">Add Lalamove shipping option</div>
+                            <div class="task-desc">Add "Lalamove" radio button/card to checkout page shipping selector
+                            </div>
+                        </div>
+                    </li>
+                    <li class="task-item">
+                        <div class="task-checkbox" onclick="toggleTask(this)"></div>
+                        <div class="task-content">
+                            <div class="task-title">Create quote modal/form</div>
+                            <div class="task-desc">Build UI to collect: delivery address, package weight, dimensions,
+                                preferred pickup time window</div>
+                        </div>
+                    </li>
+                    <li class="task-item">
+                        <div class="task-checkbox" onclick="toggleTask(this)"></div>
+                        <div class="task-content">
+                            <div class="task-title">Display real-time quote</div>
+                            <div class="task-desc">Show price, ETA, distance, and any surcharges from Lalamove API
+                                response</div>
+                        </div>
+                    </li>
+                    <li class="task-item">
+                        <div class="task-checkbox" onclick="toggleTask(this)"></div>
+                        <div class="task-content">
+                            <div class="task-title">Implement booking confirmation</div>
+                            <div class="task-desc">Add "Confirm Shipping" button that calls booking endpoint and stores
+                                result</div>
+                        </div>
+                    </li>
+                    <li class="task-item">
+                        <div class="task-checkbox" onclick="toggleTask(this)"></div>
+                        <div class="task-content">
+                            <div class="task-title">Create order summary view</div>
+                            <div class="task-desc">Display provider logo, shipping fee, tracking link, and cancel button
+                                (if applicable)</div>
+                        </div>
+                    </li>
+                    <li class="task-item">
+                        <div class="task-checkbox" onclick="toggleTask(this)"></div>
+                        <div class="task-content">
+                            <div class="task-title">Build tracking widget</div>
+                            <div class="task-desc">Add live tracking to "My Orders" page - show status timeline, driver
+                                info, and optional map view</div>
+                        </div>
+                    </li>
+                </ul>
+            </div>
+
+            <!-- Phase 4: Security & Reliability -->
+            <div class="phase priority-high">
+                <h2 class="phase-title">Phase 4: Security & Reliability <span class="badge badge-high">Critical</span>
+                </h2>
+                <ul class="task-list">
+                    <li class="task-item">
+                        <div class="task-checkbox" onclick="toggleTask(this)"></div>
+                        <div class="task-content">
+                            <div class="task-title">Implement OAuth2 token management</div>
+                            <div class="task-desc">Auto-refresh access tokens before expiry. Store securely in memory or
+                                encrypted cache.</div>
+                        </div>
+                    </li>
+                    <li class="task-item">
+                        <div class="task-checkbox" onclick="toggleTask(this)"></div>
+                        <div class="task-content">
+                            <div class="task-title">Add rate limiting</div>
+                            <div class="task-desc">Implement request queue (Bull/Redis) or token bucket to stay under
+                                Lalamove's rate limits (< 10 req/s)</div>
+                            </div>
+                    </li>
+                    <li class="task-item">
+                        <div class="task-checkbox" onclick="toggleTask(this)"></div>
+                        <div class="task-content">
+                            <div class="task-title">Implement idempotency</div>
+                            <div class="task-desc">Generate UUID client_reference_id for each booking to prevent
+                                duplicate orders on retry</div>
+                        </div>
+                    </li>
+                    <li class="task-item">
+                        <div class="task-checkbox" onclick="toggleTask(this)"></div>
+                        <div class="task-content">
+                            <div class="task-title">Add webhook signature verification</div>
+                            <div class="task-desc">Verify HMAC-SHA256 signature on all webhook callbacks using
+                                LALAMOVE_WEBHOOK_SECRET</div>
+                        </div>
+                    </li>
+                    <li class="task-item">
+                        <div class="task-checkbox" onclick="toggleTask(this)"></div>
+                        <div class="task-content">
+                            <div class="task-title">Implement error handling</div>
+                            <div class="task-desc">Map Lalamove error codes to user-friendly messages. Add retry logic
+                                with exponential backoff.</div>
+                        </div>
+                    </li>
+                </ul>
+            </div>
+
+            <!-- Phase 5: Testing -->
+            <div class="phase priority-medium">
+                <h2 class="phase-title">Phase 5: Testing & QA <span class="badge badge-medium">Important</span></h2>
+                <ul class="task-list">
+                    <li class="task-item">
+                        <div class="task-checkbox" onclick="toggleTask(this)"></div>
+                        <div class="task-content">
+                            <div class="task-title">Configure sandbox environment</div>
+                            <div class="task-desc">Set LALAMOVE_ENV=sandbox and obtain sandbox API credentials from
+                                Lalamove developer portal</div>
+                        </div>
+                    </li>
+                    <li class="task-item">
+                        <div class="task-checkbox" onclick="toggleTask(this)"></div>
+                        <div class="task-content">
+                            <div class="task-title">Write unit tests</div>
+                            <div class="task-desc">Test each method in services/lalamove.js with mocked HTTP responses
+                            </div>
+                        </div>
+                    </li>
+                    <li class="task-item">
+                        <div class="task-checkbox" onclick="toggleTask(this)"></div>
+                        <div class="task-content">
+                            <div class="task-title">Create integration tests</div>
+                            <div class="task-desc">Simulate full flow: quote → book → webhook → track using sandbox API
+                            </div>
+                        </div>
+                    </li>
+                    <li class="task-item">
+                        <div class="task-checkbox" onclick="toggleTask(this)"></div>
+                        <div class="task-content">
+                            <div class="task-title">Test locally</div>
+                            <div class="task-desc">Run complete checkout flow on localhost:3000 and verify database
+                                updates</div>
+                        </div>
+                    </li>
+                    <li class="task-item">
+                        <div class="task-checkbox" onclick="toggleTask(this)"></div>
+                        <div class="task-content">
+                            <div class="task-title">Test edge cases</div>
+                            <div class="task-desc">Test: no drivers available, invalid address, cancellation window
+                                expired, network failures</div>
+                        </div>
+                    </li>
+                </ul>
+            </div>
+
+            <!-- Phase 6: Deployment -->
+            <div class="phase priority-low">
+                <h2 class="phase-title">Phase 6: Deployment & Monitoring <span class="badge badge-low">Final</span></h2>
+                <ul class="task-list">
+                    <li class="task-item">
+                        <div class="task-checkbox" onclick="toggleTask(this)"></div>
+                        <div class="task-content">
+                            <div class="task-title">Add environment variables to Vercel</div>
+                            <div class="task-desc">Configure all LALAMOVE_* variables in Vercel dashboard for production
+                                environment</div>
+                        </div>
+                    </li>
+                    <li class="task-item">
+                        <div class="task-checkbox" onclick="toggleTask(this)"></div>
+                        <div class="task-content">
+                            <div class="task-title">Deploy with feature flag</div>
+                            <div class="task-desc">Deploy with ENABLE_LALAMOVE=true (or false initially for gradual
+                                rollout)</div>
+                        </div>
+                    </li>
+                    <li class="task-item">
+                        <div class="task-checkbox" onclick="toggleTask(this)"></div>
+                        <div class="task-content">
+                            <div class="task-title">Configure webhook URL</div>
+                            <div class="task-desc">Register production webhook URL in Lalamove dashboard:
+                                https://budolshap.vercel.app/api/webhooks/lalamove</div>
+                        </div>
+                    </li>
+                    <li class="task-item">
+                        <div class="task-checkbox" onclick="toggleTask(this)"></div>
+                        <div class="task-content">
+                            <div class="task-title">Monitor logs</div>
+                            <div class="task-desc">Set up logging/monitoring for webhook failures, API errors, and
+                                booking issues</div>
+                        </div>
+                    </li>
+                    <li class="task-item">
+                        <div class="task-checkbox" onclick="toggleTask(this)"></div>
+                        <div class="task-content">
+                            <div class="task-title">Perform live test order</div>
+                            <div class="task-desc">Create a real test order in production (sandbox mode first, then
+                                switch to production)</div>
+                        </div>
+                    </li>
+                    <li class="task-item">
+                        <div class="task-checkbox" onclick="toggleTask(this)"></div>
+                        <div class="task-content">
+                            <div class="task-title">Document for team</div>
+                            <div class="task-desc">Create internal documentation for troubleshooting, API limits, and
+                                common issues</div>
+                        </div>
+                    </li>
+                </ul>
+            </div>
+
+            <!-- Phase 7: Future Enhancements -->
+            <div class="phase priority-low">
+                <h2 class="phase-title">Phase 7: Future Enhancements <span class="badge badge-low">Optional</span></h2>
+                <ul class="task-list">
+                    <li class="task-item">
+                        <div class="task-checkbox" onclick="toggleTask(this)"></div>
+                        <div class="task-content">
+                            <div class="task-title">Add J&T Express integration</div>
+                            <div class="task-desc">Create services/jnt.js following the same provider interface pattern
+                            </div>
+                        </div>
+                    </li>
+                    <li class="task-item">
+                        <div class="task-checkbox" onclick="toggleTask(this)"></div>
+                        <div class="task-content">
+                            <div class="task-title">Add 2GO integration</div>
+                            <div class="task-desc">Create services/2go.js for nationwide shipping option</div>
+                        </div>
+                    </li>
+                    <li class="task-item">
+                        <div class="task-checkbox" onclick="toggleTask(this)"></div>
+                        <div class="task-content">
+                            <div class="task-title">Add Ninja Van integration</div>
+                            <div class="task-desc">Create services/ninjavan.js for additional carrier choice</div>
+                        </div>
+                    </li>
+                    <li class="task-item">
+                        <div class="task-checkbox" onclick="toggleTask(this)"></div>
+                        <div class="task-content">
+                            <div class="task-title">Implement smart carrier selection</div>
+                            <div class="task-desc">Auto-suggest best carrier based on distance, price, and delivery time
+                            </div>
+                        </div>
+                    </li>
+                    <li class="task-item">
+                        <div class="task-checkbox" onclick="toggleTask(this)"></div>
+                        <div class="task-content">
+                            <div class="task-title">Add SMS/email notifications</div>
+                            <div class="task-desc">Send delivery status updates to customers via SMS and email</div>
+                        </div>
+                    </li>
+                </ul>
+            </div>
+        </div>
+
+        <div class="footer">
+            <p><strong>Budolshap</strong> - Lalamove Shipping Integration Checklist</p>
+            <p>Generated on 2025-11-26 | Total Tasks: <span id="total-tasks">0</span></p>
+        </div>
+    </div>
+
+    <script>
+        function toggleTask(checkbox) {
+            checkbox.classList.toggle('checked');
+            updateProgress();
+        }
+
+        function updateProgress() {
+            const checkboxes = document.querySelectorAll('.task-checkbox');
+            const checked = document.querySelectorAll('.task-checkbox.checked');
+            const total = checkboxes.length;
+            const completed = checked.length;
+            const percent = Math.round((completed / total) * 100);
+
+            document.getElementById('progress-percent').textContent = percent;
+            document.getElementById('progress-fill').style.width = percent + '%';
+            document.getElementById('total-tasks').textContent = total;
+        }
+
+        // Initialize
+        updateProgress();
+    </script>
+</body>
+
+</html>

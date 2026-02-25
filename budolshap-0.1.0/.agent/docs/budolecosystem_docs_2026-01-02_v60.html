@@ -1,0 +1,148 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>BudolEcosystem Implementation Plan - v60</title>
+    <style>
+        :root {
+            --primary: #667eea;
+            --secondary: #764ba2;
+            --success: #27ae60;
+            --warning: #f39c12;
+            --dark: #2c3e50;
+            --light: #f8f9fa;
+        }
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            line-height: 1.6;
+            color: #333;
+            background: linear-gradient(135deg, var(--primary) 0%, var(--secondary) 100%);
+            padding: 20px;
+            min-height: 100vh;
+        }
+        .container {
+            max-width: 900px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 20px;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+            overflow: hidden;
+        }
+        .header {
+            background: linear-gradient(135deg, var(--primary) 0%, var(--secondary) 100%);
+            color: white;
+            padding: 40px;
+            text-align: center;
+        }
+        .nav-links {
+            display: flex;
+            justify-content: space-between;
+            padding: 10px 40px;
+            background: #f1f1f1;
+            font-size: 0.9em;
+        }
+        .nav-links a {
+            color: var(--primary);
+            text-decoration: none;
+            font-weight: bold;
+        }
+        .content {
+            padding: 40px;
+        }
+        h2 {
+            color: var(--primary);
+            border-bottom: 3px solid var(--primary);
+            padding-bottom: 10px;
+            margin-top: 30px;
+        }
+        h3 {
+            color: var(--secondary);
+            margin-top: 25px;
+        }
+        .feature-card {
+            background: var(--light);
+            border-left: 5px solid var(--primary);
+            padding: 20px;
+            margin: 20px 0;
+            border-radius: 0 10px 10px 0;
+        }
+        code {
+            background: #eee;
+            padding: 2px 5px;
+            border-radius: 4px;
+            font-family: monospace;
+        }
+        .footer {
+            background: var(--dark);
+            color: white;
+            text-align: center;
+            padding: 20px;
+            font-size: 0.9em;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="nav-links">
+            <a href="budolecosystem_docs_2026-01-02_v59.html">← Previous: v59</a>
+            <a href="index.html">Back to Index</a>
+        </div>
+        <div class="header">
+            <h1>🚀 Implementation Plan - v60</h1>
+            <p>QR Flow Stabilization & Webhook Enhancements</p>
+        </div>
+        <div class="content">
+            <h2>🎯 Purpose</h2>
+            <p>v60 focuses on stabilizing the QR payment lifecycle, ensuring definitive order matching through enhanced webhook metadata, and optimizing payment status validation.</p>
+
+            <h2>🛠️ Technical Implementation</h2>
+            
+            <div class="feature-card">
+                <h3>1. Webhook Metadata Integration</h3>
+                <p>Enhanced PayMongo webhook handler to use <code>metadata.orderId</code> as the primary key for order matching.</p>
+                <ul>
+                    <li><code>paymongo-adapter.js</code>: Injects <code>orderId</code> into metadata for all intent creations.</li>
+                    <li><code>paymongo/route.js</code>: Prioritizes metadata matching in database for incoming events.</li>
+                </ul>
+            </div>
+
+            <div class="feature-card">
+                <h3>2. Robust QR State Recovery</h3>
+                <p>Implemented multi-channel state recovery for the dedicated QR payment page.</p>
+                <ul>
+                    <li><code>OrderSummary.jsx</code>: Now passes <code>amount</code> and <code>provider</code> in addition to <code>payment_intent_id</code> and <code>orderId</code>.</li>
+                    <li><code>QRPaymentPage.jsx</code>: Recovers state from URL parameters if <code>localStorage</code> is cleared, including a mock fallback for BudolPay QR codes.</li>
+                </ul>
+            </div>
+
+            <div class="feature-card">
+                <h3>3. Unified DB-First Status Check</h3>
+                <p>Optimized the <code>/api/paymongo/status</code> endpoint to be provider-agnostic and more efficient.</p>
+                <ul>
+                    <li>Checks the local database first for a "paid" status before calling external APIs.</li>
+                    <li>Supports both PayMongo and BudolPay (via DB lookup) using the same polling endpoint.</li>
+                    <li>Reduced external API dependency for already processed transactions.</li>
+                </ul>
+            </div>
+
+            <h2>🏗️ Architectural Decisions</h2>
+            <h3>Metadata-First Webhook Matching</h3>
+            <p>Using internal IDs in provider metadata creates an immutable link that survives retries and partial failures, ensuring 100% accurate order fulfillment.</p>
+            
+            <h3>Redundant State Recovery</h3>
+            <p>By combining <code>localStorage</code> with URL parameters, we ensure the user never loses their payment QR code, even if they refresh the page or clear their cache mid-transaction.</p>
+
+            <h2>🚀 Future Enhancements</h2>
+            <ul>
+                <li>Implementation of a unified transaction ledger for multi-gateway reconciliation.</li>
+                <li>Real-time webhook monitoring dashboard for failed event retries.</li>
+                <li>Enhanced error reporting for cross-origin payment failures.</li>
+            </ul>
+        </div>
+        <div class="footer">
+            <p>BudolEcosystem Documentation - 2026-01-02</p>
+        </div>
+    </div>
+</body>
+</html>

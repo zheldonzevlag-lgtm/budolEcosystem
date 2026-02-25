@@ -1,0 +1,674 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Phase 2 Complete - Lalamove Backend API</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: #f5f7fa;
+            padding: 2rem;
+            color: #1a1a1a;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            background: #fff;
+            border-radius: 12px;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
+            overflow: hidden;
+        }
+
+        .header {
+            background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+            color: #fff;
+            padding: 3rem 2rem;
+            text-align: center;
+        }
+
+        .header h1 {
+            font-size: 2.5rem;
+            margin-bottom: 0.5rem;
+        }
+
+        .header .badge {
+            display: inline-block;
+            background: rgba(255, 255, 255, 0.2);
+            padding: 0.5rem 1.5rem;
+            border-radius: 20px;
+            margin-top: 1rem;
+            font-size: 1.1rem;
+            backdrop-filter: blur(10px);
+        }
+
+        .content {
+            padding: 2.5rem;
+        }
+
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 1.5rem;
+            margin: 2rem 0;
+        }
+
+        .stat-card {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: #fff;
+            padding: 1.5rem;
+            border-radius: 10px;
+            text-align: center;
+            box-shadow: 0 4px 12px rgba(102, 126, 234, 0.3);
+        }
+
+        .stat-number {
+            font-size: 2.5rem;
+            font-weight: bold;
+            margin-bottom: 0.5rem;
+        }
+
+        .stat-label {
+            font-size: 0.9rem;
+            opacity: 0.9;
+        }
+
+        .section {
+            margin-bottom: 3rem;
+            padding: 2rem;
+            background: #f8f9fa;
+            border-radius: 10px;
+            border-left: 5px solid #f5576c;
+        }
+
+        .section-title {
+            font-size: 1.8rem;
+            color: #1a1a1a;
+            margin-bottom: 1.5rem;
+            font-weight: 600;
+        }
+
+        .endpoint-list {
+            list-style: none;
+        }
+
+        .endpoint-item {
+            background: #fff;
+            padding: 1.5rem;
+            margin-bottom: 1rem;
+            border-radius: 8px;
+            border-left: 4px solid #667eea;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+        }
+
+        .endpoint-header {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+            margin-bottom: 1rem;
+        }
+
+        .method-badge {
+            padding: 0.3rem 0.8rem;
+            border-radius: 4px;
+            font-weight: 600;
+            font-size: 0.85rem;
+            font-family: monospace;
+        }
+
+        .method-get {
+            background: #10b981;
+            color: #fff;
+        }
+
+        .method-post {
+            background: #3b82f6;
+            color: #fff;
+        }
+
+        .endpoint-path {
+            font-family: monospace;
+            color: #667eea;
+            font-weight: 600;
+            font-size: 1.05rem;
+        }
+
+        .endpoint-desc {
+            color: #4a5568;
+            line-height: 1.6;
+            margin-bottom: 1rem;
+        }
+
+        .endpoint-details {
+            background: #f8f9fa;
+            padding: 1rem;
+            border-radius: 6px;
+            margin-top: 1rem;
+        }
+
+        .detail-row {
+            display: flex;
+            gap: 1rem;
+            margin-bottom: 0.5rem;
+            font-size: 0.9rem;
+        }
+
+        .detail-label {
+            font-weight: 600;
+            color: #2d3748;
+            min-width: 80px;
+        }
+
+        .detail-value {
+            color: #4a5568;
+        }
+
+        .code-inline {
+            background: #2d2d2d;
+            color: #10b981;
+            padding: 2px 6px;
+            border-radius: 4px;
+            font-family: monospace;
+            font-size: 0.9rem;
+        }
+
+        .code-block {
+            background: #2d2d2d;
+            color: #fff;
+            padding: 1.2rem;
+            border-radius: 8px;
+            margin: 1rem 0;
+            font-family: monospace;
+            font-size: 0.9rem;
+            overflow-x: auto;
+            line-height: 1.5;
+        }
+
+        .success-badge {
+            background: #10b981;
+            color: #fff;
+            padding: 4px 12px;
+            border-radius: 20px;
+            font-size: 0.85rem;
+            font-weight: 600;
+            display: inline-block;
+        }
+
+        .info-box {
+            background: #e0f2fe;
+            border-left: 4px solid #0284c7;
+            padding: 1.5rem;
+            border-radius: 8px;
+            margin: 1.5rem 0;
+        }
+
+        .info-title {
+            color: #0c4a6e;
+            font-weight: 600;
+            margin-bottom: 0.5rem;
+        }
+
+        .warning-box {
+            background: #fff3cd;
+            border-left: 4px solid #f59e0b;
+            padding: 1.5rem;
+            border-radius: 8px;
+            margin: 1.5rem 0;
+        }
+
+        .warning-title {
+            color: #92400e;
+            font-weight: 600;
+            margin-bottom: 0.5rem;
+        }
+
+        .success-box {
+            background: #f0fdf4;
+            border-left: 4px solid #10b981;
+            padding: 1.5rem;
+            border-radius: 8px;
+            margin: 1.5rem 0;
+        }
+
+        .success-title {
+            color: #065f46;
+            font-weight: 600;
+            margin-bottom: 0.5rem;
+        }
+
+        .footer {
+            background: #f8f9fa;
+            padding: 2rem;
+            text-align: center;
+            color: #718096;
+            border-top: 1px solid #e2e8f0;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 1.5rem 0;
+        }
+
+        th,
+        td {
+            border: 1px solid #e2e8f0;
+            padding: 1rem;
+            text-align: left;
+        }
+
+        th {
+            background: #f7fafc;
+            font-weight: 600;
+            color: #2d3748;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>✅ Phase 2 Complete</h1>
+            <p style="font-size:1.2rem; margin-top:0.5rem;">Lalamove Integration - Backend API Endpoints</p>
+            <div class="badge">🚀 Ready for Phase 3: Frontend UI Integration</div>
+        </div>
+
+        <div class="content">
+            <!-- Overview Stats -->
+            <div class="stats-grid">
+                <div class="stat-card">
+                    <div class="stat-number">5</div>
+                    <div class="stat-label">API Endpoints Created</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-number">5</div>
+                    <div class="stat-label">Route Files</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-number">1</div>
+                    <div class="stat-label">Package Installed</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-number">100%</div>
+                    <div class="stat-label">Phase 2 Complete</div>
+                </div>
+            </div>
+
+            <!-- API Endpoints Created -->
+            <div class="section">
+                <h2 class="section-title">📋 API Endpoints Created</h2>
+
+                <ul class="endpoint-list">
+                    <!-- Quote Endpoint -->
+                    <li class="endpoint-item">
+                        <div class="endpoint-header">
+                            <span class="method-badge method-post">POST</span>
+                            <span class="endpoint-path">/api/shipping/lalamove/quote</span>
+                        </div>
+                        <div class="endpoint-desc">
+                            Get shipping quotes from Lalamove based on pickup/delivery locations and package details.
+                        </div>
+                        <div class="endpoint-details">
+                            <div class="detail-row">
+                                <div class="detail-label">File:</div>
+                                <div class="detail-value"><span
+                                        class="code-inline">app/api/shipping/lalamove/quote/route.js</span></div>
+                            </div>
+                            <div class="detail-row">
+                                <div class="detail-label">Auth:</div>
+                                <div class="detail-value">Required (Session)</div>
+                            </div>
+                            <div class="detail-row">
+                                <div class="detail-label">Input:</div>
+                                <div class="detail-value">pickup, delivery, package details, serviceType</div>
+                            </div>
+                            <div class="detail-row">
+                                <div class="detail-label">Output:</div>
+                                <div class="detail-value">quoteId, price breakdown, distance, ETA</div>
+                            </div>
+                        </div>
+                    </li>
+
+                    <!-- Booking Endpoint -->
+                    <li class="endpoint-item">
+                        <div class="endpoint-header">
+                            <span class="method-badge method-post">POST</span>
+                            <span class="endpoint-path">/api/shipping/lalamove/book</span>
+                        </div>
+                        <div class="endpoint-desc">
+                            Book a Lalamove delivery and store booking details in the database with idempotency support.
+                        </div>
+                        <div class="endpoint-details">
+                            <div class="detail-row">
+                                <div class="detail-label">File:</div>
+                                <div class="detail-value"><span
+                                        class="code-inline">app/api/shipping/lalamove/book/route.js</span></div>
+                            </div>
+                            <div class="detail-row">
+                                <div class="detail-label">Auth:</div>
+                                <div class="detail-value">Required (Session)</div>
+                            </div>
+                            <div class="detail-row">
+                                <div class="detail-label">Input:</div>
+                                <div class="detail-value">orderId, quoteId, pickup/delivery details, contact info</div>
+                            </div>
+                            <div class="detail-row">
+                                <div class="detail-label">Output:</div>
+                                <div class="detail-value">bookingId, status, trackingUrl, shareLink</div>
+                            </div>
+                            <div class="detail-row">
+                                <div class="detail-label">Features:</div>
+                                <div class="detail-value">UUID-based client reference ID, database update</div>
+                            </div>
+                        </div>
+                    </li>
+
+                    <!-- Tracking Endpoint -->
+                    <li class="endpoint-item">
+                        <div class="endpoint-header">
+                            <span class="method-badge method-get">GET</span>
+                            <span class="endpoint-path">/api/shipping/lalamove/track/[orderId]</span>
+                        </div>
+                        <div class="endpoint-desc">
+                            Retrieve real-time delivery status, driver information, and location updates.
+                        </div>
+                        <div class="endpoint-details">
+                            <div class="detail-row">
+                                <div class="detail-label">File:</div>
+                                <div class="detail-value"><span
+                                        class="code-inline">app/api/shipping/lalamove/track/[orderId]/route.js</span>
+                                </div>
+                            </div>
+                            <div class="detail-row">
+                                <div class="detail-label">Auth:</div>
+                                <div class="detail-value">Required (Owner or Admin)</div>
+                            </div>
+                            <div class="detail-row">
+                                <div class="detail-label">Input:</div>
+                                <div class="detail-value">orderId (URL parameter)</div>
+                            </div>
+                            <div class="detail-row">
+                                <div class="detail-label">Output:</div>
+                                <div class="detail-value">status, driver info, location, timeline, ETA</div>
+                            </div>
+                        </div>
+                    </li>
+
+                    <!-- Cancel Endpoint -->
+                    <li class="endpoint-item">
+                        <div class="endpoint-header">
+                            <span class="method-badge method-post">POST</span>
+                            <span class="endpoint-path">/api/shipping/lalamove/cancel/[orderId]</span>
+                        </div>
+                        <div class="endpoint-desc">
+                            Cancel a pending Lalamove delivery order with proper validation and error handling.
+                        </div>
+                        <div class="endpoint-details">
+                            <div class="detail-row">
+                                <div class="detail-label">File:</div>
+                                <div class="detail-value"><span
+                                        class="code-inline">app/api/shipping/lalamove/cancel/[orderId]/route.js</span>
+                                </div>
+                            </div>
+                            <div class="detail-row">
+                                <div class="detail-label">Auth:</div>
+                                <div class="detail-value">Required (Owner or Admin)</div>
+                            </div>
+                            <div class="detail-row">
+                                <div class="detail-label">Input:</div>
+                                <div class="detail-value">orderId (URL parameter)</div>
+                            </div>
+                            <div class="detail-row">
+                                <div class="detail-label">Output:</div>
+                                <div class="detail-value">cancellation confirmation, updated status</div>
+                            </div>
+                            <div class="detail-row">
+                                <div class="detail-label">Validation:</div>
+                                <div class="detail-value">Checks cancellation window and order status</div>
+                            </div>
+                        </div>
+                    </li>
+
+                    <!-- Webhook Endpoint -->
+                    <li class="endpoint-item">
+                        <div class="endpoint-header">
+                            <span class="method-badge method-post">POST</span>
+                            <span class="endpoint-path">/api/webhooks/lalamove</span>
+                        </div>
+                        <div class="endpoint-desc">
+                            Receive real-time delivery status updates from Lalamove with HMAC signature verification.
+                        </div>
+                        <div class="endpoint-details">
+                            <div class="detail-row">
+                                <div class="detail-label">File:</div>
+                                <div class="detail-value"><span
+                                        class="code-inline">app/api/webhooks/lalamove/route.js</span></div>
+                            </div>
+                            <div class="detail-row">
+                                <div class="detail-label">Auth:</div>
+                                <div class="detail-value">HMAC Signature Verification</div>
+                            </div>
+                            <div class="detail-row">
+                                <div class="detail-label">Events:</div>
+                                <div class="detail-value">ASSIGNING_DRIVER, ON_GOING, PICKED_UP, IN_TRANSIT, COMPLETED,
+                                    CANCELLED</div>
+                            </div>
+                            <div class="detail-row">
+                                <div class="detail-label">Features:</div>
+                                <div class="detail-value">Timeline tracking, driver updates, location updates</div>
+                            </div>
+                        </div>
+                    </li>
+                </ul>
+            </div>
+
+            <!-- Package Installation -->
+            <div class="section">
+                <h2 class="section-title">📦 Package Installed</h2>
+                <div class="success-box">
+                    <div class="success-title">✅ UUID Package Installed</div>
+                    <div style="color:#065f46; margin-top:0.5rem;">
+                        Installed <span class="code-inline">uuid</span> package for generating unique client reference
+                        IDs to ensure idempotency in booking requests.
+                    </div>
+                    <div class="code-block">npm install uuid</div>
+                </div>
+            </div>
+
+            <!-- Testing Guide -->
+            <div class="section">
+                <h2 class="section-title">🧪 Testing Guide</h2>
+
+                <div class="info-box">
+                    <div class="info-title">📝 How to Test the Endpoints</div>
+                    <div style="color:#0c4a6e; margin-top:0.5rem; line-height:1.8;">
+                        <strong>1. Start the development server:</strong>
+                        <div class="code-block">npm run dev</div>
+
+                        <strong>2. Test Quote Endpoint:</strong>
+                        <div class="code-block">POST http://localhost:3000/api/shipping/lalamove/quote
+                            Content-Type: application/json
+
+                            {
+                            "pickup": {
+                            "address": "SM Mall of Asia, Pasay City",
+                            "coordinates": { "lat": 14.5352, "lng": 120.9822 },
+                            "contactName": "John Doe",
+                            "contactPhone": "+639171234567"
+                            },
+                            "delivery": {
+                            "address": "Bonifacio Global City, Taguig",
+                            "coordinates": { "lat": 14.5547, "lng": 121.0244 },
+                            "contactName": "Jane Smith",
+                            "contactPhone": "+639189876543"
+                            },
+                            "package": {
+                            "weight": 2.5,
+                            "dimensions": { "length": 30, "width": 20, "height": 15 },
+                            "description": "Electronics"
+                            }
+                            }</div>
+
+                        <strong>3. Test Webhook (Health Check):</strong>
+                        <div class="code-block">GET http://localhost:3000/api/webhooks/lalamove</div>
+
+                        <strong>4. Check Database:</strong>
+                        <div class="code-block">npm run prisma:studio</div>
+                    </div>
+                </div>
+
+                <div class="warning-box">
+                    <div class="warning-title">⚠️ Important Notes</div>
+                    <div style="color:#92400e; margin-top:0.5rem; line-height:1.8;">
+                        • All endpoints require authentication (except webhook)<br>
+                        • Use valid coordinates for Manila/Philippines area<br>
+                        • Webhook signature verification requires LALAMOVE_WEBHOOK_SECRET<br>
+                        • Test with sandbox environment first (LALAMOVE_ENV=sandbox)<br>
+                        • Monitor console logs for debugging information
+                    </div>
+                </div>
+            </div>
+
+            <!-- Database Schema -->
+            <div class="section">
+                <h2 class="section-title">💾 Database Schema Usage</h2>
+                <p style="color:#4a5568; line-height:1.8; margin-bottom:1rem;">
+                    All endpoints interact with the <span class="code-inline">Order.shipping</span> JSON field:
+                </p>
+
+                <div class="code-block">{
+                    "provider": "lalamove",
+                    "quoteId": "abc123",
+                    "bookingId": "LAL-12345",
+                    "clientReferenceId": "BUDOL-order123-uuid",
+                    "status": "ON_GOING",
+                    "lastEvent": "PICKED_UP",
+                    "trackingUrl": "https://www.lalamove.com/track/...",
+                    "price": {
+                    "amount": 150.00,
+                    "currency": "PHP"
+                    },
+                    "serviceType": "MOTORCYCLE",
+                    "driver": {
+                    "name": "Juan Dela Cruz",
+                    "phone": "+639171234567",
+                    "plateNumber": "ABC-1234",
+                    "photo": "https://..."
+                    },
+                    "location": {
+                    "lat": 14.5547,
+                    "lng": 121.0244,
+                    "updatedAt": "2025-11-27T00:15:00Z"
+                    },
+                    "timeline": [
+                    {
+                    "event": "ON_GOING",
+                    "status": "ON_GOING",
+                    "timestamp": "2025-11-27T00:10:00Z",
+                    "driver": { "name": "Juan Dela Cruz" }
+                    }
+                    ],
+                    "bookedAt": "2025-11-27T00:05:00Z",
+                    "updatedAt": "2025-11-27T00:15:00Z"
+                    }</div>
+            </div>
+
+            <!-- Next Steps -->
+            <div class="section" style="background:#e0f2fe; border-left-color:#0284c7;">
+                <h2 class="section-title" style="color:#0c4a6e;">🚀 Next Steps - Phase 3</h2>
+
+                <div style="color:#0c4a6e; line-height:2;">
+                    <strong>Frontend UI Integration:</strong>
+                    <ul style="margin-left:2rem; margin-top:1rem;">
+                        <li>Add Lalamove shipping option to checkout page</li>
+                        <li>Create quote modal/form for address and package details</li>
+                        <li>Display real-time quote with price and ETA</li>
+                        <li>Implement booking confirmation flow</li>
+                        <li>Build order summary view with tracking link</li>
+                        <li>Create tracking widget for "My Orders" page</li>
+                        <li>Add driver info and status timeline display</li>
+                    </ul>
+                </div>
+            </div>
+
+            <!-- Summary Table -->
+            <div class="section" style="background:#f0fdf4; border-left-color:#10b981;">
+                <h2 class="section-title" style="color:#065f46;">📊 Phase 2 Summary</h2>
+
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Component</th>
+                            <th>Status</th>
+                            <th>Details</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td>Quote Endpoint</td>
+                            <td><span class="success-badge">✅ Complete</span></td>
+                            <td>POST /api/shipping/lalamove/quote</td>
+                        </tr>
+                        <tr>
+                            <td>Booking Endpoint</td>
+                            <td><span class="success-badge">✅ Complete</span></td>
+                            <td>POST /api/shipping/lalamove/book</td>
+                        </tr>
+                        <tr>
+                            <td>Tracking Endpoint</td>
+                            <td><span class="success-badge">✅ Complete</span></td>
+                            <td>GET /api/shipping/lalamove/track/[orderId]</td>
+                        </tr>
+                        <tr>
+                            <td>Cancel Endpoint</td>
+                            <td><span class="success-badge">✅ Complete</span></td>
+                            <td>POST /api/shipping/lalamove/cancel/[orderId]</td>
+                        </tr>
+                        <tr>
+                            <td>Webhook Receiver</td>
+                            <td><span class="success-badge">✅ Complete</span></td>
+                            <td>POST /api/webhooks/lalamove</td>
+                        </tr>
+                        <tr>
+                            <td>UUID Package</td>
+                            <td><span class="success-badge">✅ Installed</span></td>
+                            <td>For idempotency support</td>
+                        </tr>
+                        <tr>
+                            <td>Authentication</td>
+                            <td><span class="success-badge">✅ Implemented</span></td>
+                            <td>Session-based + HMAC webhook verification</td>
+                        </tr>
+                        <tr>
+                            <td>Error Handling</td>
+                            <td><span class="success-badge">✅ Implemented</span></td>
+                            <td>Comprehensive error messages</td>
+                        </tr>
+                        <tr>
+                            <td>Database Integration</td>
+                            <td><span class="success-badge">✅ Complete</span></td>
+                            <td>Order.shipping field updates</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <div class="footer">
+            <p><strong>Budolshap</strong> - Lalamove Integration Phase 2 Documentation</p>
+            <p>Completed on 2025-11-27 | Total Time: ~30 minutes | Endpoints Created: 5</p>
+            <p style="margin-top:1rem; color:#f5576c; font-weight:600;">✅ Phase 2 Complete - Ready for Frontend
+                Integration!</p>
+        </div>
+    </div>
+</body>
+
+</html>

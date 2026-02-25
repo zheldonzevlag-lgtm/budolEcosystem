@@ -1,0 +1,86 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Return Logistics Implementation - Phase 1: Core Logistics</title>
+    <style>
+        :root {
+            --primary: #ee4d2d;
+            --secondary: #2673dd;
+            --success: #2ecc71;
+            --bg: #f5f5f5;
+            --text: #333;
+        }
+        body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; line-height: 1.6; color: var(--text); background: var(--bg); margin: 0; padding: 20px; }
+        .container { max-width: 900px; margin: 0 auto; background: white; padding: 40px; border-radius: 12px; shadow: 0 4px 6px rgba(0,0,0,0.1); }
+        h1 { color: var(--primary); border-bottom: 2px solid var(--primary); padding-bottom: 10px; }
+        h2 { color: var(--secondary); margin-top: 30px; }
+        .status { display: inline-block; padding: 4px 12px; border-radius: 20px; font-size: 0.8em; font-weight: bold; text-transform: uppercase; }
+        .status-complete { background: #d4edda; color: #155724; }
+        .status-pending { background: #fff3cd; color: #856404; }
+        code { background: #eee; padding: 2px 5px; border-radius: 4px; font-family: monospace; }
+        pre { background: #2d3436; color: #dfe6e9; padding: 15px; border-radius: 8px; overflow-x: auto; }
+        .task-list { list-style: none; padding: 0; }
+        .task-item { display: flex; align-items: flex-start; gap: 10px; margin-bottom: 10px; padding: 10px; border-left: 4px solid #ddd; background: #fafafa; }
+        .task-item.complete { border-left-color: var(--success); }
+        nav { margin-bottom: 30px; }
+        nav a { margin-right: 15px; text-decoration: none; color: var(--secondary); font-weight: bold; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <nav>
+            <a href="index.html">Summary</a> | 
+            <a href="phase-1-logistics.html">Phase 1</a> | 
+            <a href="phase-2-negotiation.html">Phase 2</a> | 
+            <a href="phase-3-verification.html">Phase 3</a>
+        </nav>
+
+        <h1>Phase 1: Core Logistics Architecture</h1>
+        <p>Establish the technical foundation for address swapping and return shipping bookings.</p>
+
+        <div class="status status-complete">Completed</div>
+
+        <h2>Technical Specification</h2>
+        <p>The core of return logistics is the <strong>Address Swap</strong>. Unlike a standard delivery (Store &rarr; Buyer), a return requires a (Buyer &rarr; Store) flow.</p>
+
+        <h3>Key Components</h3>
+        <ul>
+            <li><strong>Service Layer:</strong> <code>shippingService.js</code> handles the translation between Order addresses and Shipping Provider (Lalamove) stops.</li>
+            <li><strong>API Endpoint:</strong> <code>/api/shipping/lalamove/book-return</code> triggers the booking logic.</li>
+            <li><strong>State Management:</strong> Order status moves to <code>RETURN_APPROVED</code> then <code>IN_TRANSIT</code> upon booking.</li>
+        </ul>
+
+        <h2>Implementation Details</h2>
+        <pre>
+// shippingService.js - bookReturnShipping
+export async function bookReturnShipping({ orderId, returnId }) {
+    // 1. Swap Pickup (Buyer) and Delivery (Store)
+    const pickup = { address: buyerAddress, contact: buyerInfo };
+    const delivery = { address: storeAddress, contact: storeInfo };
+    
+    // 2. Book with Provider
+    const booking = await lalamove.placeOrder({ ... });
+    
+    // 3. Update DB
+    await prisma.return.update({ ... });
+}
+        </pre>
+
+        <h2>Validation Steps</h2>
+        <ul class="task-list">
+            <li class="task-item complete">
+                <div>
+                    <strong>Address Swapping Logic:</strong> Verified that the Buyer's shipping address is used as the pickup point and the Store's default address as the destination.
+                </div>
+            </li>
+            <li class="task-item complete">
+                <div>
+                    <strong>Lalamove Integration:</strong> Verified that a fresh quote is generated for the return leg to account for distance-based pricing.
+                </div>
+            </li>
+        </ul>
+    </div>
+</body>
+</html>

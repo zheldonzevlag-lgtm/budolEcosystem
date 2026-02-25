@@ -1,0 +1,1406 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Budolshap Delivery Status & Support System - Complete Implementation Plan</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            padding: 40px 20px;
+            line-height: 1.6;
+            color: #333;
+        }
+
+        .container {
+            max-width: 1600px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 20px;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+            overflow: hidden;
+        }
+
+        .header {
+            background: linear-gradient(135deg, #FF6B00 0%, #FF8C00 100%);
+            color: white;
+            padding: 60px 40px;
+            text-align: center;
+        }
+
+        .header h1 {
+            font-size: 3em;
+            margin-bottom: 15px;
+            text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.2);
+        }
+
+        .header p {
+            font-size: 1.3em;
+            opacity: 0.95;
+        }
+
+        .content {
+            padding: 50px;
+        }
+
+        .section {
+            margin-bottom: 50px;
+        }
+
+        .section h2 {
+            color: #FF6B00;
+            font-size: 2.2em;
+            margin-bottom: 25px;
+            padding-bottom: 15px;
+            border-bottom: 3px solid #FF6B00;
+        }
+
+        .section h3 {
+            color: #667eea;
+            font-size: 1.6em;
+            margin: 30px 0 15px 0;
+        }
+
+        .section h4 {
+            color: #764ba2;
+            font-size: 1.3em;
+            margin: 20px 0 10px 0;
+        }
+
+        .status-flow {
+            background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
+            border-radius: 15px;
+            padding: 40px;
+            margin: 30px 0;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
+        }
+
+        .status-stage {
+            background: white;
+            border-radius: 12px;
+            padding: 25px;
+            margin: 20px 0;
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.1);
+            position: relative;
+            border-left: 5px solid #FF6B00;
+            transition: transform 0.3s ease, box-shadow 0.3s ease;
+        }
+
+        .status-stage:hover {
+            transform: translateX(10px);
+            box-shadow: 0 8px 25px rgba(0, 0, 0, 0.15);
+        }
+
+        .status-stage::after {
+            content: '↓';
+            position: absolute;
+            bottom: -35px;
+            left: 50%;
+            transform: translateX(-50%);
+            font-size: 2em;
+            color: #FF6B00;
+            font-weight: bold;
+        }
+
+        .status-stage:last-child::after {
+            content: '';
+        }
+
+        .status-badge {
+            display: inline-block;
+            padding: 8px 16px;
+            border-radius: 20px;
+            font-weight: bold;
+            font-size: 0.95em;
+            margin: 5px;
+        }
+
+        .badge-pending {
+            background: #fef3c7;
+            color: #92400e;
+        }
+
+        .badge-processing {
+            background: #dbeafe;
+            color: #1e40af;
+        }
+
+        .badge-shipped {
+            background: #e0e7ff;
+            color: #3730a3;
+        }
+
+        .badge-transit {
+            background: #ddd6fe;
+            color: #5b21b6;
+        }
+
+        .badge-delivery {
+            background: #fce7f3;
+            color: #9f1239;
+        }
+
+        .badge-completed {
+            background: #d1fae5;
+            color: #065f46;
+        }
+
+        .badge-cancelled {
+            background: #fee2e2;
+            color: #991b1b;
+        }
+
+        .badge-issue {
+            background: #fed7aa;
+            color: #9a3412;
+        }
+
+        .comparison-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 30px;
+            margin: 30px 0;
+        }
+
+        .comparison-card {
+            background: white;
+            border-radius: 15px;
+            padding: 30px;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
+        }
+
+        .comparison-card h3 {
+            color: #FF6B00;
+            margin-bottom: 20px;
+            padding-bottom: 10px;
+            border-bottom: 2px solid #FF6B00;
+        }
+
+        .feature-list {
+            list-style: none;
+            padding: 0;
+        }
+
+        .feature-list li {
+            padding: 12px 0;
+            padding-left: 30px;
+            position: relative;
+        }
+
+        .feature-list li::before {
+            content: '✓';
+            position: absolute;
+            left: 0;
+            color: #10b981;
+            font-weight: bold;
+            font-size: 1.2em;
+        }
+
+        .info-box {
+            background: #eff6ff;
+            border-left: 5px solid #3b82f6;
+            padding: 20px;
+            border-radius: 8px;
+            margin: 20px 0;
+        }
+
+        .warning-box {
+            background: #fef3c7;
+            border-left: 5px solid #f59e0b;
+            padding: 20px;
+            border-radius: 8px;
+            margin: 20px 0;
+        }
+
+        .success-box {
+            background: #d1fae5;
+            border-left: 5px solid #10b981;
+            padding: 20px;
+            border-radius: 8px;
+            margin: 20px 0;
+        }
+
+        .danger-box {
+            background: #fee2e2;
+            border-left: 5px solid #ef4444;
+            padding: 20px;
+            border-radius: 8px;
+            margin: 20px 0;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 20px 0;
+            background: white;
+            border-radius: 10px;
+            overflow: hidden;
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.1);
+        }
+
+        th {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 15px;
+            text-align: left;
+            font-weight: 600;
+        }
+
+        td {
+            padding: 15px;
+            border-bottom: 1px solid #e5e7eb;
+        }
+
+        tr:hover {
+            background: #f9fafb;
+        }
+
+        .code-block {
+            background: #1e293b;
+            color: #e2e8f0;
+            padding: 20px;
+            border-radius: 10px;
+            overflow-x: auto;
+            margin: 20px 0;
+            font-family: 'Courier New', monospace;
+            font-size: 0.95em;
+            line-height: 1.6;
+        }
+
+        .timeline {
+            position: relative;
+            padding-left: 50px;
+            margin: 30px 0;
+        }
+
+        .timeline::before {
+            content: '';
+            position: absolute;
+            left: 20px;
+            top: 0;
+            bottom: 0;
+            width: 3px;
+            background: linear-gradient(180deg, #FF6B00 0%, #667eea 100%);
+        }
+
+        .timeline-item {
+            position: relative;
+            margin-bottom: 30px;
+            background: white;
+            padding: 20px;
+            border-radius: 10px;
+            box-shadow: 0 3px 10px rgba(0, 0, 0, 0.1);
+        }
+
+        .timeline-item::before {
+            content: '';
+            position: absolute;
+            left: -38px;
+            top: 25px;
+            width: 15px;
+            height: 15px;
+            border-radius: 50%;
+            background: #FF6B00;
+            border: 3px solid white;
+            box-shadow: 0 0 0 3px #FF6B00;
+        }
+
+        .action-card {
+            background: linear-gradient(135deg, #fef3c7 0%, #fde68a 100%);
+            border-radius: 15px;
+            padding: 30px;
+            margin: 30px 0;
+            border-left: 5px solid #f59e0b;
+        }
+
+        .action-step {
+            background: white;
+            padding: 20px;
+            margin: 15px 0;
+            border-radius: 10px;
+            border-left: 4px solid #f59e0b;
+        }
+
+        .action-step h4 {
+            color: #f59e0b;
+            margin-bottom: 10px;
+        }
+
+        .implementation-phase {
+            background: white;
+            border-radius: 15px;
+            padding: 30px;
+            margin: 25px 0;
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.1);
+            border-top: 5px solid #667eea;
+        }
+
+        .phase-header {
+            display: flex;
+            align-items: center;
+            gap: 20px;
+            margin-bottom: 20px;
+        }
+
+        .phase-number {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            width: 60px;
+            height: 60px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.8em;
+            font-weight: bold;
+            box-shadow: 0 5px 15px rgba(102, 126, 234, 0.3);
+        }
+
+        .phase-title {
+            flex: 1;
+        }
+
+        .phase-title h3 {
+            margin: 0;
+            color: #667eea;
+        }
+
+        .phase-duration {
+            background: #e0e7ff;
+            color: #3730a3;
+            padding: 8px 16px;
+            border-radius: 20px;
+            font-weight: bold;
+        }
+
+        .checklist {
+            list-style: none;
+            padding: 0;
+        }
+
+        .checklist li {
+            padding: 10px 0;
+            padding-left: 35px;
+            position: relative;
+        }
+
+        .checklist li::before {
+            content: '☐';
+            position: absolute;
+            left: 0;
+            color: #667eea;
+            font-size: 1.5em;
+        }
+
+        .ui-mockup {
+            background: #f8f9fa;
+            border-radius: 15px;
+            padding: 30px;
+            margin: 30px 0;
+            border: 2px solid #e5e7eb;
+        }
+
+        .mockup-screen {
+            background: white;
+            border-radius: 10px;
+            padding: 20px;
+            margin: 15px 0;
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.1);
+        }
+
+        .footer {
+            background: #1e293b;
+            color: white;
+            padding: 30px;
+            text-align: center;
+        }
+
+        @media (max-width: 768px) {
+            .comparison-grid {
+                grid-template-columns: 1fr;
+            }
+
+            .content {
+                padding: 30px 20px;
+            }
+
+            .header h1 {
+                font-size: 2em;
+            }
+        }
+    </style>
+</head>
+
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>📦 Delivery Status & Support System</h1>
+            <p>Complete Implementation Plan for Budolshap</p>
+            <p style="font-size: 0.9em; margin-top: 10px; opacity: 0.9;">Inspired by Shopee's Best Practices</p>
+        </div>
+
+        <div class="content">
+            <!-- Executive Summary -->
+            <div class="section">
+                <h2>📋 Executive Summary</h2>
+                <p>This document outlines a comprehensive delivery status tracking and customer support system for
+                    Budolshap, inspired by Shopee's proven approach and industry best practices. The system aims to
+                    reduce customer anxiety, minimize support inquiries, and provide transparent order tracking
+                    throughout the delivery lifecycle.</p>
+
+                <div class="success-box">
+                    <strong>🎯 Key Objectives:</strong>
+                    <ul style="margin-left: 20px; margin-top: 10px;">
+                        <li>Implement a clear, multi-stage order status system</li>
+                        <li>Provide proactive notifications at every delivery milestone</li>
+                        <li>Reduce "Where Is My Order?" (WISMO) support tickets by 60-80%</li>
+                        <li>Establish clear protocols for handling delayed deliveries</li>
+                        <li>Build customer trust through transparency and communication</li>
+                    </ul>
+                </div>
+            </div>
+
+            <!-- Shopee Analysis -->
+            <div class="section">
+                <h2>🔍 Shopee's Delivery Status System Analysis</h2>
+
+                <h3>What Shopee Does Well</h3>
+                <div class="comparison-grid">
+                    <div class="comparison-card">
+                        <h3>✅ Strengths</h3>
+                        <ul class="feature-list">
+                            <li>Clear, granular order status stages</li>
+                            <li>Estimated Delivery Date (EDD) prominently displayed</li>
+                            <li>Proactive communication about delays</li>
+                            <li>Multiple support channels (Chat, Email, Phone)</li>
+                            <li>Self-service options (Return/Refund, Track Order)</li>
+                            <li>Automatic cancellation if seller doesn't ship</li>
+                            <li>Expedited delivery request for stuck orders</li>
+                            <li>Real-time tracking with logistics partner integration</li>
+                        </ul>
+                    </div>
+                    <div class="comparison-card">
+                        <h3>🎯 Key Features to Adopt</h3>
+                        <ul class="feature-list">
+                            <li>Categorized order views (To Pay, To Ship, To Receive, To Rate)</li>
+                            <li>24-48 hour update expectations clearly stated</li>
+                            <li>Holiday/weather delay warnings</li>
+                            <li>Direct seller contact from order details</li>
+                            <li>Automated refund for non-shipment</li>
+                            <li>Follow-up forms for delayed orders</li>
+                            <li>Return to Sender (RTS) notifications</li>
+                            <li>Fake delivery attempt reporting</li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Order Status Stages -->
+            <div class="section">
+                <h2>📊 Proposed Order Status Stages for Budolshap</h2>
+
+                <div class="status-flow">
+                    <h3 style="text-align: center; color: #333; margin-bottom: 30px;">Complete Order Lifecycle</h3>
+
+                    <!-- Stage 1 -->
+                    <div class="status-stage">
+                        <div
+                            style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">
+                            <h4 style="margin: 0;">1. Order Placed</h4>
+                            <span class="status-badge badge-pending">PENDING</span>
+                        </div>
+                        <p><strong>Description:</strong> Order has been created but payment is not yet confirmed.</p>
+                        <p><strong>Customer Action Required:</strong> Complete payment</p>
+                        <p><strong>System Action:</strong> Hold order for 24 hours, then auto-cancel if unpaid</p>
+                        <div style="margin-top: 15px; padding: 15px; background: #f8f9fa; border-radius: 8px;">
+                            <strong>Notifications:</strong>
+                            <ul style="margin-left: 20px; margin-top: 5px;">
+                                <li>Email: Order confirmation with payment instructions</li>
+                                <li>SMS: Payment reminder after 12 hours</li>
+                            </ul>
+                        </div>
+                    </div>
+
+                    <!-- Stage 2 -->
+                    <div class="status-stage">
+                        <div
+                            style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">
+                            <h4 style="margin: 0;">2. Payment Confirmed</h4>
+                            <span class="status-badge badge-processing">TO SHIP</span>
+                        </div>
+                        <p><strong>Description:</strong> Payment received and verified. Waiting for seller to prepare
+                            and ship.</p>
+                        <p><strong>Seller Action Required:</strong> Prepare order and arrange shipping within 2-3
+                            business days</p>
+                        <p><strong>System Action:</strong> Notify seller, start countdown timer</p>
+                        <div style="margin-top: 15px; padding: 15px; background: #f8f9fa; border-radius: 8px;">
+                            <strong>Notifications:</strong>
+                            <ul style="margin-left: 20px; margin-top: 5px;">
+                                <li>Buyer: "Payment confirmed! Seller is preparing your order."</li>
+                                <li>Seller: "New order received. Please ship within 2 days."</li>
+                            </ul>
+                        </div>
+                        <div class="warning-box" style="margin-top: 15px;">
+                            <strong>⚠️ Auto-Cancel Policy:</strong> If seller doesn't ship within 3 business days, order
+                            is automatically cancelled and buyer receives full refund.
+                        </div>
+                    </div>
+
+                    <!-- Stage 3 -->
+                    <div class="status-stage">
+                        <div
+                            style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">
+                            <h4 style="margin: 0;">3. Order Processed</h4>
+                            <span class="status-badge badge-processing">READY TO SHIP</span>
+                        </div>
+                        <p><strong>Description:</strong> Seller has arranged shipping and obtained tracking number.</p>
+                        <p><strong>Next Step:</strong> Waiting for courier pickup</p>
+                        <div style="margin-top: 15px; padding: 15px; background: #f8f9fa; border-radius: 8px;">
+                            <strong>Notifications:</strong>
+                            <ul style="margin-left: 20px; margin-top: 5px;">
+                                <li>Buyer: "Your order is ready! Waiting for courier pickup."</li>
+                                <li>Display tracking number (if available)</li>
+                            </ul>
+                        </div>
+                    </div>
+
+                    <!-- Stage 4 -->
+                    <div class="status-stage">
+                        <div
+                            style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">
+                            <h4 style="margin: 0;">4. Picked Up by Courier</h4>
+                            <span class="status-badge badge-shipped">SHIPPED</span>
+                        </div>
+                        <p><strong>Description:</strong> Courier has collected the package from seller.</p>
+                        <p><strong>EDD Displayed:</strong> Show estimated delivery date prominently</p>
+                        <div style="margin-top: 15px; padding: 15px; background: #f8f9fa; border-radius: 8px;">
+                            <strong>Notifications:</strong>
+                            <ul style="margin-left: 20px; margin-top: 5px;">
+                                <li>Email + SMS: "Your order is on the way! Track it here: [link]"</li>
+                                <li>Push notification: "Package picked up. EDD: [date]"</li>
+                            </ul>
+                        </div>
+                    </div>
+
+                    <!-- Stage 5 -->
+                    <div class="status-stage">
+                        <div
+                            style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">
+                            <h4 style="margin: 0;">5. In Transit</h4>
+                            <span class="status-badge badge-transit">TO RECEIVE</span>
+                        </div>
+                        <p><strong>Description:</strong> Package is moving through logistics network.</p>
+                        <p><strong>Sub-statuses:</strong></p>
+                        <ul style="margin-left: 20px; margin-top: 10px;">
+                            <li>At sorting facility</li>
+                            <li>Departed from origin city</li>
+                            <li>Arrived at destination city</li>
+                            <li>At local delivery hub</li>
+                        </ul>
+                        <div style="margin-top: 15px; padding: 15px; background: #f8f9fa; border-radius: 8px;">
+                            <strong>Notifications:</strong>
+                            <ul style="margin-left: 20px; margin-top: 5px;">
+                                <li>Update every major milestone (via webhook from Lalamove)</li>
+                                <li>Daily EDD reminder if delivery is tomorrow</li>
+                            </ul>
+                        </div>
+                        <div class="info-box" style="margin-top: 15px;">
+                            <strong>ℹ️ Note to Customer:</strong> "Tracking updates may take 24-48 hours to reflect.
+                            Please check back later if no updates are shown."
+                        </div>
+                    </div>
+
+                    <!-- Stage 6 -->
+                    <div class="status-stage">
+                        <div
+                            style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">
+                            <h4 style="margin: 0;">6. Out for Delivery</h4>
+                            <span class="status-badge badge-delivery">OUT FOR DELIVERY</span>
+                        </div>
+                        <p><strong>Description:</strong> Package is with the driver and will be delivered today.</p>
+                        <p><strong>Real-time Tracking:</strong> Show driver location on map (Lalamove integration)</p>
+                        <div style="margin-top: 15px; padding: 15px; background: #f8f9fa; border-radius: 8px;">
+                            <strong>Notifications:</strong>
+                            <ul style="margin-left: 20px; margin-top: 5px;">
+                                <li>SMS: "Your order is out for delivery! Driver: [Name], ETA: [time]"</li>
+                                <li>Push: "Driver is 15 minutes away!"</li>
+                                <li>Display driver contact information</li>
+                            </ul>
+                        </div>
+                    </div>
+
+                    <!-- Stage 7 -->
+                    <div class="status-stage">
+                        <div
+                            style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">
+                            <h4 style="margin: 0;">7. Delivered</h4>
+                            <span class="status-badge badge-completed">COMPLETED</span>
+                        </div>
+                        <p><strong>Description:</strong> Package successfully delivered to customer.</p>
+                        <p><strong>Proof of Delivery:</strong> Photo, signature, or confirmation code</p>
+                        <div style="margin-top: 15px; padding: 15px; background: #f8f9fa; border-radius: 8px;">
+                            <strong>Notifications:</strong>
+                            <ul style="margin-left: 20px; margin-top: 5px;">
+                                <li>Email + SMS: "Your order has been delivered! Please rate your experience."</li>
+                                <li>Request review after 24 hours</li>
+                            </ul>
+                        </div>
+                        <div class="success-box" style="margin-top: 15px;">
+                            <strong>✓ Next Steps:</strong> Customer can now rate the product and seller. Order moves to
+                            "To Rate" category.
+                        </div>
+                    </div>
+
+                    <!-- Stage 8 (Alternative) -->
+                    <div class="status-stage" style="border-left-color: #ef4444;">
+                        <div
+                            style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">
+                            <h4 style="margin: 0;">8. Cancelled / Returned</h4>
+                            <span class="status-badge badge-cancelled">CANCELLED</span>
+                        </div>
+                        <p><strong>Reasons:</strong></p>
+                        <ul style="margin-left: 20px; margin-top: 10px;">
+                            <li>Customer cancelled before shipping</li>
+                            <li>Seller didn't ship within timeframe (auto-cancel)</li>
+                            <li>Delivery failed multiple times (Return to Sender)</li>
+                            <li>Customer rejected delivery</li>
+                        </ul>
+                        <div style="margin-top: 15px; padding: 15px; background: #f8f9fa; border-radius: 8px;">
+                            <strong>Notifications:</strong>
+                            <ul style="margin-left: 20px; margin-top: 5px;">
+                                <li>Email: Cancellation confirmation with refund details</li>
+                                <li>Refund processed within 5-7 business days</li>
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Order Categories -->
+            <div class="section">
+                <h2>📂 Order Categories (Like Shopee)</h2>
+
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Category</th>
+                            <th>Included Statuses</th>
+                            <th>Purpose</th>
+                            <th>Actions Available</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td><strong>To Pay</strong></td>
+                            <td>Order Placed (Pending Payment)</td>
+                            <td>Orders awaiting payment</td>
+                            <td>Pay Now, Cancel Order</td>
+                        </tr>
+                        <tr>
+                            <td><strong>To Ship</strong></td>
+                            <td>Payment Confirmed, Order Processed</td>
+                            <td>Orders paid but not yet shipped</td>
+                            <td>Contact Seller, Cancel (if allowed)</td>
+                        </tr>
+                        <tr>
+                            <td><strong>To Receive</strong></td>
+                            <td>Shipped, In Transit, Out for Delivery</td>
+                            <td>Orders currently being delivered</td>
+                            <td>Track Order, Contact Seller, Report Issue</td>
+                        </tr>
+                        <tr>
+                            <td><strong>To Rate</strong></td>
+                            <td>Delivered (not yet rated)</td>
+                            <td>Delivered orders awaiting review</td>
+                            <td>Rate Product, Rate Seller, Request Return</td>
+                        </tr>
+                        <tr>
+                            <td><strong>Completed</strong></td>
+                            <td>Delivered + Rated</td>
+                            <td>Fully completed orders</td>
+                            <td>View Order, Buy Again, Request Return (within 7 days)</td>
+                        </tr>
+                        <tr>
+                            <td><strong>Cancelled</strong></td>
+                            <td>Cancelled, Returned, Refunded</td>
+                            <td>Orders that didn't complete</td>
+                            <td>View Details, Check Refund Status</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+
+            <!-- Handling Delayed Deliveries -->
+            <div class="section">
+                <h2>⏰ Handling Delayed Deliveries - Action Plan</h2>
+
+                <h3>Scenario 1: Order Still Within EDD</h3>
+                <div class="action-card">
+                    <h4 style="color: #f59e0b; margin-bottom: 20px;">Customer Actions Available:</h4>
+
+                    <div class="action-step">
+                        <h4>1️⃣ Check Order Status</h4>
+                        <p>Direct customer to Order Details page showing:</p>
+                        <ul style="margin-left: 20px; margin-top: 10px;">
+                            <li>Current status with visual progress bar</li>
+                            <li>EDD prominently displayed in green bar</li>
+                            <li>Last tracking update timestamp</li>
+                            <li>Expected next update timeframe</li>
+                        </ul>
+                    </div>
+
+                    <div class="action-step">
+                        <h4>2️⃣ Track Delivery</h4>
+                        <p>Provide comprehensive tracking information:</p>
+                        <ul style="margin-left: 20px; margin-top: 10px;">
+                            <li>Real-time location (if out for delivery)</li>
+                            <li>Tracking history with timestamps</li>
+                            <li>Courier contact information</li>
+                            <li>Estimated delivery time window</li>
+                        </ul>
+                        <div class="info-box" style="margin-top: 15px;">
+                            <strong>ℹ️ Set Expectations:</strong> Display message: "Tracking updates may take 24-48
+                            hours to reflect. Delays may occur during holidays or severe weather."
+                        </div>
+                    </div>
+
+                    <div class="action-step">
+                        <h4>3️⃣ Contact Seller</h4>
+                        <p>Enable direct communication:</p>
+                        <ul style="margin-left: 20px; margin-top: 10px;">
+                            <li>"Contact Seller" button on Order Details page</li>
+                            <li>In-app messaging system</li>
+                            <li>Seller must respond within 24 hours</li>
+                            <li>Escalate to admin if no response</li>
+                        </ul>
+                    </div>
+                </div>
+
+                <h3>Scenario 2: Order Past EDD (Delayed)</h3>
+                <div class="action-card"
+                    style="background: linear-gradient(135deg, #fee2e2 0%, #fecaca 100%); border-left-color: #ef4444;">
+                    <h4 style="color: #ef4444; margin-bottom: 20px;">Escalated Customer Actions:</h4>
+
+                    <div class="action-step" style="border-left-color: #ef4444;">
+                        <h4>1️⃣ Follow Up via Support Chat</h4>
+                        <p>Implement Shopee-style follow-up form:</p>
+                        <ul style="margin-left: 20px; margin-top: 10px;">
+                            <li>Dedicated "Report Delayed Delivery" button appears after EDD</li>
+                            <li>Pre-filled form with order details</li>
+                            <li>Customer describes issue</li>
+                            <li>System creates support ticket automatically</li>
+                            <li>Email update sent within 24-48 hours</li>
+                        </ul>
+                        <div class="code-block" style="margin-top: 15px;">
+                            <code>// Auto-display delayed delivery options
+if (currentDate > estimatedDeliveryDate) {
+  showDelayedDeliveryOptions();
+  // Options: Follow Up, Request Refund, Contact Support
+}</code>
+                        </div>
+                    </div>
+
+                    <div class="action-step" style="border-left-color: #ef4444;">
+                        <h4>2️⃣ Request Return/Refund</h4>
+                        <p>Enable self-service refund request:</p>
+                        <ul style="margin-left: 20px; margin-top: 10px;">
+                            <li>"Return/Refund" button appears on Order Details after EDD + 2 days</li>
+                            <li>Customer selects reason: "Item not received"</li>
+                            <li>System investigates with seller and courier</li>
+                            <li>Auto-approve refund if no proof of delivery after 7 days</li>
+                        </ul>
+                    </div>
+
+                    <div class="action-step" style="border-left-color: #ef4444;">
+                        <h4>3️⃣ Request Expedited Delivery</h4>
+                        <p>For packages stuck at hub:</p>
+                        <ul style="margin-left: 20px; margin-top: 10px;">
+                            <li>Eligible if package at last hub > 24 hours</li>
+                            <li>Eligible if order past EDD</li>
+                            <li>Customer clicks "Request Priority Delivery"</li>
+                            <li>System contacts courier to prioritize</li>
+                            <li>Update sent within 24 hours</li>
+                        </ul>
+                    </div>
+
+                    <div class="action-step" style="border-left-color: #ef4444;">
+                        <h4>4️⃣ Contact Courier Directly</h4>
+                        <p>Provide courier contact information:</p>
+                        <ul style="margin-left: 20px; margin-top: 10px;">
+                            <li>Display Lalamove support hotline</li>
+                            <li>Provide order tracking number</li>
+                            <li>Include courier reference number</li>
+                            <li>Show business hours</li>
+                        </ul>
+                    </div>
+                </div>
+
+                <h3>Scenario 3: Special Cases</h3>
+                <div class="warning-box">
+                    <h4>⚠️ COD Orders Delayed</h4>
+                    <p>Cash on Delivery orders require special handling:</p>
+                    <ul style="margin-left: 20px; margin-top: 10px;">
+                        <li>Customer must follow up via support chat</li>
+                        <li>Provide order number in inquiry</li>
+                        <li>Verify customer identity before sharing details</li>
+                        <li>Coordinate with courier on cash handling</li>
+                    </ul>
+                </div>
+
+                <div class="danger-box">
+                    <h4>❌ Return to Sender (RTS)</h4>
+                    <p>When delivery fails multiple times:</p>
+                    <ul style="margin-left: 20px; margin-top: 10px;">
+                        <li>Notify customer after 2 failed delivery attempts</li>
+                        <li>Offer alternative: pickup at depot, reschedule, change address</li>
+                        <li>If no response after 3 attempts, package returns to seller</li>
+                        <li>Refund issued minus restocking fee (if applicable)</li>
+                        <li>Customer notified of RTS status</li>
+                    </ul>
+                </div>
+
+                <div class="danger-box">
+                    <h4>🚨 Fake Delivery Attempts</h4>
+                    <p>Handling fraudulent delivery claims:</p>
+                    <ul style="margin-left: 20px; margin-top: 10px;">
+                        <li>Customer can report "Fake Delivery" if marked delivered but not received</li>
+                        <li>System requests proof of delivery from courier</li>
+                        <li>If no valid proof, refund customer immediately</li>
+                        <li>Report courier to Lalamove</li>
+                        <li>Flag courier for future orders</li>
+                    </ul>
+                </div>
+            </div>
+
+            <!-- Proactive Communication Strategy -->
+            <div class="section">
+                <h2>📢 Proactive Communication Strategy</h2>
+
+                <h3>Notification Matrix</h3>
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Trigger Event</th>
+                            <th>Timing</th>
+                            <th>Channel</th>
+                            <th>Message</th>
+                            <th>Action Link</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td>Order Placed</td>
+                            <td>Immediate</td>
+                            <td>Email</td>
+                            <td>"Order confirmed! Please complete payment."</td>
+                            <td>Pay Now</td>
+                        </tr>
+                        <tr>
+                            <td>Payment Pending</td>
+                            <td>12 hours after order</td>
+                            <td>SMS</td>
+                            <td>"Reminder: Complete payment for Order #[ID]"</td>
+                            <td>Pay Now</td>
+                        </tr>
+                        <tr>
+                            <td>Payment Confirmed</td>
+                            <td>Immediate</td>
+                            <td>Email + Push</td>
+                            <td>"Payment received! Seller is preparing your order."</td>
+                            <td>Track Order</td>
+                        </tr>
+                        <tr>
+                            <td>Order Shipped</td>
+                            <td>Immediate</td>
+                            <td>Email + SMS + Push</td>
+                            <td>"Your order is on the way! EDD: [date]"</td>
+                            <td>Track Order</td>
+                        </tr>
+                        <tr>
+                            <td>In Transit Update</td>
+                            <td>Each major milestone</td>
+                            <td>Push</td>
+                            <td>"Package update: [status]"</td>
+                            <td>View Details</td>
+                        </tr>
+                        <tr>
+                            <td>Out for Delivery</td>
+                            <td>Immediate</td>
+                            <td>SMS + Push</td>
+                            <td>"Your order is out for delivery! ETA: [time]"</td>
+                            <td>Track Driver</td>
+                        </tr>
+                        <tr>
+                            <td>Driver Nearby</td>
+                            <td>15 min before arrival</td>
+                            <td>Push</td>
+                            <td>"Driver is 15 minutes away!"</td>
+                            <td>Live Map</td>
+                        </tr>
+                        <tr>
+                            <td>Delivered</td>
+                            <td>Immediate</td>
+                            <td>Email + SMS + Push</td>
+                            <td>"Your order has been delivered!"</td>
+                            <td>Rate Order</td>
+                        </tr>
+                        <tr>
+                            <td>Approaching EDD</td>
+                            <td>1 day before EDD</td>
+                            <td>Email</td>
+                            <td>"Your order should arrive tomorrow!"</td>
+                            <td>Track Order</td>
+                        </tr>
+                        <tr>
+                            <td>Delayed (Past EDD)</td>
+                            <td>EDD + 1 day</td>
+                            <td>Email + SMS</td>
+                            <td>"We're sorry your order is delayed. Here's what you can do..."</td>
+                            <td>Report Issue</td>
+                        </tr>
+                        <tr>
+                            <td>Stuck at Hub > 24hrs</td>
+                            <td>24 hours at hub</td>
+                            <td>Email</td>
+                            <td>"Your package is at [hub]. Request priority delivery?"</td>
+                            <td>Request Expedite</td>
+                        </tr>
+                        <tr>
+                            <td>Failed Delivery Attempt</td>
+                            <td>Immediate</td>
+                            <td>SMS + Push</td>
+                            <td>"Delivery attempt failed. Reschedule or pickup?"</td>
+                            <td>Choose Option</td>
+                        </tr>
+                    </tbody>
+                </table>
+
+                <div class="info-box">
+                    <h4>📱 Notification Best Practices</h4>
+                    <ul style="margin-left: 20px; margin-top: 10px;">
+                        <li><strong>Consolidate:</strong> Don't spam customers. Group related updates.</li>
+                        <li><strong>Timing:</strong> Send during business hours (8 AM - 8 PM) unless urgent.</li>
+                        <li><strong>Personalize:</strong> Use customer's name and order details.</li>
+                        <li><strong>Actionable:</strong> Every notification should have a clear next step.</li>
+                        <li><strong>Opt-out:</strong> Allow customers to manage notification preferences.</li>
+                    </ul>
+                </div>
+            </div>
+
+            <!-- Implementation Phases -->
+            <div class="section">
+                <h2>🚀 Implementation Roadmap</h2>
+
+                <!-- Phase 1 -->
+                <div class="implementation-phase">
+                    <div class="phase-header">
+                        <div class="phase-number">1</div>
+                        <div class="phase-title">
+                            <h3>Phase 1: Core Status System</h3>
+                            <p style="color: #666; margin-top: 5px;">Foundation & Database</p>
+                        </div>
+                        <div class="phase-duration">2 weeks</div>
+                    </div>
+
+                    <h4>Tasks:</h4>
+                    <ul class="checklist">
+                        <li>Update database schema to include all order statuses</li>
+                        <li>Create status transition logic and validation</li>
+                        <li>Implement order categorization (To Pay, To Ship, etc.)</li>
+                        <li>Build basic Order Details page with status display</li>
+                        <li>Add EDD calculation and storage</li>
+                        <li>Create admin panel for manual status updates</li>
+                    </ul>
+
+                    <h4>Database Schema Updates:</h4>
+                    <div class="code-block">
+                        <code>// Add to Order model
+model Order {
+  // ... existing fields
+  
+  status              String    // PENDING, TO_SHIP, SHIPPED, IN_TRANSIT, OUT_FOR_DELIVERY, DELIVERED, CANCELLED
+  paymentStatus       String    // UNPAID, PAID, REFUNDED
+  shippingStatus      String    // NOT_SHIPPED, READY_TO_SHIP, SHIPPED, IN_TRANSIT, OUT_FOR_DELIVERY, DELIVERED, RETURNED
+  
+  estimatedDeliveryDate DateTime?
+  actualDeliveryDate    DateTime?
+  
+  trackingNumber      String?
+  courierName         String?
+  courierContact      String?
+  
+  statusHistory       OrderStatusHistory[]
+  
+  // Delay tracking
+  isDelayed           Boolean   @default(false)
+  delayReason         String?
+  delayReportedAt     DateTime?
+  
+  // RTS tracking
+  deliveryAttempts    Int       @default(0)
+  lastDeliveryAttempt DateTime?
+  isRTS               Boolean   @default(false)
+}
+
+model OrderStatusHistory {
+  id          String   @id @default(cuid())
+  orderId     String
+  order       Order    @relation(fields: [orderId], references: [id])
+  status      String
+  description String?
+  createdAt   DateTime @default(now())
+  createdBy   String?  // system, admin, seller, courier
+}</code>
+                    </div>
+                </div>
+
+                <!-- Phase 2 -->
+                <div class="implementation-phase">
+                    <div class="phase-header">
+                        <div class="phase-number">2</div>
+                        <div class="phase-title">
+                            <h3>Phase 2: Notification System</h3>
+                            <p style="color: #666; margin-top: 5px;">Automated Alerts & Updates</p>
+                        </div>
+                        <div class="phase-duration">2 weeks</div>
+                    </div>
+
+                    <h4>Tasks:</h4>
+                    <ul class="checklist">
+                        <li>Set up email notification templates</li>
+                        <li>Integrate SMS service (Twilio/Semaphore)</li>
+                        <li>Implement push notification system</li>
+                        <li>Create notification preference settings</li>
+                        <li>Build notification queue and scheduling</li>
+                        <li>Add notification logging and tracking</li>
+                    </ul>
+
+                    <h4>Notification Service Implementation:</h4>
+                    <div class="code-block">
+                        <code>// services/notificationService.js
+class NotificationService {
+  async sendOrderUpdate(orderId, status, channel = 'all') {
+    const order = await getOrderDetails(orderId);
+    const customer = order.customer;
+    
+    const message = this.getMessageTemplate(status, order);
+    
+    if (channel === 'all' || channel === 'email') {
+      await this.sendEmail(customer.email, message);
+    }
+    
+    if (channel === 'all' || channel === 'sms') {
+      await this.sendSMS(customer.phone, message);
+    }
+    
+    if (channel === 'all' || channel === 'push') {
+      await this.sendPushNotification(customer.id, message);
+    }
+    
+    // Log notification
+    await this.logNotification(orderId, status, channel);
+  }
+  
+  getMessageTemplate(status, order) {
+    const templates = {
+      PAYMENT_CONFIRMED: {
+        subject: 'Payment Confirmed - Order #' + order.orderNumber,
+        body: `Hi ${order.customer.name}, your payment has been received! 
+               Seller is preparing your order. EDD: ${order.estimatedDeliveryDate}`,
+        action: 'Track Order',
+        link: `/orders/${order.id}`
+      },
+      SHIPPED: {
+        subject: 'Your Order is On The Way! - Order #' + order.orderNumber,
+        body: `Great news! Your order has been shipped. 
+               Tracking: ${order.trackingNumber}. EDD: ${order.estimatedDeliveryDate}`,
+        action: 'Track Package',
+        link: `/orders/${order.id}/track`
+      },
+      // ... more templates
+    };
+    
+    return templates[status];
+  }
+}</code>
+                    </div>
+                </div>
+
+                <!-- Phase 3 -->
+                <div class="implementation-phase">
+                    <div class="phase-header">
+                        <div class="phase-number">3</div>
+                        <div class="phase-title">
+                            <h3>Phase 3: Enhanced Tracking UI</h3>
+                            <p style="color: #666; margin-top: 5px;">Customer-Facing Interface</p>
+                        </div>
+                        <div class="phase-duration">3 weeks</div>
+                    </div>
+
+                    <h4>Tasks:</h4>
+                    <ul class="checklist">
+                        <li>Build comprehensive Order Details page</li>
+                        <li>Create visual progress bar for order stages</li>
+                        <li>Implement real-time tracking map (Lalamove integration)</li>
+                        <li>Add order categorization tabs (To Pay, To Ship, etc.)</li>
+                        { name: 'Out for Delivery', status: 'OUT_FOR_DELIVERY', completed: false },
+                        { name: 'Delivered', status: 'DELIVERED', completed: false }
+                        ];
+
+                        return (
+                        &lt;div className="order-tracking"&gt;
+                        {/* Progress Bar */}
+                        &lt;ProgressBar stages={stages} currentStatus={order.status} /&gt;
+
+                        {/* EDD Display */}
+                        &lt;EDDDisplay
+                        edd={order.estimatedDeliveryDate}
+                        isDelayed={order.isDelayed}
+                        /&gt;
+
+                        {/* Real-time Map (if out for delivery) */}
+                        {order.status === 'OUT_FOR_DELIVERY' && (
+                        &lt;LiveTrackingMap orderId={order.id} /&gt;
+                        )}
+
+                        {/* Tracking History */}
+                        &lt;TrackingHistory history={order.statusHistory} /&gt;
+
+                        {/* Actions */}
+                        &lt;OrderActions order={order} /&gt;
+                        &lt;/div&gt;
+                        );
+                        }</code>
+                </div>
+            </div>
+
+            <!-- Phase 4 -->
+            <div class="implementation-phase">
+                <div class="phase-header">
+                    <div class="phase-number">4</div>
+                    <div class="phase-title">
+                        <h3>Phase 4: Delay Management System</h3>
+                        <p style="color: #666; margin-top: 5px;">Proactive Issue Resolution</p>
+                    </div>
+                    <div class="phase-duration">2 weeks</div>
+                </div>
+
+                <h4>Tasks:</h4>
+                <ul class="checklist">
+                    <li>Implement automatic delay detection (past EDD)</li>
+                    <li>Build "Report Delayed Delivery" form</li>
+                    <li>Create support ticket system integration</li>
+                    <li>Add "Request Expedited Delivery" feature</li>
+                    <li>Implement automatic refund for non-delivery</li>
+                    <li>Build admin dashboard for delay monitoring</li>
+                    <li>Add courier performance tracking</li>
+                </ul>
+
+                <h4>Delay Detection Logic:</h4>
+                <div class="code-block">
+                    <code>// jobs/checkDelayedOrders.js
+async function checkDelayedOrders() {
+  const today = new Date();
+  
+  // Find orders past EDD that haven't been delivered
+  const delayedOrders = await prisma.order.findMany({
+    where: {
+      estimatedDeliveryDate: { lt: today },
+      status: { notIn: ['DELIVERED', 'CANCELLED'] },
+      isDelayed: false
+    }
+  });
+  
+  for (const order of delayedOrders) {
+    // Mark as delayed
+    await prisma.order.update({
+      where: { id: order.id },
+      data: { 
+        isDelayed: true,
+        delayReportedAt: new Date()
+      }
+    });
+    
+    // Send proactive notification
+    await notificationService.sendDelayNotification(order.id);
+    
+    // Create support ticket
+    await createAutoSupportTicket(order.id, 'DELAYED_DELIVERY');
+    
+    // Notify admin
+    await notifyAdminOfDelay(order.id);
+  }
+}
+
+// Run daily
+cron.schedule('0 9 * * *', checkDelayedOrders);</code>
+                </div>
+            </div>
+
+            <!-- Phase 5 -->
+            <div class="implementation-phase">
+                <div class="phase-header">
+                    <div class="phase-number">5</div>
+                    <div class="phase-title">
+                        <h3>Phase 5: Customer Support Integration</h3>
+                        <p style="color: #666; margin-top: 5px;">Help Center & Self-Service</p>
+                    </div>
+                    <div class="phase-duration">2 weeks</div>
+                </div>
+
+                <h4>Tasks:</h4>
+                <ul class="checklist">
+                    <li>Build Help Center with delivery FAQs</li>
+                    <li>Create "What to do if order hasn't arrived" guide</li>
+                    <li>Implement live chat support</li>
+                    <li>Add chatbot for common delivery questions</li>
+                    <li>Build return/refund request system</li>
+                    <li>Create seller messaging system</li>
+                    <li>Add courier contact information display</li>
+                </ul>
+            </div>
+
+            <!-- Phase 6 -->
+            <div class="implementation-phase">
+                <div class="phase-header">
+                    <div class="phase-number">6</div>
+                    <div class="phase-title">
+                        <h3>Phase 6: Analytics & Optimization</h3>
+                        <p style="color: #666; margin-top: 5px;">Continuous Improvement</p>
+                    </div>
+                    <div class="phase-duration">Ongoing</div>
+                </div>
+
+                <h4>Tasks:</h4>
+                <ul class="checklist">
+                    <li>Track WISMO ticket reduction metrics</li>
+                    <li>Monitor delivery success rates</li>
+                    <li>Analyze delay patterns and causes</li>
+                    <li>Measure notification open/click rates</li>
+                    <li>Track customer satisfaction scores</li>
+                    <li>Identify problematic couriers/routes</li>
+                    <li>Generate monthly delivery performance reports</li>
+                </ul>
+            </div>
+        </div>
+
+        <!-- Expected Outcomes -->
+        <div class="section">
+            <h2>📈 Expected Outcomes & KPIs</h2>
+
+            <div class="comparison-grid">
+                <div class="comparison-card">
+                    <h3>🎯 Target Metrics</h3>
+                    <table style="box-shadow: none;">
+                        <tbody>
+                            <tr>
+                                <td><strong>WISMO Tickets</strong></td>
+                                <td>↓ 60-80%</td>
+                            </tr>
+                            <tr>
+                                <td><strong>Customer Satisfaction</strong></td>
+                                <td>↑ 4.5/5.0</td>
+                            </tr>
+                            <tr>
+                                <td><strong>On-Time Delivery Rate</strong></td>
+                                <td>↑ 90%+</td>
+                            </tr>
+                            <tr>
+                                <td><strong>Delivery Issue Resolution</strong></td>
+                                <td>
+                                    < 48 hours</td>
+                            </tr>
+                            <tr>
+                                <td><strong>Notification Open Rate</strong></td>
+                                <td>↑ 70%+</td>
+                            </tr>
+                            <tr>
+                                <td><strong>Self-Service Resolution</strong></td>
+                                <td>↑ 50%+</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+
+                <div class="comparison-card">
+                    <h3>💰 Business Impact</h3>
+                    <ul class="feature-list">
+                        <li>Reduced customer support costs</li>
+                        <li>Increased customer retention</li>
+                        <li>Higher repeat purchase rate</li>
+                        <li>Better seller satisfaction</li>
+                        <li>Improved brand reputation</li>
+                        <li>Lower refund/return rates</li>
+                        <li>Competitive advantage in market</li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+
+        <!-- Best Practices Summary -->
+        <div class="section">
+            <h2>✅ Best Practices Summary</h2>
+
+            <div class="success-box">
+                <h4>🌟 Key Principles</h4>
+                <ol style="margin-left: 20px; margin-top: 10px; line-height: 1.8;">
+                    <li><strong>Transparency:</strong> Always show customers exactly where their order is</li>
+                    <li><strong>Proactivity:</strong> Notify customers before they ask</li>
+                    <li><strong>Clarity:</strong> Use simple language and clear status names</li>
+                    <li><strong>Empowerment:</strong> Give customers self-service options</li>
+                    <li><strong>Accountability:</strong> Set clear expectations and meet them</li>
+                    <li><strong>Responsiveness:</strong> Address issues within 24-48 hours</li>
+                    <li><strong>Continuous Improvement:</strong> Learn from every delayed delivery</li>
+                </ol>
+            </div>
+
+            <div class="info-box">
+                <h4>📱 Mobile-First Approach</h4>
+                <p>Most customers track orders on mobile devices. Ensure:</p>
+                <ul style="margin-left: 20px; margin-top: 10px;">
+                    <li>Responsive design for all tracking pages</li>
+                    <li>Push notifications work reliably</li>
+
+                    <div class="success-box">
+                        <ul style="margin-left: 20px; margin-top: 10px; line-height: 1.8;">
+                            <li>✅ Build customer trust and loyalty</li>
+                            <li>✅ Reduce support workload by 60-80%</li>
+                            <li>✅ Improve delivery success rates</li>
+                            <li>✅ Differentiate from competitors</li>
+                            <li>✅ Create a scalable foundation for growth</li>
+                        </ul>
+                    </div>
+
+                    <p style="margin-top: 20px;"><strong>Recommended Next Steps:</strong></p>
+                    <ol style="margin-left: 20px; margin-top: 10px; line-height: 1.8;">
+                        <li>Review and approve this implementation plan</li>
+                        <li>Allocate development resources (estimated 11 weeks total)</li>
+                        <li>Begin Phase 1: Core Status System</li>
+                        <li>Set up tracking and analytics from day one</li>
+                        <li>Plan soft launch with beta users</li>
+                        <li>Gather feedback and iterate</li>
+                        <li>Full rollout after successful testing</li>
+                    </ol>
+            </div>
+
+        </div>
+
+        <div class="footer">
+            <p><strong>Budolshap E-Commerce Platform</strong></p>
+            <p>Delivery Status & Support System - Implementation Plan</p>
+            <p style="margin-top: 10px; font-size: 0.9em;">Generated: November 28, 2025</p>
+            <p style="font-size: 0.85em; opacity: 0.8; margin-top: 5px;">Based on Shopee Best Practices & Industry
+                Standards</p>
+        </div>
+    </div>
+</body>
+
+</html>

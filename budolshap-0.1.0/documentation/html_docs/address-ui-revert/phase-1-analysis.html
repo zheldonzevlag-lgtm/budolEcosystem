@@ -1,0 +1,168 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Phase 1: Analysis & Identification - Address UI Revert</title>
+    <style>
+        :root {
+            --primary: #10b981;
+            --primary-dark: #059669;
+            --secondary: #64748b;
+            --bg: #f8fafc;
+            --card-bg: #ffffff;
+            --text: #1e293b;
+            --text-light: #64748b;
+            --border: #e2e8f0;
+        }
+        body {
+            font-family: 'Inter', system-ui, -apple-system, sans-serif;
+            line-height: 1.6;
+            color: var(--text);
+            background-color: var(--bg);
+            margin: 0;
+            padding: 0;
+        }
+        .container {
+            max-width: 900px;
+            margin: 40px auto;
+            padding: 0 20px;
+        }
+        header {
+            background: white;
+            border-bottom: 1px solid var(--border);
+            padding: 20px 0;
+            margin-bottom: 40px;
+        }
+        .header-content {
+            max-width: 900px;
+            margin: 0 auto;
+            padding: 0 20px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        h1, h2, h3 {
+            color: var(--text);
+            font-weight: 700;
+        }
+        h1 { font-size: 2.25rem; margin: 0; }
+        h2 { font-size: 1.5rem; border-bottom: 2px solid var(--primary); padding-bottom: 8px; margin-top: 40px; }
+        .card {
+            background: var(--card-bg);
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            padding: 24px;
+            margin-bottom: 24px;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+        }
+        .badge {
+            display: inline-block;
+            padding: 4px 12px;
+            border-radius: 9999px;
+            font-size: 0.875rem;
+            font-weight: 600;
+        }
+        .badge-primary { background: #dcfce7; color: #166534; }
+        .badge-secondary { background: #f1f5f9; color: #475569; }
+        code {
+            background: #f1f5f9;
+            padding: 2px 6px;
+            border-radius: 4px;
+            font-family: 'Fira Code', monospace;
+            font-size: 0.9em;
+        }
+        pre {
+            background: #1e293b;
+            color: #f8fafc;
+            padding: 16px;
+            border-radius: 8px;
+            overflow-x: auto;
+            font-family: 'Fira Code', monospace;
+            font-size: 0.875rem;
+        }
+        .nav-links {
+            display: flex;
+            gap: 16px;
+        }
+        .nav-links a {
+            text-decoration: none;
+            color: var(--primary);
+            font-weight: 600;
+        }
+        .nav-links a:hover {
+            text-decoration: underline;
+        }
+    </style>
+</head>
+<body>
+    <header>
+        <div class="header-content">
+            <h1>Phase 1: Analysis</h1>
+            <nav class="nav-links">
+                <a href="index.html">Index</a>
+                <a href="phase-2-restructuring.html">Next Phase →</a>
+            </nav>
+        </div>
+    </header>
+
+    <div class="container">
+        <div class="card">
+            <span class="badge badge-primary">Completed</span>
+            <h2>Executive Summary</h2>
+            <p>The goal of this phase was to identify the core components responsible for the address management UI and analyze the differences between the current implementation and the desired state requested by the user via screenshot.</p>
+        </div>
+
+        <h2>Technical Analysis</h2>
+        <div class="card">
+            <h3>Component Identification</h3>
+            <p>Through codebase exploration, the following key files were identified:</p>
+            <ul>
+                <li><code>components/address/AddressFormManager.jsx</code>: The primary form component responsible for the UI layout and state management of store pickup addresses.</li>
+                <li><code>components/StoreAddressModal.jsx</code>: The wrapper modal that utilizes <code>AddressFormManager</code>.</li>
+            </ul>
+        </div>
+
+        <div class="card">
+            <h3>Gap Analysis</h3>
+            <p>Comparing the current UI with the requested design revealed several discrepancies:</p>
+            <table class="status-table" style="width: 100%; border-collapse: collapse;">
+                <thead>
+                    <tr style="background: #f1f5f9;">
+                        <th style="padding: 12px; text-align: left; border-bottom: 1px solid var(--border);">Feature</th>
+                        <th style="padding: 12px; text-align: left; border-bottom: 1px solid var(--border);">Current (Old)</th>
+                        <th style="padding: 12px; text-align: left; border-bottom: 1px solid var(--border);">Desired (Reverted)</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td style="padding: 12px; border-bottom: 1px solid var(--border);">Layout</td>
+                        <td style="padding: 12px; border-bottom: 1px solid var(--border);">Two-column grid</td>
+                        <td style="padding: 12px; border-bottom: 1px solid var(--border);">Single-column vertical stack</td>
+                    </tr>
+                    <tr>
+                        <td style="padding: 12px; border-bottom: 1px solid var(--border);">Color Theme</td>
+                        <td style="padding: 12px; border-bottom: 1px solid var(--border);">Orange (Brand Primary)</td>
+                        <td style="padding: 12px; border-bottom: 1px solid var(--border);">Green (Success/Revert Theme)</td>
+                    </tr>
+                    <tr>
+                        <td style="padding: 12px; border-bottom: 1px solid var(--border);">Section Order</td>
+                        <td style="padding: 12px; border-bottom: 1px solid var(--border);">Location → Contact → Details</td>
+                        <td style="padding: 12px; border-bottom: 1px solid var(--border);">Contact → Location → Settings</td>
+                    </tr>
+                    <tr>
+                        <td style="padding: 12px; border-bottom: 1px solid var(--border);">Map Height</td>
+                        <td style="padding: 12px; border-bottom: 1px solid var(--border);">300px (Large)</td>
+                        <td style="padding: 12px; border-bottom: 1px solid var(--border);">200px (Compact)</td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+
+        <h2>Risk Assessment</h2>
+        <div class="card">
+            <p><strong>Low Risk:</strong> The changes are purely UI-driven and do not alter the underlying data structure or form submission logic. Functionality is preserved while aesthetics are reverted.</p>
+        </div>
+    </div>
+</body>
+</html>

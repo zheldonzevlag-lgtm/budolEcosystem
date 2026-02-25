@@ -1,0 +1,203 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Lalamove Order Status Sync Fix Plan</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            line-height: 1.6;
+            color: #333;
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+            background-color: #f5f5f5;
+        }
+
+        .container {
+            background-color: white;
+            padding: 40px;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+        }
+
+        h1 {
+            color: #2c3e50;
+            border-bottom: 2px solid #3498db;
+            padding-bottom: 10px;
+        }
+
+        h2 {
+            color: #34495e;
+            margin-top: 30px;
+        }
+
+        h3 {
+            color: #7f8c8d;
+        }
+
+        .status-badge {
+            display: inline-block;
+            padding: 4px 8px;
+            border-radius: 4px;
+            font-size: 0.9em;
+            font-weight: bold;
+        }
+
+        .status-cancelled {
+            background-color: #ffebee;
+            color: #c62828;
+        }
+
+        .status-processing {
+            background-color: #e3f2fd;
+            color: #1565c0;
+        }
+
+        .code-block {
+            background-color: #f8f9fa;
+            border: 1px solid #e9ecef;
+            border-radius: 4px;
+            padding: 15px;
+            font-family: 'Consolas', 'Monaco', monospace;
+            overflow-x: auto;
+        }
+
+        .alert {
+            padding: 15px;
+            margin-bottom: 20px;
+            border: 1px solid transparent;
+            border-radius: 4px;
+        }
+
+        .alert-info {
+            color: #0c5460;
+            background-color: #d1ecf1;
+            border-color: #bee5eb;
+        }
+
+        .alert-warning {
+            color: #856404;
+            background-color: #fff3cd;
+            border-color: #ffeeba;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 20px;
+        }
+
+        th,
+        td {
+            border: 1px solid #ddd;
+            padding: 12px;
+            text-align: left;
+        }
+
+        th {
+            background-color: #f2f2f2;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="container">
+        <h1>Lalamove Order Status Synchronization Fix</h1>
+        <p><strong>Date:</strong> December 13, 2025</p>
+        <p><strong>Status:</strong> Planned</p>
+
+        <div class="alert alert-warning">
+            <strong>Problem:</strong> Orders cancelled by Lalamove drivers appear as "Processing" or "Driver Assigned"
+            in the Seller and Buyer dashboards, causing confusion.
+        </div>
+
+        <h2>1. Issue Analysis</h2>
+        <p>Based on the investigation and user reports (Images 1, 2, 3), the following discrepancy exists:</p>
+        <table>
+            <tr>
+                <th>Platform</th>
+                <th>Current Status Display</th>
+                <th>Expected Status Display</th>
+            </tr>
+            <tr>
+                <td><strong>Lalamove Portal</strong></td>
+                <td><span class="status-badge status-cancelled">CANCELLED</span></td>
+                <td><span class="status-badge status-cancelled">CANCELLED</span></td>
+            </tr>
+            <tr>
+                <td><strong>Seller Dashboard</strong></td>
+                <td><span class="status-badge status-processing">PROCESSING</span></td>
+                <td><span class="status-badge status-cancelled">CANCELLED / FAILED</span></td>
+            </tr>
+            <tr>
+                <td><strong>Buyer Tracking</strong></td>
+                <td><span class="status-badge status-processing">Driver Assigned</span></td>
+                <td><span class="status-badge status-cancelled">Delivery Cancelled</span></td>
+            </tr>
+        </table>
+
+        <h3>Root Cause</h3>
+        <p>When Lalamove sends a <code>CANCELLED</code> or <code>EXPIRED</code> webhook, the backend
+            (<code>app/api/webhooks/lalamove/route.js</code>) intentionally reverts the order status to
+            <strong>PROCESSING</strong>. This is designed to allow the seller to "Rebook" the order. However, the UI
+            does not distinguish between a "normal" processing order and a "failed/reverted" processing order, leading
+            to the confusing "Driver Assigned" display.
+        </p>
+
+        <h2>2. Implementation Plan</h2>
+        <p>We will fix this by updating the <strong>UI Logic</strong> to detect the failure flags set by the backend,
+            without removing the ability to rebook.</p>
+
+        <div class="alert alert-info">
+            <strong>Strategy:</strong> We will check for <code>order.shipping.failureReason</code>. If present, the UI
+            will treat the order as "Cancelled/Failed" even if the database status is "PROCESSING".
+        </div>
+
+        <h3>A. Seller Dashboard Updates</h3>
+        <p><strong>File:</strong> <code>app/store/orders/page.jsx</code></p>
+        <ul>
+            <li>Update <code>getDeliveryStatus(order)</code> helper function.</li>
+            <li>Logic: If <code>status === 'PROCESSING'</code> AND <code>shipping.failureReason</code> exists &rarr;
+                Return <code>'cancelled'</code>.</li>
+            <li>This will move the order card to the <strong>Cancelled</strong> tab automatically.</li>
+            <li>The "Rebook Delivery" button will remain accessible (or be added to the cancelled view).</li>
+        </ul>
+
+        <h3>B. Buyer Progress Tracker Updates</h3>
+        <p><strong>File:</strong> <code>components/OrderProgressTracker.jsx</code></p>
+        <ul>
+            <li>Add check for <code>order.shipping.failureReason</code>.</li>
+            <li>If failed, override the active step label to <strong>"Delivery Cancelled"</strong> (Red).</li>
+            <li>Hide the "Driver Assigned" icon/text in this state.</li>
+        </ul>
+
+        <h3>C. Tracking Timeline Updates</h3>
+        <p><strong>File:</strong> <code>components/TrackingTimeline.jsx</code></p>
+        <ul>
+            <li>Add a new timeline event block.</li>
+            <li>If <code>shipping.failureReason</code> exists, append a "Delivery Failed/Cancelled" event to the
+                history.</li>
+            <li>Display the reason (e.g., "Driver Cancelled", "Expired") if available.</li>
+        </ul>
+
+        <h2>3. Verification Steps</h2>
+        <ol>
+            <li><strong>Simulate Failure:</strong> Use existing test scripts to create an order and push a
+                <code>CANCELLED</code> webhook.
+            </li>
+            <li><strong>Seller Check:</strong> Verify the order moves to the "Cancelled" tab in the Seller Dashboard.
+            </li>
+            <li><strong>Buyer Check:</strong> Verify the order tracking page shows "Delivery Cancelled" instead of
+                "Driver Assigned".</li>
+            <li><strong>Rebook Check:</strong> Ensure the seller can still click "Rebook" to restart the process.</li>
+        </ol>
+
+        <hr>
+        <p><em>Budolshap © 2025</em></p>
+    </div>
+</body>
+
+</html>

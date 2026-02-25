@@ -1,0 +1,388 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Budolshap Implementation Roadmap | Phase-by-Phase Plan</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link
+        href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;700&family=Inter:wght@400;500;600&display=swap"
+        rel="stylesheet">
+    <style>
+        :root {
+            --primary: #10b981;
+            --primary-dark: #059669;
+            --secondary: #6366f1;
+            --accent: #f59e0b;
+            --bg: #f8fafc;
+            --card-bg: #ffffff;
+            --text-main: #1e293b;
+            --text-muted: #64748b;
+            --border: #e2e8f0;
+            --radius: 16px;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: var(--bg);
+            color: var(--text-main);
+            line-height: 1.6;
+            padding: 40px 20px;
+        }
+
+        h1,
+        h2,
+        h3 {
+            font-family: 'Outfit', sans-serif;
+            font-weight: 700;
+        }
+
+        .container {
+            max-width: 1000px;
+            margin: 0 auto;
+        }
+
+        .header {
+            text-align: center;
+            margin-bottom: 60px;
+            animation: fadeInDown 0.8s ease-out;
+        }
+
+        .logo {
+            font-family: 'Outfit', sans-serif;
+            font-size: 2.5rem;
+            font-weight: 800;
+            margin-bottom: 10px;
+            display: inline-block;
+        }
+
+        .logo .green {
+            color: var(--primary);
+        }
+
+        .logo .dark {
+            color: #0f172a;
+        }
+
+        .header-desc {
+            font-size: 1.1rem;
+            color: var(--text-muted);
+            max-width: 600px;
+            margin: 0 auto;
+        }
+
+        /* Roadmap Timeline */
+        .timeline {
+            position: relative;
+            padding: 20px 0;
+        }
+
+        .phase-card {
+            background: var(--card-bg);
+            border-radius: var(--radius);
+            padding: 32px;
+            margin-bottom: 40px;
+            border: 1px solid var(--border);
+            box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1);
+            position: relative;
+            transition: transform 0.3s ease, box-shadow 0.3s ease;
+            animation: fadeInUp 0.8s ease-out backwards;
+        }
+
+        .phase-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 20px 25px -5px rgb(0 0 0 / 0.1), 0 8px 10px -6px rgb(0 0 0 / 0.1);
+        }
+
+        .phase-card::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 4px;
+            height: 100%;
+            border-radius: var(--radius) 0 0 var(--radius);
+        }
+
+        .phase-card.done::before {
+            background: var(--primary);
+        }
+
+        .phase-card.active::before {
+            background: var(--secondary);
+        }
+
+        .phase-card.planned::before {
+            background: var(--text-muted);
+        }
+
+        .phase-badge {
+            display: inline-block;
+            padding: 6px 12px;
+            border-radius: 99px;
+            font-size: 0.75rem;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            margin-bottom: 16px;
+        }
+
+        .done .phase-badge {
+            background: #d1fae5;
+            color: #065f46;
+        }
+
+        .active .phase-badge {
+            background: #e0e7ff;
+            color: #3730a3;
+        }
+
+        .planned .phase-badge {
+            background: #f1f5f9;
+            color: #475569;
+        }
+
+        .phase-title {
+            font-size: 1.75rem;
+            margin-bottom: 8px;
+            color: #0f172a;
+        }
+
+        .phase-meta {
+            display: flex;
+            gap: 24px;
+            margin-bottom: 24px;
+            font-size: 0.9rem;
+            color: var(--text-muted);
+            border-bottom: 1px solid var(--border);
+            padding-bottom: 16px;
+        }
+
+        .meta-item {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .meta-item b {
+            color: var(--text-main);
+        }
+
+        .phase-content {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 32px;
+        }
+
+        @media (max-width: 768px) {
+            .phase-content {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        .grid-section h4 {
+            font-size: 1rem;
+            color: var(--text-main);
+            margin-bottom: 12px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .feature-list,
+        .dep-list {
+            list-style: none;
+        }
+
+        .feature-list li {
+            position: relative;
+            padding-left: 24px;
+            margin-bottom: 8px;
+            font-size: 0.95rem;
+        }
+
+        .feature-list li::before {
+            content: '✓';
+            position: absolute;
+            left: 0;
+            color: var(--primary);
+            font-weight: bold;
+        }
+
+        .planned .feature-list li::before {
+            content: '○';
+            color: var(--text-muted);
+        }
+
+        .dep-tag {
+            display: inline-block;
+            padding: 4px 10px;
+            background: #f1f5f9;
+            border-radius: 6px;
+            font-size: 0.8rem;
+            margin: 0 4px 6px 0;
+            border: 1px solid var(--border);
+        }
+
+        footer {
+            text-align: center;
+            margin-top: 60px;
+            color: var(--text-muted);
+            font-size: 0.85rem;
+        }
+
+        @keyframes fadeInUp {
+            from {
+                opacity: 0;
+                transform: translateY(20px);
+            }
+
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        @keyframes fadeInDown {
+            from {
+                opacity: 0;
+                transform: translateY(-20px);
+            }
+
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .phase-card:nth-child(2) {
+            animation-delay: 0.2s;
+        }
+
+        .phase-card:nth-child(3) {
+            animation-delay: 0.4s;
+        }
+    </style>
+</head>
+
+<body>
+
+    <div class="container">
+        <header class="header">
+            <div class="logo">
+                <span class="dark">budol</span><span class="green">shap</span>
+            </div>
+            <h1>Implementation Roadmap</h1>
+            <p class="header-desc">Detailed alignment of Budolshap processes with Shopee standard best practices for
+                E-commerce reliability.</p>
+        </header>
+
+        <div class="timeline">
+            <!-- PHASE 1 -->
+            <div class="phase-card done">
+                <span class="phase-badge">Completed</span>
+                <h2 class="phase-title">Phase 1: Automated Escrow & Protection</h2>
+                <div class="phase-meta">
+                    <div class="meta-item">⏱ <b>Timeframe:</b> 2 Days</div>
+                    <div class="meta-item">🛡 <b>Status:</b> Production Ready</div>
+                </div>
+                <div class="phase-content">
+                    <div class="grid-section">
+                        <h4>Key Deliverables</h4>
+                        <ul class="feature-list">
+                            <li>Automatic Cancellation of expired QRPH/Online orders (48h threshold).</li>
+                            <li>Escrow Protection Window settings in Admin Dashboard.</li>
+                            <li>Prisma migration for SystemSettings and logic triggers.</li>
+                            <li>Automated background jobs (Cron) via Next.js API.</li>
+                        </ul>
+                    </div>
+                    <div class="grid-section">
+                        <h4>Dependencies</h4>
+                        <div class="dep-list">
+                            <span class="dep-tag">Vercel/Next.js Cron</span>
+                            <span class="dep-tag">Prisma ORM</span>
+                            <span class="dep-tag">Admin Auth Provider</span>
+                            <span class="dep-tag">SystemSettings Model</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- PHASE 2 -->
+            <div class="phase-card done">
+                <span class="phase-badge">Completed</span>
+                <h2 class="phase-title">Phase 2: QRPH Verification System</h2>
+                <div class="phase-meta">
+                    <div class="meta-item">⏱ <b>Timeframe:</b> 3 Days</div>
+                    <div class="meta-item">🛡 <b>Status:</b> Programmatically Verified</div>
+                </div>
+                <div class="phase-content">
+                    <div class="grid-section">
+                        <h4>Key Deliverables</h4>
+                        <ul class="feature-list">
+                            <li>Buyer-side Payment Proof upload interface (Mobile First).</li>
+                            <li>Admin Verification Center for Image/Receipt review.</li>
+                            <li>Status Transition Logic: <b>Pending Verification</b> state.</li>
+                            <li>Real-time Buyer notifications for Approval/Rejection.</li>
+                        </ul>
+                    </div>
+                    <div class="grid-section">
+                        <h4>Dependencies</h4>
+                        <div class="dep-list">
+                            <span class="dep-tag">Pusher/Socket.io</span>
+                            <span class="dep-tag">Image Cloud Storage</span>
+                            <span class="dep-tag">PaymentProof Schema</span>
+                            <span class="dep-tag">Admin Role Permissions</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- PHASE 3 -->
+            <div class="phase-card active">
+                <span class="phase-badge">In Progress</span>
+                <h2 class="phase-title">Phase 3: Advanced Return & Refund (R&R)</h2>
+                <div class="phase-meta">
+                    <div class="meta-item">⏱ <b>Timeframe:</b> 5 Days</div>
+                    <div class="meta-item">🛡 <b>Status:</b> Design & Architecture</div>
+                </div>
+                <div class="phase-content">
+                    <div class="grid-section">
+                        <h4>Key Deliverables</h4>
+                        <ul class="feature-list">
+                            <li><b>Refund Only</b> vs <b>Return and Refund</b> logic.</li>
+                            <li>Seller Response Center: Accept, Reject, or Dispute.</li>
+                            <li>Escrow Wallet reversals (Atomic wallet credits).</li>
+                            <li>Admin Arbitration Center for dispute resolution.</li>
+                            <li>Auto-resolution deadlines (Seller must respond in X days).</li>
+                        </ul>
+                    </div>
+                    <div class="grid-section">
+                        <h4>Dependencies</h4>
+                        <div class="dep-list">
+                            <span class="dep-tag">Wallet/Transaction Model</span>
+                            <span class="dep-tag">Atomic DB Transactions</span>
+                            <span class="dep-tag">Notification Service</span>
+                            <span class="dep-tag">Advanced Escrow Logic</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <footer>
+            &copy; 2025 Budolshap Ecosystem &bull; Technical Implementation Strategy &bull; v1.2.0
+        </footer>
+    </div>
+
+</body>
+
+</html>

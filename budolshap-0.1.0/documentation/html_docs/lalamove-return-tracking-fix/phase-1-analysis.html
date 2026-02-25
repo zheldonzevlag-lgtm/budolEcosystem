@@ -1,0 +1,190 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Phase 1: Problem Analysis - Lalamove Return Tracking Fix</title>
+    <style>
+        :root {
+            --primary-color: #2563eb;
+            --secondary-color: #1e40af;
+            --text-color: #1f2937;
+            --bg-color: #f8fafc;
+            --card-bg: #ffffff;
+            --border-color: #e2e8f0;
+            --code-bg: #1e293b;
+            --code-text: #f8fafc;
+        }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+            line-height: 1.6;
+            color: var(--text-color);
+            background-color: var(--bg-color);
+            margin: 0;
+            padding: 0;
+        }
+        .container {
+            max-width: 1000px;
+            margin: 2rem auto;
+            padding: 0 1rem;
+        }
+        header {
+            background-color: var(--primary-color);
+            color: white;
+            padding: 2rem 0;
+            text-align: center;
+            margin-bottom: 2rem;
+            box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1);
+        }
+        nav {
+            background: white;
+            padding: 1rem;
+            border-radius: 8px;
+            margin-bottom: 2rem;
+            box-shadow: 0 1px 3px 0 rgb(0 0 0 / 0.1);
+        }
+        nav a {
+            color: var(--primary-color);
+            text-decoration: none;
+            margin-right: 1.5rem;
+            font-weight: 500;
+        }
+        nav a:hover {
+            text-decoration: underline;
+        }
+        .card {
+            background: var(--card-bg);
+            padding: 2rem;
+            border-radius: 8px;
+            box-shadow: 0 1px 3px 0 rgb(0 0 0 / 0.1);
+            margin-bottom: 2rem;
+        }
+        h1, h2, h3 {
+            color: var(--secondary-color);
+        }
+        .status-badge {
+            display: inline-block;
+            padding: 0.25rem 0.75rem;
+            border-radius: 9999px;
+            font-size: 0.875rem;
+            font-weight: 600;
+            background-color: #dcfce7;
+            color: #166534;
+        }
+        code {
+            background-color: #f1f5f9;
+            padding: 0.2rem 0.4rem;
+            border-radius: 4px;
+            font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+            font-size: 0.9em;
+        }
+        pre {
+            background-color: var(--code-bg);
+            color: var(--code-text);
+            padding: 1.5rem;
+            border-radius: 8px;
+            overflow-x: auto;
+            margin: 1.5rem 0;
+        }
+        pre code {
+            background: transparent;
+            color: inherit;
+            padding: 0;
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 1.5rem 0;
+        }
+        th, td {
+            text-align: left;
+            padding: 0.75rem;
+            border-bottom: 1px solid var(--border-color);
+        }
+        th {
+            background-color: #f1f5f9;
+            font-weight: 600;
+        }
+        .risk-high { color: #dc2626; font-weight: bold; }
+        .risk-med { color: #d97706; font-weight: bold; }
+    </style>
+</head>
+<body>
+    <header>
+        <div class="container">
+            <h1>Phase 1: Problem Analysis</h1>
+            <p>Lalamove Return Tracking System Optimization</p>
+        </div>
+    </header>
+
+    <div class="container">
+        <nav>
+            <a href="index.html">← Back to Index</a>
+            <a href="phase-1-analysis.html">Phase 1: Analysis</a>
+            <a href="phase-2-implementation.html">Phase 2: Implementation</a>
+            <a href="phase-3-testing-verification.html">Phase 3: Testing</a>
+            <a href="implementation-summary.html">Summary</a>
+        </nav>
+
+        <div class="card">
+            <h2>Executive Summary</h2>
+            <p>The current return process in Budolshap encountered significant issues where return shipments (booked via Lalamove) failed to update their statuses in the UI. While the original delivery tracking worked correctly, the return tracking logic was decoupled from the main order's shipping updates, leading to a "stuck" state in the user and store dashboards.</p>
+        </div>
+
+        <div class="card">
+            <h2>Problem Identification</h2>
+            <p>Through detailed code analysis and log review, the following core issues were identified:</p>
+            <ul>
+                <li><strong>Data Decoupling:</strong> The return tracking used <code>Return.returnShipping</code> while the system primarily monitored <code>Order.shipping</code>.</li>
+                <li><strong>Webhook Routing:</strong> Lalamove webhooks for returns were being processed but failed to update the specific <code>Return</code> record because the metadata was not consistently utilized to differentiate between a standard delivery and a return.</li>
+                <li><strong>Realtime Event Gaps:</strong> Even when data updated in the database, <code>return-updated</code> events were not consistently triggered, preventing UI updates without page refreshes.</li>
+                <li><strong>Sync Logic Flaws:</strong> Background services and manual sync routes only looked at the main order's <code>trackingNumber</code>, ignoring the secondary <code>booked ID</code> generated for returns.</li>
+            </ul>
+        </div>
+
+        <div class="card">
+            <h2>Technical Constraints & Dependencies</h2>
+            <table>
+                <thead>
+                    <tr>
+                        <th>Component</th>
+                        <th>Requirement</th>
+                        <th>Impact</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td>Prisma Schema</td>
+                        <td><code>Return</code> model with <code>returnShipping</code> Json field</td>
+                        <td>Storage for return-specific Lalamove data.</td>
+                    </tr>
+                    <tr>
+                        <td>Lalamove API</td>
+                        <td>Webhook payloads with <code>metadata</code></td>
+                        <td>Used to identify return-type bookings.</td>
+                    </tr>
+                    <tr>
+                        <td>Realtime Service</td>
+                        <td>Pusher/Socket integration</td>
+                        <td>Required for instant UI status propagation.</td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+
+        <div class="card">
+            <h2>Risk Assessment</h2>
+            <ul>
+                <li><span class="risk-med">Medium Risk:</span> Accidental updates to main order status when a return fails.</li>
+                <li><span class="risk-med">Medium Risk:</span> Race conditions between webhook updates and manual syncs.</li>
+                <li><span class="risk-high">High Risk:</span> Incorrect status mapping (e.g., Lalamove <code>COMPLETED</code> marking a return as <code>CANCELLED</code>).</li>
+            </ul>
+        </div>
+
+        <div class="card">
+            <h2>Next Steps (Phase 2)</h2>
+            <p>The implementation will focus on unifying the tracking logic across three main entry points: Webhooks, Manual Sync, and Background Services, ensuring <code>isReturnSync</code> logic is applied consistently.</p>
+        </div>
+    </div>
+</body>
+</html>

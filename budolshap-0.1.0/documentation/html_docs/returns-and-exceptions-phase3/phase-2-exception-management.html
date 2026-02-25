@@ -1,0 +1,100 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Phase 2: Exception Management - BudolShap</title>
+    <style>
+        :root { --primary: #ee4d2d; --bg: #f5f5f5; --text: #333; }
+        body { font-family: -apple-system, system-ui, sans-serif; line-height: 1.6; color: var(--text); background: var(--bg); margin: 0; padding: 20px; }
+        .container { max-width: 900px; margin: 0 auto; background: white; padding: 40px; border-radius: 12px; box-shadow: 0 4px 20px rgba(0,0,0,0.08); }
+        h1, h2, h3 { color: var(--primary); }
+        pre { background: #f8f9fa; padding: 15px; border-radius: 6px; border-left: 4px solid var(--primary); overflow-x: auto; }
+        code { font-family: 'Fira Code', monospace; font-size: 0.9em; }
+        .back-link { display: inline-block; margin-bottom: 20px; color: var(--primary); text-decoration: none; font-weight: bold; }
+        .spec-table { width: 100%; border-collapse: collapse; margin: 20px 0; }
+        .spec-table th, .spec-table td { border: 1px solid #eee; padding: 12px; text-align: left; }
+        .spec-table th { background: #fafafa; }
+        .nav-footer { margin-top: 50px; padding-top: 20px; border-top: 1px solid #eee; display: flex; justify-content: space-between; align-items: center; }
+        .nav-link { color: var(--primary); text-decoration: none; font-weight: bold; }
+        .nav-link:hover { text-decoration: underline; }
+        .badge { display: inline-block; padding: 4px 12px; border-radius: 20px; font-size: 0.8rem; font-weight: 600; }
+        .badge-success { background: #e8f5e9; color: #2e7d32; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div style="margin-bottom: 20px;">
+            <a href="index.html" style="color: var(--primary); text-decoration: none; font-weight: bold;">← Back to Phase Index</a>
+        </div>
+        <h1>Phase 2: Exception & Failure Management</h1>
+        
+        <h2>Implementation Status: <span class="badge badge-success">COMPLETED</span></h2>
+        <p>This phase introduced robust handling for "Non-Happy Path" scenarios in the delivery process, ensuring that sellers can recover from courier failures without losing order momentum.</p>
+
+        <h3>1. Failure Status Handling</h3>
+        <p>The system now explicitly handles various courier failure states received via webhooks (e.g., Lalamove):</p>
+        <table class="spec-table">
+            <thead>
+                <tr>
+                    <th>Courier Status</th>
+                    <th>System Response</th>
+                    <th>Seller Action</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td><code>CANCELED</code></td>
+                    <td>Marks shipping as failed; preserves history.</td>
+                    <td>Re-book or Switch Courier</td>
+                </tr>
+                <tr>
+                    <td><code>EXPIRED</code></td>
+                    <td>Alerts seller that no driver was found within the timeout period.</td>
+                    <td><span style="color: #2563eb; font-weight: bold;">Rebook Delivery</span> link in order list.</td>
+                </tr>
+                <tr>
+                    <td><code>REJECTED</code></td>
+                    <td>Logs reason for rejection.</td>
+                    <td>Update details and Re-book</td>
+                </tr>
+            </tbody>
+        </table>
+
+        <h3>2. Key Features</h3>
+        
+        <h4>A. Courier Switching (Manual Booking)</h4>
+        <p>Sellers are no longer locked into Lalamove. If a booking fails, they can switch to a <strong>Manual Provider</strong> (e.g., J&T, Grab, Personal Delivery).</p>
+        <ul>
+            <li>New endpoint: <code>/api/shipping/manual/book</code></li>
+            <li>Allows input of Provider Name, Tracking Number, and Tracking URL.</li>
+            <li>Updates order status to <code>PROCESSING</code> / <code>SHIPPED</code> while maintaining the Shopee-style UI.</li>
+        </ul>
+
+        <h4>B. History Preservation & UI Display</h4>
+        <p>Re-booking no longer overwrites previous shipping data. All attempts are archived in <code>order.shipping.previousAttempts</code>, allowing for audit trails.</p>
+        <ul>
+            <li><strong>UI Integration:</strong> The "Tracking History" sidebar now displays a chronological list of all events, including failures.</li>
+            <li><strong>Exception Highlighting:</strong> Failed attempts are marked with a red "✕" icon in the vertical history list.</li>
+            <li><strong>Reason Logging:</strong> Detailed failure reasons (e.g., "No driver found", "Cancelled by sender") are displayed directly under the status label.</li>
+        </ul>
+
+        <h4>C. Manual Sync & Recovery</h4>
+        <p>Added a "Manual Sync" button in the Seller Dashboard to force-refresh status from the courier API in case webhooks are delayed.</p>
+
+        <h3>3. Success Criteria Validation</h3>
+        <ul>
+            <li>✅ Sellers can re-book failed Lalamove orders without error.</li>
+            <li>✅ "Switch to Manual Courier" option is functional in the booking modal.</li>
+            <li>✅ Webhook failures are mitigated by a redundant polling mechanism.</li>
+            <li>✅ Order history correctly logs all failed delivery attempts.</li>
+        </ul>
+
+        <div class="nav-footer">
+            <a href="phase-1-return-lifecycle.html" class="nav-link">← Previous: 1. Return Lifecycle</a>
+            <a href="index.html" class="nav-link">Back to Index</a>
+            <a href="phase-3-delivery-proof.html" class="nav-link">Next: 3. Delivery Proof →</a>
+        </div>
+    </div>
+</body>
+</html>

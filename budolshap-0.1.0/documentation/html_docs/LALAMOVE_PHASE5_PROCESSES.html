@@ -1,0 +1,1328 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Lalamove Phase 5 - Step-by-Step Implementation Guide</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            line-height: 1.6;
+            color: #333;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 20px;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+            overflow: hidden;
+        }
+
+        .header {
+            background: linear-gradient(135deg, #FF6B35 0%, #F7931E 100%);
+            color: white;
+            padding: 40px;
+            text-align: center;
+        }
+
+        .header h1 {
+            font-size: 2.5em;
+            margin-bottom: 10px;
+            text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.2);
+        }
+
+        .header .subtitle {
+            font-size: 1.2em;
+            opacity: 0.95;
+        }
+
+        .content {
+            padding: 40px;
+        }
+
+        .section {
+            margin-bottom: 40px;
+        }
+
+        .section h2 {
+            color: #FF6B35;
+            font-size: 1.8em;
+            margin-bottom: 20px;
+            padding-bottom: 10px;
+            border-bottom: 3px solid #FF6B35;
+        }
+
+        .section h3 {
+            color: #667eea;
+            font-size: 1.4em;
+            margin: 25px 0 15px 0;
+        }
+
+        .step-card {
+            background: #f7fafc;
+            border-left: 5px solid #667eea;
+            padding: 25px;
+            margin: 20px 0;
+            border-radius: 8px;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+        }
+
+        .step-card h4 {
+            color: #667eea;
+            font-size: 1.3em;
+            margin-bottom: 15px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .step-number {
+            background: #667eea;
+            color: white;
+            width: 35px;
+            height: 35px;
+            border-radius: 50%;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: bold;
+            font-size: 1.1em;
+        }
+
+        .code-block {
+            background: #2d3748;
+            color: #e2e8f0;
+            padding: 20px;
+            border-radius: 8px;
+            overflow-x: auto;
+            margin: 15px 0;
+            font-family: 'Courier New', monospace;
+            font-size: 0.9em;
+            line-height: 1.5;
+        }
+
+        .code-block .comment {
+            color: #68d391;
+        }
+
+        .code-block .keyword {
+            color: #f687b3;
+        }
+
+        .code-block .string {
+            color: #fbd38d;
+        }
+
+        .info-box {
+            background: #ebf8ff;
+            border-left: 4px solid #4299e1;
+            padding: 20px;
+            margin: 15px 0;
+            border-radius: 8px;
+        }
+
+        .warning-box {
+            background: #fffaf0;
+            border-left: 4px solid #f6ad55;
+            padding: 20px;
+            margin: 15px 0;
+            border-radius: 8px;
+        }
+
+        .success-box {
+            background: #f0fff4;
+            border-left: 4px solid #38a169;
+            padding: 20px;
+            margin: 15px 0;
+            border-radius: 8px;
+        }
+
+        .error-box {
+            background: #fff5f5;
+            border-left: 4px solid #e53e3e;
+            padding: 20px;
+            margin: 15px 0;
+            border-radius: 8px;
+        }
+
+        .sub-steps {
+            margin-left: 30px;
+            margin-top: 15px;
+        }
+
+        .sub-steps li {
+            margin: 10px 0;
+            padding-left: 10px;
+        }
+
+        .footer {
+            background: #2d3748;
+            color: white;
+            padding: 30px;
+            text-align: center;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 20px 0;
+            background: white;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+            border-radius: 8px;
+            overflow: hidden;
+        }
+
+        th {
+            background: #667eea;
+            color: white;
+            padding: 15px;
+            text-align: left;
+            font-weight: bold;
+        }
+
+        td {
+            padding: 12px 15px;
+            border-bottom: 1px solid #e2e8f0;
+        }
+
+        tr:last-child td {
+            border-bottom: none;
+        }
+
+        tr:hover {
+            background: #f7fafc;
+        }
+
+        .highlight {
+            background: #fef5e7;
+            padding: 2px 6px;
+            border-radius: 3px;
+            font-weight: bold;
+            color: #d68910;
+        }
+
+        .badge {
+            display: inline-block;
+            padding: 4px 12px;
+            border-radius: 12px;
+            font-size: 0.85em;
+            font-weight: bold;
+            margin: 0 5px;
+        }
+
+        .badge-critical {
+            background: #e53e3e;
+            color: white;
+        }
+
+        .badge-important {
+            background: #f6ad55;
+            color: white;
+        }
+
+        .badge-optional {
+            background: #4299e1;
+            color: white;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>📖 Lalamove Phase 5</h1>
+            <div class="subtitle">Step-by-Step Implementation Guide</div>
+            <div class="subtitle" style="margin-top: 10px; font-size: 1em;">Creating Real Orders in Partner Portal
+            </div>
+        </div>
+
+        <div class="content">
+            <!-- Introduction -->
+            <div class="section">
+                <h2>🎯 Overview</h2>
+                <p>This guide provides detailed, step-by-step instructions for implementing Phase 5 of the Lalamove
+                    integration. By following these steps, you will enable actual order creation that appears in your
+                    Lalamove Partner Portal.</p>
+
+                <div class="warning-box">
+                    <h4>⚠️ Critical Understanding</h4>
+                    <p><strong>The Key Issue:</strong> The current implementation uses hardcoded stopIds ('0' and '1')
+                        when creating orders. However, Lalamove requires you to use the <strong>actual stopIds</strong>
+                        returned in the quote response.</p>
+                    <p style="margin-top: 10px;"><strong>Why This Matters:</strong> Each quote generates unique stopIds
+                        for each location. These IDs link the order back to the original quote and ensure proper
+                        routing and pricing.</p>
+                </div>
+            </div>
+
+            <!-- Step 1 -->
+            <div class="section">
+                <h2>Step 1: Understanding the Quote Response Structure</h2>
+
+                <div class="step-card">
+                    <h4><span class="step-number">1.1</span> Examine Quote Response</h4>
+                    <p>First, let's understand what data the quote API returns. Run this test to see the structure:</p>
+
+                    <div class="code-block">
+                        <span class="comment">// test-quote-structure.js</span>
+                        <span class="keyword">const</span> { getShippingProvider } =
+                        require('./services/shippingFactory');
+
+                        async function examineQuoteStructure() {
+                        <span class="keyword">const</span> lalamove = getShippingProvider('lalamove');
+
+                        <span class="keyword">const</span> quoteData = {
+                        serviceType: <span class="string">'MOTORCYCLE'</span>,
+                        language: <span class="string">'en_PH'</span>,
+                        stops: [
+                        {
+                        coordinates: { lat: <span class="string">'14.5995'</span>, lng: <span
+                            class="string">'120.9842'</span> },
+                        address: <span class="string">'Manila City Hall, Manila'</span>
+                        },
+                        {
+                        coordinates: { lat: <span class="string">'14.5547'</span>, lng: <span
+                            class="string">'121.0244'</span> },
+                        address: <span class="string">'Makati City Hall, Makati'</span>
+                        }
+                        ]
+                        };
+
+                        <span class="keyword">const</span> quote = <span class="keyword">await</span>
+                        lalamove.getQuote(quoteData);
+
+                        console.log(<span class="string">'=== FULL QUOTE RESPONSE ==='</span>);
+                        console.log(JSON.stringify(quote, null, 2));
+
+                        console.log(<span class="string">'\n=== CRITICAL: STOP IDs ==='</span>);
+                        <span class="keyword">if</span> (quote.stops) {
+                        quote.stops.forEach((stop, index) => {
+                        console.log(`Stop ${index}: stopId = ${stop.stopId}`);
+                        });
+                        } <span class="keyword">else</span> {
+                        console.log(<span class="string">'⚠️ WARNING: No stops array in response!'</span>);
+                        }
+                        }
+
+                        examineQuoteStructure().catch(console.error);
+                    </div>
+
+                    <div class="info-box">
+                        <h4>Expected Output:</h4>
+                        <div class="code-block">
+                            {
+                            "quotationId": "3372979870736265844",
+                            "priceBreakdown": { ... },
+                            "distance": { ... },
+                            "stops": [
+                            {
+                            "stopId": "1234567890123", <span class="comment">// ✅ This is what we need!</span>
+                            "coordinates": { ... },
+                            "address": "Manila City Hall, Manila"
+                            },
+                            {
+                            "stopId": "9876543210987", <span class="comment">// ✅ And this one too!</span>
+                            "coordinates": { ... },
+                            "address": "Makati City Hall, Makati"
+                            }
+                            ]
+                            }
+                        </div>
+                    </div>
+                </div>
+
+                <div class="step-card">
+                    <h4><span class="step-number">1.2</span> Verify Current getQuote Method Returns Stops</h4>
+                    <p><strong>File:</strong> <code>services/lalamove.js</code></p>
+                    <p>Check if the getQuote method is returning the stops array. Look at line 186-196:</p>
+
+                    <div class="code-block">
+                        <span class="comment">// Current implementation (around line 186)</span>
+                        <span class="keyword">return</span> {
+                        quotationId: result.data.quotationId,
+                        priceBreakdown: result.data.priceBreakdown,
+                        distance: result.data.distance,
+                        serviceType: result.data.serviceType,
+                        estimatedPickupTime: pickupEta,
+                        estimatedDeliveryTime: deliveryEta,
+                        expiresAt: result.data.expiresAt,
+                        scheduleAt: result.data.scheduleAt,
+                        isManualReview: result.data.isManualReview || false
+                        <span class="comment">// ⚠️ MISSING: stops array!</span>
+                        };
+                    </div>
+
+                    <div class="success-box">
+                        <h4>✅ Fix: Add stops to return object</h4>
+                        <div class="code-block">
+                            <span class="comment">// Updated implementation</span>
+                            <span class="keyword">return</span> {
+                            quotationId: result.data.quotationId,
+                            priceBreakdown: result.data.priceBreakdown,
+                            distance: result.data.distance,
+                            serviceType: result.data.serviceType,
+                            estimatedPickupTime: pickupEta,
+                            estimatedDeliveryTime: deliveryEta,
+                            expiresAt: result.data.expiresAt,
+                            scheduleAt: result.data.scheduleAt,
+                            isManualReview: result.data.isManualReview || false,
+                            stops: result.data.stops || [] <span class="comment">// ✅ ADD THIS LINE</span>
+                            };
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Step 2 -->
+            <div class="section">
+                <h2>Step 2: Fix the createOrder Method</h2>
+
+                <div class="step-card">
+                    <h4><span class="step-number">2.1</span> Update Method Signature <span
+                            class="badge badge-critical">CRITICAL</span></h4>
+                    <p><strong>File:</strong> <code>services/lalamove.js</code> (line 206)</p>
+                    <p>The createOrder method needs to accept stops data from the quote.</p>
+
+                    <div class="code-block">
+                        <span class="comment">// ❌ BEFORE (Current - Incorrect)</span>
+                        async createOrder(payload) {
+                        <span class="keyword">const</span> {
+                        quotationId,
+                        pickupAddress,
+                        pickupLat,
+                        pickupLng,
+                        pickupContact,
+                        deliveryAddress,
+                        deliveryLat,
+                        deliveryLng,
+                        deliveryContact,
+                        packageDetails,
+                        clientReferenceId
+                        } = payload;
+
+                        <span class="keyword">const</span> orderData = {
+                        data: {
+                        quotationId: quotationId,
+                        sender: {
+                        stopId: <span class="string">'0'</span>, <span class="comment">// ❌ WRONG!</span>
+                        name: pickupContact.name,
+                        phone: pickupContact.phone
+                        },
+                        recipients: [{
+                        stopId: <span class="string">'1'</span>, <span class="comment">// ❌ WRONG!</span>
+                        name: deliveryContact.name,
+                        phone: deliveryContact.phone,
+                        remarks: packageDetails.remarks || <span class="string">''</span>
+                        }],
+                        isPODEnabled: false,
+                        metadata: clientReferenceId || crypto.randomUUID()
+                        }
+                        };
+
+                        <span class="comment">// ... rest of method</span>
+                        }
+                    </div>
+
+                    <div class="success-box">
+                        <h4>✅ AFTER (Corrected)</h4>
+                        <div class="code-block">
+                            async createOrder(payload) {
+                            <span class="keyword">const</span> {
+                            quotationId,
+                            stops, <span class="comment">// ✅ ADD: stops array from quote</span>
+                            pickupContact,
+                            deliveryContact,
+                            packageDetails,
+                            metadata
+                            } = payload;
+
+                            <span class="comment">// Validate that we have stops data</span>
+                            <span class="keyword">if</span> (!stops || !Array.isArray(stops) || stops.length < 2) {
+                                <span class="keyword">throw new</span> Error(<span class="string">'Quote stops data is
+                                    required. Must include stopIds from quote response.'</span>);
+                                }
+
+                                <span class="comment">// Validate stopIds exist</span>
+                                <span class="keyword">if</span> (!stops[0].stopId || !stops[1].stopId) {
+                                <span class="keyword">throw new</span> Error(<span class="string">'Invalid stops data.
+                                    stopId missing from quote response.'</span>);
+                                }
+
+                                console.log(<span class="string">'[Lalamove] Creating order with stopIds:'</span>, {
+                                pickup: stops[0].stopId,
+                                delivery: stops[1].stopId
+                                });
+
+                                <span class="keyword">const</span> orderData = {
+                                data: {
+                                quotationId: quotationId,
+                                sender: {
+                                stopId: stops[0].stopId, <span class="comment">// ✅ CORRECT: From quote</span>
+                                name: pickupContact.name,
+                                phone: pickupContact.phone
+                                },
+                                recipients: [{
+                                stopId: stops[1].stopId, <span class="comment">// ✅ CORRECT: From quote</span>
+                                name: deliveryContact.name,
+                                phone: deliveryContact.phone,
+                                remarks: packageDetails?.remarks || <span class="string">''</span>
+                                }],
+                                isPODEnabled: false,
+                                metadata: metadata || {}
+                                }
+                                };
+
+                                console.log(<span class="string">'[Lalamove] Order payload:'</span>,
+                                JSON.stringify(orderData, null, 2));
+
+                                <span class="keyword">const</span> result = <span class="keyword">await</span>
+                                this.apiRequest(<span class="string">'POST'</span>, `/v3/orders`, orderData);
+
+                                <span class="keyword">return</span> {
+                                orderId: result.data.orderId,
+                                quotationId: result.data.quotationId,
+                                status: result.data.status,
+                                shareLink: result.data.shareLink,
+                                priceBreakdown: result.data.priceBreakdown,
+                                distance: result.data.distance,
+                                stops: result.data.stops,
+                                driverId: result.data.driverId || null
+                                };
+                                }
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Step 3 -->
+            <div class="section">
+                <h2>Step 3: Store Quote Data in Database</h2>
+
+                <div class="step-card">
+                    <h4><span class="step-number">3.1</span> Update Quote API Route <span
+                            class="badge badge-critical">CRITICAL</span></h4>
+                    <p><strong>File:</strong> <code>app/api/shipping/lalamove/quote/route.js</code></p>
+                    <p>Store the complete quote response (including stops) in the database so it can be retrieved
+                        during order creation.</p>
+
+                    <div class="code-block">
+                        <span class="comment">// Add this after getting the quote (around line 80-100)</span>
+
+                        <span class="keyword">try</span> {
+                        <span class="comment">// Get quote from Lalamove</span>
+                        <span class="keyword">const</span> quote = <span class="keyword">await</span>
+                        lalamove.getQuote(quoteData);
+
+                        <span class="comment">// ✅ Store quote in database with stopIds</span>
+                        <span class="keyword">if</span> (orderId) {
+                        <span class="keyword">await</span> prisma.order.update({
+                        where: { id: orderId },
+                        data: {
+                        shipping: {
+                        provider: <span class="string">'lalamove'</span>,
+                        quote: {
+                        quotationId: quote.quotationId,
+                        stops: quote.stops, <span class="comment">// ✅ Store stops with stopIds</span>
+                        priceBreakdown: quote.priceBreakdown,
+                        distance: quote.distance,
+                        serviceType: quote.serviceType,
+                        expiresAt: quote.expiresAt,
+                        estimatedPickupTime: quote.estimatedPickupTime,
+                        estimatedDeliveryTime: quote.estimatedDeliveryTime,
+                        createdAt: <span class="keyword">new</span> Date().toISOString()
+                        }
+                        }
+                        }
+                        });
+                        }
+
+                        <span class="comment">// Return quote to frontend</span>
+                        <span class="keyword">return</span> NextResponse.json({
+                        success: true,
+                        quote: quote
+                        });
+
+                        } <span class="keyword">catch</span> (error) {
+                        console.error(<span class="string">'Quote error:'</span>, error);
+                        <span class="keyword">return</span> NextResponse.json(
+                        { error: error.message },
+                        { status: 500 }
+                        );
+                        }
+                    </div>
+                </div>
+
+                <div class="step-card">
+                    <h4><span class="step-number">3.2</span> Verify Database Schema Supports JSON Storage</h4>
+                    <p><strong>File:</strong> <code>prisma/schema.prisma</code></p>
+                    <p>Ensure the Order model has a shipping field that can store JSON data:</p>
+
+                    <div class="code-block">
+                        model Order {
+                        id String @id @default(cuid())
+                        // ... other fields
+                        shipping Json? <span class="comment">// ✅ This should already exist</span>
+                        // ... other fields
+                        }
+                    </div>
+
+                    <div class="info-box">
+                        <h4>📝 Note:</h4>
+                        <p>If the shipping field doesn't exist or is not of type Json, you'll need to add it and run a
+                            migration:</p>
+                        <div class="code-block">
+                            npx prisma migrate dev --name add_shipping_json
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Step 4 -->
+            <div class="section">
+                <h2>Step 4: Update Book API Route</h2>
+
+                <div class="step-card">
+                    <h4><span class="step-number">4.1</span> Retrieve Stored Quote Data <span
+                            class="badge badge-critical">CRITICAL</span></h4>
+                    <p><strong>File:</strong> <code>app/api/shipping/lalamove/book/route.js</code></p>
+                    <p>Before creating the order, retrieve the stored quote data from the database.</p>
+
+                    <div class="code-block">
+                        <span class="comment">// Around line 63-72, after finding the order</span>
+
+                        <span class="keyword">const</span> order = <span class="keyword">await</span>
+                        prisma.order.findUnique({
+                        where: { id: orderId }
+                        });
+
+                        <span class="keyword">if</span> (!order) {
+                        <span class="keyword">return</span> NextResponse.json(
+                        { error: <span class="string">'Order not found'</span> },
+                        { status: 404 }
+                        );
+                        }
+
+                        <span class="comment">// ✅ Retrieve stored quote data</span>
+                        <span class="keyword">const</span> storedQuote = order.shipping?.quote;
+
+                        <span class="keyword">if</span> (!storedQuote) {
+                        <span class="keyword">return</span> NextResponse.json(
+                        { error: <span class="string">'No quote found for this order. Please request a quote
+                            first.'</span> },
+                        { status: 400 }
+                        );
+                        }
+
+                        <span class="comment">// ✅ Validate quote hasn't expired (15 minute validity)</span>
+                        <span class="keyword">if</span> (storedQuote.expiresAt && <span class="keyword">new</span>
+                        Date(storedQuote.expiresAt) < <span class="keyword">new</span> Date()) {
+                            <span class="keyword">return</span> NextResponse.json(
+                            {
+                            error: <span class="string">'Quote has expired. Please request a new quote.'</span>,
+                            expired: true
+                            },
+                            { status: 400 }
+                            );
+                            }
+
+                            <span class="comment">// ✅ Validate stops data exists</span>
+                            <span class="keyword">if</span> (!storedQuote.stops || storedQuote.stops.length < 2) { <span
+                                class="keyword">return</span> NextResponse.json(
+                                { error: <span class="string">'Invalid quote data. Missing stops information.'</span> },
+                                { status: 400 }
+                                );
+                                }
+
+                                console.log(<span class="string">'[Book] Using quote:'</span>, {
+                                quotationId: storedQuote.quotationId,
+                                stopIds: storedQuote.stops.map(s => s.stopId),
+                                expiresAt: storedQuote.expiresAt
+                                });
+                    </div>
+                </div>
+
+                <div class="step-card">
+                    <h4><span class="step-number">4.2</span> Pass Stops to createOrder <span
+                            class="badge badge-critical">CRITICAL</span></h4>
+                    <p>Update the booking data to include stops from the stored quote.</p>
+
+                    <div class="code-block">
+                        <span class="comment">// Around line 88-110, replace the bookingData preparation</span>
+
+                        <span class="comment">// ❌ REMOVE the old bookingData that used hardcoded stopIds</span>
+
+                        <span class="comment">// ✅ NEW: Prepare booking data with stops from stored quote</span>
+                        <span class="keyword">const</span> bookingData = {
+                        quotationId: storedQuote.quotationId, <span class="comment">// Use stored quotationId</span>
+                        stops: storedQuote.stops, <span class="comment">// ✅ CRITICAL: Pass stops from quote</span>
+                        pickupContact: {
+                        name: pickup.contactName,
+                        phone: pickup.contactPhone
+                        },
+                        deliveryContact: {
+                        name: delivery.contactName,
+                        phone: delivery.contactPhone
+                        },
+                        packageDetails: {
+                        remarks: packageDetails?.description || <span class="string">'Budolshap order delivery'</span>
+                        },
+                        metadata: {
+                        orderId: orderId,
+                        platform: <span class="string">'budolshap'</span>,
+                        clientReferenceId: clientReferenceId,
+                        quotationId: storedQuote.quotationId
+                        }
+                        };
+
+                        console.log(<span class="string">'[Book] Creating order with data:'</span>,
+                        JSON.stringify(bookingData, null, 2));
+
+                        <span class="comment">// Create booking with Lalamove</span>
+                        <span class="keyword">const</span> booking = <span class="keyword">await</span>
+                        lalamove.createOrder(bookingData);
+
+                        console.log(<span class="string">'[Book] Order created successfully:'</span>, {
+                        orderId: booking.orderId,
+                        status: booking.status,
+                        shareLink: booking.shareLink
+                        });
+                    </div>
+                </div>
+
+                <div class="step-card">
+                    <h4><span class="step-number">4.3</span> Update Database with Booking Details</h4>
+                    <p>Store the complete booking response in the database.</p>
+
+                    <div class="code-block">
+                        <span class="comment">// Around line 116-148, update the order with booking details</span>
+
+                        <span class="keyword">const</span> updatedOrder = <span class="keyword">await</span>
+                        prisma.order.update({
+                        where: { id: orderId },
+                        data: {
+                        shipping: {
+                        provider: <span class="string">'lalamove'</span>,
+                        quote: storedQuote, <span class="comment">// Keep the quote data</span>
+                        booking: { <span class="comment">// ✅ Add booking details</span>
+                        orderId: booking.orderId,
+                        quotationId: booking.quotationId,
+                        status: booking.status,
+                        shareLink: booking.shareLink,
+                        trackingUrl: `https://www.lalamove.com/track/${booking.shareLink}`,
+                        priceBreakdown: booking.priceBreakdown,
+                        distance: booking.distance,
+                        serviceType: serviceType,
+                        clientReferenceId: clientReferenceId,
+                        bookedAt: <span class="keyword">new</span> Date().toISOString()
+                        },
+                        pickup: {
+                        address: pickup.address,
+                        coordinates: pickup.coordinates,
+                        contact: {
+                        name: pickup.contactName,
+                        phone: pickup.contactPhone
+                        }
+                        },
+                        delivery: {
+                        address: delivery.address,
+                        coordinates: delivery.coordinates,
+                        contact: {
+                        name: delivery.contactName,
+                        phone: delivery.contactPhone
+                        }
+                        },
+                        updatedAt: <span class="keyword">new</span> Date().toISOString()
+                        }
+                        }
+                        });
+
+                        console.log(<span class="string">'[Book] Database updated for order:'</span>, orderId);
+                    </div>
+                </div>
+            </div>
+
+            <!-- Step 5 -->
+            <div class="section">
+                <h2>Step 5: Testing the Implementation</h2>
+
+                <div class="step-card">
+                    <h4><span class="step-number">5.1</span> Create Test Script <span
+                            class="badge badge-critical">CRITICAL</span></h4>
+                    <p><strong>File:</strong> <code>test-lalamove-complete-flow.js</code> (Create new)</p>
+
+                    <div class="code-block">
+                        <span class="comment">// test-lalamove-complete-flow.js</span>
+                        <span class="keyword">const</span> { getShippingProvider } = require(<span
+                            class="string">'./services/shippingFactory'</span>);
+
+                        async function testCompleteFlow() {
+                        <span class="keyword">const</span> lalamove = getShippingProvider(<span
+                            class="string">'lalamove'</span>);
+
+                        console.log(<span class="string">'========================================='</span>);
+                        console.log(<span class="string">' LALAMOVE COMPLETE ORDER FLOW TEST'</span>);
+                        console.log(<span class="string">'========================================='</span>);
+
+                        <span class="comment">// Step 1: Get Quote</span>
+                        console.log(<span class="string">'\n📋 STEP 1: Getting Quote...'</span>);
+                        <span class="keyword">const</span> quoteData = {
+                        serviceType: <span class="string">'MOTORCYCLE'</span>,
+                        language: <span class="string">'en_PH'</span>,
+                        stops: [
+                        {
+                        coordinates: {
+                        lat: <span class="string">'14.5995'</span>,
+                        lng: <span class="string">'120.9842'</span>
+                        },
+                        address: <span class="string">'Manila City Hall, Arroceros St, Ermita, Manila'</span>
+                        },
+                        {
+                        coordinates: {
+                        lat: <span class="string">'14.5547'</span>,
+                        lng: <span class="string">'121.0244'</span>
+                        },
+                        address: <span class="string">'Makati City Hall, J.P. Rizal Ave, Poblacion, Makati'</span>
+                        }
+                        ]
+                        };
+
+                        <span class="keyword">const</span> quote = <span class="keyword">await</span>
+                        lalamove.getQuote(quoteData);
+
+                        console.log(<span class="string">'✅ Quote received:'</span>);
+                        console.log(<span class="string">' Quotation ID:'</span>, quote.quotationId);
+                        console.log(<span class="string">' Price:'</span>, quote.priceBreakdown.total,
+                        quote.priceBreakdown.currency);
+                        console.log(<span class="string">' Distance:'</span>, quote.distance.value,
+                        quote.distance.unit);
+                        console.log(<span class="string">' Expires at:'</span>, quote.expiresAt);
+
+                        <span class="comment">// ✅ CRITICAL: Check stops</span>
+                        console.log(<span class="string">'\n🔍 CRITICAL: Stop IDs:'</span>);
+                        <span class="keyword">if</span> (quote.stops && quote.stops.length >= 2) {
+                        console.log(<span class="string">' ✅ Pickup Stop ID:'</span>, quote.stops[0].stopId);
+                        console.log(<span class="string">' ✅ Delivery Stop ID:'</span>, quote.stops[1].stopId);
+                        } <span class="keyword">else</span> {
+                        console.error(<span class="string">' ❌ ERROR: Stops not found in quote response!'</span>);
+                        <span class="keyword">return</span>;
+                        }
+
+                        <span class="comment">// Step 2: Create Order</span>
+                        console.log(<span class="string">'\n📦 STEP 2: Creating Order...'</span>);
+                        <span class="keyword">const</span> orderData = {
+                        quotationId: quote.quotationId,
+                        stops: quote.stops, <span class="comment">// ✅ Pass stops from quote</span>
+                        pickupContact: {
+                        name: <span class="string">'Test Sender'</span>,
+                        phone: <span class="string">'+639171234567'</span> <span class="comment">// Replace with valid
+                            PH number</span>
+                        },
+                        deliveryContact: {
+                        name: <span class="string">'Test Recipient'</span>,
+                        phone: <span class="string">'+639177654321'</span> <span class="comment">// Replace with valid
+                            PH number</span>
+                        },
+                        packageDetails: {
+                        remarks: <span class="string">'TEST ORDER - Budolshap Platform Integration Test'</span>
+                        },
+                        metadata: {
+                        platform: <span class="string">'budolshap'</span>,
+                        test: true,
+                        timestamp: <span class="keyword">new</span> Date().toISOString()
+                        }
+                        };
+
+                        <span class="keyword">const</span> order = <span class="keyword">await</span>
+                        lalamove.createOrder(orderData);
+
+                        console.log(<span class="string">'✅ Order created successfully!'</span>);
+                        console.log(<span class="string">' Order ID:'</span>, order.orderId);
+                        console.log(<span class="string">' Status:'</span>, order.status);
+                        console.log(<span class="string">' Share Link:'</span>, order.shareLink);
+                        console.log(<span class="string">' Price:'</span>, order.priceBreakdown.total,
+                        order.priceBreakdown.currency);
+
+                        <span class="comment">// Step 3: Track Order</span>
+                        console.log(<span class="string">'\n🔍 STEP 3: Tracking Order...'</span>);
+                        <span class="keyword">const</span> tracking = <span class="keyword">await</span>
+                        lalamove.trackOrder(order.orderId);
+
+                        console.log(<span class="string">'✅ Tracking info:'</span>);
+                        console.log(<span class="string">' Status:'</span>, tracking.status);
+                        <span class="keyword">if</span> (tracking.driver) {
+                        console.log(<span class="string">' Driver:'</span>, tracking.driver.name);
+                        console.log(<span class="string">' Phone:'</span>, tracking.driver.phone);
+                        } <span class="keyword">else</span> {
+                        console.log(<span class="string">' Driver: Not assigned yet'</span>);
+                        }
+
+                        <span class="comment">// Summary</span>
+                        console.log(<span class="string">'\n========================================='</span>);
+                        console.log(<span class="string">' ✅ TEST COMPLETE!'</span>);
+                        console.log(<span class="string">'========================================='</span>);
+                        console.log(<span class="string">'\n📊 NEXT STEPS:'</span>);
+                        console.log(<span class="string">'1. Check Partner Portal:
+                            http://partnerportal.lalamove.com/'</span>);
+                        console.log(<span class="string">'2. Verify order appears with ID:'</span>, order.orderId);
+                        console.log(<span class="string">'3. Check order details match'</span>);
+                        console.log(<span class="string">'4. Test tracking link:'</span>, order.shareLink);
+                        console.log(<span class="string">'\n⚠️ Remember to cancel test order if needed!'</span>);
+                        }
+
+                        testCompleteFlow().catch(error => {
+                        console.error(<span class="string">'\n❌ TEST FAILED:'</span>, error.message);
+                        console.error(<span class="string">'\nFull error:'</span>, error);
+                        });
+                    </div>
+
+                    <div class="info-box">
+                        <h4>🚀 Run the test:</h4>
+                        <div class="code-block">
+                            node test-lalamove-complete-flow.js
+                        </div>
+                    </div>
+                </div>
+
+                <div class="step-card">
+                    <h4><span class="step-number">5.2</span> Verify in Partner Portal <span
+                            class="badge badge-critical">CRITICAL</span></h4>
+                    <p>This is the moment of truth - checking if orders appear in the Lalamove Partner Portal.</p>
+
+                    <ol class="sub-steps">
+                        <li><strong>Log in to Partner Portal:</strong>
+                            <ul style="margin-left: 20px; margin-top: 5px;">
+                                <li>URL: <a href="http://partnerportal.lalamove.com/"
+                                        target="_blank">http://partnerportal.lalamove.com/</a></li>
+                                <li>Use your Lalamove account credentials</li>
+                            </ul>
+                        </li>
+                        <li><strong>Navigate to Orders:</strong>
+                            <ul style="margin-left: 20px; margin-top: 5px;">
+                                <li>Click on "Orders" in the main menu</li>
+                                <li>Look for your test order by Order ID</li>
+                            </ul>
+                        </li>
+                        <li><strong>Verify Order Details:</strong>
+                            <ul style="margin-left: 20px; margin-top: 5px;">
+                                <li>✅ Order ID matches</li>
+                                <li>✅ Status is correct (likely "ASSIGNING_DRIVER")</li>
+                                <li>✅ Pickup and delivery addresses are correct</li>
+                                <li>✅ Price matches quote</li>
+                                <li>✅ Metadata is stored (if visible)</li>
+                            </ul>
+                        </li>
+                        <li><strong>Test Tracking Link:</strong>
+                            <ul style="margin-left: 20px; margin-top: 5px;">
+                                <li>Copy the shareLink from test output</li>
+                                <li>Open in browser</li>
+                                <li>Verify tracking page loads correctly</li>
+                            </ul>
+                        </li>
+                    </ol>
+
+                    <div class="success-box">
+                        <h4>✅ Success Criteria:</h4>
+                        <p>If you see your order in the Partner Portal with all correct details, congratulations! Your
+                            integration is working correctly.</p>
+                    </div>
+
+                    <div class="error-box">
+                        <h4>❌ If Order Doesn't Appear:</h4>
+                        <ul style="margin-left: 20px; margin-top: 10px;">
+                            <li>Check test script output for errors</li>
+                            <li>Verify stopIds were correctly extracted from quote</li>
+                            <li>Check Lalamove API response for error messages</li>
+                            <li>Verify you're using the correct environment (sandbox vs production)</li>
+                            <li>Check API credentials are correct</li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Step 6 -->
+            <div class="section">
+                <h2>Step 6: Implement Webhook Receiver (Optional but Recommended)</h2>
+
+                <div class="step-card">
+                    <h4><span class="step-number">6.1</span> Create Webhook Endpoint <span
+                            class="badge badge-important">IMPORTANT</span></h4>
+                    <p><strong>File:</strong> <code>app/api/shipping/lalamove/webhook/route.js</code> (Create new)</p>
+
+                    <div class="code-block">
+                        <span class="comment">// app/api/shipping/lalamove/webhook/route.js</span>
+                        <span class="keyword">import</span> { NextResponse } from <span
+                            class="string">'next/server'</span>;
+                        <span class="keyword">import</span> crypto from <span class="string">'crypto'</span>;
+                        <span class="keyword">import</span> prisma from <span class="string">'@/lib/prisma'</span>;
+
+                        <span class="comment">/**
+                            * POST /api/shipping/lalamove/webhook
+                            * Receive status updates from Lalamove
+                            */</span>
+                        <span class="keyword">export async function</span> POST(request) {
+                        <span class="keyword">try</span> {
+                        <span class="comment">// Get raw body for signature verification</span>
+                        <span class="keyword">const</span> body = <span class="keyword">await</span> request.text();
+                        <span class="keyword">const</span> signature = request.headers.get(<span
+                            class="string">'X-Lalamove-Signature'</span>);
+
+                        console.log(<span class="string">'[Webhook] Received request'</span>);
+
+                        <span class="comment">// Verify webhook signature</span>
+                        <span class="keyword">const</span> webhookSecret = process.env.LALAMOVE_WEBHOOK_SECRET;
+                        <span class="keyword">const</span> hmac = crypto.createHmac(<span
+                            class="string">'sha256'</span>, webhookSecret);
+                        <span class="keyword">const</span> expectedSignature = hmac.update(body).digest(<span
+                            class="string">'hex'</span>);
+
+                        <span class="keyword">if</span> (signature !== expectedSignature) {
+                        console.error(<span class="string">'[Webhook] Invalid signature'</span>);
+                        <span class="keyword">return</span> NextResponse.json(
+                        { error: <span class="string">'Invalid signature'</span> },
+                        { status: 401 }
+                        );
+                        }
+
+                        <span class="comment">// Parse payload</span>
+                        <span class="keyword">const</span> payload = JSON.parse(body);
+                        <span class="keyword">const</span> { updateType, data } = payload;
+
+                        console.log(<span class="string">'[Webhook] Update type:'</span>, updateType);
+                        console.log(<span class="string">'[Webhook] Data:'</span>, JSON.stringify(data, null, 2));
+
+                        <span class="comment">// Handle different update types</span>
+                        <span class="keyword">switch</span> (updateType) {
+                        <span class="keyword">case</span> <span class="string">'ORDER_STATUS_CHANGED'</span>:
+                        <span class="keyword">await</span> handleStatusChange(data);
+                        <span class="keyword">break</span>;
+                        <span class="keyword">case</span> <span class="string">'DRIVER_ASSIGNED'</span>:
+                        <span class="keyword">await</span> handleDriverAssigned(data);
+                        <span class="keyword">break</span>;
+                        <span class="keyword">case</span> <span class="string">'ORDER_AMOUNT_CHANGED'</span>:
+                        <span class="keyword">await</span> handleAmountChange(data);
+                        <span class="keyword">break</span>;
+                        <span class="keyword">default</span>:
+                        console.log(<span class="string">'[Webhook] Unknown update type:'</span>, updateType);
+                        }
+
+                        <span class="comment">// Always return 200 to acknowledge receipt</span>
+                        <span class="keyword">return</span> NextResponse.json({ received: true });
+
+                        } <span class="keyword">catch</span> (error) {
+                        console.error(<span class="string">'[Webhook] Error:'</span>, error);
+                        <span class="comment">// Still return 200 to prevent retries</span>
+                        <span class="keyword">return</span> NextResponse.json({ received: true });
+                        }
+                        }
+
+                        <span class="comment">// Handle status change</span>
+                        async function handleStatusChange(data) {
+                        <span class="keyword">const</span> { orderId, status } = data;
+
+                        console.log(<span class="string">'[Webhook] Status change:'</span>, orderId, <span
+                            class="string">'->'</span>, status);
+
+                        <span class="comment">// Find order by Lalamove orderId in shipping.booking.orderId</span>
+                        <span class="keyword">const</span> orders = <span class="keyword">await</span>
+                        prisma.order.findMany({
+                        where: {
+                        shipping: {
+                        path: [<span class="string">'booking'</span>, <span class="string">'orderId'</span>],
+                        equals: orderId
+                        }
+                        }
+                        });
+
+                        <span class="keyword">if</span> (orders.length > 0) {
+                        <span class="keyword">const</span> order = orders[0];
+
+                        <span class="comment">// Update order status</span>
+                        <span class="keyword">await</span> prisma.order.update({
+                        where: { id: order.id },
+                        data: {
+                        shipping: {
+                        ...order.shipping,
+                        booking: {
+                        ...order.shipping.booking,
+                        status: status,
+                        lastStatusUpdate: <span class="keyword">new</span> Date().toISOString()
+                        }
+                        }
+                        }
+                        });
+
+                        console.log(<span class="string">'[Webhook] Updated order:'</span>, order.id);
+                        } <span class="keyword">else</span> {
+                        console.log(<span class="string">'[Webhook] Order not found:'</span>, orderId);
+                        }
+                        }
+
+                        <span class="comment">// Handle driver assigned</span>
+                        async function handleDriverAssigned(data) {
+                        <span class="keyword">const</span> { orderId, driverInfo } = data;
+
+                        console.log(<span class="string">'[Webhook] Driver assigned:'</span>, orderId);
+
+                        <span class="keyword">const</span> orders = <span class="keyword">await</span>
+                        prisma.order.findMany({
+                        where: {
+                        shipping: {
+                        path: [<span class="string">'booking'</span>, <span class="string">'orderId'</span>],
+                        equals: orderId
+                        }
+                        }
+                        });
+
+                        <span class="keyword">if</span> (orders.length > 0) {
+                        <span class="keyword">const</span> order = orders[0];
+
+                        <span class="keyword">await</span> prisma.order.update({
+                        where: { id: order.id },
+                        data: {
+                        shipping: {
+                        ...order.shipping,
+                        booking: {
+                        ...order.shipping.booking,
+                        driverInfo: driverInfo,
+                        driverAssignedAt: <span class="keyword">new</span> Date().toISOString()
+                        }
+                        }
+                        }
+                        });
+
+                        console.log(<span class="string">'[Webhook] Driver info updated'</span>);
+                        }
+                        }
+
+                        <span class="comment">// Handle amount change</span>
+                        async function handleAmountChange(data) {
+                        <span class="keyword">const</span> { orderId, priceBreakdown } = data;
+
+                        console.log(<span class="string">'[Webhook] Amount changed:'</span>, orderId);
+
+                        <span class="keyword">const</span> orders = <span class="keyword">await</span>
+                        prisma.order.findMany({
+                        where: {
+                        shipping: {
+                        path: [<span class="string">'booking'</span>, <span class="string">'orderId'</span>],
+                        equals: orderId
+                        }
+                        }
+                        });
+
+                        <span class="keyword">if</span> (orders.length > 0) {
+                        <span class="keyword">const</span> order = orders[0];
+
+                        <span class="keyword">await</span> prisma.order.update({
+                        where: { id: order.id },
+                        data: {
+                        shipping: {
+                        ...order.shipping,
+                        booking: {
+                        ...order.shipping.booking,
+                        priceBreakdown: priceBreakdown,
+                        priceUpdatedAt: <span class="keyword">new</span> Date().toISOString()
+                        }
+                        }
+                        }
+                        });
+
+                        console.log(<span class="string">'[Webhook] Price updated'</span>);
+                        }
+                        }
+                    </div>
+                </div>
+
+                <div class="step-card">
+                    <h4><span class="step-number">6.2</span> Configure Webhook URL</h4>
+                    <p>Set up ngrok for local testing or use your production URL.</p>
+
+                    <div class="warning-box">
+                        <h4>For Local Testing:</h4>
+                        <ol style="margin-left: 20px; margin-top: 10px;">
+                            <li>Install ngrok: <code>npm install -g ngrok</code></li>
+                            <li>Start your dev server: <code>npm run dev</code></li>
+                            <li>In another terminal, start ngrok: <code>ngrok http 3000</code></li>
+                            <li>Copy the HTTPS URL (e.g., https://abc123.ngrok.io)</li>
+                            <li>Webhook URL: <code>https://abc123.ngrok.io/api/shipping/lalamove/webhook</code></li>
+                        </ol>
+                    </div>
+
+                    <div class="info-box">
+                        <h4>For Production:</h4>
+                        <p>Webhook URL: <code>https://budolshap.vercel.app/api/shipping/lalamove/webhook</code></p>
+                    </div>
+
+                    <div class="success-box">
+                        <h4>Configure in Partner Portal:</h4>
+                        <ol style="margin-left: 20px; margin-top: 10px;">
+                            <li>Log in to Partner Portal</li>
+                            <li>Go to Developers → Webhook</li>
+                            <li>Enter your webhook URL</li>
+                            <li>Save configuration</li>
+                            <li>Test by creating an order</li>
+                            <li>Check "Webhook Attempts" section for delivery status</li>
+                        </ol>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Troubleshooting -->
+            <div class="section">
+                <h2>🔧 Troubleshooting Guide</h2>
+
+                <div class="error-box">
+                    <h4>Problem: ERR_INVALID_STOP_ID</h4>
+                    <p><strong>Symptom:</strong> Order creation fails with invalid stopId error.</p>
+                    <p><strong>Cause:</strong> Using hardcoded stopIds instead of values from quote.</p>
+                    <p><strong>Solution:</strong></p>
+                    <ol style="margin-left: 20px; margin-top: 10px;">
+                        <li>Verify getQuote returns stops array</li>
+                        <li>Check stops are stored in database</li>
+                        <li>Confirm createOrder receives stops parameter</li>
+                        <li>Verify stopIds are extracted correctly: <code>stops[0].stopId</code></li>
+                    </ol>
+                </div>
+
+                <div class="error-box">
+                    <h4>Problem: Order Not Appearing in Partner Portal</h4>
+                    <p><strong>Possible Causes:</strong></p>
+                    <ul style="margin-left: 20px; margin-top: 10px;">
+                        <li>Using wrong environment (sandbox vs production)</li>
+                        <li>API credentials mismatch</li>
+                        <li>Order creation actually failed but error not caught</li>
+                        <li>Wrong market code</li>
+                    </ul>
+                    <p><strong>Solution:</strong></p>
+                    <ol style="margin-left: 20px; margin-top: 10px;">
+                        <li>Check console logs for actual API response</li>
+                        <li>Verify LALAMOVE_ENV matches portal you're checking</li>
+                        <li>Confirm API credentials in .env.local</li>
+                        <li>Check market code is 'PH' not 'PH_MNL'</li>
+                    </ol>
+                </div>
+
+                <div class="error-box">
+                    <h4>Problem: ERR_INSUFFICIENT_CREDIT</h4>
+                    <p><strong>Symptom:</strong> HTTP 402 error when creating order.</p>
+                    <p><strong>Cause:</strong> Lalamove wallet balance too low.</p>
+                    <p><strong>Solution:</strong></p>
+                    <ol style="margin-left: 20px; margin-top: 10px;">
+                        <li>Log in to Partner Portal</li>
+                        <li>Check wallet balance</li>
+                        <li>Top up wallet if needed</li>
+                        <li>Retry order creation</li>
+                    </ol>
+                </div>
+
+                <div class="error-box">
+                    <h4>Problem: Quote Expired</h4>
+                    <p><strong>Symptom:</strong> ERR_INVALID_QUOTE when creating order.</p>
+                    <p><strong>Cause:</strong> More than 15 minutes passed since quote was created.</p>
+                    <p><strong>Solution:</strong></p>
+                    <ol style="margin-left: 20px; margin-top: 10px;">
+                        <li>Check quote.expiresAt before creating order</li>
+                        <li>If expired, fetch new quote</li>
+                        <li>Implement auto-refresh logic in checkout flow</li>
+                        <li>Notify user if price changed</li>
+                    </ol>
+                </div>
+            </div>
+
+            <!-- Summary -->
+            <div class="section">
+                <h2>✅ Implementation Checklist</h2>
+
+                <div class="success-box">
+                    <h4>Complete these steps in order:</h4>
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>Step</th>
+                                <th>Task</th>
+                                <th>File</th>
+                                <th>Status</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr>
+                                <td>1.1</td>
+                                <td>Add stops to getQuote return</td>
+                                <td>services/lalamove.js</td>
+                                <td>☐</td>
+                            </tr>
+                            <tr>
+                                <td>2.1</td>
+                                <td>Fix createOrder method</td>
+                                <td>services/lalamove.js</td>
+                                <td>☐</td>
+                            </tr>
+                            <tr>
+                                <td>3.1</td>
+                                <td>Store quote in database</td>
+                                <td>app/api/.../quote/route.js</td>
+                                <td>☐</td>
+                            </tr>
+                            <tr>
+                                <td>4.1</td>
+                                <td>Retrieve quote in book route</td>
+                                <td>app/api/.../book/route.js</td>
+                                <td>☐</td>
+                            </tr>
+                            <tr>
+                                <td>4.2</td>
+                                <td>Pass stops to createOrder</td>
+                                <td>app/api/.../book/route.js</td>
+                                <td>☐</td>
+                            </tr>
+                            <tr>
+                                <td>5.1</td>
+                                <td>Create test script</td>
+                                <td>test-lalamove-complete-flow.js</td>
+                                <td>☐</td>
+                            </tr>
+                            <tr>
+                                <td>5.2</td>
+                                <td>Run test and verify</td>
+                                <td>Partner Portal</td>
+                                <td>☐</td>
+                            </tr>
+                            <tr>
+                                <td>6.1</td>
+                                <td>Create webhook endpoint</td>
+                                <td>app/api/.../webhook/route.js</td>
+                                <td>☐</td>
+                            </tr>
+                            <tr>
+                                <td>6.2</td>
+                                <td>Configure webhook URL</td>
+                                <td>Partner Portal</td>
+                                <td>☐</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        <div class="footer">
+            <p><strong>Lalamove Integration - Phase 5 Process Guide</strong></p>
+            <p>Step-by-Step Implementation for Order Creation</p>
+            <p style="margin-top: 10px; opacity: 0.8;">November 27, 2025 • BudolShap E-Commerce Platform</p>
+        </div>
+    </div>
+</body>
+
+</html>

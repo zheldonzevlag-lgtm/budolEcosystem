@@ -1,0 +1,54 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Phase 3: Client-side Handling & Logging - Lalamove API Fix</title>
+    <style>
+        body { font-family: -apple-system, sans-serif; line-height: 1.6; color: #333; max-width: 800px; margin: 0 auto; padding: 20px; background: #f4f7f6; }
+        .card { background: white; padding: 2rem; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); margin-bottom: 2rem; }
+        h1, h2 { color: #4f46e5; }
+        pre { background: #1e293b; color: #f8fafc; padding: 1rem; border-radius: 4px; overflow-x: auto; }
+        code { font-family: monospace; background: #e2e8f0; padding: 0.2rem 0.4rem; border-radius: 4px; }
+        .nav { margin-bottom: 1rem; }
+        .nav a { color: #4f46e5; text-decoration: none; }
+    </style>
+</head>
+<body>
+    <div class="nav"><a href="index.html">&larr; Back to Index</a></div>
+    <div class="card">
+        <h1>Phase 3: Client-side Handling & Logging</h1>
+        <p><strong>Status:</strong> <span style="color: #166534;">Completed</span></p>
+        
+        <h2>Objective</h2>
+        <p>Improve the <code>LalamoveWidget</code> component to handle the new structured error responses and provide better debugging information in the console.</p>
+
+        <h2>Implementation Details</h2>
+        <p>Modified <code>components/LalamoveWidget.jsx</code> in the <code>retryWithBackoff</code> function:</p>
+        <pre><code>if (!response.ok) {
+    console.error('[Lalamove Quote API Error Response]', {
+        status: response.status,
+        statusText: response.statusText,
+        data: data
+    });
+    
+    if (response.status === 408 || response.status === 504) {
+        throw new Error("Request timed out. Please try again.");
+    } else if (response.status === 503) {
+        throw new Error("Lalamove service temporarily unavailable.");
+    } else {
+        // Extract error message from various possible formats
+        const errorMessage = data?.error || data?.message || (typeof data === 'string' ? data : null) || 'Failed to get delivery quote';
+        throw new Error(errorMessage);
+    }
+}</code></pre>
+
+        <h2>Key Improvements</h2>
+        <ul>
+            <li><strong>Contextual Logging:</strong> We now log the HTTP status and status text alongside the data, which helps identify infrastructure issues (like 502/504) vs. application errors.</li>
+            <li><strong>Flexible Error Extraction:</strong> The logic now safely handles cases where the error might be a simple string, a <code>{ error: ... }</code> object, or a <code>{ message: ... }</code> object.</li>
+            <li><strong>User Feedback:</strong> Standardized error messages are presented to the user via the <code>setError</code> state, with a "Try Again" option.</li>
+        </ul>
+    </div>
+</body>
+</html>

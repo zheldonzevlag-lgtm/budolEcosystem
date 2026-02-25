@@ -1,0 +1,165 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Phase 1: Analysis - Return Status Flow Fix</title>
+    <style>
+        :root {
+            --primary-color: #0ea5e9;
+            --secondary-color: #64748b;
+            --bg-color: #f8fafc;
+            --text-color: #1e293b;
+            --card-bg: #ffffff;
+            --border-color: #e2e8f0;
+            --code-bg: #f1f5f9;
+        }
+        body {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+            line-height: 1.6;
+            color: var(--text-color);
+            background-color: var(--bg-color);
+            margin: 0;
+            padding: 0;
+        }
+        .container {
+            max-width: 900px;
+            margin: 0 auto;
+            padding: 2rem;
+        }
+        nav {
+            margin-bottom: 2rem;
+        }
+        nav a {
+            color: var(--primary-color);
+            text-decoration: none;
+            font-weight: 500;
+        }
+        header {
+            margin-bottom: 3rem;
+        }
+        h1 {
+            color: var(--primary-color);
+            font-size: 2.5rem;
+            margin-bottom: 1rem;
+        }
+        h2 {
+            color: var(--text-color);
+            border-bottom: 2px solid var(--border-color);
+            padding-bottom: 0.5rem;
+            margin-top: 2.5rem;
+        }
+        .section {
+            background: var(--card-bg);
+            padding: 2rem;
+            border-radius: 0.75rem;
+            border: 1px solid var(--border-color);
+            margin-bottom: 2rem;
+        }
+        code {
+            background-color: var(--code-bg);
+            padding: 0.2rem 0.4rem;
+            border-radius: 0.25rem;
+            font-family: 'Fira Code', monospace;
+            font-size: 0.9em;
+        }
+        .risk-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 1.5rem 0;
+        }
+        .risk-table th, .risk-table td {
+            text-align: left;
+            padding: 0.75rem;
+            border-bottom: 1px solid var(--border-color);
+        }
+        .risk-table th {
+            background-color: var(--code-bg);
+            color: var(--secondary-color);
+            font-weight: 600;
+        }
+        .highlight {
+            border-left: 4px solid var(--primary-color);
+            padding-left: 1rem;
+            font-style: italic;
+            color: var(--secondary-color);
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <nav>
+            <a href="index.html">&larr; Back to Overview</a>
+        </nav>
+
+        <header>
+            <h1>Phase 1: Analysis & Requirements</h1>
+            <p class="subtitle">Identifying the root cause and defining the solution for premature status transitions.</p>
+        </header>
+
+        <main>
+            <div class="section">
+                <h2>Problem Identification</h2>
+                <p>The user reported that upon booking a return courier via Lalamove, the return status immediately transitioned to <code>SHIPPED</code>. This was inaccurate because the package had not yet been picked up by the driver, let alone transitioned through the intermediate stages of the Lalamove workflow.</p>
+                <div class="highlight">
+                    "The status immediately shows shipped even if these status haven't been happening. I still haven't changed the status in Lalamove portal to picked up..."
+                </div>
+            </div>
+
+            <div class="section">
+                <h2>Root Cause Analysis</h2>
+                <p>Auditing the <code>shippingService.js</code> file revealed that the status update logic was hardcoded to set the return status to <code>SHIPPED</code> immediately after a successful API call to Lalamove's booking endpoint.</p>
+                <p>Location: <code>lib/services/shippingService.js</code> (Line 167)</p>
+                <p>Existing logic:</p>
+                <pre><code>status: 'SHIPPED', // Incorrectly setting to SHIPPED immediately</code></pre>
+            </div>
+
+            <div class="section">
+                <h2>Proposed Solution</h2>
+                <p>To fix this, we proposed adding a new status: <code>BOOKED</code>. This status represents the state where the courier has been requested but pickup has not occurred.</p>
+                <ul>
+                    <li><strong>New Status:</strong> <code>BOOKED</code> (Waiting for Pickup)</li>
+                    <li><strong>Initial State:</strong> <code>APPROVED</code></li>
+                    <li><strong>Booking Completion:</strong> Transition to <code>BOOKED</code></li>
+                    <li><strong>Lalamove Webhook (PICKED_UP):</strong> Transition to <code>SHIPPED</code></li>
+                    <li><strong>Lalamove Webhook (COMPLETED):</strong> Transition to <code>RECEIVED</code></li>
+                </ul>
+            </div>
+
+            <div class="section">
+                <h2>Risk Assessment</h2>
+                <table class="risk-table">
+                    <thead>
+                        <tr>
+                            <th>Risk</th>
+                            <th>Impact</th>
+                            <th>Mitigation</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td>Database Enum Mismatch</td>
+                            <td>High</td>
+                            <td>Ensure <code>schema.prisma</code> is updated and client is regenerated.</td>
+                        </tr>
+                        <tr>
+                            <td>UI Filtering Issues</td>
+                            <td>Medium</td>
+                            <td>Update all seller and admin return management pages to include the <code>BOOKED</code> filter.</td>
+                        </tr>
+                        <tr>
+                            <td>Webhook Logic Gaps</td>
+                            <td>High</td>
+                            <td>Ensure the webhook correctly identifies <code>BOOKED</code> returns for status updates.</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </main>
+
+        <footer>
+            <p>&copy; 2025 Budolshap Implementation Planning.</p>
+        </footer>
+    </div>
+</body>
+</html>

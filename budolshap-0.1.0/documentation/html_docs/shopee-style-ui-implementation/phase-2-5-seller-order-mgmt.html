@@ -1,0 +1,82 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Phase 2.5: Seller Order Management UI</title>
+    <style>
+        body { font-family: 'Segoe UI', sans-serif; line-height: 1.6; color: #333; max-width: 900px; margin: 0 auto; padding: 20px; }
+        header { background: #ee4d2d; color: white; padding: 1rem; border-radius: 8px; margin-bottom: 1rem; }
+        .back-link { display: inline-block; margin-bottom: 1rem; color: #ee4d2d; text-decoration: none; }
+        .spec-block { background: #f8f9fa; border: 1px solid #ddd; padding: 1.5rem; border-radius: 4px; margin-bottom: 1.5rem; }
+        code { background: #eee; padding: 0.2rem 0.4rem; border-radius: 3px; font-family: 'Courier New', Courier, monospace; }
+        pre { background: #2d2d2d; color: #f8f8f2; padding: 1rem; border-radius: 4px; overflow-x: auto; }
+        .success { color: #166534; font-weight: bold; }
+    </style>
+</head>
+<body>
+    <a href="index.html" class="back-link">← Back to Overview</a>
+    <header>
+        <h1>Phase 2.5: Seller Order Management UI</h1>
+    </header>
+
+    <div class="spec-block">
+        <h2>Objective</h2>
+        <p>Enhance the seller's order management interface to align with the Shopee-style milestones, providing clear status badges and streamlined actions for shipping and fulfillment.</p>
+    </div>
+
+    <div class="spec-block">
+        <h2>Technical Changes</h2>
+        <h3>SellerDashboard & Order Management Components</h3>
+        <ul>
+            <li><strong>Status Badges:</strong> Updated seller-side order status badges to use "To Ship", "To Receive", and "Completed" terminology for consistency with the buyer's view.</li>
+            <li><strong>Action Buttons:</strong> Streamlined fulfillment actions. For "To Ship" orders, the "Arrange Shipment" button is prioritized.</li>
+            <li><strong>Lalamove Integration:</strong> For sellers using Lalamove, the "Track Driver" button is prominently displayed once a driver is assigned.</li>
+            <li><strong>Status Filtering:</strong> Updated the seller dashboard filters to match the new Shopee-style milestones (All, To Ship, To Receive, Completed, Cancelled, Return/Refund).</li>
+        </ul>
+    </div>
+
+    <div class="spec-block">
+        <h2>Code Snippets</h2>
+        <p>Updated status mapping for Seller views:</p>
+        <pre><code>const getStatusLabel = (status) => {
+    switch (status) {
+        case 'ORDER_PLACED':
+        case 'PAID':
+        case 'PROCESSING':
+            return 'TO SHIP';
+        case 'SHIPPED':
+        case 'IN_TRANSIT':
+            return 'TO RECEIVE';
+        case 'DELIVERED':
+        case 'COMPLETED':
+            return 'COMPLETED';
+        default:
+            return status;
+    }
+};</code></pre>
+
+        <p>Conditional action buttons for sellers:</p>
+        <pre><code>{order.status === 'PAID' && (
+    <button className="bg-primary text-white px-4 py-2 rounded">
+        Arrange Shipment
+    </button>
+)}
+{order.shipping?.provider === 'LALAMOVE' && order.status === 'IN_TRANSIT' && (
+    <button className="border border-primary text-primary px-4 py-2 rounded">
+        Track Driver
+    </button>
+)}</code></pre>
+    </div>
+
+    <div class="spec-block">
+        <h2>Validation Criteria</h2>
+        <ul>
+            <li><span class="success">✓</span> Seller dashboard correctly categorizes orders under "To Ship" and "To Receive".</li>
+            <li><span class="success">✓</span> "Arrange Shipment" button appears correctly for paid orders.</li>
+            <li><span class="success">✓</span> Seller can view the same 5-stage progress tracker as the buyer for transparency.</li>
+            <li><span class="success">✓</span> Lalamove tracking links are easily accessible from the seller's order details.</li>
+        </ul>
+    </div>
+</body>
+</html>

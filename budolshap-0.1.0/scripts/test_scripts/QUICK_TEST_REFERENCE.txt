@@ -1,0 +1,191 @@
+╔══════════════════════════════════════════════════════════════════════════════╗
+║                                                                              ║
+║                   🧪 BUDOLSHAP ORDER FLOW TEST                               ║
+║                   GCash Payment + Lalamove Delivery                          ║
+║                                                                              ║
+╚══════════════════════════════════════════════════════════════════════════════╝
+
+┌──────────────────────────────────────────────────────────────────────────────┐
+│ 📋 QUICK START                                                               │
+└──────────────────────────────────────────────────────────────────────────────┘
+
+1. Open Test Guide (Visual):
+   → Open: COMPLETE_ORDER_FLOW_TEST_GUIDE.html in browser
+   
+2. Read Instructions:
+   → Open: TESTING_INSTRUCTIONS.md
+   
+3. Run Automated Test (Optional):
+   → Run: node test-complete-order-flow.js
+   → Note: Requires valid test user credentials
+
+┌──────────────────────────────────────────────────────────────────────────────┐
+│ ✅ PREREQUISITES CHECKLIST                                                   │
+└──────────────────────────────────────────────────────────────────────────────┘
+
+□ Dev server running (npm run dev)
+□ Lalamove credentials in .env.local
+□ PayMongo credentials in .env.local
+□ Test user account exists
+□ Store with products available
+□ User has saved delivery address
+□ Lalamove wallet has credit
+
+┌──────────────────────────────────────────────────────────────────────────────┐
+│ 🔄 TEST FLOW (14 STEPS)                                                      │
+└──────────────────────────────────────────────────────────────────────────────┘
+
+ 1. Login to app
+ 2. Browse products
+ 3. Add to cart
+ 4. Proceed to checkout
+ 5. Select delivery address
+ 6. Get Lalamove quote
+ 7. Select GCash payment
+ 8. Place order
+ 9. Complete GCash payment
+10. Verify payment status
+11. Book Lalamove delivery (store owner)
+12. Verify in Lalamove Portal
+13. Monitor driver assignment
+14. Track delivery to completion
+
+┌──────────────────────────────────────────────────────────────────────────────┐
+│ 🎯 KEY VERIFICATION POINTS                                                   │
+└──────────────────────────────────────────────────────────────────────────────┘
+
+✓ Order created with correct total (items + shipping)
+✓ GCash checkout URL generated
+✓ Payment webhook updates order to "paid"
+✓ Lalamove quote includes quotationId and stopIds
+✓ Lalamove order appears in Partner Portal
+✓ Driver assigned with details visible
+✓ Delivery tracked to completion
+
+┌──────────────────────────────────────────────────────────────────────────────┐
+│ 🔧 COMMON ISSUES & QUICK FIXES                                               │
+└──────────────────────────────────────────────────────────────────────────────┘
+
+❌ Order not in Lalamove Portal
+   → Check: Browser console for API errors
+   → Check: Lalamove credentials in .env.local
+   → Check: Wallet balance in Partner Portal
+   → Check: Address within Metro Manila
+
+❌ Payment not updating order
+   → Check: Webhook configured in PayMongo dashboard
+   → Check: Webhook endpoint accessible (use ngrok for local)
+   → Check: Webhook secret in .env.local
+
+❌ Driver not assigned
+   → Sandbox: May be simulated/delayed
+   → Production: Wait 5-15 minutes
+   → Check: Service hours and area coverage
+
+❌ Quote expired
+   → Solution: Request new quote
+   → Tip: Complete checkout faster
+
+┌──────────────────────────────────────────────────────────────────────────────┐
+│ 📊 EXPECTED API SEQUENCE                                                     │
+└──────────────────────────────────────────────────────────────────────────────┘
+
+1. POST /api/orders
+   → Order created (status: pending)
+
+2. POST /api/payment/gcash/create
+   → GCash checkout URL returned
+
+3. [User completes payment in GCash]
+
+4. POST /api/webhooks/paymongo (webhook)
+   → Order updated (isPaid: true)
+
+5. POST /api/shipping/lalamove/book
+   → Lalamove order created
+
+6. POST /api/webhooks/lalamove (webhook)
+   → Order status updated based on delivery
+
+┌──────────────────────────────────────────────────────────────────────────────┐
+│ 🌐 IMPORTANT URLS                                                            │
+└──────────────────────────────────────────────────────────────────────────────┘
+
+Local App:
+  → http://localhost:3000
+
+Lalamove Partner Portal:
+  → https://partnerportal.lalamove.com/records
+
+PayMongo Dashboard:
+  → https://dashboard.paymongo.com/
+
+┌──────────────────────────────────────────────────────────────────────────────┐
+│ 📍 TEST ADDRESSES (Metro Manila)                                             │
+└──────────────────────────────────────────────────────────────────────────────┘
+
+Pickup (Store):
+  Address: Manila City Hall, Arroceros St, Ermita, Manila
+  Coordinates: 14.5995, 120.9842
+  Phone: +639171234567
+
+Delivery (Customer):
+  Address: Makati City Hall, J.P. Rizal Ave, Poblacion, Makati
+  Coordinates: 14.5547, 121.0244
+  Phone: +639177654321
+
+┌──────────────────────────────────────────────────────────────────────────────┐
+│ ⚠️  IMPORTANT WARNINGS                                                       │
+└──────────────────────────────────────────────────────────────────────────────┘
+
+⚠️  Booking Lalamove creates a REAL order and charges your account!
+⚠️  Use sandbox mode for testing when possible
+⚠️  Quotes expire after 10-15 minutes
+⚠️  Complete checkout quickly to avoid expiration
+⚠️  Ensure sufficient wallet credit before booking
+
+┌──────────────────────────────────────────────────────────────────────────────┐
+│ ✨ SUCCESS CRITERIA                                                          │
+└──────────────────────────────────────────────────────────────────────────────┘
+
+Test is SUCCESSFUL when ALL of these are true:
+
+✅ Order created in Budolshap database
+✅ GCash payment completed
+✅ Order marked as paid (isPaid: true)
+✅ Lalamove order visible in Partner Portal
+✅ Order details match in both systems
+✅ Driver assigned
+✅ Tracking available
+✅ Delivery completed
+✅ Order status: "delivered"
+
+┌──────────────────────────────────────────────────────────────────────────────┐
+│ 📞 SUPPORT                                                                   │
+└──────────────────────────────────────────────────────────────────────────────┘
+
+Lalamove:
+  → Partner Portal for support contact
+  → API Docs: https://developers.lalamove.com/
+
+PayMongo:
+  → support@paymongo.com
+  → API Docs: https://developers.paymongo.com/
+
+┌──────────────────────────────────────────────────────────────────────────────┐
+│ 📄 DOCUMENTATION FILES                                                       │
+└──────────────────────────────────────────────────────────────────────────────┘
+
+COMPLETE_ORDER_FLOW_TEST_GUIDE.html  → Visual step-by-step guide
+TESTING_INSTRUCTIONS.md               → Detailed instructions
+test-complete-order-flow.js           → Automated test script
+test-lalamove-order-creation.js       → Lalamove-specific test
+LALAMOVE_PHASE5_COMPLETE_DOCUMENTATION.html → Integration docs
+
+╔══════════════════════════════════════════════════════════════════════════════╗
+║                                                                              ║
+║                        🚀 READY TO TEST!                                     ║
+║                                                                              ║
+║  Start with: COMPLETE_ORDER_FLOW_TEST_GUIDE.html                            ║
+║                                                                              ║
+╚══════════════════════════════════════════════════════════════════════════════╝

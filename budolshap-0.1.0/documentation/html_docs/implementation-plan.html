@@ -1,0 +1,1265 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Implementation Plan - Industry Standard Order Status</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            line-height: 1.6;
+            color: #333;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            padding: 20px;
+            min-height: 100vh;
+        }
+
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 20px;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+            overflow: hidden;
+        }
+
+        .header {
+            background: linear-gradient(135deg, #27ae60 0%, #229954 100%);
+            color: white;
+            padding: 50px;
+            text-align: center;
+        }
+
+        .header h1 {
+            font-size: 3em;
+            margin-bottom: 15px;
+            text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.2);
+        }
+
+        .header p {
+            font-size: 1.3em;
+            opacity: 0.95;
+        }
+
+        .content {
+            padding: 50px;
+        }
+
+        .overview {
+            background: linear-gradient(135deg, #d4fc79 0%, #96e6a1 100%);
+            padding: 30px;
+            border-radius: 15px;
+            margin-bottom: 40px;
+            border-left: 8px solid #27ae60;
+        }
+
+        .overview h2 {
+            color: #27ae60;
+            margin-bottom: 15px;
+        }
+
+        .phase {
+            background: #f8f9fa;
+            border-radius: 15px;
+            padding: 30px;
+            margin: 30px 0;
+            border-left: 6px solid #667eea;
+        }
+
+        .phase-header {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+            margin-bottom: 25px;
+            padding-bottom: 15px;
+            border-bottom: 2px solid #667eea;
+        }
+
+        .phase-number {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            width: 60px;
+            height: 60px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.8em;
+            font-weight: bold;
+            box-shadow: 0 4px 10px rgba(102, 126, 234, 0.4);
+        }
+
+        .phase-title {
+            flex: 1;
+        }
+
+        .phase-title h2 {
+            color: #667eea;
+            font-size: 2em;
+            margin-bottom: 5px;
+        }
+
+        .phase-title p {
+            color: #666;
+            font-size: 1.1em;
+        }
+
+        .step {
+            background: white;
+            border-radius: 12px;
+            padding: 25px;
+            margin: 20px 0;
+            box-shadow: 0 3px 10px rgba(0, 0, 0, 0.1);
+            border-left: 4px solid #27ae60;
+        }
+
+        .step h3 {
+            color: #27ae60;
+            font-size: 1.5em;
+            margin-bottom: 15px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .step-icon {
+            font-size: 1.3em;
+        }
+
+        .code-block {
+            background: #1e1e1e;
+            color: #d4d4d4;
+            padding: 25px;
+            border-radius: 10px;
+            overflow-x: auto;
+            margin: 20px 0;
+            font-family: 'Consolas', 'Courier New', monospace;
+            font-size: 0.95em;
+            line-height: 1.6;
+            box-shadow: 0 3px 10px rgba(0, 0, 0, 0.3);
+        }
+
+        .code-block .comment {
+            color: #6a9955;
+        }
+
+        .code-block .keyword {
+            color: #569cd6;
+        }
+
+        .code-block .string {
+            color: #ce9178;
+        }
+
+        .code-block .function {
+            color: #dcdcaa;
+        }
+
+        .code-block .property {
+            color: #9cdcfe;
+        }
+
+        .code-block .number {
+            color: #b5cea8;
+        }
+
+        .file-path {
+            background: #2c3e50;
+            color: white;
+            padding: 10px 20px;
+            border-radius: 8px;
+            font-family: 'Courier New', monospace;
+            margin: 15px 0;
+            display: inline-block;
+        }
+
+        .checklist {
+            background: white;
+            border-radius: 10px;
+            padding: 20px;
+            margin: 20px 0;
+        }
+
+        .checklist-item {
+            padding: 12px;
+            margin: 8px 0;
+            border-left: 3px solid #27ae60;
+            background: #f8f9fa;
+            border-radius: 5px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .checklist-item input[type="checkbox"] {
+            width: 20px;
+            height: 20px;
+            cursor: pointer;
+        }
+
+        .warning-box {
+            background: #fff3cd;
+            border-left: 6px solid #f39c12;
+            padding: 20px;
+            border-radius: 10px;
+            margin: 20px 0;
+        }
+
+        .warning-box h4 {
+            color: #f39c12;
+            margin-bottom: 10px;
+        }
+
+        .success-box {
+            background: #d4edda;
+            border-left: 6px solid #27ae60;
+            padding: 20px;
+            border-radius: 10px;
+            margin: 20px 0;
+        }
+
+        .success-box h4 {
+            color: #27ae60;
+            margin-bottom: 10px;
+        }
+
+        .info-box {
+            background: #d1ecf1;
+            border-left: 6px solid #17a2b8;
+            padding: 20px;
+            border-radius: 10px;
+            margin: 20px 0;
+        }
+
+        .info-box h4 {
+            color: #17a2b8;
+            margin-bottom: 10px;
+        }
+
+        .timeline {
+            margin: 30px 0;
+        }
+
+        .timeline-item {
+            display: flex;
+            gap: 20px;
+            margin: 20px 0;
+        }
+
+        .timeline-marker {
+            min-width: 40px;
+            height: 40px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-weight: bold;
+        }
+
+        .timeline-content {
+            flex: 1;
+            background: white;
+            padding: 20px;
+            border-radius: 10px;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+        }
+
+        .badge {
+            display: inline-block;
+            padding: 5px 12px;
+            border-radius: 20px;
+            font-size: 0.85em;
+            font-weight: bold;
+            margin: 0 5px;
+        }
+
+        .badge.easy {
+            background: #27ae60;
+            color: white;
+        }
+
+        .badge.medium {
+            background: #f39c12;
+            color: white;
+        }
+
+        .badge.hard {
+            background: #e74c3c;
+            color: white;
+        }
+
+        .badge.time {
+            background: #3498db;
+            color: white;
+        }
+
+        .comparison-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 20px 0;
+            box-shadow: 0 3px 10px rgba(0, 0, 0, 0.1);
+            border-radius: 10px;
+            overflow: hidden;
+        }
+
+        .comparison-table th {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 15px;
+            text-align: left;
+        }
+
+        .comparison-table td {
+            padding: 15px;
+            border-bottom: 1px solid #eee;
+        }
+
+        .comparison-table tr:nth-child(even) {
+            background: #f8f9fa;
+        }
+
+        .footer {
+            background: #2c3e50;
+            color: white;
+            padding: 30px;
+            text-align: center;
+        }
+
+        .footer a {
+            color: #3498db;
+            text-decoration: none;
+        }
+
+        .footer a:hover {
+            text-decoration: underline;
+        }
+
+        @media (max-width: 768px) {
+            .header h1 {
+                font-size: 2em;
+            }
+
+            .content {
+                padding: 25px;
+            }
+
+            .phase-header {
+                flex-direction: column;
+                text-align: center;
+            }
+        }
+    </style>
+</head>
+
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🚀 Implementation Plan</h1>
+            <p>Upgrading to Industry Standard Order Status Flow</p>
+            <p style="font-size: 1em; margin-top: 10px; opacity: 0.9;">Based on Shopee & Lazada Best Practices</p>
+        </div>
+
+        <div class="content">
+            <!-- Overview -->
+            <div class="overview">
+                <h2>📋 Implementation Overview</h2>
+                <p>This plan outlines the step-by-step process to upgrade Budolshap's order status system to match
+                    industry standards used by Shopee and Lazada.</p>
+
+                <h3 style="margin-top: 20px; color: #27ae60;">What Will Change:</h3>
+                <ul style="margin-top: 10px; line-height: 2;">
+                    <li>✅ <strong>Automatic status updates</strong> when delivery events occur</li>
+                    <li>✅ <strong>Progressive status flow:</strong> PAID → PROCESSING → SHIPPED → DELIVERED → COMPLETED
+                    </li>
+                    <li>✅ <strong>Automated notifications</strong> at each stage</li>
+                    <li>✅ <strong>Buyer confirmation period</strong> (7 days) before auto-completion</li>
+                    <li>✅ <strong>Improved customer experience</strong> with clear status tracking</li>
+                </ul>
+
+                <h3 style="margin-top: 20px; color: #27ae60;">Estimated Timeline:</h3>
+                <p style="margin-top: 10px;"><span class="badge time">⏱️ 4-6 hours</span> for complete implementation
+                    and testing</p>
+            </div>
+
+            <!-- Phase 1 -->
+            <div class="phase">
+                <div class="phase-header">
+                    <div class="phase-number">1</div>
+                    <div class="phase-title">
+                        <h2>Database Schema Updates</h2>
+                        <p>Add new status values and fields</p>
+                        <span class="badge easy">Easy</span>
+                        <span class="badge time">30 minutes</span>
+                    </div>
+                </div>
+
+                <div class="step">
+                    <h3><span class="step-icon">📝</span> Update Order Status Enum</h3>
+                    <p>Add new status values to support the complete order lifecycle.</p>
+
+                    <div class="file-path">📁 /prisma/schema.prisma</div>
+
+                    <div class="code-block">
+                        <span class="comment">// Current enum</span>
+                        <span class="keyword">enum</span> OrderStatus {
+                        ORDER_PLACED
+                        PAID
+                        PROCESSING
+                        SHIPPED
+                        DELIVERED
+                        CANCELLED
+                        RETURN_REQUESTED
+                        RETURN_APPROVED
+                        REFUNDED
+                        }
+
+                        <span class="comment">// ✅ Already has all needed statuses!</span>
+                        <span class="comment">// No changes needed to the enum</span>
+                    </div>
+
+                    <div class="success-box">
+                        <h4>✅ Good News!</h4>
+                        <p>The Order model already has all the necessary status values. No schema changes needed!</p>
+                    </div>
+                </div>
+
+                <div class="step">
+                    <h3><span class="step-icon">🔍</span> Verify Existing Fields</h3>
+                    <p>Confirm that all required fields exist in the Order model.</p>
+
+                    <div class="checklist">
+                        <div class="checklist-item">
+                            <input type="checkbox" checked disabled>
+                            <span><code>status</code> - Main order status</span>
+                        </div>
+                        <div class="checklist-item">
+                            <input type="checkbox" checked disabled>
+                            <span><code>isPaid</code> - Payment confirmation flag</span>
+                        </div>
+                        <div class="checklist-item">
+                            <input type="checkbox" checked disabled>
+                            <span><code>paymentStatus</code> - Payment processing status</span>
+                        </div>
+                        <div class="checklist-item">
+                            <input type="checkbox" checked disabled>
+                            <span><code>shipping</code> - JSON field for shipping details</span>
+                        </div>
+                        <div class="checklist-item">
+                            <input type="checkbox" checked disabled>
+                            <span><code>shippedAt</code> - Timestamp for shipment</span>
+                        </div>
+                        <div class="checklist-item">
+                            <input type="checkbox" checked disabled>
+                            <span><code>deliveredAt</code> - Timestamp for delivery</span>
+                        </div>
+                    </div>
+
+                    <div class="success-box">
+                        <h4>✅ All Fields Present!</h4>
+                        <p>No database migrations needed. We can proceed directly to code changes.</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Phase 2 -->
+            <div class="phase">
+                <div class="phase-header">
+                    <div class="phase-number">2</div>
+                    <div class="phase-title">
+                        <h2>Update Lalamove Webhook Handler</h2>
+                        <p>Implement automatic order status updates</p>
+                        <span class="badge medium">Medium</span>
+                        <span class="badge time">1-2 hours</span>
+                    </div>
+                </div>
+
+                <div class="step">
+                    <h3><span class="step-icon">📝</span> Step 2.1: Update PICKED_UP Event Handler</h3>
+                    <p>Auto-update order status to SHIPPED when driver picks up the package.</p>
+
+                    <div class="file-path">📁 /app/api/webhooks/lalamove/route.js</div>
+
+                    <h4 style="margin: 20px 0 10px 0; color: #e74c3c;">❌ Current Code (Lines ~161-164):</h4>
+                    <div class="code-block">
+                        <span class="keyword">case</span> <span class="string">'PICKED_UP'</span>:
+                        console.<span class="function">log</span>(<span class="string">`Package picked up for order
+                            ${order.id}`</span>)
+                        <span class="comment">// TODO: Send notification to customer</span>
+                        <span class="keyword">break</span>
+                    </div>
+
+                    <h4 style="margin: 20px 0 10px 0; color: #27ae60;">✅ New Code (Replace with):</h4>
+                    <div class="code-block">
+                        <span class="keyword">case</span> <span class="string">'PICKED_UP'</span>:
+                        console.<span class="function">log</span>(<span class="string">`Package picked up for order
+                            ${order.id}`</span>)
+
+                        <span class="comment">// ✅ Auto-update order status to SHIPPED</span>
+                        <span class="keyword">await</span> prisma.order.<span class="function">update</span>({
+                        <span class="property">where</span>: { id: order.id },
+                        <span class="property">data</span>: {
+                        <span class="property">status</span>: <span class="string">'SHIPPED'</span>,
+                        <span class="property">shippedAt</span>: <span class="keyword">new</span> <span
+                            class="function">Date</span>()
+                        }
+                        })
+
+                        <span class="comment">// ✅ Send notification to customer</span>
+                        <span class="keyword">try</span> {
+                        <span class="keyword">const</span> orderWithDetails = <span class="keyword">await</span>
+                        prisma.order.<span class="function">findUnique</span>({
+                        <span class="property">where</span>: { id: order.id },
+                        <span class="property">include</span>: {
+                        <span class="property">user</span>: <span class="keyword">true</span>,
+                        <span class="property">store</span>: <span class="keyword">true</span>
+                        }
+                        })
+
+                        <span class="keyword">if</span> (orderWithDetails) {
+                        <span class="keyword">await</span> <span class="function">sendOrderStatusEmail</span>(
+                        orderWithDetails.user.email,
+                        orderWithDetails,
+                        orderWithDetails.user,
+                        orderWithDetails.store,
+                        <span class="string">'SHIPPED'</span>
+                        )
+                        }
+                        } <span class="keyword">catch</span> (emailError) {
+                        console.<span class="function">error</span>(<span class="string">'Failed to send shipped
+                            notification:'</span>, emailError)
+                        <span class="comment">// Don't fail the webhook if email fails</span>
+                        }
+
+                        console.<span class="function">log</span>(<span class="string">`Order ${order.id} status updated
+                            to SHIPPED`</span>)
+                        <span class="keyword">break</span>
+                    </div>
+                </div>
+
+                <div class="step">
+                    <h3><span class="step-icon">📝</span> Step 2.2: Update COMPLETED Event Handler</h3>
+                    <p>Auto-update order status to DELIVERED when delivery is completed.</p>
+
+                    <h4 style="margin: 20px 0 10px 0; color: #e74c3c;">❌ Current Code (Lines ~166-170):</h4>
+                    <div class="code-block">
+                        <span class="keyword">case</span> <span class="string">'COMPLETED'</span>:
+                        console.<span class="function">log</span>(<span class="string">`Order ${order.id} delivered
+                            successfully`</span>)
+                        <span class="comment">// TODO: Send delivery confirmation to customer</span>
+                        <span class="comment">// TODO: Update order status to 'delivered'</span>
+                        <span class="keyword">break</span>
+                    </div>
+
+                    <h4 style="margin: 20px 0 10px 0; color: #27ae60;">✅ New Code (Replace with):</h4>
+                    <div class="code-block">
+                        <span class="keyword">case</span> <span class="string">'COMPLETED'</span>:
+                        console.<span class="function">log</span>(<span class="string">`Order ${order.id} delivered
+                            successfully`</span>)
+
+                        <span class="comment">// ✅ Auto-update order status to DELIVERED</span>
+                        <span class="keyword">await</span> prisma.order.<span class="function">update</span>({
+                        <span class="property">where</span>: { id: order.id },
+                        <span class="property">data</span>: {
+                        <span class="property">status</span>: <span class="string">'DELIVERED'</span>,
+                        <span class="property">deliveredAt</span>: actualDeliveryTime || <span
+                            class="keyword">new</span> <span class="function">Date</span>()
+                        }
+                        })
+
+                        <span class="comment">// ✅ Send delivery confirmation to customer</span>
+                        <span class="keyword">try</span> {
+                        <span class="keyword">const</span> orderWithDetails = <span class="keyword">await</span>
+                        prisma.order.<span class="function">findUnique</span>({
+                        <span class="property">where</span>: { id: order.id },
+                        <span class="property">include</span>: {
+                        <span class="property">user</span>: <span class="keyword">true</span>,
+                        <span class="property">store</span>: <span class="keyword">true</span>
+                        }
+                        })
+
+                        <span class="keyword">if</span> (orderWithDetails) {
+                        <span class="keyword">await</span> <span class="function">sendOrderStatusEmail</span>(
+                        orderWithDetails.user.email,
+                        orderWithDetails,
+                        orderWithDetails.user,
+                        orderWithDetails.store,
+                        <span class="string">'DELIVERED'</span>
+                        )
+                        }
+                        } <span class="keyword">catch</span> (emailError) {
+                        console.<span class="function">error</span>(<span class="string">'Failed to send delivered
+                            notification:'</span>, emailError)
+                        }
+
+                        console.<span class="function">log</span>(<span class="string">`Order ${order.id} status updated
+                            to DELIVERED`</span>)
+                        <span class="keyword">break</span>
+                    </div>
+                </div>
+
+                <div class="info-box">
+                    <h4>💡 Important Note</h4>
+                    <p>The <code>sendOrderStatusEmail</code> function already exists in <code>/lib/email.js</code> and
+                        handles SHIPPED and DELIVERED status emails. No changes needed to the email service!</p>
+                </div>
+            </div>
+
+            <!-- Phase 3 -->
+            <div class="phase">
+                <div class="phase-header">
+                    <div class="phase-number">3</div>
+                    <div class="phase-title">
+                        <h2>Add PROCESSING Status on Booking</h2>
+                        <p>Update status when Lalamove delivery is booked</p>
+                        <span class="badge easy">Easy</span>
+                        <span class="badge time">30 minutes</span>
+                    </div>
+                </div>
+
+                <div class="step">
+                    <h3><span class="step-icon">📝</span> Update Lalamove Booking Handler</h3>
+                    <p>Set order status to PROCESSING when store owner books Lalamove delivery.</p>
+
+                    <div class="file-path">📁 /app/api/shipping/lalamove/book/route.js</div>
+
+                    <h4 style="margin: 20px 0 10px 0; color: #27ae60;">✅ Add After Booking Success (Around line 350):
+                    </h4>
+                    <div class="code-block">
+                        <span class="comment">// Update Budolshap order with booking details</span>
+                        <span class="keyword">await</span> prisma.order.<span class="function">update</span>({
+                        <span class="property">where</span>: { id: orderId },
+                        <span class="property">data</span>: {
+                        <span class="property">status</span>: <span class="string">'PROCESSING'</span>, <span
+                            class="comment">// ✅ ADD THIS LINE</span>
+                        <span class="property">shipping</span>: {
+                        ...existingShipping,
+                        <span class="property">bookingId</span>: booking.orderId,
+                        <span class="property">status</span>: <span class="string">'ASSIGNING_DRIVER'</span>,
+                        <span class="property">shareLink</span>: booking.shareLink,
+                        <span class="property">driverLink</span>: booking.driverLink,
+                        <span class="property">bookedAt</span>: <span class="keyword">new</span> <span
+                            class="function">Date</span>().<span class="function">toISOString</span>()
+                        }
+                        }
+                        })
+
+                        <span class="comment">// ✅ Send notification to customer</span>
+                        <span class="keyword">try</span> {
+                        <span class="keyword">const</span> orderWithDetails = <span class="keyword">await</span>
+                        prisma.order.<span class="function">findUnique</span>({
+                        <span class="property">where</span>: { id: orderId },
+                        <span class="property">include</span>: {
+                        <span class="property">user</span>: <span class="keyword">true</span>,
+                        <span class="property">store</span>: <span class="keyword">true</span>
+                        }
+                        })
+
+                        <span class="keyword">if</span> (orderWithDetails) {
+                        <span class="keyword">await</span> <span class="function">sendOrderStatusEmail</span>(
+                        orderWithDetails.user.email,
+                        orderWithDetails,
+                        orderWithDetails.user,
+                        orderWithDetails.store,
+                        <span class="string">'PROCESSING'</span>
+                        )
+                        }
+                        } <span class="keyword">catch</span> (emailError) {
+                        console.<span class="function">error</span>(<span class="string">'Failed to send processing
+                            notification:'</span>, emailError)
+                        }
+                    </div>
+                </div>
+            </div>
+
+            <!-- Phase 4 -->
+            <div class="phase">
+                <div class="phase-header">
+                    <div class="phase-number">4</div>
+                    <div class="phase-title">
+                        <h2>Implement Auto-Completion</h2>
+                        <p>Add buyer confirmation period and auto-completion</p>
+                        <span class="badge medium">Medium</span>
+                        <span class="badge time">1-2 hours</span>
+                    </div>
+                </div>
+
+                <div class="step">
+                    <h3><span class="step-icon">📝</span> Step 4.1: Create Auto-Completion Utility</h3>
+                    <p>Create a utility function to schedule auto-completion after 7 days.</p>
+
+                    <div class="file-path">📁 /lib/orderAutoComplete.js (NEW FILE)</div>
+
+                    <div class="code-block">
+                        <span class="keyword">import</span> { prisma } <span class="keyword">from</span> <span
+                            class="string">'./prisma'</span>
+                        <span class="keyword">import</span> { sendOrderStatusEmail } <span class="keyword">from</span>
+                        <span class="string">'./email'</span>
+
+                        <span class="comment">/**
+                            * Schedule auto-completion for an order after specified days
+                            * @param {string} orderId - Order ID
+                            * @param {number} days - Number of days to wait (default: 7)
+                            */</span>
+                        <span class="keyword">export async function</span> <span
+                            class="function">scheduleAutoComplete</span>(orderId, days = <span class="number">7</span>)
+                        {
+                        <span class="keyword">const</span> completionDate = <span class="keyword">new</span> <span
+                            class="function">Date</span>()
+                        completionDate.<span class="function">setDate</span>(completionDate.<span
+                            class="function">getDate</span>() + days)
+
+                        <span class="comment">// Store completion date in order metadata</span>
+                        <span class="keyword">await</span> prisma.order.<span class="function">update</span>({
+                        <span class="property">where</span>: { id: orderId },
+                        <span class="property">data</span>: {
+                        <span class="property">autoCompleteAt</span>: completionDate
+                        }
+                        })
+
+                        console.<span class="function">log</span>(<span class="string">`Order ${orderId} scheduled for
+                            auto-completion on ${completionDate}`</span>)
+                        }
+
+                        <span class="comment">/**
+                            * Process auto-completion for delivered orders
+                            * Should be run as a cron job daily
+                            */</span>
+                        <span class="keyword">export async function</span> <span
+                            class="function">processAutoCompletions</span>() {
+                        <span class="keyword">const</span> now = <span class="keyword">new</span> <span
+                            class="function">Date</span>()
+
+                        <span class="comment">// Find orders that are DELIVERED and past auto-complete date</span>
+                        <span class="keyword">const</span> ordersToComplete = <span class="keyword">await</span>
+                        prisma.order.<span class="function">findMany</span>({
+                        <span class="property">where</span>: {
+                        <span class="property">status</span>: <span class="string">'DELIVERED'</span>,
+                        <span class="property">autoCompleteAt</span>: {
+                        <span class="property">lte</span>: now
+                        }
+                        },
+                        <span class="property">include</span>: {
+                        <span class="property">user</span>: <span class="keyword">true</span>,
+                        <span class="property">store</span>: <span class="keyword">true</span>
+                        }
+                        })
+
+                        <span class="keyword">for</span> (<span class="keyword">const</span> order <span
+                            class="keyword">of</span> ordersToComplete) {
+                        <span class="keyword">try</span> {
+                        <span class="comment">// Update to COMPLETED</span>
+                        <span class="keyword">await</span> prisma.order.<span class="function">update</span>({
+                        <span class="property">where</span>: { id: order.id },
+                        <span class="property">data</span>: {
+                        <span class="property">status</span>: <span class="string">'COMPLETED'</span>,
+                        <span class="property">completedAt</span>: now
+                        }
+                        })
+
+                        <span class="comment">// Send completion notification</span>
+                        <span class="keyword">await</span> <span class="function">sendOrderStatusEmail</span>(
+                        order.user.email,
+                        order,
+                        order.user,
+                        order.store,
+                        <span class="string">'COMPLETED'</span>
+                        )
+
+                        console.<span class="function">log</span>(<span class="string">`Order ${order.id}
+                            auto-completed`</span>)
+                        } <span class="keyword">catch</span> (error) {
+                        console.<span class="function">error</span>(<span class="string">`Failed to auto-complete order
+                            ${order.id}:`</span>, error)
+                        }
+                        }
+
+                        <span class="keyword">return</span> ordersToComplete.length
+                        }
+                    </div>
+                </div>
+
+                <div class="step">
+                    <h3><span class="step-icon">📝</span> Step 4.2: Add autoCompleteAt Field to Schema</h3>
+                    <p>Add a field to track when orders should be auto-completed.</p>
+
+                    <div class="file-path">📁 /prisma/schema.prisma</div>
+
+                    <div class="code-block">
+                        <span class="keyword">model</span> Order {
+                        <span class="comment">// ... existing fields ...</span>
+
+                        deliveredAt DateTime?
+                        completedAt DateTime?
+                        autoCompleteAt DateTime? <span class="comment">// ✅ ADD THIS LINE</span>
+
+                        <span class="comment">// ... rest of model ...</span>
+                        }
+                    </div>
+
+                    <div class="warning-box">
+                        <h4>⚠️ Migration Required</h4>
+                        <p>After adding this field, run:</p>
+                        <div class="code-block" style="margin-top: 10px;">
+                            npx prisma migrate dev --name add-auto-complete-field
+                        </div>
+                    </div>
+                </div>
+
+                <div class="step">
+                    <h3><span class="step-icon">📝</span> Step 4.3: Update Lalamove Webhook to Schedule Auto-Completion
+                    </h3>
+                    <p>Call the schedule function when order is delivered.</p>
+
+                    <div class="file-path">📁 /app/api/webhooks/lalamove/route.js</div>
+
+                    <div class="code-block">
+                        <span class="comment">// Add import at top of file</span>
+                        <span class="keyword">import</span> { scheduleAutoComplete } <span class="keyword">from</span>
+                        <span class="string">'@/lib/orderAutoComplete'</span>
+
+                        <span class="comment">// In the COMPLETED case, after updating order status:</span>
+                        <span class="keyword">case</span> <span class="string">'COMPLETED'</span>:
+                        <span class="comment">// ... existing code to update status to DELIVERED ...</span>
+
+                        <span class="comment">// ✅ Schedule auto-completion after 7 days</span>
+                        <span class="keyword">await</span> <span class="function">scheduleAutoComplete</span>(order.id,
+                        <span class="number">7</span>)
+
+                        <span class="keyword">break</span>
+                    </div>
+                </div>
+
+                <div class="step">
+                    <h3><span class="step-icon">📝</span> Step 4.4: Create Cron Job API Route</h3>
+                    <p>Create an API endpoint to process auto-completions (to be called by a cron job).</p>
+
+                    <div class="file-path">📁 /app/api/cron/auto-complete-orders/route.js (NEW FILE)</div>
+
+                    <div class="code-block">
+                        <span class="keyword">import</span> { NextResponse } <span class="keyword">from</span> <span
+                            class="string">'next/server'</span>
+                        <span class="keyword">import</span> { processAutoCompletions } <span class="keyword">from</span>
+                        <span class="string">'@/lib/orderAutoComplete'</span>
+
+                        <span class="comment">/**
+                            * GET /api/cron/auto-complete-orders
+                            * Process auto-completion for delivered orders
+                            * Should be called by a cron job daily
+                            */</span>
+                        <span class="keyword">export async function</span> <span class="function">GET</span>(request) {
+                        <span class="keyword">try</span> {
+                        <span class="comment">// Optional: Add authentication to prevent unauthorized access</span>
+                        <span class="keyword">const</span> authHeader = request.headers.<span
+                            class="function">get</span>(<span class="string">'authorization'</span>)
+                        <span class="keyword">const</span> cronSecret = process.env.CRON_SECRET
+
+                        <span class="keyword">if</span> (cronSecret &amp;&amp; authHeader !== <span
+                            class="string">`Bearer ${cronSecret}`</span>) {
+                        <span class="keyword">return</span> NextResponse.<span class="function">json</span>(
+                        { <span class="property">error</span>: <span class="string">'Unauthorized'</span> },
+                        { <span class="property">status</span>: <span class="number">401</span> }
+                        )
+                        }
+
+                        <span class="keyword">const</span> completedCount = <span class="keyword">await</span> <span
+                            class="function">processAutoCompletions</span>()
+
+                        <span class="keyword">return</span> NextResponse.<span class="function">json</span>({
+                        <span class="property">success</span>: <span class="keyword">true</span>,
+                        <span class="property">completedOrders</span>: completedCount,
+                        <span class="property">timestamp</span>: <span class="keyword">new</span> <span
+                            class="function">Date</span>().<span class="function">toISOString</span>()
+                        })
+                        } <span class="keyword">catch</span> (error) {
+                        console.<span class="function">error</span>(<span class="string">'Auto-completion cron
+                            error:'</span>, error)
+                        <span class="keyword">return</span> NextResponse.<span class="function">json</span>(
+                        { <span class="property">error</span>: error.message },
+                        { <span class="property">status</span>: <span class="number">500</span> }
+                        )
+                        }
+                        }
+                    </div>
+                </div>
+
+                <div class="info-box">
+                    <h4>💡 Setting Up Cron Job</h4>
+                    <p>On Vercel, add this to <code>vercel.json</code>:</p>
+                    <div class="code-block" style="margin-top: 10px;">
+                        {
+                        <span class="string">"crons"</span>: [{
+                        <span class="string">"path"</span>: <span
+                            class="string">"/api/cron/auto-complete-orders"</span>,
+                        <span class="string">"schedule"</span>: <span class="string">"0 0 * * *"</span> <span
+                            class="comment">// Run daily at midnight</span>
+                        }]
+                        }
+                    </div>
+                    <p style="margin-top: 10px;">Add <code>CRON_SECRET</code> to your environment variables for
+                        security.</p>
+                </div>
+            </div>
+
+            <!-- Phase 5 -->
+            <div class="phase">
+                <div class="phase-header">
+                    <div class="phase-number">5</div>
+                    <div class="phase-title">
+                        <h2>Testing & Validation</h2>
+                        <p>Comprehensive testing of the new flow</p>
+                        <span class="badge medium">Medium</span>
+                        <span class="badge time">1-2 hours</span>
+                    </div>
+                </div>
+
+                <div class="step">
+                    <h3><span class="step-icon">✅</span> Testing Checklist</h3>
+
+                    <div class="checklist">
+                        <h4 style="margin-bottom: 15px;">Phase 1: Order Creation & Payment</h4>
+                        <div class="checklist-item">
+                            <input type="checkbox">
+                            <span>Create test order with GCash payment</span>
+                        </div>
+                        <div class="checklist-item">
+                            <input type="checkbox">
+                            <span>Verify order status is <code>ORDER_PLACED</code></span>
+                        </div>
+                        <div class="checklist-item">
+                            <input type="checkbox">
+                            <span>Complete GCash payment</span>
+                        </div>
+                        <div class="checklist-item">
+                            <input type="checkbox">
+                            <span>Verify PayMongo webhook updates status to <code>PAID</code></span>
+                        </div>
+                        <div class="checklist-item">
+                            <input type="checkbox">
+                            <span>Verify seller wallet is credited</span>
+                        </div>
+
+                        <h4 style="margin: 25px 0 15px 0;">Phase 2: Lalamove Booking</h4>
+                        <div class="checklist-item">
+                            <input type="checkbox">
+                            <span>Book Lalamove delivery from store dashboard</span>
+                        </div>
+                        <div class="checklist-item">
+                            <input type="checkbox">
+                            <span>Verify order status changes to <code>PROCESSING</code></span>
+                        </div>
+                        <div class="checklist-item">
+                            <input type="checkbox">
+                            <span>Verify customer receives "Order Processing" email</span>
+                        </div>
+                        <div class="checklist-item">
+                            <input type="checkbox">
+                            <span>Verify Lalamove booking appears in Partner Portal</span>
+                        </div>
+
+                        <h4 style="margin: 25px 0 15px 0;">Phase 3: Package Pickup</h4>
+                        <div class="checklist-item">
+                            <input type="checkbox">
+                            <span>Wait for driver to pick up package (or simulate webhook)</span>
+                        </div>
+                        <div class="checklist-item">
+                            <input type="checkbox">
+                            <span>Verify order status changes to <code>SHIPPED</code></span>
+                        </div>
+                        <div class="checklist-item">
+                            <input type="checkbox">
+                            <span>Verify <code>shippedAt</code> timestamp is set</span>
+                        </div>
+                        <div class="checklist-item">
+                            <input type="checkbox">
+                            <span>Verify customer receives "Order Shipped" email with tracking</span>
+                        </div>
+
+                        <h4 style="margin: 25px 0 15px 0;">Phase 4: Delivery Completion</h4>
+                        <div class="checklist-item">
+                            <input type="checkbox">
+                            <span>Wait for delivery completion (or simulate webhook)</span>
+                        </div>
+                        <div class="checklist-item">
+                            <input type="checkbox">
+                            <span>Verify order status changes to <code>DELIVERED</code></span>
+                        </div>
+                        <div class="checklist-item">
+                            <input type="checkbox">
+                            <span>Verify <code>deliveredAt</code> timestamp is set</span>
+                        </div>
+                        <div class="checklist-item">
+                            <input type="checkbox">
+                            <span>Verify <code>autoCompleteAt</code> is set to 7 days from now</span>
+                        </div>
+                        <div class="checklist-item">
+                            <input type="checkbox">
+                            <span>Verify customer receives "Order Delivered" email</span>
+                        </div>
+
+                        <h4 style="margin: 25px 0 15px 0;">Phase 5: Auto-Completion</h4>
+                        <div class="checklist-item">
+                            <input type="checkbox">
+                            <span>Test cron job endpoint: <code>GET /api/cron/auto-complete-orders</code></span>
+                        </div>
+                        <div class="checklist-item">
+                            <input type="checkbox">
+                            <span>Manually set <code>autoCompleteAt</code> to past date for testing</span>
+                        </div>
+                        <div class="checklist-item">
+                            <input type="checkbox">
+                            <span>Run cron job and verify order changes to <code>COMPLETED</code></span>
+                        </div>
+                        <div class="checklist-item">
+                            <input type="checkbox">
+                            <span>Verify customer receives "Order Completed" email</span>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="step">
+                    <h3><span class="step-icon">🧪</span> Webhook Testing</h3>
+                    <p>Test webhook handlers without waiting for actual deliveries.</p>
+
+                    <h4 style="margin: 20px 0 10px 0;">Create Test Script:</h4>
+                    <div class="file-path">📁 /scripts/test-webhook-flow.js (NEW FILE)</div>
+
+                    <div class="code-block">
+                        <span class="keyword">const</span> axios = <span class="function">require</span>(<span
+                            class="string">'axios'</span>)
+
+                        <span class="keyword">const</span> BASE_URL = <span
+                            class="string">'http://localhost:3000'</span>
+                        <span class="keyword">const</span> ORDER_ID = <span class="string">'your-test-order-id'</span>
+
+                        <span class="keyword">async function</span> <span class="function">testWebhookFlow</span>() {
+                        console.<span class="function">log</span>(<span class="string">'Testing Lalamove webhook
+                            flow...\n'</span>)
+
+                        <span class="comment">// Test PICKED_UP event</span>
+                        console.<span class="function">log</span>(<span class="string">'1. Simulating PICKED_UP
+                            event...'</span>)
+                        <span class="keyword">await</span> axios.<span class="function">post</span>(<span
+                            class="string">`${BASE_URL}/api/webhooks/lalamove`</span>, {
+                        <span class="property">event</span>: <span class="string">'PICKED_UP'</span>,
+                        <span class="property">orderId</span>: <span class="string">'lalamove-booking-id'</span>,
+                        <span class="property">status</span>: <span class="string">'PICKED_UP'</span>
+                        })
+                        console.<span class="function">log</span>(<span class="string">'✅ PICKED_UP processed\n'</span>)
+
+                        <span class="comment">// Wait a bit</span>
+                        <span class="keyword">await</span> <span class="keyword">new</span> <span
+                            class="function">Promise</span>(resolve =&gt; <span
+                            class="function">setTimeout</span>(resolve, <span class="number">2000</span>))
+
+                        <span class="comment">// Test COMPLETED event</span>
+                        console.<span class="function">log</span>(<span class="string">'2. Simulating COMPLETED
+                            event...'</span>)
+                        <span class="keyword">await</span> axios.<span class="function">post</span>(<span
+                            class="string">`${BASE_URL}/api/webhooks/lalamove`</span>, {
+                        <span class="property">event</span>: <span class="string">'COMPLETED'</span>,
+                        <span class="property">orderId</span>: <span class="string">'lalamove-booking-id'</span>,
+                        <span class="property">status</span>: <span class="string">'COMPLETED'</span>,
+                        <span class="property">actualDeliveryTime</span>: <span class="keyword">new</span> <span
+                            class="function">Date</span>().<span class="function">toISOString</span>()
+                        })
+                        console.<span class="function">log</span>(<span class="string">'✅ COMPLETED processed\n'</span>)
+
+                        console.<span class="function">log</span>(<span class="string">'Test complete! Check order
+                            status in database.'</span>)
+                        }
+
+                        <span class="function">testWebhookFlow</span>().<span
+                            class="function">catch</span>(console.error)
+                    </div>
+                </div>
+            </div>
+
+            <!-- Phase 6 -->
+            <div class="phase">
+                <div class="phase-header">
+                    <div class="phase-number">6</div>
+                    <div class="phase-title">
+                        <h2>Deployment</h2>
+                        <p>Deploy changes to production</p>
+                        <span class="badge easy">Easy</span>
+                        <span class="badge time">30 minutes</span>
+                    </div>
+                </div>
+
+                <div class="step">
+                    <h3><span class="step-icon">📝</span> Pre-Deployment Checklist</h3>
+
+                    <div class="checklist">
+                        <div class="checklist-item">
+                            <input type="checkbox">
+                            <span>All code changes committed to Git</span>
+                        </div>
+                        <div class="checklist-item">
+                            <input type="checkbox">
+                            <span>Database migration tested locally</span>
+                        </div>
+                        <div class="checklist-item">
+                            <input type="checkbox">
+                            <span>All tests passing</span>
+                        </div>
+                        <div class="checklist-item">
+                            <input type="checkbox">
+                            <span>Environment variables configured on Vercel</span>
+                        </div>
+                        <div class="checklist-item">
+                            <input type="checkbox">
+                            <span>Cron job configured in <code>vercel.json</code></span>
+                        </div>
+                        <div class="checklist-item">
+                            <input type="checkbox">
+                            <span><code>CRON_SECRET</code> added to environment variables</span>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="step">
+                    <h3><span class="step-icon">🚀</span> Deployment Steps</h3>
+
+                    <div class="timeline">
+                        <div class="timeline-item">
+                            <div class="timeline-marker">1</div>
+                            <div class="timeline-content">
+                                <h4>Push to GitHub</h4>
+                                <div class="code-block" style="margin-top: 10px;">
+                                    git add .
+                                    git commit -m "feat: implement industry standard order status flow"
+                                    git push origin main
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="timeline-item">
+                            <div class="timeline-marker">2</div>
+                            <div class="timeline-content">
+                                <h4>Run Database Migration on Production</h4>
+                                <div class="code-block" style="margin-top: 10px;">
+                                    npx prisma migrate deploy
+                                </div>
+                                <p style="margin-top: 10px;">Or use Vercel's automatic migration if configured.</p>
+                            </div>
+                        </div>
+
+                        <div class="timeline-item">
+                            <div class="timeline-marker">3</div>
+                            <div class="timeline-content">
+                                <h4>Verify Deployment</h4>
+                                <ul style="margin-top: 10px;">
+                                    <li>Check Vercel deployment logs</li>
+                                    <li>Verify cron job is registered</li>
+                                    <li>Test with a real order</li>
+                                </ul>
+                            </div>
+                        </div>
+
+                        <div class="timeline-item">
+                            <div class="timeline-marker">4</div>
+                            <div class="timeline-content">
+                                <h4>Monitor</h4>
+                                <ul style="margin-top: 10px;">
+                                    <li>Watch webhook logs for any errors</li>
+                                    <li>Monitor email delivery</li>
+                                    <li>Check cron job execution daily</li>
+                                </ul>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Summary -->
+            <div class="overview"
+                style="background: linear-gradient(135deg, #a8edea 0%, #fed6e3 100%); border-left-color: #667eea;">
+                <h2 style="color: #667eea;">📊 Implementation Summary</h2>
+
+                <table class="comparison-table" style="margin-top: 20px;">
+                    <thead>
+                        <tr>
+                            <th>Phase</th>
+                            <th>Changes</th>
+                            <th>Files Modified</th>
+                            <th>Time</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td><strong>Phase 1</strong></td>
+                            <td>Database schema updates</td>
+                            <td><code>/prisma/schema.prisma</code></td>
+                            <td>30 min</td>
+                        </tr>
+                        <tr>
+                            <td><strong>Phase 2</strong></td>
+                            <td>Lalamove webhook updates</td>
+                            <td><code>/app/api/webhooks/lalamove/route.js</code></td>
+                            <td>1-2 hours</td>
+                        </tr>
+                        <tr>
+                            <td><strong>Phase 3</strong></td>
+                            <td>Booking status update</td>
+                            <td><code>/app/api/shipping/lalamove/book/route.js</code></td>
+                            <td>30 min</td>
+                        </tr>
+                        <tr>
+                            <td><strong>Phase 4</strong></td>
+                            <td>Auto-completion system</td>
+                            <td><code>/lib/orderAutoComplete.js</code><br><code>/app/api/cron/auto-complete-orders/route.js</code>
+                            </td>
+                            <td>1-2 hours</td>
+                        </tr>
+                        <tr>
+                            <td><strong>Phase 5</strong></td>
+                            <td>Testing & validation</td>
+                            <td>All modified files</td>
+                            <td>1-2 hours</td>
+                        </tr>
+                        <tr>
+                            <td><strong>Phase 6</strong></td>
+                            <td>Deployment</td>
+                            <td>Production environment</td>
+                            <td>30 min</td>
+                        </tr>
+                    </tbody>
+                </table>
+
+                <h3 style="margin-top: 30px; color: #667eea;">Total Estimated Time: 4-6 hours</h3>
+
+                <h3 style="margin-top: 30px; color: #667eea;">Benefits After Implementation:</h3>
+                <ul style="margin-top: 15px; line-height: 2;">
+                    <li>✅ Fully automated order status progression</li>
+                    <li>✅ Aligned with industry standards (Shopee/Lazada)</li>
+                    <li>✅ Improved customer experience</li>
+                    <li>✅ Reduced manual work for store owners</li>
+                    <li>✅ Automated email notifications at each stage</li>
+                    <li>✅ Buyer protection with 7-day confirmation period</li>
+                    <li>✅ Professional, scalable system</li>
+                </ul>
+            </div>
+        </div>
+
+        <div class="footer">
+            <p><strong>Implementation Plan Created:</strong> December 3, 2025</p>
+            <p><strong>Based on:</strong> Shopee & Lazada Industry Standards</p>
+            <p><strong>Target System:</strong> Budolshap V2 Multi-vendor E-commerce Platform</p>
+            <p style="margin-top: 20px;">
+                <a href="index.html">← Back to Documentation Index</a> |
+                <a href="flow-comparison-diagram.html">View Flow Comparison →</a>
+            </p>
+        </div>
+    </div>
+</body>
+
+</html>

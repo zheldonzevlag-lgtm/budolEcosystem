@@ -1,0 +1,85 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Phase 2: Logistics & Exceptions - Implementation Plan</title>
+    <style>
+        :root { --primary: #ee4d2d; --secondary: #1e293b; --bg: #f8fafc; --text: #334155; --success: #22c55e; --warning: #f59e0b; --danger: #ef4444; }
+        body { font-family: -apple-system, system-ui, sans-serif; line-height: 1.6; color: var(--text); background: var(--bg); margin: 0; padding: 20px; }
+        .container { max-width: 900px; margin: 0 auto; background: white; padding: 40px; border-radius: 12px; box-shadow: 0 4px 20px rgba(0,0,0,0.05); }
+        h1, h2 { color: var(--secondary); border-bottom: 2px solid var(--primary); padding-bottom: 8px; }
+        .spec-box { background: #f1f5f9; padding: 20px; border-radius: 8px; margin: 20px 0; border-left: 4px solid var(--primary); }
+        .task-list { list-style: none; padding: 0; }
+        .task-item { display: flex; align-items: flex-start; gap: 10px; margin-bottom: 15px; padding: 10px; border: 1px solid #e2e8f0; border-radius: 6px; }
+        .task-status { font-weight: bold; font-size: 0.8em; text-transform: uppercase; padding: 2px 6px; border-radius: 4px; }
+        .status-todo { background: #fee2e2; color: #991b1b; }
+        .nav-link { color: var(--primary); text-decoration: none; font-weight: bold; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <a href="index.html" class="nav-link">← Back to Master Plan</a>
+        <h1>Phase 2: Logistics & Exception Handling</h1>
+        
+        <div class="spec-box">
+            <strong>Estimated Timeframe:</strong> 1-2 Days<br>
+            <strong>Primary Goal:</strong> Handle complex return scenarios including COD failures, return shipping costs, and Shopee Guarantee extensions.
+        </div>
+
+        <h2>1. Technical Specifications</h2>
+        <ul>
+            <li><strong>COD Unpaid Logic:</strong> Track failed COD deliveries and automatically increment the user's <code>codUnpaidCount</code>.</li>
+            <li><strong>RSF (Return Shipping Fee):</strong> Implement a rule engine to decide if the Buyer or Seller pays for the return shipping based on the return reason.</li>
+            <li><strong>Guarantee Extension:</strong> Add an <code>autoCompleteAt</code> field update logic when a buyer requests an extension.</li>
+        </ul>
+
+        <h2>2. Backup & Safety Protocol</h2>
+        <p>Before proceeding, the following files must be backed up to <code>/backups/phase2/</code>:</p>
+        <ul>
+            <li><code>lib/services/shippingService.js</code></li>
+            <li><code>lib/services/ordersService.js</code></li>
+            <li><code>app/api/orders/[id]/extend-guarantee/route.js</code> (to be created/edited)</li>
+        </ul>
+
+        <h2>3. Implementation Steps</h2>
+        <ul class="task-list">
+            <li class="task-item">
+                <div>
+                    <span class="task-status status-todo">Task 1</span>
+                    <strong>COD Failure Tracking</strong>
+                    <p>Modify <code>ordersService.js</code> to capture COD delivery failures and update buyer performance.</p>
+                </div>
+            </li>
+            <li class="task-item">
+                <div>
+                    <span class="task-status status-todo">Task 2</span>
+                    <strong>Return Shipping Calculation</strong>
+                    <p>Implement <code>calculateRSF(reason)</code> in <code>returnsService.js</code> to handle pro-rata shipping deductions.</p>
+                </div>
+            </li>
+            <li class="task-item">
+                <div>
+                    <span class="task-status status-todo">Task 3</span>
+                    <strong>Extension UI & Backend</strong>
+                    <p>Add the "Extend Shopee Guarantee" button to the Order Detail page and implement the 3-day extension logic.</p>
+                </div>
+            </li>
+        </ul>
+
+        <h2>4. Testing Protocol</h2>
+        <div class="spec-box" style="background: #fffbeb; border-color: var(--warning);">
+            <strong>Test Case 1: RSF Deduction</strong><br>
+            Process a return for "Change of Mind". Verify that the return shipping cost is deducted from the buyer's refund amount.
+            <br><br>
+            <strong>Test Case 2: COD Restriction</strong><br>
+            Trigger 2 COD failures for a test user. Verify that the COD payment option is hidden in the checkout UI for their next order.
+        </div>
+
+        <div style="margin-top: 40px; padding-top: 20px; border-top: 1px solid #eee; display: flex; justify-content: space-between;">
+            <a href="phase-1-foundation.html" class="nav-link">← Back to Phase 1</a>
+            <a href="phase-3-admin-mediation.html" class="nav-link">Proceed to Phase 3: Admin Mediation →</a>
+        </div>
+    </div>
+</body>
+</html>

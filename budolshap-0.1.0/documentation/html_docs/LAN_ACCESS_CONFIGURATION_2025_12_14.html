@@ -1,0 +1,981 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>LAN Access Configuration - Budolshap v3</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            line-height: 1.6;
+            color: #333;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            padding: 20px;
+            min-height: 100vh;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 12px;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+            overflow: hidden;
+        }
+
+        .header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 40px;
+            text-align: center;
+        }
+
+        .header h1 {
+            font-size: 2.5em;
+            margin-bottom: 10px;
+            text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.2);
+        }
+
+        .header .subtitle {
+            font-size: 1.2em;
+            opacity: 0.9;
+        }
+
+        .header .date {
+            margin-top: 15px;
+            font-size: 0.9em;
+            opacity: 0.8;
+        }
+
+        .content {
+            padding: 40px;
+        }
+
+        .section {
+            margin-bottom: 40px;
+        }
+
+        .section h2 {
+            color: #667eea;
+            font-size: 1.8em;
+            margin-bottom: 20px;
+            padding-bottom: 10px;
+            border-bottom: 3px solid #667eea;
+        }
+
+        .section h3 {
+            color: #764ba2;
+            font-size: 1.4em;
+            margin: 25px 0 15px 0;
+        }
+
+        .section h4 {
+            color: #555;
+            font-size: 1.1em;
+            margin: 20px 0 10px 0;
+        }
+
+        .info-box {
+            background: #f8f9ff;
+            border-left: 4px solid #667eea;
+            padding: 20px;
+            margin: 20px 0;
+            border-radius: 4px;
+        }
+
+        .warning-box {
+            background: #fff3cd;
+            border-left: 4px solid #ffc107;
+            padding: 20px;
+            margin: 20px 0;
+            border-radius: 4px;
+        }
+
+        .success-box {
+            background: #d4edda;
+            border-left: 4px solid #28a745;
+            padding: 20px;
+            margin: 20px 0;
+            border-radius: 4px;
+        }
+
+        .code-block {
+            background: #2d2d2d;
+            color: #f8f8f2;
+            padding: 20px;
+            border-radius: 6px;
+            overflow-x: auto;
+            margin: 15px 0;
+            font-family: 'Courier New', monospace;
+            font-size: 0.9em;
+            line-height: 1.5;
+        }
+
+        .code-block .comment {
+            color: #6a9955;
+        }
+
+        .code-block .string {
+            color: #ce9178;
+        }
+
+        .code-block .keyword {
+            color: #569cd6;
+        }
+
+        .inline-code {
+            background: #f4f4f4;
+            padding: 2px 6px;
+            border-radius: 3px;
+            font-family: 'Courier New', monospace;
+            color: #d63384;
+            font-size: 0.9em;
+        }
+
+        .step-list {
+            counter-reset: step-counter;
+            list-style: none;
+            padding-left: 0;
+        }
+
+        .step-list li {
+            counter-increment: step-counter;
+            margin-bottom: 25px;
+            padding-left: 60px;
+            position: relative;
+        }
+
+        .step-list li::before {
+            content: counter(step-counter);
+            position: absolute;
+            left: 0;
+            top: 0;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: bold;
+            font-size: 1.2em;
+        }
+
+        .network-info {
+            background: #e7f3ff;
+            border: 2px solid #2196F3;
+            padding: 20px;
+            border-radius: 8px;
+            margin: 20px 0;
+        }
+
+        .network-info strong {
+            color: #1976D2;
+            font-size: 1.1em;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 20px 0;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+        }
+
+        table th {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 15px;
+            text-align: left;
+            font-weight: 600;
+        }
+
+        table td {
+            padding: 12px 15px;
+            border-bottom: 1px solid #ddd;
+        }
+
+        table tr:hover {
+            background: #f5f5f5;
+        }
+
+        ul,
+        ol {
+            margin-left: 20px;
+            margin-bottom: 15px;
+        }
+
+        li {
+            margin-bottom: 8px;
+        }
+
+        .footer {
+            background: #f8f9fa;
+            padding: 30px;
+            text-align: center;
+            color: #666;
+            border-top: 1px solid #ddd;
+        }
+
+        .badge {
+            display: inline-block;
+            padding: 5px 12px;
+            border-radius: 20px;
+            font-size: 0.85em;
+            font-weight: 600;
+            margin: 5px 5px 5px 0;
+        }
+
+        .badge-primary {
+            background: #667eea;
+            color: white;
+        }
+
+        .badge-success {
+            background: #28a745;
+            color: white;
+        }
+
+        .badge-warning {
+            background: #ffc107;
+            color: #333;
+        }
+
+        .badge-info {
+            background: #17a2b8;
+            color: white;
+        }
+
+        .toc {
+            background: #f8f9fa;
+            padding: 25px;
+            border-radius: 8px;
+            margin-bottom: 30px;
+        }
+
+        .toc h3 {
+            color: #333;
+            margin-bottom: 15px;
+        }
+
+        .toc ul {
+            list-style: none;
+            margin-left: 0;
+        }
+
+        .toc ul li {
+            margin-bottom: 10px;
+        }
+
+        .toc a {
+            color: #667eea;
+            text-decoration: none;
+            transition: color 0.3s;
+        }
+
+        .toc a:hover {
+            color: #764ba2;
+            text-decoration: underline;
+        }
+
+        .screenshot-placeholder {
+            background: #f0f0f0;
+            border: 2px dashed #ccc;
+            padding: 40px;
+            text-align: center;
+            color: #999;
+            border-radius: 8px;
+            margin: 20px 0;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🌐 LAN Access Configuration</h1>
+            <div class="subtitle">Budolshap v3 - Local Network Access Setup</div>
+            <div class="date">📅 December 14, 2025</div>
+        </div>
+
+        <div class="content">
+            <!-- Table of Contents -->
+            <div class="toc">
+                <h3>📑 Table of Contents</h3>
+                <ul>
+                    <li><a href="#overview">1. Overview</a></li>
+                    <li><a href="#network-info">2. Network Information</a></li>
+                    <li><a href="#configuration">3. Configuration Changes</a></li>
+                    <li><a href="#setup-guide">4. Setup Guide</a></li>
+                    <li><a href="#firewall">5. Firewall Configuration</a></li>
+                    <li><a href="#access-methods">6. Access Methods</a></li>
+                    <li><a href="#troubleshooting">7. Troubleshooting</a></li>
+                    <li><a href="#security">8. Security Considerations</a></li>
+                </ul>
+            </div>
+
+            <!-- Overview Section -->
+            <div class="section" id="overview">
+                <h2>1. Overview</h2>
+                <p>This document details the configuration changes made to enable LAN (Local Area Network) access for
+                    the Budolshap v3 application. This allows the application to be accessed from other devices on the
+                    same network, such as mobile phones, tablets, and other computers.</p>
+
+                <div class="info-box">
+                    <strong>📌 Purpose:</strong> Enable testing and development of the Budolshap application across
+                    multiple devices on the local network without deploying to a remote server.
+                </div>
+
+                <h3>Benefits</h3>
+                <ul>
+                    <li><strong>Mobile Testing:</strong> Test the application on actual mobile devices</li>
+                    <li><strong>Cross-Device Testing:</strong> Verify responsive design across different screen sizes
+                    </li>
+                    <li><strong>Team Collaboration:</strong> Allow team members to access the development server</li>
+                    <li><strong>Client Demos:</strong> Showcase features to clients on the same network</li>
+                    <li><strong>Real Device Testing:</strong> Test features like camera, geolocation, and touch
+                        interactions</li>
+                </ul>
+            </div>
+
+            <!-- Network Information Section -->
+            <div class="section" id="network-info">
+                <h2>2. Network Information</h2>
+
+                <div class="network-info">
+                    <strong>🖥️ Host Machine IP Address:</strong> <span class="inline-code">192.168.1.6</span><br>
+                    <strong>📡 Network:</strong> <span class="inline-code">192.168.1.0/24</span><br>
+                    <strong>🚪 Gateway:</strong> <span class="inline-code">192.168.1.1</span><br>
+                    <strong>🔌 Interface:</strong> Wi-Fi 2 (Wireless LAN adapter)
+                </div>
+
+                <h3>Network Configuration Details</h3>
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Parameter</th>
+                            <th>Value</th>
+                            <th>Description</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td>IPv4 Address</td>
+                            <td><code>192.168.1.6</code></td>
+                            <td>Local IP address of the development machine</td>
+                        </tr>
+                        <tr>
+                            <td>Subnet Mask</td>
+                            <td><code>255.255.255.0</code></td>
+                            <td>Defines the network range (192.168.1.1 - 192.168.1.254)</td>
+                        </tr>
+                        <tr>
+                            <td>Default Gateway</td>
+                            <td><code>192.168.1.1</code></td>
+                            <td>Router IP address</td>
+                        </tr>
+                        <tr>
+                            <td>Application Port</td>
+                            <td><code>3000</code></td>
+                            <td>Next.js development server port</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+
+            <!-- Configuration Changes Section -->
+            <div class="section" id="configuration">
+                <h2>3. Configuration Changes</h2>
+
+                <h3>Modified File: <span class="inline-code">package.json</span></h3>
+
+                <h4>Before:</h4>
+                <div class="code-block">
+                    <span class="string">"scripts"</span>: {
+                    <span class="string">"dev"</span>: <span class="string">"next dev --turbopack"</span>,
+                    <span class="string">"build"</span>: <span class="string">"prisma generate && next build"</span>,
+                    <span class="string">"start"</span>: <span class="string">"next start"</span>,
+                    <span class="comment">// ... other scripts</span>
+                    }
+                </div>
+
+                <h4>After:</h4>
+                <div class="code-block">
+                    <span class="string">"scripts"</span>: {
+                    <span class="string">"dev"</span>: <span class="string">"next dev --turbopack -H 0.0.0.0"</span>,
+                    <span class="string">"build"</span>: <span class="string">"prisma generate && next build"</span>,
+                    <span class="string">"start"</span>: <span class="string">"next start -H 0.0.0.0"</span>,
+                    <span class="comment">// ... other scripts</span>
+                    }
+                </div>
+
+                <h3>What Changed?</h3>
+                <div class="info-box">
+                    <p><strong>Added Flag:</strong> <span class="inline-code">-H 0.0.0.0</span></p>
+                    <p><strong>Purpose:</strong> Binds the Next.js server to all network interfaces instead of just
+                        localhost (127.0.0.1)</p>
+                    <p><strong>Scripts Modified:</strong></p>
+                    <ul>
+                        <li><span class="inline-code">dev</span> - Development server</li>
+                        <li><span class="inline-code">start</span> - Production server</li>
+                    </ul>
+                </div>
+
+                <h3>Technical Explanation</h3>
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Binding Address</th>
+                            <th>Access Level</th>
+                            <th>Use Case</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td><code>127.0.0.1</code> (localhost)</td>
+                            <td>Local machine only</td>
+                            <td>Default Next.js behavior - secure but limited</td>
+                        </tr>
+                        <tr>
+                            <td><code>0.0.0.0</code> (all interfaces)</td>
+                            <td>Local machine + LAN devices</td>
+                            <td>Development testing across devices</td>
+                        </tr>
+                        <tr>
+                            <td><code>192.168.1.6</code> (specific IP)</td>
+                            <td>Specific interface only</td>
+                            <td>Advanced configuration (not used here)</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+
+            <!-- Setup Guide Section -->
+            <div class="section" id="setup-guide">
+                <h2>4. Setup Guide</h2>
+
+                <h3>Quick Start</h3>
+                <ol class="step-list">
+                    <li>
+                        <strong>Start the Development Server</strong>
+                        <div class="code-block">npm run dev</div>
+                        <p>The server will start and bind to all network interfaces (0.0.0.0:3000)</p>
+                    </li>
+
+                    <li>
+                        <strong>Verify Server is Running</strong>
+                        <p>You should see output similar to:</p>
+                        <div class="code-block">
+                            ▲ Next.js 16.0.7
+                            - Local: http://localhost:3000
+                            - Network: http://192.168.1.6:3000
+
+                            ✓ Ready in 2.5s
+                        </div>
+                    </li>
+
+                    <li>
+                        <strong>Connect Device to Same Network</strong>
+                        <p>Ensure your mobile device, tablet, or other computer is connected to the same Wi-Fi network
+                            (192.168.1.x)</p>
+                    </li>
+
+                    <li>
+                        <strong>Access from Other Device</strong>
+                        <p>Open a browser on the device and navigate to:</p>
+                        <div class="code-block">http://192.168.1.6:3000</div>
+                    </li>
+
+                    <li>
+                        <strong>Test the Application</strong>
+                        <p>You should now see the Budolshap application running on your device!</p>
+                    </li>
+                </ol>
+
+                <div class="success-box">
+                    <strong>✅ Success Indicator:</strong> If you can see the application on your mobile device or other
+                    computer, the LAN access is working correctly!
+                </div>
+            </div>
+
+            <!-- Firewall Configuration Section -->
+            <div class="section" id="firewall">
+                <h2>5. Firewall Configuration</h2>
+
+                <div class="warning-box">
+                    <strong>⚠️ Important:</strong> Windows Firewall may block incoming connections on port 3000. You
+                    need to allow this port for LAN access to work.
+                </div>
+
+                <h3>Method 1: Allow Through Windows Defender Firewall (Recommended)</h3>
+                <ol class="step-list">
+                    <li>
+                        <strong>Open Windows Defender Firewall</strong>
+                        <p>Press <span class="inline-code">Win + R</span>, type <span class="inline-code">wf.msc</span>,
+                            and press Enter</p>
+                    </li>
+
+                    <li>
+                        <strong>Create Inbound Rule</strong>
+                        <ul>
+                            <li>Click "Inbound Rules" in the left panel</li>
+                            <li>Click "New Rule..." in the right panel</li>
+                        </ul>
+                    </li>
+
+                    <li>
+                        <strong>Configure Rule Type</strong>
+                        <ul>
+                            <li>Select "Port"</li>
+                            <li>Click "Next"</li>
+                        </ul>
+                    </li>
+
+                    <li>
+                        <strong>Specify Port</strong>
+                        <ul>
+                            <li>Select "TCP"</li>
+                            <li>Select "Specific local ports"</li>
+                            <li>Enter: <span class="inline-code">3000</span></li>
+                            <li>Click "Next"</li>
+                        </ul>
+                    </li>
+
+                    <li>
+                        <strong>Allow Connection</strong>
+                        <ul>
+                            <li>Select "Allow the connection"</li>
+                            <li>Click "Next"</li>
+                        </ul>
+                    </li>
+
+                    <li>
+                        <strong>Select Profiles</strong>
+                        <ul>
+                            <li>Check "Private" (for home/work networks)</li>
+                            <li>Optionally check "Domain" if on a domain network</li>
+                            <li>⚠️ Avoid checking "Public" for security</li>
+                            <li>Click "Next"</li>
+                        </ul>
+                    </li>
+
+                    <li>
+                        <strong>Name the Rule</strong>
+                        <ul>
+                            <li>Name: <span class="inline-code">Next.js Development Server (Port 3000)</span></li>
+                            <li>Description: <span class="inline-code">Allow LAN access to Budolshap development
+                                    server</span></li>
+                            <li>Click "Finish"</li>
+                        </ul>
+                    </li>
+                </ol>
+
+                <h3>Method 2: Quick Test (Temporary)</h3>
+                <div class="warning-box">
+                    <strong>⚠️ Not Recommended for Production:</strong> This method temporarily disables the firewall.
+                    Use only for quick testing.
+                </div>
+                <ol>
+                    <li>Open Windows Defender Firewall settings</li>
+                    <li>Click "Turn Windows Defender Firewall on or off"</li>
+                    <li>Temporarily turn off for Private networks</li>
+                    <li>Test LAN access</li>
+                    <li><strong>Remember to turn it back on!</strong></li>
+                </ol>
+
+                <h3>Method 3: Using PowerShell (Advanced)</h3>
+                <div class="code-block">
+                    <span class="comment"># Run PowerShell as Administrator</span>
+                    New-NetFirewallRule -DisplayName <span class="string">"Next.js Dev Server"</span> `
+                    -Direction Inbound `
+                    -LocalPort 3000 `
+                    -Protocol TCP `
+                    -Action Allow `
+                    -Profile Private
+                </div>
+            </div>
+
+            <!-- Access Methods Section -->
+            <div class="section" id="access-methods">
+                <h2>6. Access Methods</h2>
+
+                <h3>From Different Devices</h3>
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Device Type</th>
+                            <th>URL to Use</th>
+                            <th>Notes</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td>📱 Mobile Phone (iOS/Android)</td>
+                            <td><code>http://192.168.1.6:3000</code></td>
+                            <td>Connect to same Wi-Fi network first</td>
+                        </tr>
+                        <tr>
+                            <td>📱 Tablet (iPad/Android)</td>
+                            <td><code>http://192.168.1.6:3000</code></td>
+                            <td>Perfect for testing responsive layouts</td>
+                        </tr>
+                        <tr>
+                            <td>💻 Another Computer</td>
+                            <td><code>http://192.168.1.6:3000</code></td>
+                            <td>Great for team collaboration</td>
+                        </tr>
+                        <tr>
+                            <td>🖥️ Host Machine (localhost)</td>
+                            <td><code>http://localhost:3000</code> or <code>http://192.168.1.6:3000</code></td>
+                            <td>Both URLs work on the host</td>
+                        </tr>
+                    </tbody>
+                </table>
+
+                <h3>Testing Checklist</h3>
+                <div class="info-box">
+                    <h4>✅ Pre-Access Checklist:</h4>
+                    <ul>
+                        <li>☐ Development server is running (<span class="inline-code">npm run dev</span>)</li>
+                        <li>☐ Device is connected to the same Wi-Fi network</li>
+                        <li>☐ Firewall rule is configured for port 3000</li>
+                        <li>☐ Using the correct IP address (192.168.1.6)</li>
+                        <li>☐ Including the port number (:3000) in the URL</li>
+                    </ul>
+                </div>
+
+                <h3>QR Code Access (Optional Enhancement)</h3>
+                <p>For easier mobile access, you can generate a QR code that points to <span
+                        class="inline-code">http://192.168.1.6:3000</span>. Mobile devices can scan this QR code to
+                    instantly open the application.</p>
+
+                <div class="info-box">
+                    <strong>💡 Pro Tip:</strong> Use online QR code generators or install a package like <span
+                        class="inline-code">qrcode-terminal</span> to display a QR code in your terminal when the dev
+                    server starts.
+                </div>
+            </div>
+
+            <!-- Troubleshooting Section -->
+            <div class="section" id="troubleshooting">
+                <h2>7. Troubleshooting</h2>
+
+                <h3>Common Issues and Solutions</h3>
+
+                <h4>❌ Issue 1: Cannot Connect from Mobile Device</h4>
+                <div class="warning-box">
+                    <strong>Symptoms:</strong> Browser shows "Can't reach this page" or times out
+                    <br><br>
+                    <strong>Solutions:</strong>
+                    <ul>
+                        <li><strong>Check Network:</strong> Ensure both devices are on the same Wi-Fi network
+                            (192.168.1.x)</li>
+                        <li><strong>Verify IP:</strong> Run <span class="inline-code">ipconfig</span> to confirm the
+                            host IP hasn't changed</li>
+                        <li><strong>Check Firewall:</strong> Ensure port 3000 is allowed through Windows Firewall</li>
+                        <li><strong>Restart Server:</strong> Stop and restart the dev server with <span
+                                class="inline-code">npm run dev</span></li>
+                    </ul>
+                </div>
+
+                <h4>❌ Issue 2: Connection Refused</h4>
+                <div class="warning-box">
+                    <strong>Symptoms:</strong> "Connection refused" error
+                    <br><br>
+                    <strong>Solutions:</strong>
+                    <ul>
+                        <li><strong>Verify Server:</strong> Check that the dev server is actually running</li>
+                        <li><strong>Check Binding:</strong> Ensure the server output shows "Network:
+                            http://192.168.1.6:3000"</li>
+                        <li><strong>Port Conflict:</strong> Make sure no other application is using port 3000</li>
+                    </ul>
+                </div>
+
+                <h4>❌ Issue 3: IP Address Changed</h4>
+                <div class="warning-box">
+                    <strong>Symptoms:</strong> Previously working URL no longer works
+                    <br><br>
+                    <strong>Solutions:</strong>
+                    <ul>
+                        <li><strong>Check Current IP:</strong> Run <span class="inline-code">ipconfig</span> to get the
+                            current IP</li>
+                        <li><strong>DHCP:</strong> Your router may have assigned a new IP address</li>
+                        <li><strong>Static IP:</strong> Consider setting a static IP in your router settings</li>
+                    </ul>
+                </div>
+
+                <h4>❌ Issue 4: Slow Performance on Mobile</h4>
+                <div class="warning-box">
+                    <strong>Symptoms:</strong> App loads slowly or is laggy on mobile devices
+                    <br><br>
+                    <strong>Solutions:</strong>
+                    <ul>
+                        <li><strong>Wi-Fi Signal:</strong> Ensure strong Wi-Fi signal on mobile device</li>
+                        <li><strong>Network Congestion:</strong> Check if other devices are using bandwidth</li>
+                        <li><strong>Development Mode:</strong> Remember that dev mode is slower than production</li>
+                        <li><strong>Hot Reload:</strong> Disable hot reload if not needed for testing</li>
+                    </ul>
+                </div>
+
+                <h3>Diagnostic Commands</h3>
+                <div class="code-block">
+                    <span class="comment"># Check your current IP address</span>
+                    ipconfig
+
+                    <span class="comment"># Test if port 3000 is listening</span>
+                    netstat -an | findstr :3000
+
+                    <span class="comment"># Ping your own IP (should work)</span>
+                    ping 192.168.1.6
+
+                    <span class="comment"># Check firewall rules</span>
+                    netsh advfirewall firewall show rule name=all | findstr 3000
+                </div>
+
+                <h3>Testing from Command Line</h3>
+                <div class="code-block">
+                    <span class="comment"># From another device on the network, test connectivity:</span>
+                    <span class="comment"># On Windows:</span>
+                    Test-NetConnection -ComputerName 192.168.1.6 -Port 3000
+
+                    <span class="comment"># On Mac/Linux:</span>
+                    nc -zv 192.168.1.6 3000
+
+                    <span class="comment"># Or use curl:</span>
+                    curl http://192.168.1.6:3000
+                </div>
+            </div>
+
+            <!-- Security Considerations Section -->
+            <div class="section" id="security">
+                <h2>8. Security Considerations</h2>
+
+                <div class="warning-box">
+                    <strong>⚠️ Important Security Notice:</strong> Binding to 0.0.0.0 makes your development server
+                    accessible to anyone on your local network. Follow these security best practices.
+                </div>
+
+                <h3>Security Best Practices</h3>
+
+                <h4>1. Network Security</h4>
+                <ul>
+                    <li><strong>Trusted Networks Only:</strong> Only use this configuration on trusted private networks
+                        (home/office)</li>
+                    <li><strong>Avoid Public Wi-Fi:</strong> Never run the dev server on public Wi-Fi networks</li>
+                    <li><strong>Password Protection:</strong> Ensure your Wi-Fi network has a strong password</li>
+                    <li><strong>Guest Network:</strong> Don't use this on guest Wi-Fi networks</li>
+                </ul>
+
+                <h4>2. Firewall Configuration</h4>
+                <ul>
+                    <li><strong>Private Profile Only:</strong> Only allow port 3000 on the "Private" firewall profile
+                    </li>
+                    <li><strong>Specific Port:</strong> Only open port 3000, not a range of ports</li>
+                    <li><strong>Remove When Done:</strong> Delete the firewall rule when not actively developing</li>
+                </ul>
+
+                <h4>3. Development vs Production</h4>
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Environment</th>
+                            <th>Binding</th>
+                            <th>Security Level</th>
+                            <th>Use Case</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td>Development (Local Only)</td>
+                            <td><code>127.0.0.1</code></td>
+                            <td>🔒 High</td>
+                            <td>Solo development</td>
+                        </tr>
+                        <tr>
+                            <td>Development (LAN)</td>
+                            <td><code>0.0.0.0</code></td>
+                            <td>⚠️ Medium</td>
+                            <td>Testing on devices, team collaboration</td>
+                        </tr>
+                        <tr>
+                            <td>Production</td>
+                            <td>Reverse proxy (nginx/Apache)</td>
+                            <td>🔒 High</td>
+                            <td>Public deployment</td>
+                        </tr>
+                    </tbody>
+                </table>
+
+                <h4>4. Sensitive Data</h4>
+                <div class="warning-box">
+                    <ul>
+                        <li><strong>Environment Variables:</strong> Ensure <span class="inline-code">.env</span> files
+                            are not exposed</li>
+                        <li><strong>API Keys:</strong> Use development/test API keys, not production keys</li>
+                        <li><strong>Database:</strong> Use a local development database, not production data</li>
+                        <li><strong>Authentication:</strong> Test with dummy accounts, not real user credentials</li>
+                    </ul>
+                </div>
+
+                <h4>5. When to Disable LAN Access</h4>
+                <div class="info-box">
+                    <strong>Revert to localhost-only when:</strong>
+                    <ul>
+                        <li>You're done testing on other devices</li>
+                        <li>Working on a public/untrusted network</li>
+                        <li>Handling sensitive production data</li>
+                        <li>Not actively needing LAN access</li>
+                    </ul>
+                    <br>
+                    <strong>To revert:</strong> Remove the <span class="inline-code">-H 0.0.0.0</span> flag from your
+                    npm scripts
+                </div>
+
+                <h3>Security Checklist</h3>
+                <div class="success-box">
+                    <h4>✅ Before Enabling LAN Access:</h4>
+                    <ul>
+                        <li>☐ Verify you're on a trusted private network</li>
+                        <li>☐ Confirm Wi-Fi network has strong password</li>
+                        <li>☐ Using development database (not production)</li>
+                        <li>☐ Using test API keys (not production)</li>
+                        <li>☐ Firewall rule is set to "Private" profile only</li>
+                        <li>☐ Team members are aware of the access URL</li>
+                    </ul>
+                </div>
+            </div>
+
+            <!-- Additional Information -->
+            <div class="section">
+                <h2>9. Additional Information</h2>
+
+                <h3>Alternative Methods</h3>
+
+                <h4>Using ngrok (For Remote Access)</h4>
+                <p>If you need to share your development server with someone not on your local network, consider using
+                    ngrok:</p>
+                <div class="code-block">
+                    <span class="comment"># Install ngrok</span>
+                    npm install -g ngrok
+
+                    <span class="comment"># Start your dev server</span>
+                    npm run dev
+
+                    <span class="comment"># In another terminal, create a tunnel</span>
+                    ngrok http 3000
+                </div>
+                <div class="warning-box">
+                    <strong>⚠️ Security Warning:</strong> ngrok exposes your local server to the internet. Only use for
+                    temporary sharing and never with production data.
+                </div>
+
+                <h4>Using localtunnel</h4>
+                <div class="code-block">
+                    <span class="comment"># Install localtunnel</span>
+                    npm install -g localtunnel
+
+                    <span class="comment"># Start your dev server</span>
+                    npm run dev
+
+                    <span class="comment"># Create a tunnel</span>
+                    lt --port 3000
+                </div>
+
+                <h3>Environment-Specific Configuration</h3>
+                <p>For more advanced setups, you can create environment-specific scripts:</p>
+                <div class="code-block">
+                    <span class="string">"scripts"</span>: {
+                    <span class="string">"dev"</span>: <span class="string">"next dev --turbopack"</span>,
+                    <span class="string">"dev:lan"</span>: <span class="string">"next dev --turbopack -H
+                        0.0.0.0"</span>,
+                    <span class="string">"dev:host"</span>: <span class="string">"next dev --turbopack -H
+                        192.168.1.6"</span>,
+                    <span class="string">"start"</span>: <span class="string">"next start -H 0.0.0.0"</span>
+                    }
+                </div>
+
+                <h3>Useful Resources</h3>
+                <ul>
+                    <li><strong>Next.js CLI Documentation:</strong> <a href="https://nextjs.org/docs/api-reference/cli"
+                            target="_blank">https://nextjs.org/docs/api-reference/cli</a></li>
+                    <li><strong>Network Troubleshooting:</strong> Windows Network Diagnostics</li>
+                    <li><strong>Firewall Management:</strong> Windows Defender Firewall with Advanced Security</li>
+                </ul>
+            </div>
+
+            <!-- Summary -->
+            <div class="section">
+                <h2>10. Summary</h2>
+
+                <div class="success-box">
+                    <h3>✅ What Was Accomplished</h3>
+                    <ul>
+                        <li>Modified <span class="inline-code">package.json</span> to bind Next.js server to all network
+                            interfaces</li>
+                        <li>Identified host machine IP address: <span class="inline-code">192.168.1.6</span></li>
+                        <li>Configured both development and production server scripts</li>
+                        <li>Documented firewall configuration requirements</li>
+                        <li>Provided troubleshooting guide for common issues</li>
+                        <li>Outlined security considerations and best practices</li>
+                    </ul>
+                </div>
+
+                <div class="info-box">
+                    <h3>📋 Quick Reference</h3>
+                    <table>
+                        <tr>
+                            <td><strong>Start Dev Server:</strong></td>
+                            <td><span class="inline-code">npm run dev</span></td>
+                        </tr>
+                        <tr>
+                            <td><strong>Access URL (LAN):</strong></td>
+                            <td><span class="inline-code">http://192.168.1.6:3000</span></td>
+                        </tr>
+                        <tr>
+                            <td><strong>Access URL (Local):</strong></td>
+                            <td><span class="inline-code">http://localhost:3000</span></td>
+                        </tr>
+                        <tr>
+                            <td><strong>Firewall Port:</strong></td>
+                            <td><span class="inline-code">3000 (TCP)</span></td>
+                        </tr>
+                        <tr>
+                            <td><strong>Network Range:</strong></td>
+                            <td><span class="inline-code">192.168.1.0/24</span></td>
+                        </tr>
+                    </table>
+                </div>
+
+                <div class="warning-box">
+                    <h3>⚠️ Remember</h3>
+                    <ul>
+                        <li>Only use LAN access on trusted private networks</li>
+                        <li>Configure firewall to allow port 3000</li>
+                        <li>All devices must be on the same network</li>
+                        <li>Use development data and API keys only</li>
+                        <li>Consider reverting to localhost-only when not needed</li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+
+        <div class="footer">
+            <p><strong>Budolshap v3</strong> - LAN Access Configuration Documentation</p>
+            <p>Generated: December 14, 2025</p>
+            <p>
+                <span class="badge badge-primary">Next.js 16.0.7</span>
+                <span class="badge badge-success">LAN Enabled</span>
+                <span class="badge badge-info">Development</span>
+            </p>
+        </div>
+    </div>
+</body>
+
+</html>

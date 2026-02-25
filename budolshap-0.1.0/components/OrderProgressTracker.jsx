@@ -1,0 +1,323 @@
+import { PROVIDER_STAGES, SHIPPING_PROVIDERS } from '@/lib/shipping/config';
+import { UNIVERSAL_STATUS } from '@/lib/shipping/statusMapper';
+import BudolPayText from './payment/BudolPayText';
+
+export default function OrderProgressTracker({ order }) {
+    const provider = order.shipping?.provider || SHIPPING_PROVIDERS.STANDARD;
+
+    const deferredPaymentMethods = ['COD'];
+    const isDeferredPayment = deferredPaymentMethods.includes(order.paymentMethod);
+    const deferredPaymentCleared = isDeferredPayment &&
+        (order.status === UNIVERSAL_STATUS.DELIVERED || order.status === 'COMPLETED');
+
+    const lalamoveStatus = order.shipping?.status;
+
+    // For QRPH/Manual/BudolPay, we consider it paid if isPaid is true or it's being verified
+    const isVerifying = order.status === 'PENDING_VERIFICATION';
+    
+    // Priority: 1. If isPaid is true, it's paid. 2. If it's verifying, it's "in progress". 3. If deferred (COD), check if cleared (delivered).
+    const hasPayment = order.isPaid || isVerifying || (isDeferredPayment && deferredPaymentCleared);
+    
+    const unpaidLabel = order.status === 'PENDING_VERIFICATION'
+        ? 'Verifying Payment'
+        : order.paymentMethod === 'BUDOL_PAY'
+            ? (
+                <>
+                    Unpaid (<BudolPayText text="budolPay" />)
+                </>
+            )
+            : 'Unpaid (COD)';
+
+    const stages = PROVIDER_STAGES[provider] || PROVIDER_STAGES[SHIPPING_PROVIDERS.STANDARD];
+
+    // Check if it's a return-related status
+    const hasActiveReturn = order.returns && order.returns.length > 0;
+    const isReturnRelated = hasActiveReturn || ['RETURN_REQUESTED', 'RETURN_APPROVED', 'RETURN_DISPUTED', 'REFUNDED'].includes(order.status);
+
+    // Define return-specific stages using universal statuses
+    const returnStages = [
+        { status: 'ORDER_PLACED', label: 'Order Placed', icon: '📝' },
+        { status: UNIVERSAL_STATUS.DELIVERED, label: 'Delivered', icon: '📦' },
+        { status: 'RETURN_REQUESTED', label: 'Return Req.', icon: '↩️' },
+        { status: 'TO_PICKUP', label: 'To Pick Up', icon: '⏰' },
+        { status: 'PICKED_UP', label: 'Picked Up', icon: '📦' },
+        { status: UNIVERSAL_STATUS.SHIPPING, label: 'Shipping', icon: '🚚' },
+        { status: 'DELIVERED_TO_SELLER', label: 'At Seller', icon: '🏠' },
+        { status: 'REFUNDED', label: 'Refunded', icon: '💰' }
+    ];
+
+    // Find the active return (prioritize the one with tracking or the most recent one)
+    const activeReturn = order.returns?.find(r =>
+        ['BOOKED', 'PICKED_UP', 'IN_TRANSIT', 'OUT_FOR_DELIVERY', 'DELIVERED', 'REFUNDED', 'TO_PICKUP', 'SHIPPING'].includes(r.status)
+    ) || order.returns?.[0];
+
+    const returnStatus = activeReturn?.status;
+
+    // Map return statuses to universal statuses
+    const returnStatusMapping = {
+        'PENDING': 'RETURN_REQUESTED',
+        'APPROVED': 'RETURN_REQUESTED',
+        'BOOKING_REQUESTED': 'RETURN_REQUESTED',
+        'BOOKED': 'TO_PICKUP',
+        'TO_PICKUP': 'TO_PICKUP',
+        'PICKED_UP': 'PICKED_UP',
+        'SHIPPED': UNIVERSAL_STATUS.SHIPPING,
+        'SHIPPING': UNIVERSAL_STATUS.SHIPPING,
+        'IN_TRANSIT': UNIVERSAL_STATUS.SHIPPING,
+        'OUT_FOR_DELIVERY': UNIVERSAL_STATUS.SHIPPING,
+        'DELIVERED': 'DELIVERED_TO_SELLER',
+        'RECEIVED': 'DELIVERED_TO_SELLER',
+        'REFUNDED': 'REFUNDED',
+        'DISPUTED': 'RETURN_REQUESTED'
+    };
+
+    // Map intermediate order statuses to stages for better tracking
+    const statusMapping = {
+        'RETURN_DISPUTED': 'RETURN_REQUESTED',
+        'RETURN_APPROVED': 'RETURN_REQUESTED',
+        'IN_TRANSIT': UNIVERSAL_STATUS.SHIPPING,  // Legacy support
+    };
+
+    const activeStages = isReturnRelated ? returnStages : stages;
+
+    // Verify completion status first to prevent early exit
+    let overrideIndex = -1;
+
+    // 1. Check if Order is globally delivered/completed
+    if (order.status === UNIVERSAL_STATUS.DELIVERED || order.status === 'COMPLETED') {
+        overrideIndex = activeStages.findIndex(s => s.status === UNIVERSAL_STATUS.DELIVERED);
+    }
+    // 2. Check if Order is refunded (Terminal status for returns)
+    else if (order.status === 'REFUNDED') {
+        overrideIndex = activeStages.findIndex(s => s.status === 'REFUNDED');
+    }
+    // 3. Handle return-related statuses
+    else if (isReturnRelated) {
+        const targetStatus = returnStatus ? returnStatusMapping[returnStatus] : (statusMapping[order.status] || order.status);
+        overrideIndex = activeStages.findIndex(s => s.status === targetStatus);
+    }
+    // 4. Handle universal statuses for regular orders
+    else if (order.status === UNIVERSAL_STATUS.TO_SHIP) {
+        overrideIndex = activeStages.findIndex(s => s.status === UNIVERSAL_STATUS.TO_SHIP);
+    }
+    else if (order.status === UNIVERSAL_STATUS.SHIPPING) {
+        overrideIndex = activeStages.findIndex(s => s.status === UNIVERSAL_STATUS.SHIPPING);
+    }
+
+    // Find current stage index
+    const currentStageIndex = overrideIndex !== -1 ? overrideIndex : activeStages.findIndex((s, idx) => {
+        // 1. Handle Needs Booking / Booked distinction for Lalamove/Standard
+        if (s.label === 'Needs Booking' && order.shipping?.bookingId) {
+            return false; // Skip Needs Booking if already booked
+        }
+        if (s.label === 'Booked' && !order.shipping?.bookingId) {
+            return false; // Skip Booked if not yet booked
+        }
+
+        // 2. Specific status check (for providers like Lalamove)
+        if (s.specificStatus) {
+            let matches = false;
+            if (Array.isArray(s.specificStatus)) {
+                matches = s.specificStatus.includes(lalamoveStatus);
+            } else {
+                matches = s.specificStatus === lalamoveStatus;
+            }
+            if (matches) return true;
+        }
+
+        // 3. Base check on main order status
+        if (s.status === order.status) {
+            // If status is PROCESSING, we only match if it's the correct granular stage (Needs Booking vs Booked)
+            if (order.status === 'PROCESSING') {
+                if (s.label === 'Booked' && order.shipping?.bookingId) return true;
+                if (s.label === 'Needs Booking' && !order.shipping?.bookingId) return true;
+                return false;
+            }
+            return true;
+        }
+
+        return false;
+    });
+
+    let activeIndex = currentStageIndex >= 0 ? currentStageIndex : 0;
+
+    // Fix: If order is paid but status hasn't advanced from ORDER_PLACED, 
+    // force active index to the Paid stage (usually index 1)
+    const paymentStageIndex = activeStages.findIndex(s => s.status === UNIVERSAL_STATUS.PAID);
+    if (hasPayment && activeIndex < paymentStageIndex && order.status === 'ORDER_PLACED') {
+        activeIndex = paymentStageIndex;
+    }
+
+    const progressPercentage = (activeIndex / (activeStages.length - 1)) * 100;
+
+    return (
+        <div className="bg-white p-6 md:p-8 rounded-xl shadow-sm mb-6">
+            <h3 className="text-xl font-semibold text-slate-800 mb-6">Order Progress</h3>
+
+            {/* Desktop View */}
+            <div className="hidden md:block">
+                <div className="relative">
+                    {/* Progress Line */}
+                    <div className="absolute top-6 left-0 right-0 h-1 bg-slate-200 rounded-full">
+                        <div
+                            className="h-full bg-gradient-to-r from-green-500 to-orange-500 rounded-full transition-all duration-500"
+                            style={{ width: `${progressPercentage}%` }}
+                        />
+                    </div>
+
+                    {/* Progress Steps */}
+                    <div className="relative flex justify-between">
+                        {activeStages.map((stage, index) => {
+                            // Fix: Ensure Paid is only marked completed if paid (or COD)
+                            const isPaymentStage = stage.label === 'Paid';
+                            const isPaymentPending = isPaymentStage && !hasPayment;
+
+                            const isTerminalStage = stage.status === 'DELIVERED' || stage.status === 'REFUNDED';
+                            const isCompleted = (index < activeIndex || (index === activeIndex && isTerminalStage)) && !isPaymentPending;
+                            const isActive = index === activeIndex && !isTerminalStage && !isPaymentPending;
+                            const isPending = index > activeIndex || isPaymentPending;
+
+                            // Check for failure/cancellation
+                            const isFailed = order.shipping?.failureReason;
+
+                            // If failed, and this is the active stage (which would be processing/driver assigned),
+                            // override the label and style
+                            const showFailed = isFailed && isActive;
+
+                            return (
+                                <div key={index} className="flex flex-col items-center relative" style={{ flex: 1 }}>
+                                    {/* Celebration Icon for Terminal Stages - Absolutely positioned */}
+                                    {index === activeIndex && isTerminalStage && isCompleted && (
+                                        <div className="absolute -top-12 text-5xl animate-bounce">
+                                            {stage.status === 'REFUNDED' ? '💰' : '📦'}
+                                        </div>
+                                    )}
+
+                                    {/* Icon Circle */}
+                                    <div className={`
+                                        w-12 h-12 rounded-full flex items-center justify-center text-xl font-bold
+                                        transition-all duration-300 relative z-10
+                                        ${isCompleted ? 'bg-gradient-to-br from-green-500 to-green-600 text-white shadow-lg' : ''}
+                                        ${showFailed ? 'bg-gradient-to-br from-red-500 to-red-600 text-white shadow-lg' : ''}
+                                        ${isActive && !showFailed ? 'bg-gradient-to-br from-orange-500 to-orange-600 text-white shadow-lg animate-pulse' : ''}
+                                        ${isPending && !showFailed ? (isPaymentPending ? 'bg-red-100 text-red-600 border border-red-200' : 'bg-slate-200 text-slate-400') : ''}
+                                    `}>
+                                        {isCompleted ? '✓' : showFailed ? '✕' : isPaymentPending ? '✕' :
+                                            (['In Transit', 'Booked'].includes(stage.label) && order.shipping?.driverInfo?.vehicleType) ? (() => {
+                                                const type = order.shipping.driverInfo.vehicleType.toUpperCase();
+                                                if (type.includes('MOTORCYCLE')) return '🏍️';
+                                                if (type.includes('SEDAN') || type.includes('CAR')) return '🚗';
+                                                if (type.includes('VAN')) return '🚐';
+                                                if (type.includes('TRUCK')) return '🚛';
+                                                if (type.includes('MPV') || type.includes('SUV')) return '🚙';
+                                                return stage.icon;
+                                            })() : stage.icon}
+                                    </div>
+
+                                    {/* Label */}
+                                    <div className="mt-3 text-center max-w-[100px]">
+                                        {!isPaymentPending && (
+                                            <p className={`
+                                                text-xs font-medium
+                                                ${isCompleted ? 'text-green-600' : ''}
+                                                ${showFailed ? 'text-red-600 font-bold' : ''}
+                                                ${isActive && !showFailed ? 'text-orange-600 font-bold' : ''}
+                                                ${isPending && !showFailed ? 'text-slate-400' : ''}
+                                            `}>
+                                                {showFailed ? 'Delivery Cancelled' : stage.label}
+                                            </p>
+                                        )}
+                                        {isPaymentPending && (
+                                            <p className="mt-1 text-[11px] font-semibold text-red-600">
+                                                {unpaidLabel}
+                                            </p>
+                                        )}
+                                    </div>
+                                </div>
+                            );
+                        })}
+                    </div>
+                </div>
+            </div>
+
+            {/* Mobile View */}
+            <div className="md:hidden space-y-4">
+                {activeStages.map((stage, index) => {
+                    const isPaymentStage = stage.label === 'Paid';
+                    const isPaymentPending = isPaymentStage && !hasPayment;
+
+                    const isTerminalStage = stage.status === 'DELIVERED' || stage.status === 'REFUNDED';
+                    const isCompleted = (index < activeIndex || (index === activeIndex && isTerminalStage)) && !isPaymentPending;
+                    const isActive = index === activeIndex && !isTerminalStage && !isPaymentPending;
+                    const isPending = index > activeIndex || isPaymentPending;
+                    const isFailed = order.shipping?.failureReason;
+                    const showFailed = isFailed && isActive;
+
+                    return (
+                        <div key={index} className="flex items-start gap-4">
+                            <div className="flex flex-col items-center">
+                                <div className={`
+                                    w-10 h-10 rounded-full flex items-center justify-center text-lg font-bold
+                                    transition-all duration-300 relative z-10
+                                    ${isCompleted ? 'bg-gradient-to-br from-green-500 to-green-600 text-white shadow-md' : ''}
+                                    ${showFailed ? 'bg-gradient-to-br from-red-500 to-red-600 text-white shadow-md' : ''}
+                                    ${isActive && !showFailed ? 'bg-gradient-to-br from-orange-500 to-orange-600 text-white animate-pulse shadow-md' : ''}
+                                    ${isPending && !showFailed ? (isPaymentPending ? 'bg-red-100 text-red-600 border border-red-200' : 'bg-slate-200 text-slate-400') : ''}
+                                `}>
+                                    {isCompleted ? '✓' : showFailed ? '✕' : isPaymentPending ? '✕' :
+                                        (['In Transit', 'Booked'].includes(stage.label) && order.shipping?.driverInfo?.vehicleType) ? (() => {
+                                            const type = order.shipping.driverInfo.vehicleType.toUpperCase();
+                                            if (type.includes('MOTORCYCLE')) return '🏍️';
+                                            if (type.includes('SEDAN') || type.includes('CAR')) return '🚗';
+                                            if (type.includes('VAN')) return '🚐';
+                                            if (type.includes('TRUCK')) return '🚛';
+                                            if (type.includes('MPV') || type.includes('SUV')) return '🚙';
+                                            return stage.icon;
+                                        })() : stage.icon}
+                                </div>
+                            </div>
+
+                            {/* Label */}
+                            <div className="flex-1">
+                                {!isPaymentPending && (
+                                    <p className={`
+                                        text-sm font-medium
+                                        ${isCompleted ? 'text-green-600' : ''}
+                                        ${showFailed ? 'text-red-600 font-bold' : ''}
+                                        ${isActive && !showFailed ? 'text-orange-600 font-bold' : ''}
+                                        ${isPending && !showFailed ? 'text-slate-400' : ''}
+                                    `}>
+                                        {showFailed ? 'Delivery Cancelled' : stage.label}
+                                        {index === activeIndex && isTerminalStage && isCompleted && (
+                                            <span className="ml-2 text-lg">{stage.status === 'REFUNDED' ? '💰' : '📦'}</span>
+                                        )}
+                                    </p>
+                                )}
+                                {isPaymentPending && (
+                                    <p className="text-[11px] font-semibold text-red-600">
+                                        {unpaidLabel}
+                                    </p>
+                                )}
+                            </div>
+
+                            {/* Status Indicator */}
+                            {isActive && (
+                                <span className="text-xs bg-orange-100 text-orange-600 px-2 py-1 rounded-full font-medium">
+                                    Current
+                                </span>
+                            )}
+                        </div>
+                    );
+                })}
+            </div>
+
+            {/* Info Note */}
+            <div className="mt-6 p-4 bg-blue-50 border-l-4 border-blue-500 rounded">
+                <p className="text-sm text-blue-800">
+                    ℹ️ <strong>Note:</strong> Tracking updates may take 24-48 hours to reflect.
+                    {provider === SHIPPING_PROVIDERS.LALAMOVE ? ' Your package is being delivered via Lalamove same-day service.' : ' Your package is on schedule for delivery.'}
+                </p>
+            </div>
+        </div>
+    );
+}

@@ -1,0 +1,79 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Phase 2: Implementation - Schema Fixes</title>
+    <style>
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; line-height: 1.6; color: #333; max-width: 1000px; margin: 0 auto; padding: 20px; background-color: #f4f7f6; }
+        header { background: #2c3e50; color: #fff; padding: 20px; border-radius: 8px; margin-bottom: 20px; }
+        h1 { margin: 0; }
+        .card { background: #fff; padding: 20px; border-radius: 8px; box-shadow: 0 2px 5px rgba(0,0,0,0.1); margin-bottom: 20px; }
+        h2 { color: #2c3e50; border-bottom: 2px solid #3498db; padding-bottom: 10px; }
+        pre { background: #2d3436; color: #dfe6e9; padding: 15px; border-radius: 5px; overflow-x: auto; }
+        code { font-family: 'Courier New', Courier, monospace; }
+        .success-box { background: #d4edda; color: #155724; padding: 15px; border-radius: 5px; border: 1px solid #c3e6cb; margin-bottom: 20px; }
+        .success-box h3 { margin-top: 0; }
+        nav { margin-bottom: 20px; }
+        nav a { margin-right: 15px; text-decoration: none; color: #3498db; font-weight: bold; }
+        nav a:hover { text-decoration: underline; }
+    </style>
+</head>
+<body>
+    <header>
+        <h1>Phase 2: Implementation</h1>
+        <p>Execution of schema updates and synchronization</p>
+    </header>
+
+    <nav>
+        <a href="index.html">Overview</a>
+        <a href="phase-1-analysis.html">Phase 1: Analysis</a>
+        <a href="phase-2-fix.html">Phase 2: Implementation</a>
+        <a href="phase-3-verification.html">Phase 3: Verification</a>
+    </nav>
+
+    <div class="card">
+        <h2>Schema Updates Applied</h2>
+        <p>The following changes were applied to <code>prisma/schema.prisma</code> to resolve the identified discrepancies.</p>
+
+        <div class="success-box">
+            <h3>1. Return Model Enhancement</h3>
+            <p>Added <code>adminId</code> and <code>adminNotes</code> to track administrative actions during disputes.</p>
+            <pre><code>model Return {
+  ...
+  adminId          String?
+  adminNotes       String?
+  ...
+}</code></pre>
+        </div>
+
+        <div class="success-box">
+            <h3>2. ReturnStatus Enum Synchronization</h3>
+            <p>Added <code>TO_PICKUP</code> status to align with Lalamove webhook integrations and universal status mapping.</p>
+            <pre><code>enum ReturnStatus {
+  ...
+  DISPUTED
+  TO_PICKUP
+}</code></pre>
+        </div>
+    </div>
+
+    <div class="card">
+        <h2>Next Steps: Database Migration</h2>
+        <p>To apply these changes to your database and regenerate the Prisma client, run the following commands in your terminal:</p>
+        <pre><code>npx prisma generate
+npx prisma db push</code></pre>
+        <p><em>Note: Using <code>db push</code> is recommended for development environments to quickly sync the schema. For production, use <code>prisma migrate dev</code>.</em></p>
+    </div>
+
+    <div class="card">
+        <h2>Codebase Verification</h2>
+        <p>The codebase was audited to ensure these fields are correctly utilized. The following files are now fully synchronized with the schema:</p>
+        <ul>
+            <li><code>lib/services/returnsService.js</code> - <code>resolveDispute</code> function</li>
+            <li><code>app/api/shipping/lalamove/webhook/route.js</code> - Return status updates</li>
+            <li><code>lib/shipping/statusMapper.js</code> - Universal status mapping</li>
+        </ul>
+    </div>
+</body>
+</html>

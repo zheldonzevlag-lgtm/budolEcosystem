@@ -1,0 +1,283 @@
+import { NextResponse } from 'next/server';
+import { getShippingProvider } from '@/services/shippingFactory';
+import { prisma } from '@/lib/prisma';
+import { sendOrderStatusEmail } from '@/lib/email';
+
+/**
+ * POST /api/webhooks/lalamove
+ * Receive webhook events from Lalamove
+ * 
+ * Events:
+ * - ASSIGNING_DRIVER: Looking for a driver
+ * - ON_GOING: Driver assigned
+ * - PICKED_UP: Package picked up
+ * - IN_TRANSIT: In transit to destination
+ * - COMPLETED: Delivered successfully
+ * - CANCELLED: Order cancelled
+ * - REJECTED: Order rejected
+ * - EXPIRED: Order expired
+ */
+export async function POST(request) {
+    try {
+        // Get raw body for signature verification
+        const rawBody = await request.text();
+        const signature = request.headers.get('x-lalamove-signature');
+
+        if (!signature) {
+            console.error('Webhook signature missing');
+            return NextResponse.json(
+                { error: 'Signature missing' },
+                { status: 401 }
+            );
+        }
+
+        // Get Lalamove provider for signature verification
+        const lalamove = getShippingProvider('lalamove');
+
+        // Verify webhook signature
+        const isValid = lalamove.verifyWebhookSignature(rawBody, signature);
+
+        if (!isValid) {
+            console.error('Invalid webhook signature');
+            return NextResponse.json(
+                { error: 'Invalid signature' },
+                { status: 401 }
+            );
+        }
+
+        // Parse webhook payload
+        const payload = JSON.parse(rawBody);
+
+        console.log('Lalamove webhook received:', {
+            event: payload.event,
+            orderId: payload.orderId,
+            status: payload.status,
+            timestamp: new Date().toISOString()
+        });
+
+        // Extract webhook data
+        const {
+            orderId: lalamoveOrderId,
+            event,
+            status,
+            driver,
+            location,
+            estimatedDeliveryTime,
+            actualDeliveryTime,
+            metadata
+        } = payload;
+
+        // Find order by Lalamove booking ID
+        const order = await prisma.order.findFirst({
+            where: {
+                shipping: {
+                    path: ['bookingId'],
+                    equals: lalamoveOrderId
+                }
+            },
+            include: {
+                user: true,
+                store: true
+            }
+        });
+
+        if (!order) {
+            console.error('Order not found for booking ID:', lalamoveOrderId);
+            // Still return 200 to acknowledge receipt
+            return NextResponse.json({
+                received: true,
+                message: 'Order not found but webhook acknowledged'
+            });
+        }
+
+        // Prepare updated shipping data
+        const updatedShipping = {
+            ...order.shipping,
+            status: status,
+            lastEvent: event,
+            updatedAt: new Date().toISOString()
+        };
+
+        // If driver is assigned, fetch complete driver info from Lalamove API
+        if (driver || (event === 'DRIVER_ASSIGNED' && lalamoveOrderId) || (event === 'ON_GOING' && lalamoveOrderId)) {
+            try {
+                console.log(`Fetching complete driver info for order ${lalamoveOrderId}`);
+                const lalamove = getShippingProvider('lalamove');
+                const trackingData = await lalamove.trackOrder(lalamoveOrderId);
+
+                if (trackingData.driverInfo) {
+                    updatedShipping.driverInfo = trackingData.driverInfo;
+                    console.log('Driver info updated:', trackingData.driverInfo);
+                }
+
+                if (trackingData.location) {
+                    updatedShipping.location = {
+                        ...trackingData.location,
+                        updatedAt: new Date().toISOString()
+                    };
+                }
+
+                // Update shareLink if available
+                if (trackingData.shareLink) {
+                    updatedShipping.shareLink = trackingData.shareLink;
+                }
+            } catch (error) {
+                console.error('Failed to fetch driver info from Lalamove:', error);
+                // Continue with webhook data if API call fails
+                if (driver) {
+                    updatedShipping.driverInfo = {
+                        name: driver.name,
+                        phone: driver.phone,
+                        plateNumber: driver.plateNumber,
+                        photo: driver.photo
+                    };
+                }
+            }
+        }
+
+        // Add location if available from webhook
+        if (location && !updatedShipping.location) {
+            updatedShipping.location = {
+                lat: location.lat,
+                lng: location.lng,
+                updatedAt: new Date().toISOString()
+            };
+        }
+
+        // Add delivery times
+        if (estimatedDeliveryTime) {
+            updatedShipping.estimatedDeliveryTime = estimatedDeliveryTime;
+        }
+
+        if (actualDeliveryTime) {
+            updatedShipping.actualDeliveryTime = actualDeliveryTime;
+            updatedShipping.deliveredAt = actualDeliveryTime;
+        }
+
+        // Add event to timeline
+        if (!updatedShipping.timeline) {
+            updatedShipping.timeline = [];
+        }
+
+        updatedShipping.timeline.push({
+            event: event,
+            status: status,
+            timestamp: new Date().toISOString(),
+            driverInfo: updatedShipping.driverInfo || null
+        });
+
+        // Prepare update data
+        const updateData = {
+            shipping: updatedShipping
+        };
+
+        // Handle specific events for main order status updates
+        let newStatus = null;
+        let emailSent = false;
+
+        switch (event) {
+            case 'ON_GOING':
+                console.log(`Driver assigned to order ${order.id}:`, driver?.name);
+                break;
+
+            case 'PICKED_UP':
+                console.log(`Package picked up for order ${order.id}`);
+                // Update status to SHIPPED if not already
+                if (order.status !== 'SHIPPED' && order.status !== 'DELIVERED' && order.status !== 'COMPLETED') {
+                    newStatus = 'SHIPPED';
+                    updateData.status = 'SHIPPED';
+                    updateData.shippedAt = new Date();
+                }
+                break;
+
+            case 'COMPLETED':
+                console.log(`Order ${order.id} delivered successfully`);
+                // Update status to DELIVERED
+                if (order.status !== 'DELIVERED' && order.status !== 'COMPLETED') {
+                    newStatus = 'DELIVERED';
+                    updateData.status = 'DELIVERED';
+                    updateData.deliveredAt = new Date();
+
+                    // Set auto-complete date (7 days from now)
+                    const autoCompleteDate = new Date();
+                    autoCompleteDate.setDate(autoCompleteDate.getDate() + 7);
+                    updateData.autoCompleteAt = autoCompleteDate;
+                }
+                break;
+
+            case 'CANCELLED':
+                console.log(`Order ${order.id} cancelled`);
+                // Only cancel if not already completed
+                if (order.status !== 'COMPLETED' && order.status !== 'DELIVERED') {
+                    newStatus = 'CANCELLED';
+                    updateData.status = 'CANCELLED';
+                }
+                break;
+
+            default:
+                console.log(`Event ${event} received for order ${order.id}`);
+        }
+
+        // Update order in database
+        await prisma.order.update({
+            where: { id: order.id },
+            data: updateData
+        });
+
+        console.log('Order updated successfully:', {
+            orderId: order.id,
+            event: event,
+            status: status,
+            newStatus: newStatus || 'unchanged'
+        });
+
+        // Send email notification if status changed
+        if (newStatus) {
+            try {
+                await sendOrderStatusEmail(
+                    order.user.email,
+                    order,
+                    order.user,
+                    order.store,
+                    newStatus
+                );
+                console.log(`Email notification sent for status ${newStatus}`);
+            } catch (emailError) {
+                console.error('Failed to send email notification:', emailError);
+            }
+        }
+
+        // Return 200 OK to acknowledge receipt
+        return NextResponse.json({
+            received: true,
+            orderId: order.id,
+            event: event,
+            status: status,
+            newStatus: newStatus,
+            timestamp: new Date().toISOString()
+        });
+
+    } catch (error) {
+        console.error('Webhook processing error:', error);
+
+        // Still return 200 to prevent Lalamove from retrying
+        // Log the error for manual investigation
+        return NextResponse.json({
+            received: true,
+            error: 'Processing error',
+            message: error.message
+        });
+    }
+}
+
+/**
+ * GET /api/webhooks/lalamove
+ * Health check endpoint
+ */
+export async function GET() {
+    return NextResponse.json({
+        status: 'ok',
+        service: 'Lalamove Webhook Receiver',
+        timestamp: new Date().toISOString()
+    });
+}

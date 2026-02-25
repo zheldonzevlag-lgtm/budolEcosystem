@@ -1,0 +1,82 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Fixes & Resolutions - v1.0</title>
+    <style>
+        body { font-family: sans-serif; padding: 40px; max-width: 900px; margin: 0 auto; line-height: 1.6; }
+        h1, h2 { color: #0052CC; }
+        .fix-entry { border: 1px solid #ddd; padding: 20px; border-radius: 5px; margin-bottom: 20px; }
+        .code-ref { background: #f4f5f7; padding: 2px 5px; border-radius: 3px; font-family: monospace; }
+        pre { background: #2d2d2d; color: #f8f8f2; padding: 15px; border-radius: 5px; overflow-x: auto; }
+    </style>
+</head>
+<body>
+    <h1>Fixes & Resolutions</h1>
+    <p><a href="index.html">&larr; Back to Index</a></p>
+
+    <div class="fix-entry">
+        <h2>1. Post-Logout Empty Cart & Race Condition</h2>
+        <p><strong>Issue:</strong> Users experienced an empty cart or 0 badge count upon re-login. This was caused by a race condition where the frontend would sync an empty cart (due to local storage clearing) to the server <em>during</em> the logout process, effectively wiping the user's saved cart in the database.</p>
+        <p><strong>Resolution:</strong></p>
+        <ul>
+            <li>Modified <span class="code-ref">app/(public)/layout.jsx</span> to detect user logout (transition from valid userId to null) and clear the Redux state <em>locally</em> without triggering a server sync.</li>
+            <li>Removed explicit <span class="code-ref">dispatch(clearCart())</span> from <span class="code-ref">components/Navbar.jsx</span> to prevent the race condition.</li>
+            <li>Added logic to <span class="code-ref">app/(public)/layout.jsx</span> to disable auto-sync if the initial cart fetch fails, preventing overwrite of server data with an empty state.</li>
+        </ul>
+        <h3>Code Change in PublicLayout.jsx:</h3>
+        <pre>
+// Handle cart clearing on logout
+useEffect(() => {
+    // If we had a user ID before, but now we don't, it means we logged out
+    if (prevUserIdRef.current && !userId) {
+        console.log('[Layout] User logged out, clearing cart state');
+        dispatch(clearCart());
+        localStorage.removeItem('budolshap_cart');
+    }
+    prevUserIdRef.current = userId;
+}, [userId, dispatch]);
+        </pre>
+    </div>
+
+    <div class="fix-entry">
+        <h2>2. Image Rendering Errors</h2>
+        <p><strong>Issue:</strong> Browser console showed errors "Empty string passed to src attribute" and "Missing required 'src' property" in product cards.</p>
+        <p><strong>Resolution:</strong> Added conditional rendering checks for <span class="code-ref">product.images[0]</span> in multiple components.</p>
+        <p><strong>Files Modified:</strong></p>
+        <ul>
+            <li><span class="code-ref">components/ProductCard.jsx</span></li>
+            <li><span class="code-ref">app/store/manage-product/page.jsx</span></li>
+            <li><span class="code-ref">app/admin/products/page.jsx</span></li>
+            <li><span class="code-ref">components/Hero.jsx</span></li>
+        </ul>
+    </div>
+
+    <div class="fix-entry">
+        <h2>3. Email Template UI Update (Verification Code)</h2>
+        <p><strong>Issue:</strong> User requested UI update to remove black footer, add background image, and integrate OTP into the design.</p>
+        <p><strong>Resolution:</strong> Updated <code>lib/email.js</code> to support <code>backgroundImage</code> option in <code>getHtmlTemplate</code>.</p>
+        <p><strong>Changes:</strong></p>
+        <ul>
+            <li>Updated <code>getHtmlTemplate</code> to accept an options object for background image and colors.</li>
+            <li>Modified <code>sendOTPEmail</code> to use a Cloudinary URL for the background image (<code>v1771241939/test2_j7juqz.png</code>).</li>
+            <li>Removed the dashed border/background around the OTP code to integrate seamlessly with the background image design.</li>
+            <li>Configured the OTP code to be centered.</li>
+            <li>Set footer background to transparent when an image is used.</li>
+            <li>Removed footer text ("© 2026 budolShap. All rights reserved." and "This email was sent to you because you signed up for budolShap.") as requested.</li>
+            <li>Restructured email layout to match new design: hidden header logo, centralized content, and reintegrated subtle footer text.</li>
+            <li>Refined email template to support portrait mode background images with correct content positioning (padding top/bottom).</li>
+            <li>Styled OTP container with white background, rounded corners, and shadow to match the reference design.</li>
+            <li>Updated typography to match the specific font weights, colors, and sizes from the reference image.</li>
+            <li>Adjusted content padding (Top: 160px, Left: 80px) to better align text with the background graphics and reduce whitespace.</li>
+            <li>Repositioned footer text to <code>bottom: 10px</code> with reduced font size (10px) and margin (2px) to fit cleanly below the "Secure Payments" background element.</li>
+            <li>Removed the copyright text ("© 2026 budolShap. All rights reserved.") from the email footer as requested.</li>
+            <li>Relocated "This email was sent to you because you signed up for budolShap" to directly follow the "If you didn't request this..." text within the content area, styled in small white text (10px) to overlay the bottom background.</li>
+            <li>Added a unique timestamp (hidden) to the email footer to prevent email clients (like Gmail) from threading/collapsing identical messages, resolving the "3 dots" issue.</li>
+            <li>Inserted "Verification Code" text and the budolShap logo (<code>v1771246508</code>) above the user greeting to improve branding and clarity.</li>
+            <li>Centered the "Verification Code" and logo header horizontally to align with the background image design.</li>
+        </ul>
+    </div>
+</body>
+</html>

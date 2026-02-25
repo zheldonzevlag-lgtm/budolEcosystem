@@ -1,0 +1,715 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Order Status Flow Explanation - Budolshap V2</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            line-height: 1.6;
+            color: #333;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            padding: 20px;
+            min-height: 100vh;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 20px;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+            overflow: hidden;
+        }
+
+        .header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 40px;
+            text-align: center;
+        }
+
+        .header h1 {
+            font-size: 2.5em;
+            margin-bottom: 10px;
+            text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.2);
+        }
+
+        .header p {
+            font-size: 1.2em;
+            opacity: 0.9;
+        }
+
+        .content {
+            padding: 40px;
+        }
+
+        .section {
+            margin-bottom: 40px;
+        }
+
+        h2 {
+            color: #667eea;
+            font-size: 2em;
+            margin-bottom: 20px;
+            padding-bottom: 10px;
+            border-bottom: 3px solid #667eea;
+        }
+
+        h3 {
+            color: #764ba2;
+            font-size: 1.5em;
+            margin: 30px 0 15px 0;
+        }
+
+        h4 {
+            color: #555;
+            font-size: 1.2em;
+            margin: 20px 0 10px 0;
+        }
+
+        .status-box {
+            background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
+            border-left: 5px solid #667eea;
+            padding: 20px;
+            margin: 20px 0;
+            border-radius: 10px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+        }
+
+        .status-box.warning {
+            border-left-color: #f39c12;
+            background: linear-gradient(135deg, #fff5e6 0%, #ffe4b3 100%);
+        }
+
+        .status-box.success {
+            border-left-color: #27ae60;
+            background: linear-gradient(135deg, #e8f8f5 0%, #d1f2eb 100%);
+        }
+
+        .status-box.error {
+            border-left-color: #e74c3c;
+            background: linear-gradient(135deg, #fee 0%, #fcc 100%);
+        }
+
+        .flow-step {
+            background: white;
+            border: 2px solid #667eea;
+            border-radius: 15px;
+            padding: 25px;
+            margin: 20px 0;
+            position: relative;
+            transition: all 0.3s ease;
+        }
+
+        .flow-step:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 10px 25px rgba(102, 126, 234, 0.3);
+        }
+
+        .flow-step::before {
+            content: attr(data-step);
+            position: absolute;
+            top: -15px;
+            left: 20px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 5px 15px;
+            border-radius: 20px;
+            font-weight: bold;
+            font-size: 0.9em;
+        }
+
+        .code-block {
+            background: #2d2d2d;
+            color: #f8f8f2;
+            padding: 20px;
+            border-radius: 10px;
+            overflow-x: auto;
+            margin: 20px 0;
+            font-family: 'Courier New', monospace;
+            font-size: 0.9em;
+            line-height: 1.5;
+        }
+
+        .code-block .comment {
+            color: #75715e;
+        }
+
+        .code-block .keyword {
+            color: #f92672;
+        }
+
+        .code-block .string {
+            color: #e6db74;
+        }
+
+        .code-block .function {
+            color: #66d9ef;
+        }
+
+        .code-block .number {
+            color: #ae81ff;
+        }
+
+        .comparison-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 20px 0;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+            border-radius: 10px;
+            overflow: hidden;
+        }
+
+        .comparison-table th {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 15px;
+            text-align: left;
+            font-weight: bold;
+        }
+
+        .comparison-table td {
+            padding: 15px;
+            border-bottom: 1px solid #eee;
+        }
+
+        .comparison-table tr:nth-child(even) {
+            background: #f8f9fa;
+        }
+
+        .comparison-table tr:hover {
+            background: #e8f4f8;
+        }
+
+        .badge {
+            display: inline-block;
+            padding: 5px 12px;
+            border-radius: 20px;
+            font-size: 0.85em;
+            font-weight: bold;
+            margin: 0 5px;
+        }
+
+        .badge.paid {
+            background: #27ae60;
+            color: white;
+        }
+
+        .badge.pending {
+            background: #f39c12;
+            color: white;
+        }
+
+        .badge.completed {
+            background: #3498db;
+            color: white;
+        }
+
+        .badge.processing {
+            background: #9b59b6;
+            color: white;
+        }
+
+        .timeline {
+            position: relative;
+            padding-left: 40px;
+            margin: 30px 0;
+        }
+
+        .timeline::before {
+            content: '';
+            position: absolute;
+            left: 10px;
+            top: 0;
+            bottom: 0;
+            width: 3px;
+            background: linear-gradient(180deg, #667eea 0%, #764ba2 100%);
+        }
+
+        .timeline-item {
+            position: relative;
+            margin-bottom: 30px;
+            padding: 20px;
+            background: white;
+            border-radius: 10px;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+        }
+
+        .timeline-item::before {
+            content: '';
+            position: absolute;
+            left: -34px;
+            top: 25px;
+            width: 15px;
+            height: 15px;
+            border-radius: 50%;
+            background: #667eea;
+            border: 3px solid white;
+            box-shadow: 0 0 0 3px #667eea;
+        }
+
+        .icon {
+            font-size: 1.5em;
+            margin-right: 10px;
+        }
+
+        .highlight {
+            background: linear-gradient(120deg, #f6d365 0%, #fda085 100%);
+            padding: 2px 8px;
+            border-radius: 4px;
+            font-weight: bold;
+        }
+
+        .footer {
+            background: #2c3e50;
+            color: white;
+            padding: 30px;
+            text-align: center;
+        }
+
+        .footer a {
+            color: #3498db;
+            text-decoration: none;
+        }
+
+        .footer a:hover {
+            text-decoration: underline;
+        }
+
+        @media print {
+            body {
+                background: white;
+                padding: 0;
+            }
+
+            .container {
+                box-shadow: none;
+            }
+
+            .flow-step:hover {
+                transform: none;
+            }
+        }
+
+        @media (max-width: 768px) {
+            .header h1 {
+                font-size: 1.8em;
+            }
+
+            .content {
+                padding: 20px;
+            }
+
+            h2 {
+                font-size: 1.5em;
+            }
+        }
+    </style>
+</head>
+
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>📦 Order Status Flow Explanation</h1>
+            <p>Understanding GCash Payment + Lalamove Delivery Integration</p>
+        </div>
+
+        <div class="content">
+            <!-- Overview Section -->
+            <div class="section">
+                <h2>📋 Overview</h2>
+                <p>This document explains why <strong>Lalamove shows "COMPLETED"</strong> status while <strong>Budolshap
+                        shows "PAID"</strong> status for an order placed with GCash payment and Lalamove delivery.</p>
+            </div>
+
+            <!-- The Situation -->
+            <div class="section">
+                <h2>🔍 The Situation</h2>
+                <div class="status-box">
+                    <h3>What You Observed:</h3>
+                    <ul>
+                        <li><strong>Lalamove Partner Portal:</strong> Order status = <span
+                                class="badge completed">COMPLETED</span></li>
+                        <li><strong>Budolshap Store Dashboard:</strong> Order status = <span
+                                class="badge paid">PAID</span></li>
+                    </ul>
+                </div>
+
+                <div class="status-box success">
+                    <h3>Why This Happens:</h3>
+                    <p>These are <strong>two different systems tracking different aspects</strong> of the same order:
+                    </p>
+                    <ul>
+                        <li><strong>Lalamove</strong> tracks the <span class="highlight">delivery/shipping status</span>
+                        </li>
+                        <li><strong>Budolshap</strong> tracks the <span class="highlight">overall order status</span>
+                            (including payment)</li>
+                    </ul>
+                </div>
+            </div>
+
+            <!-- Complete System Process Flow -->
+            <div class="section">
+                <h2>🔄 Complete System Process Flow</h2>
+
+                <div class="timeline">
+                    <div class="timeline-item">
+                        <div class="flow-step" data-step="Step 1">
+                            <h3><span class="icon">🛒</span>Customer Places Order</h3>
+                            <p><strong>Location:</strong> Cart/Checkout Page → <code>/app/api/orders/route.js</code>
+                                (POST)</p>
+
+                            <h4>What Happens:</h4>
+                            <div class="code-block">
+                                <span class="comment">// File: /app/api/orders/route.js (Lines 217-238)</span>
+
+                                <span class="keyword">const</span> order = <span class="keyword">await</span>
+                                tx.order.<span class="function">create</span>({
+                                data: {
+                                userId,
+                                storeId,
+                                addressId,
+                                total: finalTotal,
+                                shippingCost,
+                                paymentMethod: <span class="string">'GCASH'</span>,
+                                isPaid: <span class="keyword">false</span>, <span class="comment">// ❌ Not paid
+                                    yet</span>
+                                paymentStatus: <span class="string">'pending'</span>, <span class="comment">// ⏳ Waiting
+                                    for payment</span>
+                                status: <span class="string">'ORDER_PLACED'</span>, <span class="comment">// 📦 Initial
+                                    status</span>
+                                shipping: {
+                                provider: <span class="string">'lalamove'</span>,
+                                quoteId: <span class="string">'...'</span>,
+                                <span class="comment">// No bookingId yet - delivery not booked</span>
+                                }
+                                }
+                                })
+                            </div>
+
+                            <div class="status-box">
+                                <p><strong>Order Status:</strong> <span class="badge">ORDER_PLACED</span></p>
+                                <p><strong>Payment Status:</strong> <span class="badge pending">pending</span></p>
+                                <p><strong>isPaid:</strong> <code>false</code></p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="timeline-item">
+                        <div class="flow-step" data-step="Step 2">
+                            <h3><span class="icon">💳</span>Customer Pays via GCash</h3>
+                            <p><strong>Location:</strong> Payment Gateway → PayMongo</p>
+
+                            <ol>
+                                <li>Customer is redirected to PayMongo/GCash payment page</li>
+                                <li>Customer authorizes payment in GCash app</li>
+                                <li>PayMongo creates a "source" (payment authorization)</li>
+                            </ol>
+
+                            <div class="status-box warning">
+                                <p>Order is created but <strong>NOT yet paid</strong></p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="timeline-item">
+                        <div class="flow-step" data-step="Step 3">
+                            <h3><span class="icon">🔔</span>PayMongo Webhook - Source Chargeable</h3>
+                            <p><strong>Location:</strong> <code>/app/api/webhooks/paymongo/route.js</code></p>
+                            <p><strong>Webhook Event:</strong> <code>source.chargeable</code></p>
+
+                            <div class="code-block">
+                                <span class="comment">// File: /app/api/webhooks/paymongo/route.js (Lines 63-97)</span>
+
+                                <span class="keyword">async function</span> <span
+                                    class="function">handleSourceChargeable</span>(data) {
+                                <span class="keyword">const</span> sourceId = data.id
+
+                                <span class="comment">// Find order with this source ID</span>
+                                <span class="keyword">const</span> order = <span class="keyword">await</span>
+                                prisma.order.<span class="function">findFirst</span>({
+                                where: { paymentSourceId: sourceId }
+                                })
+
+                                <span class="comment">// Create payment to capture the funds</span>
+                                <span class="keyword">const</span> payment = <span class="keyword">await</span> <span
+                                    class="function">createPayment</span>(sourceId, amount)
+
+                                <span class="comment">// Update order</span>
+                                <span class="keyword">await</span> prisma.order.<span class="function">update</span>({
+                                where: { id: order.id },
+                                data: {
+                                paymentId: payment.data.id,
+                                paymentStatus: <span class="string">'processing'</span> <span class="comment">// ⚙️
+                                    Processing payment</span>
+                                }
+                                })
+                                }
+                            </div>
+
+                            <div class="status-box">
+                                <p><strong>Order Status:</strong> <span class="badge">ORDER_PLACED</span></p>
+                                <p><strong>Payment Status:</strong> <span class="badge processing">processing</span></p>
+                                <p><strong>isPaid:</strong> <code>false</code></p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="timeline-item">
+                        <div class="flow-step" data-step="Step 4">
+                            <h3><span class="icon">✅</span>PayMongo Webhook - Payment Paid</h3>
+                            <p><strong>Location:</strong> <code>/app/api/webhooks/paymongo/route.js</code></p>
+                            <p><strong>Webhook Event:</strong> <code>payment.paid</code></p>
+
+                            <div class="code-block">
+                                <span class="comment">// File: /app/api/webhooks/paymongo/route.js (Lines
+                                    104-178)</span>
+
+                                <span class="keyword">async function</span> <span
+                                    class="function">handlePaymentPaid</span>(data) {
+                                <span class="keyword">const</span> paymentId = data.id
+
+                                <span class="comment">// ✅ MARK ORDER AS PAID</span>
+                                <span class="keyword">await</span> prisma.order.<span class="function">update</span>({
+                                where: { id: order.id },
+                                data: {
+                                isPaid: <span class="keyword">true</span>, <span class="comment">// ✅ Payment
+                                    confirmed</span>
+                                status: <span class="string">'PAID'</span>, <span class="comment">// 💰 Status changed
+                                    to PAID</span>
+                                paymentStatus: <span class="string">'paid'</span>,
+                                paidAt: <span class="keyword">new</span> <span class="function">Date</span>()
+                                }
+                                })
+
+                                <span class="comment">// 💵 Credit seller's wallet</span>
+                                <span class="keyword">const</span> commissionRate = <span class="number">0.10</span>
+                                <span class="keyword">const</span> commissionAmount = discountedTotal * commissionRate
+                                <span class="keyword">const</span> sellerAmount = order.total - commissionAmount
+
+                                <span class="keyword">await</span> prisma.wallet.<span class="function">update</span>({
+                                where: { storeId: order.storeId },
+                                data: { balance: { increment: sellerAmount } }
+                                })
+                                }
+                            </div>
+
+                            <div class="status-box success">
+                                <p><strong>Order Status:</strong> <span class="badge paid">PAID</span> ✅ ← <strong>THIS
+                                        IS WHERE BUDOLSHAP STATUS CHANGES</strong></p>
+                                <p><strong>Payment Status:</strong> <span class="badge paid">paid</span></p>
+                                <p><strong>isPaid:</strong> <code>true</code></p>
+                                <p><strong>Seller Wallet:</strong> Credited with (order total - 10% commission)</p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="timeline-item">
+                        <div class="flow-step" data-step="Step 5">
+                            <h3><span class="icon">🚚</span>Store Owner Books Lalamove Delivery</h3>
+                            <p><strong>Location:</strong> Store Dashboard →
+                                <code>/app/api/shipping/lalamove/book/route.js</code></p>
+
+                            <div class="code-block">
+                                <span class="comment">// Create Lalamove order</span>
+                                <span class="keyword">const</span> booking = <span class="keyword">await</span>
+                                lalamove.<span class="function">createOrder</span>(bookingPayload)
+
+                                <span class="comment">// Update Budolshap order with booking details</span>
+                                <span class="keyword">await</span> prisma.order.<span class="function">update</span>({
+                                where: { id: orderId },
+                                data: {
+                                shipping: {
+                                ...existingShipping,
+                                bookingId: booking.orderId, <span class="comment">// Lalamove order ID</span>
+                                status: <span class="string">'ASSIGNING_DRIVER'</span>, <span class="comment">// Initial
+                                    Lalamove status</span>
+                                shareLink: booking.shareLink,
+                                driverLink: booking.driverLink,
+                                bookedAt: <span class="keyword">new</span> <span class="function">Date</span>().<span
+                                    class="function">toISOString</span>()
+                                }
+                                }
+                                })
+                            </div>
+
+                            <div class="status-box">
+                                <p><strong>Order Status in Budolshap:</strong> <span class="badge paid">PAID</span>
+                                    (unchanged)</p>
+                                <p><strong>Shipping Status:</strong> <span class="badge">ASSIGNING_DRIVER</span></p>
+                                <p><strong>Lalamove Order:</strong> Created with ID <code>337613168334815740</code></p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="timeline-item">
+                        <div class="flow-step" data-step="Step 6">
+                            <h3><span class="icon">👨‍✈️</span>Lalamove Assigns Driver</h3>
+                            <p><strong>Webhook Event:</strong> <code>ON_GOING</code></p>
+
+                            <div class="status-box">
+                                <p><strong>Order Status in Budolshap:</strong> <span class="badge paid">PAID</span>
+                                    (unchanged)</p>
+                                <p><strong>Shipping Status:</strong> <span class="badge">ON_GOING</span></p>
+                                <p><strong>Driver Info:</strong> Added to order.shipping.driver</p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="timeline-item">
+                        <div class="flow-step" data-step="Step 7">
+                            <h3><span class="icon">📦</span>Driver Picks Up Package</h3>
+                            <p><strong>Webhook Event:</strong> <code>PICKED_UP</code></p>
+
+                            <div class="status-box">
+                                <p><strong>Order Status in Budolshap:</strong> <span class="badge paid">PAID</span>
+                                    (unchanged)</p>
+                                <p><strong>Shipping Status:</strong> <span class="badge">PICKED_UP</span></p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="timeline-item">
+                        <div class="flow-step" data-step="Step 8">
+                            <h3><span class="icon">✅</span>Lalamove Completes Delivery</h3>
+                            <p><strong>Webhook Event:</strong> <code>COMPLETED</code></p>
+
+                            <div class="code-block">
+                                <span class="comment">// File: /app/api/webhooks/lalamove/route.js (Lines
+                                    166-170)</span>
+
+                                <span class="keyword">case</span> <span class="string">'COMPLETED'</span>:
+                                console.<span class="function">log</span>(<span class="string">`Order ${order.id}
+                                    delivered successfully`</span>)
+                                <span class="comment">// Updates shipping.status to 'COMPLETED'</span>
+                                <span class="comment">// Updates shipping.actualDeliveryTime</span>
+                                <span class="comment">// TODO: Update order status to 'DELIVERED'</span>
+                                <span class="keyword">break</span>
+                            </div>
+
+                            <div class="status-box error">
+                                <p><strong>Order Status in Budolshap:</strong> <span class="badge paid">PAID</span> ←
+                                    <strong>STILL PAID (This is the issue!)</strong></p>
+                                <p><strong>Shipping Status:</strong> <span class="badge completed">COMPLETED</span> ←
+                                    <strong>This is what Lalamove shows</strong></p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Why the Status Difference -->
+            <div class="section">
+                <h2>🎯 Why the Status Difference?</h2>
+
+                <table class="comparison-table">
+                    <thead>
+                        <tr>
+                            <th>System</th>
+                            <th>Status Shown</th>
+                            <th>What It Means</th>
+                            <th>What It Tracks</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td><strong>Lalamove Partner Portal</strong></td>
+                            <td><span class="badge completed">COMPLETED</span></td>
+                            <td>Delivery was successfully completed</td>
+                            <td>Shipping/delivery lifecycle only</td>
+                        </tr>
+                        <tr>
+                            <td><strong>Budolshap Store Dashboard</strong></td>
+                            <td><span class="badge paid">PAID</span></td>
+                            <td>Payment was received, but order not yet marked as delivered</td>
+                            <td>Overall order lifecycle (payment + fulfillment)</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+
+            <!-- The Missing Link -->
+            <div class="section">
+                <h2>🔧 The Missing Link</h2>
+
+                <div class="status-box error">
+                    <h3>Current Issue:</h3>
+                    <p>The Lalamove webhook handler <strong>does NOT update the Budolshap order status</strong> when
+                        delivery is completed.</p>
+                </div>
+
+                <h3>Code Evidence:</h3>
+                <div class="code-block">
+                    <span class="comment">// File: /app/api/webhooks/lalamove/route.js (Lines 166-170)</span>
+
+                    <span class="keyword">case</span> <span class="string">'COMPLETED'</span>:
+                    console.<span class="function">log</span>(<span class="string">`Order ${order.id} delivered
+                        successfully`</span>)
+                    <span class="comment">// TODO: Send delivery confirmation to customer</span>
+                    <span class="comment">// TODO: Update order status to 'delivered' ← ❌ NOT IMPLEMENTED</span>
+                    <span class="keyword">break</span>
+                </div>
+
+                <h3>What Should Happen:</h3>
+                <div class="code-block">
+                    <span class="keyword">case</span> <span class="string">'COMPLETED'</span>:
+                    <span class="comment">// Update order status to DELIVERED</span>
+                    <span class="keyword">await</span> prisma.order.<span class="function">update</span>({
+                    where: { id: order.id },
+                    data: {
+                    status: <span class="string">'DELIVERED'</span>, <span class="comment">// ← Should change from PAID
+                        to DELIVERED</span>
+                    deliveredAt: actualDeliveryTime
+                    }
+                    })
+                    <span class="keyword">break</span>
+                </div>
+            </div>
+
+            <!-- Key Takeaways -->
+            <div class="section">
+                <h2>📝 Key Takeaways</h2>
+
+                <div class="status-box success">
+                    <ol>
+                        <li><strong>Status "PAID" is correct</strong> - Payment was successfully received</li>
+                        <li><strong>Lalamove "COMPLETED" is also correct</strong> - Delivery was completed</li>
+                        <li><strong>They track different things</strong> - Payment vs. Delivery</li>
+                        <li><strong>The webhook works</strong> - It updates shipping status in the order</li>
+                        <li><strong>The order status doesn't auto-update</strong> - This is by design (currently)</li>
+                    </ol>
+                </div>
+            </div>
+
+            <!-- Related Files -->
+            <div class="section">
+                <h2>🔗 Related Files</h2>
+                <ul>
+                    <li><strong>Order Creation:</strong> <code>/app/api/orders/route.js</code></li>
+                    <li><strong>Payment Webhook:</strong> <code>/app/api/webhooks/paymongo/route.js</code></li>
+                    <li><strong>Lalamove Booking:</strong> <code>/app/api/shipping/lalamove/book/route.js</code></li>
+                    <li><strong>Lalamove Webhook:</strong> <code>/app/api/webhooks/lalamove/route.js</code></li>
+                    <li><strong>Order Status Update:</strong> <code>/app/api/orders/[orderId]/status/route.js</code>
+                    </li>
+                </ul>
+            </div>
+        </div>
+
+        <div class="footer">
+            <p><strong>Document Created:</strong> December 3, 2025</p>
+            <p><strong>System:</strong> Budolshap V2 Multi-vendor E-commerce Platform</p>
+            <p><strong>Version:</strong> 1.0</p>
+        </div>
+    </div>
+</body>
+
+</html>

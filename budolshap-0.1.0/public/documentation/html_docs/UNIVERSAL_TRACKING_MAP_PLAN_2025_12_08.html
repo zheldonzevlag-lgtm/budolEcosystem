@@ -1,0 +1,164 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Universal Tracking Map Implementation Plan</title>
+    <style>
+        :root {
+            --primary: #2563eb;
+            --success: #16a34a;
+            --warning: #ca8a04;
+            --danger: #dc2626;
+            --bg: #f8fafc;
+            --card: #ffffff;
+            --text: #1e293b;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+            line-height: 1.6;
+            color: var(--text);
+            background: var(--bg);
+            max-width: 900px;
+            margin: 0 auto;
+            padding: 2rem;
+        }
+
+        .header {
+            border-bottom: 2px solid #e2e8f0;
+            padding-bottom: 1rem;
+            margin-bottom: 2rem;
+        }
+
+        .status-badge {
+            display: inline-block;
+            padding: 0.25rem 0.75rem;
+            border-radius: 9999px;
+            font-size: 0.875rem;
+            font-weight: 600;
+            background: #dbeafe;
+            color: var(--primary);
+        }
+
+        .card {
+            background: var(--card);
+            border-radius: 0.5rem;
+            padding: 1.5rem;
+            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+            margin-bottom: 1.5rem;
+        }
+
+        h2 {
+            border-left: 4px solid var(--primary);
+            padding-left: 1rem;
+            margin-top: 2rem;
+        }
+
+        code {
+            background: #f1f5f9;
+            padding: 0.2rem 0.4rem;
+            border-radius: 0.25rem;
+            font-family: monospace;
+        }
+
+        .timeline {
+            border-left: 2px solid #e2e8f0;
+            padding-left: 1.5rem;
+            margin-left: 0.5rem;
+        }
+
+        .timeline-item {
+            position: relative;
+            margin-bottom: 1.5rem;
+        }
+
+        .timeline-item::before {
+            content: '';
+            position: absolute;
+            left: -1.9rem;
+            top: 0.5rem;
+            width: 0.8rem;
+            height: 0.8rem;
+            background: var(--primary);
+            border-radius: 50%;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="header">
+        <span class="status-badge">Proposed Refactor</span>
+        <h1>Universal Tracking Map Implementation Plan</h1>
+        <p><strong>Date:</strong> December 8, 2025 | <strong>Author:</strong> Antigravity</p>
+    </div>
+
+    <div class="card">
+        <h3>Objective</h3>
+        <p>Decouple the frontend tracking logic from specific providers (Lalamove, Standard, future integrations).
+            Create a unified interface that automatically renders the correct map component based on the shipping
+            provider configuration.</p>
+    </div>
+
+    <h2>1. The Problem</h2>
+    <p>Currently, <code>app/(public)/orders/[orderId]/page.jsx</code> has hardcoded logic:</p>
+    <pre style="background:#1e293b; color:#fff; padding:1rem; border-radius:0.5rem;">
+{/* Hardcoded Checks */}
+{order.shipping?.provider === 'lalamove' ? (
+    &lt;LalamoveTracking /&gt; 
+) : (
+    &lt;StandardDeliveryMap /&gt;
+)}</pre>
+    <p>If we add <strong>Grab</strong> or <strong>J&T</strong>, we have to modify the main order page every time. This
+        scales poorly.</p>
+
+    <h2>2. The Solution: UniversalTrackingMap</h2>
+    <p>We will introduce a Factory Component pattern on the frontend.</p>
+
+    <div class="card">
+        <h4>New Component Structure</h4>
+        <ul>
+            <li><strong>File:</strong> <code>components/UniversalTrackingMap.jsx</code></li>
+            <li><strong>Responsibility:</strong> Receive <code>order</code> object, detect provider, render correct
+                sub-component.</li>
+            <li><strong>Scalability:</strong> Adding a new provider only requires updating this one file, not the main
+                pages.</li>
+        </ul>
+    </div>
+
+    <h2>3. Implementation Steps</h2>
+    <div class="timeline">
+        <div class="timeline-item">
+            <h4>Step 1: Create Universal Component</h4>
+            <p>Create <code>components/UniversalTrackingMap.jsx</code>. It will import <code>LalamoveTracking</code> and
+                <code>StandardDeliveryMap</code>.</p>
+        </div>
+        <div class="timeline-item">
+            <h4>Step 2: Implement Factory Logic</h4>
+            <p>Write switch/case logic to match <code>order.shipping.provider</code> strings to components.</p>
+        </div>
+        <div class="timeline-item">
+            <h4>Step 3: Refactor Order Page</h4>
+            <p>Replace the conditional rendering in <code>page.jsx</code> with a single
+                <code>&lt;UniversalTrackingMap order={order} /&gt;</code>.</p>
+        </div>
+        <div class="timeline-item">
+            <h4>Step 4: Verification</h4>
+            <p>Verify that existing Lalamove orders still show Lalamove map, and standard orders show standard map.</p>
+        </div>
+    </div>
+
+    <h2>4. Timeframe Estimate</h2>
+    <div class="card">
+        <p><strong>Total Estimated Time:</strong> 15 - 20 Minutes</p>
+        <ul>
+            <li><strong>Code Creation:</strong> 5 mins</li>
+            <li><strong>Refactoring:</strong> 5 mins</li>
+            <li><strong>Testing & Verification:</strong> 5-10 mins</li>
+        </ul>
+    </div>
+
+</body>
+
+</html>

@@ -1,0 +1,522 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Technical Implementation Manual | Shopee Scale</title>
+    <style>
+        :root {
+            --primary: #ee4d2d;
+            --secondary: #2673dd;
+            --background: #f8f9fa;
+            --surface: #ffffff;
+            --text: #212121;
+            --code-bg: #1e1e1e;
+            --border: #e0e0e0;
+            --free-tier: #0070f3;
+            --pro-tier: #7928ca;
+        }
+
+        body {
+            font-family: 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+            background-color: var(--background);
+            color: var(--text);
+            line-height: 1.6;
+            margin: 0;
+            padding: 0;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 2rem;
+            background: var(--surface);
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
+            min-height: 100vh;
+        }
+
+        header {
+            text-align: center;
+            border-bottom: 3px solid var(--primary);
+            padding-bottom: 2rem;
+            margin-bottom: 3rem;
+        }
+
+        h1 {
+            color: var(--primary);
+            margin: 0;
+            font-size: 2.5rem;
+        }
+
+        h2 {
+            font-size: 1.8rem;
+            margin-top: 3rem;
+            border-left: 5px solid var(--primary);
+            padding-left: 1rem;
+        }
+
+        h3 {
+            font-size: 1.3rem;
+            margin-top: 2rem;
+            color: #444;
+        }
+
+        .phase-meta {
+            display: flex;
+            gap: 1rem;
+            margin-bottom: 2rem;
+            flex-wrap: wrap;
+        }
+
+        .meta-tag {
+            background: #eee;
+            padding: 0.2rem 0.8rem;
+            border-radius: 4px;
+            font-size: 0.9rem;
+            font-weight: 600;
+        }
+
+        .tag-time {
+            background: #e3f2fd;
+            color: #1565c0;
+        }
+
+        .tag-cli {
+            background: #333;
+            color: #4af626;
+            font-family: monospace;
+        }
+
+        .step-container {
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            margin-bottom: 2rem;
+            overflow: hidden;
+        }
+
+        .step-header {
+            background: #f5f5f5;
+            padding: 1rem;
+            border-bottom: 1px solid var(--border);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            cursor: pointer;
+        }
+
+        .step-title {
+            font-weight: bold;
+            font-size: 1.1rem;
+        }
+
+        .step-est {
+            color: #666;
+            font-size: 0.9rem;
+        }
+
+        .step-body {
+            padding: 1.5rem;
+            display: block;
+            /* Can be toggled */
+        }
+
+        .code-block {
+            background: var(--code-bg);
+            color: #d4d4d4;
+            padding: 1rem;
+            border-radius: 6px;
+            font-family: 'Consolas', 'Monaco', monospace;
+            overflow-x: auto;
+            margin: 1rem 0;
+            font-size: 0.9rem;
+            position: relative;
+        }
+
+        .code-label {
+            position: absolute;
+            top: 0;
+            right: 0;
+            background: #333;
+            color: #ccc;
+            font-size: 0.7rem;
+            padding: 2px 6px;
+            border-bottom-left-radius: 4px;
+        }
+
+        .cli-cmd {
+            color: #4af626;
+        }
+
+        .file-path {
+            color: #569cd6;
+            font-weight: bold;
+            display: block;
+            margin-bottom: 0.5rem;
+        }
+
+        .strategy-toggle {
+            display: flex;
+            margin: 1rem 0;
+            gap: 1rem;
+        }
+
+        .strategy-card {
+            flex: 1;
+            padding: 1rem;
+            border: 1px solid #ddd;
+            border-radius: 6px;
+            font-size: 0.9rem;
+        }
+
+        .free-card {
+            background: #f0f9ff;
+            border-left: 3px solid var(--free-tier);
+        }
+
+        .pro-card {
+            background: #f3e5f5;
+            border-left: 3px solid var(--pro-tier);
+        }
+
+        .checklist {
+            list-style: none;
+            padding: 0;
+        }
+
+        .checklist li::before {
+            content: "☐";
+            margin-right: 0.5rem;
+        }
+
+        /* Navigation Bar */
+        .nav-bar {
+            background: #f0f0f0;
+            padding: 1rem;
+            border-radius: 8px;
+            margin-bottom: 2rem;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            border: 1px solid #ddd;
+        }
+
+        .nav-title {
+            font-weight: bold;
+            color: #555;
+        }
+
+        .nav-links {
+            display: flex;
+            gap: 10px;
+        }
+
+        .nav-btn {
+            text-decoration: none;
+            padding: 8px 16px;
+            border-radius: 4px;
+            font-size: 0.9rem;
+            font-weight: 600;
+        }
+
+        .nav-btn.active {
+            background: var(--primary);
+            color: white;
+            cursor: default;
+        }
+
+        .nav-btn.inactive {
+            background: white;
+            color: var(--secondary);
+            border: 1px solid var(--border);
+            transition: all 0.2s;
+        }
+
+        .nav-btn.inactive:hover {
+            background: #eef;
+            border-color: var(--secondary);
+        }
+    </style>
+</head>
+
+<body>
+    <div class="container">
+        <!-- Navigation Bar -->
+        <div class="nav-bar">
+            <span class="nav-title">Document View:</span>
+            <div class="nav-links">
+                <a href="MICROSERVICES_STRATEGIC_PLAN.html" class="nav-btn inactive">Strategic Roadmap (High Level)</a>
+                <span class="nav-btn active">Technical Manual (Deep Dive)</span>
+            </div>
+        </div>
+
+        <header>
+            <h1>Shopee-Scale Technical Implementation Manual</h1>
+            <p>Step-by-Step Engineering Execution Guide</p>
+        </header>
+
+        <!-- PHASE 1 -->
+        <section id="phase-1">
+            <h2>Phase 1: Gateway & Foundation</h2>
+            <div class="phase-meta">
+                <span class="meta-tag tag-time">Duration: 2 Weeks</span>
+                <span class="meta-tag">Focus: Routing, Logging, Standards</span>
+            </div>
+
+            <!-- Step 1.1 -->
+            <div class="step-container">
+                <div class="step-header">
+                    <span class="step-title">1.1. Setup Middleware Gateway</span>
+                    <span class="step-est">Est: 4 Hours</span>
+                </div>
+                <div class="step-body">
+                    <p><strong>Objective:</strong> Intercept every request to tag it with a unique ID and handle CORS
+                        before it hits any logic.</p>
+
+                    <span class="file-path">File: middleware.ts</span>
+                    <div class="code-block">
+                        <span class="code-label">TYPESCRIPT</span>
+                        import { NextResponse } from 'next/server'
+                        import type { NextRequest } from 'next/server'
+
+                        export function middleware(request: NextRequest) {
+                        const requestHeaders = new Headers(request.headers)
+
+                        // 1. Tag Request (Traceability)
+                        requestHeaders.set('x-request-id', crypto.randomUUID())
+
+                        // 2. Strict CORS (Shopee Standard)
+                        const response = NextResponse.next({
+                        request: { headers: requestHeaders },
+                        })
+
+                        response.headers.set('Access-Control-Allow-Origin', process.env.NEXT_PUBLIC_APP_URL || '*')
+                        response.headers.set('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS')
+
+                        return response
+                        }
+
+                        export const config = {
+                        matcher: '/api/:path*',
+                        }
+                    </div>
+
+                    <p><strong>CLI Execution:</strong></p>
+                    <div class="code-block">
+                        <span class="cli-cmd">npm install uuid</span>
+                        <span class="cli-cmd">vercel env add NEXT_PUBLIC_APP_URL production https://budolshap.com</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Step 1.2 -->
+            <div class="step-container">
+                <div class="step-header">
+                    <span class="step-title">1.2. Implement Standard API Envelope</span>
+                    <span class="step-est">Est: 6 Hours</span>
+                </div>
+                <div class="step-body">
+                    <p><strong>Objective:</strong> Enforce strictly typed JSON responses across ALL endpoints.</p>
+
+                    <span class="file-path">File: lib/api-response.ts</span>
+                    <div class="code-block">
+                        <span class="code-label">TYPESCRIPT</span>
+                        export type ApiResponse&lt;T&gt; = {
+                        data: T | null
+                        meta?: {
+                        page: number
+                        limit: number
+                        total: number
+                        }
+                        error?: {
+                        code: string
+                        message: string
+                        details?: any
+                        }
+                        requestId: string
+                        }
+
+                        export function success&lt;T&gt;(data: T, meta?: any): ApiResponse&lt;T&gt; {
+                        return {
+                        data,
+                        meta,
+                        requestId: 'generated-in-middleware' // In reality, grab from context
+                        }
+                        }
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- PHASE 2 -->
+        <section id="phase-2">
+            <h2>Phase 2: Identity Decoupling</h2>
+            <div class="phase-meta">
+                <span class="meta-tag tag-time">Duration: 2 Weeks</span>
+                <span class="meta-tag">Focus: Auth Isolation, Schema Split</span>
+            </div>
+
+            <div class="strategy-toggle">
+                <div class="strategy-card free-card">
+                    <strong>Free Tier Task:</strong> Use Prisma Multi-Schema to simulate isolation. Use
+                    <code>schema="identity"</code>.
+                </div>
+                <div class="strategy-card pro-card">
+                    <strong>Pro Tier Task:</strong> Create a new Vercel Project <code>budolshap-auth</code> and link a
+                    dedicated Postgres Store.
+                </div>
+            </div>
+
+            <!-- Step 2.1 -->
+            <div class="step-container">
+                <div class="step-header">
+                    <span class="step-title">2.1. Configure Prisma Schemas</span>
+                    <span class="step-est">Est: 1 Day</span>
+                </div>
+                <div class="step-body">
+                    <p><strong>Objective:</strong> Physically or logically separate User tables from Product tables.</p>
+
+                    <span class="file-path">File: prisma/schema.prisma</span>
+                    <div class="code-block">
+                        <span class="code-label">PRISMA</span>
+                        generator client {
+                        provider = "prisma-client-js"
+                        previewFeatures = ["multiSchema"]
+                        }
+
+                        datasource db {
+                        provider = "postgresql"
+                        url = env("DATABASE_URL")
+                        schemas = ["public", "identity", "catalog", "orders"]
+                        }
+
+                        model User {
+                        id String @id @default(cuid())
+                        email String @unique
+                        // ...
+                        @@schema("identity") // Crucial: Moves table to identity schema
+                        }
+
+                        model Product {
+                        id String @id
+                        // ...
+                        @@schema("catalog")
+                        }
+                    </div>
+
+                    <p><strong>CLI Execution:</strong></p>
+                    <div class="code-block">
+                        <span class="cli-cmd">npx prisma db push</span>
+                        <span class="cli-cmd"># Output should show: "Applying migration... to schema 'identity'"</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Step 2.2 -->
+            <div class="step-container">
+                <div class="step-header">
+                    <span class="step-title">2.2. Switch to Stateless Authentication</span>
+                    <span class="step-est">Est: 3 Days</span>
+                </div>
+                <div class="step-body">
+                    <p><strong>Objective:</strong> Stop hitting the DB for session checks. Use signed JWTs verified at
+                        the Edge.</p>
+
+                    <span class="file-path">File: lib/auth/edge-verify.ts</span>
+                    <div class="code-block">
+                        <span class="code-label">TYPESCRIPT</span>
+                        import { jwtVerify } from 'jose'
+
+                        export async function verifyAuth(token: string) {
+                        try {
+                        const secret = new TextEncoder().encode(process.env.JWT_SECRET)
+                        const { payload } = await jwtVerify(token, secret)
+                        return payload // Contains { userId, role }
+                        } catch (err) {
+                        return null
+                        }
+                        }
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- PHASE 3 -->
+        <section id="phase-3">
+            <h2>Phase 3: Catalog & Caches</h2>
+            <div class="phase-meta">
+                <span class="meta-tag tag-time">Duration: 2 Weeks</span>
+            </div>
+
+            <!-- Step 3.1 -->
+            <div class="step-container">
+                <div class="step-header">
+                    <span class="step-title">3.1. Implement Stale-While-Revalidate</span>
+                    <span class="step-est">Est: 2 Days</span>
+                </div>
+                <div class="step-body">
+                    <p><strong>Objective:</strong> Ensure Product Pages load in &lt;100ms by serving cached HTML while
+                        updating in background.</p>
+
+                    <span class="file-path">File: app/product/[slug]/page.tsx</span>
+                    <div class="code-block">
+                        <span class="code-label">TYPESCRIPT</span>
+                        // Next.js 14+ / App Router
+                        export const revalidate = 60 // Cache for 60 seconds
+
+                        export default async function ProductPage({ params }) {
+                        const data = await getProduct(params.slug)
+                        // ...
+                        }
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- PHASE 4 -->
+        <section id="phase-4">
+            <h2>Phase 4: Async Transactions</h2>
+
+            <!-- Step 4.1 -->
+            <div class="step-container">
+                <div class="step-header">
+                    <span class="step-title">4.1. Setup Message Queue (QStash)</span>
+                    <span class="step-est">Est: 1 Day</span>
+                </div>
+                <div class="step-body">
+                    <p><strong>Objective:</strong> Offload "Send Email" and "Update Inventory" to background jobs to
+                        prevent checkout timeout.</p>
+
+                    <p><strong>CLI Execution:</strong></p>
+                    <div class="code-block">
+                        <span class="cli-cmd">npm install @upstash/qstash</span>
+                        <span class="cli-cmd">vercel env add QSTASH_TOKEN</span>
+                    </div>
+
+                    <span class="file-path">File: app/api/orders/create/route.ts</span>
+                    <div class="code-block">
+                        <span class="code-label">TYPESCRIPT</span>
+                        import { Client } from "@upstash/qstash"
+
+                        const client = new Client({ token: process.env.QSTASH_TOKEN })
+
+                        export async function POST(req: Request) {
+                        // 1. Fast DB Write (Create Order PENDING)
+                        const order = await prisma.order.create(...)
+
+                        // 2. Offload Heavy Work
+                        await client.publishJSON({
+                        url: "https://budolshap.com/api/queues/process-order",
+                        body: { orderId: order.id },
+                        })
+
+                        return NextResponse.json({ success: true, orderId: order.id })
+                        }
+                    </div>
+                </div>
+            </div>
+        </section>
+    </div>
+</body>
+
+</html>

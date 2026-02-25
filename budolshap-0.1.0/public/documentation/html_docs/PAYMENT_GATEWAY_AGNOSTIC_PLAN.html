@@ -1,0 +1,181 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Robust & Agnostic Payment Implementation Plan</title>
+    <style>
+        /* Light Theme for better readability */
+        :root {
+            --bg: #f8fafc;
+            --text: #0f172a;
+            --card-bg: #ffffff;
+            --accent: #6366f1;
+            --success: #16a34a;
+            --warning: #d97706;
+            --code-bg: #e2e8f0;
+            --code-text: #ef4444;
+        }
+
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: var(--bg);
+            color: var(--text);
+            line-height: 1.6;
+            padding: 2rem;
+            max-width: 900px;
+            margin: 0 auto;
+        }
+
+        h1,
+        h2,
+        h3 {
+            color: var(--accent);
+        }
+
+        .card {
+            background-color: var(--card-bg);
+            padding: 1.5rem;
+            border-radius: 0.5rem;
+            margin-bottom: 1.5rem;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.05);
+            border: 1px solid #e2e8f0;
+        }
+
+        code {
+            background-color: var(--code-bg);
+            padding: 0.2rem 0.4rem;
+            border-radius: 0.25rem;
+            font-family: monospace;
+            color: var(--code-text);
+        }
+
+        .tag {
+            display: inline-block;
+            padding: 0.25rem 0.75rem;
+            border-radius: 9999px;
+            font-size: 0.75rem;
+            font-weight: 700;
+            text-transform: uppercase;
+            margin-right: 0.5rem;
+        }
+
+        .tag-new {
+            background-color: var(--success);
+            color: #fff;
+        }
+
+        .tag-refactor {
+            background-color: var(--warning);
+            color: #fff;
+        }
+
+        .mermaid {
+            background: #f1f5f9;
+            padding: 1rem;
+            border-radius: 0.5rem;
+            margin: 1rem 0;
+            overflow-x: auto;
+            border: 1px solid #cbd5e1;
+        }
+    </style>
+</head>
+
+<body>
+
+    <h1>🛡️ Payment Gateway Agnostic Architecture</h1>
+    <p>To answer your questions: The previous plan was <strong>NOT</strong> gateway agnostic. It was tightly coupled to
+        PayMongo. <br>
+        This new plan introduces an <strong>Adapter Pattern</strong> to ensure robustness and allow easy addition of
+        future gateways (Xendit, Stripe, PayPal) without rewriting frontend logic.</p>
+
+    <div class="card">
+        <h2>🏗️ Architecture Overview</h2>
+        <p>We will introduce a <code>PaymentService</code> layer that abstracts specific provider logic.</p>
+
+        <div class="mermaid">
+            graph TD
+            Client[Frontend PaymentComponent] -->|POST /api/payment/checkout| UnifiedAPI
+            UnifiedAPI[Unified API Route] -->|initiatePayment| PaymentService
+            PaymentService -->|Select Provider| AdapterFactory
+
+            subgraph Adapters
+            AdapterFactory --> PayMongo[PayMongo Adapter]
+            AdapterFactory --> Xendit["Xendit Adapter (Future)"]
+            AdapterFactory --> Stripe["Stripe Adapter (Future)"]
+            end
+
+            PayMongo -->|API Call| PayMongoAPI[PayMongo External API]
+        </div>
+        <script type="module">
+            import mermaid from 'https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.esm.min.mjs';
+            mermaid.initialize({
+                startOnLoad: true,
+                theme: 'neutral',
+                securityLevel: 'loose'
+            });
+        </script>
+    </div>
+
+    <div class="card">
+        <h2>🛠 Implementation Steps</h2>
+
+        <h3>1. Create Payment Adapter Interface</h3>
+        <p><strong>File:</strong> <code>lib/payment/adapters/base-adapter.js</code> <span class="tag tag-new">NEW</span>
+        </p>
+        <ul>
+            <li>Define the contract: <code>createPaymentIntent(amount, currency, method, billing)</code></li>
+            <li>Define the return structure: <code>{ checkoutUrl, paymentIntentId, status }</code> (Normalized)</li>
+        </ul>
+
+        <h3>2. Implement PayMongo Adapter</h3>
+        <p><strong>File:</strong> <code>lib/payment/adapters/paymongo-adapter.js</code> <span
+                class="tag tag-new">NEW</span></p>
+        <ul>
+            <li>Move logic from <code>lib/paymongo.js</code> into this class.</li>
+            <li>Handle mapping of generic methods (<code>gcash</code>, <code>card</code>) to PayMongo specific payloads.
+            </li>
+        </ul>
+
+        <h3>3. Create Unified Payment Service</h3>
+        <p><strong>File:</strong> <code>lib/payment/service.js</code> <span class="tag tag-new">NEW</span></p>
+        <ul>
+            <li><code>initiatePayment(provider, amount, method, billing)</code></li>
+            <li>Loads the correct adapter based on config or request.</li>
+        </ul>
+
+        <h3>4. Create Unified API Endpoint</h3>
+        <p><strong>File:</strong> <code>app/api/payment/checkout/route.js</code> <span class="tag tag-new">NEW</span>
+        </p>
+        <ul>
+            <li>Replaces specific <code>create-intent</code> routes.</li>
+            <li>Accepts: <code>{ provider: 'paymongo', method: 'qrph', amount: 1000, ... }</code></li>
+            <li>Returns: <code>{ checkoutUrl: '...' }</code></li>
+        </ul>
+
+        <h3>5. Update Frontend Component</h3>
+        <p><strong>File:</strong> <code>components/payment/UniversalPaymentButton.jsx</code> <span
+                class="tag tag-new">NEW</span></p>
+        <ul>
+            <li>Accepts a <code>provider</code> prop (defaulting to 'paymongo' for now).</li>
+            <li>Renders available options dynamically.</li>
+            <li>Calls the unified <code>/api/payment/checkout</code>.</li>
+        </ul>
+    </div>
+
+    <div class="card">
+        <h2>🚀 Future Extensibility</h2>
+        <p>To add a new gateway (e.g., Xendit) in the future, you only need to:</p>
+        <ol>
+            <li>Create <code>lib/payment/adapters/xendit-adapter.js</code> implementing the base interface.</li>
+            <li>Add 'xendit' to the <code>service.js</code> factory.</li>
+            <li><strong>No changes</strong> required in the frontend component (just pass
+                <code>provider="xendit"</code>).</li>
+            <li><strong>No changes</strong> required in the API route logic.</li>
+        </ol>
+    </div>
+
+</body>
+
+</html>

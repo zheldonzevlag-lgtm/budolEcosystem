@@ -1,0 +1,145 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Phase 3: Testing & Validation Protocols | Lalamove Real-time Status Fix</title>
+    <style>
+        :root {
+            --primary: #2563eb;
+            --secondary: #64748b;
+            --bg: #f8fafc;
+            --card-bg: #ffffff;
+            --text: #1e293b;
+            --border: #e2e8f0;
+            --code-bg: #1e1e1e;
+        }
+        body {
+            font-family: 'Inter', -apple-system, sans-serif;
+            line-height: 1.6;
+            color: var(--text);
+            background: var(--bg);
+            margin: 0;
+            display: flex;
+        }
+        nav {
+            width: 280px;
+            height: 100vh;
+            background: var(--card-bg);
+            border-right: 1px solid var(--border);
+            position: fixed;
+            padding: 2rem;
+            box-sizing: border-box;
+        }
+        main {
+            margin-left: 280px;
+            padding: 4rem;
+            max-width: 900px;
+        }
+        .nav-item {
+            display: block;
+            padding: 0.75rem 1rem;
+            color: var(--secondary);
+            text-decoration: none;
+            border-radius: 0.5rem;
+            margin-bottom: 0.5rem;
+        }
+        .nav-item.active {
+            background: var(--primary);
+            color: white;
+        }
+        h1, h2, h3 { color: #0f172a; }
+        .card {
+            background: var(--card-bg);
+            border: 1px solid var(--border);
+            border-radius: 0.75rem;
+            padding: 1.5rem;
+            margin-bottom: 2rem;
+        }
+        pre {
+            background: var(--code-bg);
+            color: #d4d4d4;
+            padding: 1.5rem;
+            border-radius: 0.5rem;
+            overflow-x: auto;
+            font-size: 0.9rem;
+        }
+        .status-badge {
+            float: right;
+            background: #e0f2fe;
+            color: #0369a1;
+            padding: 0.25rem 0.75rem;
+            border-radius: 0.25rem;
+            font-size: 0.85rem;
+        }
+        .test-case {
+            border-left: 4px solid var(--primary);
+            padding-left: 1rem;
+            margin-bottom: 1.5rem;
+        }
+    </style>
+</head>
+<body>
+    <nav>
+        <h3>Implementation Plan</h3>
+        <a href="index.html" class="nav-item">Overview</a>
+        <a href="phase-1-setup.html" class="nav-item">Phase 1: Setup</a>
+        <a href="phase-2-identification.html" class="nav-item">Phase 2: Identification</a>
+        <a href="phase-3-testing.html" class="nav-item active">Phase 3: Testing</a>
+        <a href="implementation-summary.html" class="nav-item">Final Summary</a>
+    </nav>
+    <main>
+        <h1>Phase 3: Testing & Validation Protocols</h1>
+        <div class="status-badge">Pending Implementation</div>
+        
+        <div class="card">
+            <h2>Testing Strategy</h2>
+            <p>To validate the fix, we will use a combination of automated webhook simulations and manual UI observation.</p>
+        </div>
+
+        <div class="card">
+            <h2>1. Webhook Simulation Script</h2>
+            <p>A script will be used to send POST requests to the webhook endpoint with mock Lalamove payloads.</p>
+            <pre><code>// Example Simulation Command
+curl -X POST http://localhost:3000/api/webhooks/lalamove \
+-H "Content-Type: application/json" \
+-d '{
+    "eventType": "ORDER_STATUS_CHANGED",
+    "orderId": "LALA-123456",
+    "status": "PICKED_UP",
+    "data": {
+        "order": { "status": "PICKED_UP" }
+    }
+}'</code></pre>
+        </div>
+
+        <div class="card">
+            <h2>2. Test Cases</h2>
+            <div class="test-case">
+                <h3>TC-01: Status Change Notification</h3>
+                <p><strong>Input:</strong> Webhook with <code>PICKED_UP</code> status.</p>
+                <p><strong>Expected:</strong> UI orders list refreshes, order status changes to <code>IN_TRANSIT</code>.</p>
+            </div>
+            <div class="test-case">
+                <h3>TC-02: Driver Assignment Update</h3>
+                <p><strong>Input:</strong> Webhook with <code>DRIVER_ASSIGNED</code> event.</p>
+                <p><strong>Expected:</strong> Driver info appears in order details, status remains or moves to <code>PROCESSING</code>.</p>
+            </div>
+            <div class="test-case">
+                <h3>TC-03: Failed Real-time Fallback</h3>
+                <p><strong>Input:</strong> Webhook received while Pusher is misconfigured.</p>
+                <p><strong>Expected:</strong> Order status updates in DB, webhook returns 200, error is logged in <code>WebhookEvent</code> table.</p>
+            </div>
+        </div>
+
+        <div class="card">
+            <h2>Success Criteria</h2>
+            <ul>
+                <li><input type="checkbox" disabled> UI refreshes within 2 seconds of webhook receipt.</li>
+                <li><input type="checkbox" disabled> Webhook status in <code>WebhookEvent</code> table shows <code>SUCCESS</code>.</li>
+                <li><input type="checkbox" disabled> Pusher debug console shows events reaching the correct channel.</li>
+            </ul>
+        </div>
+    </main>
+</body>
+</html>

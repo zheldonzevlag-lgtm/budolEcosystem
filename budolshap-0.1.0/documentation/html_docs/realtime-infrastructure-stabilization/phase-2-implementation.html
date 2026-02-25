@@ -1,0 +1,87 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Phase 2: Implementation - Realtime Stabilization</title>
+    <style>
+        :root { --primary-color: #2563eb; --secondary-color: #1e40af; --bg-color: #f8fafc; --text-color: #1e293b; --border-color: #e2e8f0; --code-bg: #f1f5f9; }
+        body { font-family: system-ui, -apple-system, sans-serif; line-height: 1.6; color: var(--text-color); background-color: var(--bg-color); margin: 0; padding: 2rem; }
+        .container { max-width: 900px; margin: 0 auto; background: white; padding: 2.5rem; border-radius: 8px; box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1); }
+        h1, h2, h3 { color: var(--primary-color); border-bottom: 1px solid var(--border-color); padding-bottom: 0.5rem; }
+        .back-link { display: inline-block; margin-bottom: 1.5rem; color: var(--primary-color); text-decoration: none; font-weight: 500; }
+        .back-link:hover { text-decoration: underline; }
+        code { background: var(--code-bg); padding: 0.2rem 0.4rem; border-radius: 4px; font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace; font-size: 0.9em; }
+        pre { background: var(--code-bg); padding: 1rem; border-radius: 6px; overflow-x: auto; border: 1px solid var(--border-color); }
+        .step { margin-bottom: 2rem; padding-left: 1rem; border-left: 4px solid var(--primary-color); }
+        .file-path { font-weight: bold; color: #475569; margin-bottom: 0.5rem; display: block; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <a href="index.html" class="back-link">← Back to Overview</a>
+        <header>
+            <h1>Phase 2: Implementation</h1>
+            <p>Technical specifications and code modifications for stabilizing the realtime infrastructure.</p>
+        </header>
+
+        <section>
+            <div class="step">
+                <h3>1. Fixing Uncontrolled Input State</h3>
+                <p>To prevent React from switching an input from uncontrolled to controlled, we ensure that every key in the state object is initialized with a non-undefined value, even after API updates.</p>
+                <span class="file-path">File: app/admin/settings/realtime/page.jsx</span>
+                <pre><code>// Implementation of explicit fallbacks in useEffect
+useEffect(() => {
+    fetch('/api/system/settings')
+        .then(res => res.json())
+        .then(data => {
+            setSettings({
+                provider: data.realtimeProvider || 'POLLING',
+                pusherKey: data.pusherKey || '',
+                pusherCluster: data.pusherCluster || '',
+                pusherAppId: data.pusherAppId || '', // Explicitly set to empty string if missing
+                pusherSecret: data.pusherSecret || '', // Explicitly set to empty string if missing
+                socketUrl: data.socketUrl || 'http://localhost:4000',
+            });
+            setLoading(false);
+        });
+}, []);</code></pre>
+            </div>
+
+            <div class="step">
+                <h3>2. Refactoring Event Binding for Pusher JS v8.4.0</h3>
+                <p>Modern versions of Pusher JS have deprecated <code>bind_all</code>. We moved to explicit event binding within a loop for better control and compatibility.</p>
+                <span class="file-path">File: hooks/useRealtimeUser.js</span>
+                <pre><code>// Define events to listen for
+const userEvents = ['store-status-updated', 'order-updated', 'rating-created'];
+
+// Explicitly bind each event
+userEvents.forEach(eventName => {
+    channel.bind(eventName, (data) => {
+        console.log(`⚡ [RealtimeUser] ${eventName} (Pusher):`, data);
+        if (onEvent) onEvent(eventName, data);
+    });
+});</code></pre>
+            </div>
+
+            <div class="step">
+                <h3>3. Defensive Cleanup Logic</h3>
+                <p>Added existence checks for <code>unbind_all</code> in the cleanup phase of all realtime hooks to prevent runtime errors during component unmounting.</p>
+                <span class="file-path">Affected Files: hooks/useRealtimeOrders.js, hooks/useRealtimeUser.js, etc.</span>
+                <pre><code>return () => {
+    // Check if unbind_all exists before calling (Pusher JS compatibility)
+    if (channel.unbind_all) {
+        channel.unbind_all();
+    }
+    channel.unsubscribe();
+    pusher.disconnect();
+};</code></pre>
+            </div>
+        </section>
+
+        <div style="margin-top: 3rem; text-align: right;">
+            <a href="phase-3-testing.html" class="back-link">Proceed to Phase 3: Testing →</a>
+        </div>
+    </div>
+</body>
+</html>

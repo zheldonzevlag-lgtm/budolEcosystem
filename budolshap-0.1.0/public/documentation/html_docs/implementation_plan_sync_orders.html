@@ -1,0 +1,116 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Implementation Plan - Sync Order Status</title>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            line-height: 1.6;
+            color: #333;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+
+        h1 {
+            border-bottom: 2px solid #eaeaea;
+            pb: 0.3em;
+        }
+
+        h2 {
+            border-bottom: 1px solid #eaeaea;
+            pb: 0.3em;
+            mt: 24px;
+        }
+
+        code {
+            background-color: #f6f8fa;
+            padding: 0.2em 0.4em;
+            border-radius: 3px;
+            font-family: monospace;
+            font-size: 85%;
+        }
+
+        .alert {
+            padding: 16px;
+            margin-bottom: 16px;
+            border-radius: 6px;
+            border-left: 4px solid;
+        }
+
+        .alert-important {
+            background-color: #e3f2fd;
+            border-color: #2196f3;
+            color: #0d47a1;
+        }
+
+        .diff-add {
+            color: #22863a;
+            background-color: #f0fff4;
+        }
+
+        .diff-remove {
+            color: #b31d28;
+            background-color: #ffeef0;
+        }
+    </style>
+</head>
+
+<body>
+
+    <h1>Sync Buyer Order Status with Seller View</h1>
+
+    <p>The Buyer's "My Orders" page displays stale status information (e.g., "Paid") and uses different formatting than
+        the Seller's "Store Orders" view (e.g., "PROCESSING", "IN TRANSIT"). This plan addresses both the data freshness
+        issue and the visual inconsistency.</p>
+
+    <div class="alert alert-important">
+        <strong>IMPORTANT:</strong> This change will force the <code>/api/orders</code> endpoint to be dynamic, ensuring
+        buyers always see the latest status from the database.
+    </div>
+
+    <h2>Proposed Changes</h2>
+
+    <h3>1. Fix Data Freshness (API Layer)</h3>
+    <p>Prevent caching of the orders API to ensure the status is always up-to-date.</p>
+    <ul>
+        <li><strong>File:</strong> <code>app/api/orders/route.js</code></li>
+        <li><strong>Change:</strong> Add <code>export const dynamic = 'force-dynamic'</code> to opt out of static
+            caching.</li>
+    </ul>
+
+    <h3>2. Sync UI Presentation (Buyer View)</h3>
+    <p>Update the Buyer's order list to match the Seller's status display logic, including colors and text mappings.</p>
+    <ul>
+        <li><strong>File:</strong> <code>components/OrderItem.jsx</code></li>
+        <li><strong>Logic Update:</strong> Adopt the Seller's status logic:
+            <ul>
+                <li><strong>SHIPPED:</strong> Display as "IN TRANSIT" with purple styling.</li>
+                <li><strong>DELIVERED:</strong> Display with green styling.</li>
+                <li><strong>CANCELLED/REFUNDED:</strong> Display with red styling.</li>
+                <li><strong>PROCESSING/BOOKED/Others:</strong> Display with blue styling.</li>
+            </ul>
+        </li>
+    </ul>
+
+    <h2>Verification Plan</h2>
+
+    <h3>Manual Verification</h3>
+    <ol>
+        <li><strong>Login:</strong> Open two browsers/tabs. Log in as <strong>Buyer</strong> in one and
+            <strong>Seller</strong> in the other.</li>
+        <li><strong>Action:</strong> As Seller, change an order status (e.g., "Mark Shipped").</li>
+        <li><strong>Check:</strong> Refresh Buyer view. Verify:
+            <ul>
+                <li>Status text updates to "IN TRANSIT" (matching Seller view logic).</li>
+                <li>Status color changes to Purple (matching Seller view styling).</li>
+            </ul>
+        </li>
+    </ol>
+
+</body>
+
+</html>

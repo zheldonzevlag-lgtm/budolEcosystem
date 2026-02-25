@@ -1,0 +1,929 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Courier Cancellation Implementation Plan - Bodolshap</title>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            line-height: 1.6;
+            color: #333;
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+            background-color: #f8fafc;
+        }
+        .header {
+            background: linear-gradient(135deg, #1e40af 0%, #3b82f6 100%);
+            color: white;
+            padding: 30px;
+            border-radius: 12px;
+            margin-bottom: 30px;
+            text-align: center;
+        }
+        .phase-card {
+            background: white;
+            border-radius: 12px;
+            padding: 25px;
+            margin: 20px 0;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+            border-left: 5px solid #3b82f6;
+        }
+        .phase-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+        }
+        .phase-title {
+            font-size: 1.5em;
+            font-weight: 700;
+            color: #1e40af;
+            margin: 0;
+        }
+        .phase-duration {
+            background: #e0f2fe;
+            color: #0369a1;
+            padding: 5px 12px;
+            border-radius: 20px;
+            font-size: 0.9em;
+            font-weight: 500;
+        }
+        .technical-specs {
+            background: #f8fafc;
+            border: 1px solid #e2e8f0;
+            border-radius: 8px;
+            padding: 20px;
+            margin: 15px 0;
+        }
+        .spec-item {
+            display: flex;
+            align-items: flex-start;
+            margin: 10px 0;
+            padding: 10px;
+            background: white;
+            border-radius: 6px;
+            border-left: 3px solid #3b82f6;
+        }
+        .spec-icon {
+            color: #3b82f6;
+            margin-right: 10px;
+            font-size: 16px;
+        }
+        .code-block {
+            background: #1e293b;
+            color: #e2e8f0;
+            padding: 15px;
+            border-radius: 8px;
+            font-family: 'Monaco', 'Menlo', monospace;
+            font-size: 0.9em;
+            margin: 10px 0;
+            overflow-x: auto;
+        }
+        .testing-section {
+            background: #f0fdf4;
+            border: 1px solid #bbf7d0;
+            border-radius: 8px;
+            padding: 20px;
+            margin: 15px 0;
+        }
+        .risk-item {
+            display: flex;
+            align-items: flex-start;
+            margin: 10px 0;
+            padding: 12px;
+            border-radius: 6px;
+        }
+        .risk-high { background: #fef2f2; border-left: 3px solid #ef4444; }
+        .risk-medium { background: #fffbeb; border-left: 3px solid #f59e0b; }
+        .risk-low { background: #f0f9ff; border-left: 3px solid #3b82f6; }
+        .risk-icon {
+            margin-right: 10px;
+            font-size: 16px;
+        }
+        .risk-high .risk-icon { color: #ef4444; }
+        .risk-medium .risk-icon { color: #f59e0b; }
+        .risk-low .risk-icon { color: #3b82f6; }
+        .dependency-list {
+            background: #fefce8;
+            border: 1px solid #fde047;
+            border-radius: 8px;
+            padding: 15px;
+            margin: 10px 0;
+        }
+        .success-criteria {
+            background: #f0fdf4;
+            border: 1px solid #22c55e;
+            border-radius: 8px;
+            padding: 15px;
+            margin: 10px 0;
+        }
+        .navigation {
+            position: sticky;
+            top: 20px;
+            background: white;
+            border-radius: 8px;
+            padding: 20px;
+            margin-bottom: 20px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        .nav-links {
+            display: flex;
+            gap: 15px;
+            flex-wrap: wrap;
+        }
+        .nav-link {
+            color: #3b82f6;
+            text-decoration: none;
+            padding: 8px 12px;
+            border-radius: 6px;
+            background: #eff6ff;
+            font-size: 0.9em;
+            font-weight: 500;
+            transition: all 0.2s;
+        }
+        .nav-link:hover {
+            background: #3b82f6;
+            color: white;
+        }
+        .database-schema {
+            background: #1e293b;
+            color: #e2e8f0;
+            padding: 20px;
+            border-radius: 8px;
+            font-family: 'Monaco', 'Menlo', monospace;
+            font-size: 0.9em;
+            margin: 15px 0;
+            overflow-x: auto;
+        }
+        .api-endpoint {
+            background: #f8fafc;
+            border: 1px solid #cbd5e1;
+            border-radius: 8px;
+            padding: 15px;
+            margin: 10px 0;
+        }
+        .http-method {
+            display: inline-block;
+            padding: 2px 8px;
+            border-radius: 4px;
+            font-size: 0.8em;
+            font-weight: bold;
+            margin-right: 8px;
+        }
+        .method-post { background: #22c55e; color: white; }
+        .method-get { background: #3b82f6; color: white; }
+        .method-put { background: #f59e0b; color: white; }
+        .method-delete { background: #ef4444; color: white; }
+        
+        /* Navigation styles */
+        .nav-header {
+            background: #1e293b;
+            padding: 15px 0;
+            position: sticky;
+            top: 0;
+            z-index: 100;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            margin-bottom: 20px;
+        }
+        .nav-container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 0 20px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        .nav-brand {
+            color: white;
+            font-weight: 600;
+        }
+        .nav-links {
+            display: flex;
+            gap: 20px;
+        }
+        .nav-link {
+            color: #94a3b8;
+            text-decoration: none;
+            font-size: 0.9em;
+            padding: 5px 10px;
+            border-radius: 4px;
+            transition: all 0.2s ease;
+        }
+        .nav-link:hover {
+            color: white;
+            background: rgba(255, 255, 255, 0.1);
+        }
+        .nav-link.active {
+            color: white;
+            background: #3b82f6;
+        }
+        .quick-nav {
+            background: linear-gradient(135deg, #f8fafc 0%, #e2e8f0 100%);
+            border-radius: 12px;
+            padding: 20px;
+            margin: 20px 0;
+            border: 1px solid #cbd5e1;
+        }
+        .nav-button {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            background: white;
+            color: #3b82f6;
+            padding: 10px 16px;
+            border: 2px solid #e2e8f0;
+            border-radius: 8px;
+            text-decoration: none;
+            font-weight: 500;
+            transition: all 0.2s ease;
+            margin: 5px;
+        }
+        .nav-button:hover {
+            background: #3b82f6;
+            color: white;
+            border-color: #3b82f6;
+            transform: translateY(-1px);
+        }
+        .nav-button.primary {
+            background: #3b82f6;
+            color: white;
+            border-color: #3b82f6;
+        }
+        .nav-button.primary:hover {
+            background: #2563eb;
+            box-shadow: 0 4px 12px rgba(59, 130, 246, 0.3);
+        }
+    </style>
+</head>
+<body>
+    <!-- Navigation Header -->
+    <div class="nav-header">
+        <div class="nav-container">
+            <div class="nav-brand">
+                📋 Implementation Plan
+            </div>
+            <div class="nav-links">
+                <a href="comparative-analysis.html" class="nav-link">📊 Analysis</a>
+                <span class="nav-link active">📋 Plan</span>
+                <a href="testing-protocol.html" class="nav-link">🧪 Testing</a>
+                <a href="index.html" class="nav-link">📈 Summary</a>
+            </div>
+        </div>
+    </div>
+
+    <div class="header">
+        <h1>🚀 Courier Cancellation Implementation Plan</h1>
+        <p>Comprehensive Technical Implementation Plan for Shopee-like Courier Cancellation Handling</p>
+        
+        <!-- Quick Navigation -->
+        <div class="quick-nav" style="margin-top: 20px;">
+            <h4 style="margin-top: 0; color: #1e40af;">🚀 Quick Navigation</h4>
+            <div style="display: flex; gap: 10px; flex-wrap: wrap;">
+                <a href="comparative-analysis.html" class="nav-button">📊 View Analysis</a>
+                <span class="nav-button primary" style="background: #3b82f6; color: white; border-color: #3b82f6;">📋 Plan (Current)</span>
+                <a href="testing-protocol.html" class="nav-button">🧪 View Testing</a>
+                <a href="index.html" class="nav-button">📈 View Summary</a>
+            </div>
+        </div>
+    </div>
+
+    <div class="navigation">
+        <div class="nav-links">
+            <a href="#phase1" class="nav-link">Phase 1: Core Infrastructure</a>
+            <a href="#phase2" class="nav-link">Phase 2: Retry Mechanism</a>
+            <a href="#phase3" class="nav-link">Phase 3: SLA Management</a>
+            <a href="#phase4" class="nav-link">Phase 4: Alternative Options</a>
+            <a href="#phase5" class="nav-link">Phase 5: Monitoring & Analytics</a>
+        </div>
+    </div>
+
+    <div id="phase1" class="phase-card">
+        <div class="phase-header">
+            <h2 class="phase-title">Phase 1: Core Infrastructure & Webhook Enhancement</h2>
+            <span class="phase-duration">Duration: 3-4 days</span>
+        </div>
+
+        <div class="technical-specs">
+            <h3>🔧 Technical Implementation</h3>
+            
+            <div class="spec-item">
+                <div class="spec-icon">📁</div>
+                <div>
+                    <strong>File: <code>app/api/webhooks/lalamove/route.js</code></strong><br>
+                    Enhance webhook handler to distinguish courier cancellations
+                </div>
+            </div>
+
+            <div class="code-block">
+// Enhanced webhook handler for courier cancellation detection
+case 'CANCELLED':
+case 'REJECTED':
+case 'EXPIRED':
+    const cancellationType = determineCancellationType(payload);
+    
+    if (cancellationType === 'COURIER_INITIATED') {
+        // Handle courier-specific cancellation
+        await handleCourierCancellation(returnRequest, payload);
+    } else {
+        // Handle regular cancellation
+        newReturnStatus = 'CANCELLED';
+    }
+    break;
+
+// New function to determine cancellation type
+function determineCancellationType(payload) {
+    const courierCancellationReasons = [
+        'DRIVER_UNAVAILABLE', 'VEHICLE_BREAKDOWN', 'AREA_NOT_SERVICEABLE',
+        'DRIVER_CANCELLED', 'COURIER_CANCELLED', 'PICKUP_FAILED',
+        'DELIVERY_ATTEMPT_FAILED', 'ADDRESS_NOT_FOUND'
+    ];
+    
+    const reason = payload.data?.cancellationReason || payload.reason;
+    return courierCancellationReasons.includes(reason) ? 'COURIER_INITIATED' : 'OTHER';
+}
+            </div>
+
+            <div class="spec-item">
+                <div class="spec-icon">🗄️</div>
+                <div>
+                    <strong>Database Schema Updates</strong><br>
+                    Add courier cancellation tracking fields
+                </div>
+            </div>
+
+            <div class="database-schema">
+-- Add to Return model
+ALTER TABLE "Return" 
+ADD COLUMN "cancellationType" VARCHAR(50), -- 'COURIER_INITIATED', 'BUYER_INITIATED', 'SELLER_INITIATED'
+ADD COLUMN "cancellationReason" TEXT,
+ADD COLUMN "courierCancellationCount" INTEGER DEFAULT 0,
+ADD COLUMN "retryWindowExpiry" TIMESTAMP,
+ADD COLUMN "lastCourierCancellationAt" TIMESTAMP,
+ADD COLUMN "retryAttempts" INTEGER DEFAULT 0;
+
+-- Add to shipping tracking
+ALTER TABLE "Return" 
+ADD COLUMN "returnShipping" JSONB DEFAULT '{}';
+-- Enhance returnShipping to include cancellation history
+            </div>
+        </div>
+
+        <div class="dependency-list">
+            <h3>📋 Dependencies</h3>
+            <ul>
+                <li>✅ Current webhook infrastructure exists</li>
+                <li>✅ Return service layer implemented</li>
+                <li>⚠️ Database migration required</li>
+                <li>⚠️ Lalamove API documentation review needed</li>
+            </ul>
+        </div>
+
+        <div class="success-criteria">
+            <h3>✅ Success Criteria</h3>
+            <ul>
+                <li>Webhook correctly identifies courier-initiated cancellations</li>
+                <li>Database stores cancellation type and reason</li>
+                <li>Return status updated to "COURIER_CANCELLED" instead of "CANCELLED"</li>
+                <li>Unit tests cover all cancellation scenarios</li>
+            </ul>
+        </div>
+
+        <div class="testing-section">
+            <h3>🧪 Testing Requirements</h3>
+            <ul>
+                <li>Test webhook processing with different cancellation reasons</li>
+                <li>Verify database updates for courier cancellations</li>
+                <li>Test failure scenarios and error handling</li>
+                <li>Validate signature verification still works</li>
+            </ul>
+        </div>
+    </div>
+
+    <div id="phase2" class="phase-card">
+        <div class="phase-header">
+            <h2 class="phase-title">Phase 2: Retry Window & Buyer Notification System</h2>
+            <span class="phase-duration">Duration: 4-5 days</span>
+        </div>
+
+        <div class="technical-specs">
+            <h3>🔧 Technical Implementation</h3>
+
+            <div class="spec-item">
+                <div class="spec-icon">📧</div>
+                <div>
+                    <strong>New Email Templates</strong><br>
+                    Create specialized courier cancellation notifications
+                </div>
+            </div>
+
+            <div class="code-block">
+// New email template for courier cancellation
+const courierCancellationTemplate = (returnData, order, retryWindowExpiry) => ({
+    subject: `Return Pickup Failed - Action Required for Order #${order.id.slice(0, 8)}`,
+    html: `
+        <div style="font-family: Arial, sans-serif; max-width: 600px;">
+            <h2>Return Pickup Failed</h2>
+            <p>Unfortunately, the courier was unable to pick up your return package.</p>
+            
+            <div style="background: #fef3c7; padding: 15px; border-radius: 5px; margin: 20px 0;">
+                <strong>Reason:</strong> ${returnData.cancellationReason}<br>
+                <strong>Next Steps:</strong> You have until ${retryWindowExpiry} to re-schedule pickup.
+            </div>
+            
+            <div style="text-align: center; margin: 30px 0;">
+                <a href="${process.env.NEXT_PUBLIC_URL}/orders/${order.id}/return/rebook" 
+                   style="background: #3b82f6; color: white; padding: 12px 24px; text-decoration: none; border-radius: 5px;">
+                    Re-schedule Pickup
+                </a>
+            </div>
+            
+            <p><strong>Alternative Option:</strong> You can also drop off the package at a nearby location.</p>
+            <a href="${process.env.NEXT_PUBLIC_URL}/orders/${order.id}/return/dropoff">Find Drop-off Locations</a>
+        </div>
+    `
+});
+            </div>
+
+            <div class="api-endpoint">
+                <div class="http-method method-post">POST</div>
+                <strong>/api/returns/[returnId]/retry-pickup</strong>
+                <p>Allow buyers to retry pickup booking after courier cancellation</p>
+            </div>
+
+            <div class="code-block">
+// New API endpoint for retrying pickup
+export async function POST(request, { params }) {
+    const { returnId } = await params;
+    const { retryMethod = 'PICKUP', dropoffLocation } = await request.json();
+    
+    // Validate return is eligible for retry
+    const returnRequest = await validateReturnRetry(returnId);
+    
+    // Check retry window hasn't expired
+    if (new Date() > returnRequest.retryWindowExpiry) {
+        return NextResponse.json({ 
+            error: 'Retry window has expired',
+            code: 'RETRY_WINDOW_EXPIRED'
+        }, { status: 400 });
+    }
+    
+    // Increment retry attempts
+    await incrementRetryAttempts(returnId);
+    
+    // Handle different retry methods
+    if (retryMethod === 'PICKUP') {
+        return await retryPickupBooking(returnRequest);
+    } else if (retryMethod === 'DROPOFF') {
+        return await setupDropoffOption(returnRequest, dropoffLocation);
+    }
+}
+            </div>
+        </div>
+
+        <div class="risk-item risk-medium">
+            <div class="risk-icon">⚠️</div>
+            <div>
+                <strong>Medium Risk: Email Delivery Reliability</strong><br>
+                Ensure email notifications are delivered reliably. Consider backup notification methods (SMS, in-app) for critical communications.
+            </div>
+        </div>
+
+        <div class="success-criteria">
+            <h3>✅ Success Criteria</h3>
+            <ul>
+                <li>Buyers receive clear notifications within 5 minutes of courier cancellation</li>
+                <li>Retry window is clearly communicated (48-72 hours)</li>
+                <li>API endpoint handles pickup retry requests successfully</li>
+                <li>Alternative drop-off options are presented to buyers</li>
+            </ul>
+        </div>
+    </div>
+
+    <div id="phase3" class="phase-card">
+        <div class="phase-header">
+            <h2 class="phase-title">Phase 3: SLA Management & Auto-Resolution</h2>
+            <span class="phase-duration">Duration: 3-4 days</span>
+        </div>
+
+        <div class="technical-specs">
+            <h3>🔧 Technical Implementation</h3>
+
+            <div class="spec-item">
+                <div class="spec-icon">⏰</div>
+                <div>
+                    <strong>Cron Job: Courier Cancellation SLA Monitor</strong><br>
+                    Monitor and auto-resolve expired retry windows
+                </div>
+            </div>
+
+            <div class="code-block">
+// New cron job: app/api/cron/courier-cancellation-sla/route.js
+export async function GET() {
+    const now = new Date();
+    
+    // Find returns with expired retry windows
+    const expiredRetries = await prisma.return.findMany({
+        where: {
+            status: 'COURIER_CANCELLED',
+            retryWindowExpiry: { lt: now },
+            retryAttempts: { lt: 3 } // Max 3 retry attempts
+        },
+        include: { order: true }
+    });
+    
+    console.log(`[CourierSLA] Found ${expiredRetries.length} expired retry windows`);
+    
+    for (const returnRequest of expiredRetries) {
+        try {
+            // Auto-cancel the return request
+            await autoCancelReturn(returnRequest);
+            
+            // Release funds to seller
+            await releaseFromLocked({
+                orderId: returnRequest.orderId,
+                amount: returnRequest.refundAmount
+            });
+            
+            // Notify both parties
+            await notifyAutoCancellation(returnRequest);
+            
+            console.log(`[CourierSLA] Auto-cancelled return ${returnRequest.id}`);
+        } catch (error) {
+            console.error(`[CourierSLA] Failed to process return ${returnRequest.id}:`, error);
+        }
+    }
+    
+    return NextResponse.json({ 
+        processed: expiredRetries.length,
+        timestamp: now.toISOString()
+    });
+}
+            </div>
+
+            <div class="spec-item">
+                <div class="spec-icon">📊</div>
+                <div>
+                    <strong>SLA Configuration</strong><br>
+                    Configurable retry window and attempt limits
+                </div>
+            </div>
+
+            <div class="code-block">
+// SLA Configuration
+const COURIER_CANCELLATION_SLA = {
+    RETRY_WINDOW_HOURS: 48, // 48-hour retry window
+    MAX_RETRY_ATTEMPTS: 3,  // Maximum 3 pickup attempts
+    NOTIFICATION_DELAYS: {
+        FIRST_REMINDER: 12,  // 12 hours after cancellation
+        FINAL_REMINDER: 36,  // 36 hours after cancellation (12 hours before expiry)
+        EXPIRY_WARNING: 6     // 6 hours before expiry
+    }
+};
+            </div>
+        </div>
+
+        <div class="dependency-list">
+            <h3>📋 Dependencies</h3>
+            <ul>
+                <li>✅ Phase 1 & 2 completed</li>
+                <li>✅ Cron job infrastructure exists</li>
+                <li>⚠️ Email notification system enhancement needed</li>
+                <li>⚠️ Fund release mechanism testing required</li>
+            </ul>
+        </div>
+
+        <div class="testing-section">
+            <h3>🧪 Testing Requirements</h3>
+            <ul>
+                <li>Test cron job execution and timing accuracy</li>
+                <li>Verify fund release mechanism works correctly</li>
+                <li>Test notification delivery for SLA milestones</li>
+                <li>Validate edge cases (multiple cancellations, system failures)</li>
+            </ul>
+        </div>
+    </div>
+
+    <div id="phase4" class="phase-card">
+        <div class="phase-header">
+            <h2 class="phase-title">Phase 4: Alternative Shipping Options (Drop-off)</h2>
+            <span class="phase-duration">Duration: 5-6 days</span>
+        </div>
+
+        <div class="technical-specs">
+            <h3>🔧 Technical Implementation</h3>
+
+            <div class="spec-item">
+                <div class="spec-icon">📍</div>
+                <div>
+                    <strong>Drop-off Location Integration</strong><br>
+                    Integrate with shipping provider APIs for location finding
+                </div>
+            </div>
+
+            <div class="code-block">
+// New service: lib/services/dropoffService.js
+export async function getDropoffLocations(buyerAddress, provider = 'lalamove') {
+    try {
+        const locations = await shippingProvider.getDropoffPoints({
+            latitude: buyerAddress.latitude,
+            longitude: buyerAddress.longitude,
+            radius: 5000, // 5km radius
+            limit: 10
+        });
+        
+        return locations.map(location => ({
+            id: location.id,
+            name: location.name,
+            address: location.address,
+            distance: calculateDistance(buyerAddress, location),
+            operatingHours: location.operatingHours,
+            contact: location.contact,
+            services: location.supportedServices
+        }));
+    } catch (error) {
+        console.error('Failed to fetch dropoff locations:', error);
+        throw new Error('Unable to fetch dropoff locations');
+    }
+}
+            </div>
+
+            <div class="api-endpoint">
+                <div class="http-method method-get">GET</div>
+                <strong>/api/returns/[returnId]/dropoff-locations</strong>
+                <p>Get nearby drop-off locations for buyer</p>
+            </div>
+
+            <div class="code-block">
+// New API endpoint for drop-off locations
+export async function GET(request, { params }) {
+    const { returnId } = await params;
+    
+    // Get return request with order details
+    const returnRequest = await prisma.return.findUnique({
+        where: { id: returnId },
+        include: { 
+            order: { 
+                include: { address: true } 
+            } 
+        }
+    });
+    
+    if (!returnRequest) {
+        return NextResponse.json({ error: 'Return request not found' }, { status: 404 });
+    }
+    
+    // Get buyer address
+    const buyerAddress = returnRequest.order.address;
+    
+    // Fetch drop-off locations
+    const locations = await getDropoffLocations(buyerAddress);
+    
+    return NextResponse.json({
+        locations,
+        buyerAddress: {
+            latitude: buyerAddress.latitude,
+            longitude: buyerAddress.longitude
+        }
+    });
+}
+            </div>
+
+            <div class="spec-item">
+                <div class="spec-icon">🔄</div>
+                <div>
+                    <strong>Drop-off Booking Integration</strong><br>
+                    Convert return shipping to drop-off method
+                </div>
+            </div>
+
+            <div class="code-block">
+// Convert return to drop-off method
+export async function convertToDropoff(returnId, dropoffLocation) {
+    const returnRequest = await prisma.return.findUnique({
+        where: { id: returnId },
+        include: { order: true }
+    });
+    
+    // Update return shipping method
+    await prisma.return.update({
+        where: { id: returnId },
+        data: {
+            shippingMethod: 'DROPOFF',
+            dropoffLocation: dropoffLocation,
+            status: 'DROPOFF_ASSIGNED',
+            dropoffCode: generateDropoffCode(), // Unique code for drop-off
+            dropoffExpiry: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000) // 7 days
+        }
+    });
+    
+    // Generate drop-off instructions
+    const instructions = generateDropoffInstructions(dropoffLocation, returnRequest);
+    
+    // Send confirmation to buyer
+    await sendDropoffConfirmation(returnRequest, instructions);
+    
+    return { success: true, instructions };
+}
+            </div>
+        </div>
+
+        <div class="risk-item risk-high">
+            <div class="risk-icon">🚨</div>
+            <div>
+                <strong>High Risk: Shipping Provider API Integration</strong><br>
+                Drop-off location APIs may have limitations or require additional partnerships. Have fallback manual location entry ready.
+            </div>
+        </div>
+
+        <div class="success-criteria">
+            <h3>✅ Success Criteria</h3>
+            <ul>
+                <li>Buyers can view nearby drop-off locations within 5km</li>
+                <li>Drop-off booking creates unique tracking code</li>
+                <li>Clear instructions provided for drop-off process</li>
+                <li>System tracks drop-off status and updates return accordingly</li>
+            </ul>
+        </div>
+    </div>
+
+    <div id="phase5" class="phase-card">
+        <div class="phase-header">
+            <h2 class="phase-title">Phase 5: Monitoring, Analytics & Optimization</h2>
+            <span class="phase-duration">Duration: 3-4 days</span>
+        </div>
+
+        <div class="technical-specs">
+            <h3>🔧 Technical Implementation</h3>
+
+            <div class="spec-item">
+                <div class="spec-icon">📊</div>
+                <div>
+                    <strong>Analytics Dashboard</strong><br>
+                    Track courier cancellation patterns and resolution success
+                </div>
+            </div>
+
+            <div class="code-block">
+// New analytics tracking
+export async function trackCourierCancellation(data) {
+    await prisma.analyticsEvent.create({
+        data: {
+            type: 'COURIER_CANCELLATION',
+            eventData: {
+                returnId: data.returnId,
+                orderId: data.orderId,
+                cancellationReason: data.reason,
+                courierName: data.courierName,
+                retryMethod: data.retryMethod,
+                resolution: data.resolution,
+                timeToResolution: data.timeToResolution,
+                retryAttempts: data.retryAttempts
+            },
+            timestamp: new Date()
+        }
+    });
+}
+
+// Analytics aggregation
+export async function getCourierCancellationMetrics(timeRange = '30d') {
+    return await prisma.analyticsEvent.findMany({
+        where: {
+            type: 'COURIER_CANCELLATION',
+            timestamp: {
+                gte: new Date(Date.now() - parseTimeRange(timeRange))
+            }
+        },
+        select: {
+            eventData: true,
+            timestamp: true
+        }
+    });
+}
+            </div>
+
+            <div class="spec-item">
+                <div class="spec-icon">⚠️</div>
+                <div>
+                    <strong>Alert System</strong><br>
+                    Monitor for unusual cancellation patterns
+                </div>
+            </div>
+
+            <div class="code-block">
+// Alert configuration
+const CANCELLATION_ALERTS = {
+    HIGH_CANCELLATION_RATE: {
+        threshold: 0.15, // 15% cancellation rate
+        window: '1h',
+        severity: 'HIGH'
+    },
+    REPEATED_CANCELLATIONS: {
+        threshold: 3, // Same courier cancelling multiple times
+        window: '24h',
+        severity: 'MEDIUM'
+    },
+    LONG_RESOLUTION_TIME: {
+        threshold: 72, // 72 hours to resolution
+        window: '7d',
+        severity: 'LOW'
+    }
+};
+
+// Alert monitoring function
+export async function checkCancellationAlerts() {
+    const metrics = await getCourierCancellationMetrics('24h');
+    
+    // Check high cancellation rate
+    const cancellationRate = metrics.filter(m => 
+        m.eventData.resolution === 'CANCELLED'
+    ).length / metrics.length;
+    
+    if (cancellationRate > CANCELLATION_ALERTS.HIGH_CANCELLATION_RATE.threshold) {
+        await sendAlert('HIGH_CANCELLATION_RATE', {
+            rate: cancellationRate,
+            threshold: CANCELLATION_ALERTS.HIGH_CANCELLATION_RATE.threshold
+        });
+    }
+}
+            </div>
+        </div>
+
+        <div class="testing-section">
+            <h3>🧪 Testing & Monitoring Requirements</h3>
+            <ul>
+                <li>Set up automated tests for all cancellation scenarios</li>
+                <li>Monitor system performance under high cancellation load</li>
+                <li>Track buyer satisfaction with retry process</li>
+                <li>Measure time-to-resolution metrics</li>
+                <li>Set up alerting for system failures</li>
+            </ul>
+        </div>
+
+        <div class="success-criteria">
+            <h3>✅ Success Criteria</h3>
+            <ul>
+                <li>Real-time dashboard showing cancellation metrics</li>
+                <li>Automated alerts for unusual patterns</li>
+                <li>Performance monitoring for all system components</li>
+                <li>Regular reports on system effectiveness</li>
+            </ul>
+        </div>
+    </div>
+
+    <div class="phase-card" style="border-left-color: #10b981;">
+        <div class="phase-header">
+            <h2 class="phase-title">🎯 Implementation Summary & Timeline</h2>
+        </div>
+
+        <table style="width: 100%; border-collapse: collapse; margin: 20px 0;">
+            <thead>
+                <tr style="background: #f8fafc;">
+                    <th style="padding: 12px; text-align: left; border: 1px solid #e2e8f0;">Phase</th>
+                    <th style="padding: 12px; text-align: left; border: 1px solid #e2e8f0;">Duration</th>
+                    <th style="padding: 12px; text-align: left; border: 1px solid #e2e8f0;">Key Deliverables</th>
+                    <th style="padding: 12px; text-align: left; border: 1px solid #e2e8f0;">Dependencies</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td style="padding: 12px; border: 1px solid #e2e8f0;"><strong>Phase 1</strong><br>Core Infrastructure</td>
+                    <td style="padding: 12px; border: 1px solid #e2e8f0;">3-4 days</td>
+                    <td style="padding: 12px; border: 1px solid #e2e8f0;">Enhanced webhook handler, database schema, cancellation detection</td>
+                    <td style="padding: 12px; border: 1px solid #e2e8f0;">Existing webhook system</td>
+                </tr>
+                <tr>
+                    <td style="padding: 12px; border: 1px solid #e2e8f0;"><strong>Phase 2</strong><br>Retry & Notification</td>
+                    <td style="padding: 12px; border: 1px solid #e2e8f0;">4-5 days</td>
+                    <td style="padding: 12px; border: 1px solid #e2e8f0;">Email templates, retry API, buyer workflow</td>
+                    <td style="padding: 12px; border: 1px solid #e2e8f0;">Phase 1, email system</td>
+                </tr>
+                <tr>
+                    <td style="padding: 12px; border: 1px solid #e2e8f0;"><strong>Phase 3</strong><br>SLA Management</td>
+                    <td style="padding: 12px; border: 1px solid #e2e8f0;">3-4 days</td>
+                    <td style="padding: 12px; border: 1px solid #e2e8f0;">Cron jobs, auto-resolution, fund release</td>
+                    <td style="padding: 12px; border: 1px solid #e2e8f0;">Phase 2, cron infrastructure</td>
+                </tr>
+                <tr>
+                    <td style="padding: 12px; border: 1px solid #e2e8f0;"><strong>Phase 4</strong><br>Alternative Options</td>
+                    <td style="padding: 12px; border: 1px solid #e2e8f0;">5-6 days</td>
+                    <td style="padding: 12px; border: 1px solid #e2e8f0;">Drop-off locations, API integration, booking system</td>
+                    <td style="padding: 12px; border: 1px solid #e2e8f0;">Phase 3, shipping provider APIs</td>
+                </tr>
+                <tr>
+                    <td style="padding: 12px; border: 1px solid #e2e8f0;"><strong>Phase 5</strong><br>Monitoring & Analytics</td>
+                    <td style="padding: 12px; border: 1px solid #e2e8f0;">3-4 days</td>
+                    <td style="padding: 12px; border: 1px solid #e2e8f0;">Dashboard, alerts, performance tracking</td>
+                    <td style="padding: 12px; border: 1px solid #e2e8f0;">All previous phases</td>
+                </tr>
+            </tbody>
+        </table>
+
+        <div style="background: #f0fdf4; border: 1px solid #22c55e; border-radius: 8px; padding: 20px; margin: 20px 0;">
+            <h3 style="color: #166534; margin-top: 0;">🚀 Total Implementation Timeline: 18-23 days</h3>
+            <p><strong>Recommended Approach:</strong> Implement phases sequentially with overlap where possible. Phase 1 and 2 can have some parallel development. Testing should be continuous throughout all phases.</p>
+        </div>
+    </div>
+</body>
+</html>

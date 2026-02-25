@@ -1,0 +1,89 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Webhook Documentation: Security & Flow</title>
+    <style>
+        :root {
+            --primary: #1a56db;
+            --bg: #f9fafb;
+            --card-bg: #ffffff;
+            --text: #111827;
+            --code-bg: #1e293b;
+        }
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: var(--bg);
+            color: var(--text);
+            line-height: 1.6;
+            margin: 0;
+            padding: 2rem;
+        }
+        .container { max-width: 900px; margin: 0 auto; }
+        .card { background: var(--card-bg); padding: 2rem; border-radius: 0.75rem; box-shadow: 0 4px 6px rgba(0,0,0,0.05); margin-bottom: 2rem; }
+        h1 { color: var(--primary); border-bottom: 2px solid var(--primary); padding-bottom: 0.5rem; }
+        h2 { color: var(--primary); margin-top: 2rem; }
+        pre { background: var(--code-bg); color: #f8f8f2; padding: 1.5rem; border-radius: 0.5rem; overflow-x: auto; font-size: 0.9rem; }
+        code { font-family: 'Fira Code', monospace; }
+        .back-link { display: inline-block; margin-bottom: 1rem; color: var(--primary); text-decoration: none; font-weight: 500; }
+        .flow-diagram { background: #f3f4f6; padding: 1rem; border-radius: 0.5rem; font-family: monospace; font-size: 0.85rem; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <a href="index.html" class="back-link">← Back to Index</a>
+        <div class="card">
+            <h1>Webhook Documentation: Security & Flow</h1>
+            
+            <h2>Security: HMAC SHA256 Verification</h2>
+            <p>
+                Lalamove webhooks include an <code>X-Lalamove-Signature</code> header. Budolshap verifies this signature 
+                using the <code>webhookSecret</code> configured in the Lalamove service.
+            </p>
+            <pre><code>// Verification Method (services/lalamove.js)
+verifyWebhookSignature(payload, signature) {
+    const hmac = crypto.createHmac('sha256', this.webhookSecret);
+    const content = typeof payload === 'string' ? payload : JSON.stringify(payload);
+    const expectedSignature = hmac.update(content).digest('hex');
+    return signature === expectedSignature;
+}</code></pre>
+
+            <h2>Webhook Handling Flow</h2>
+            <div class="flow-diagram">
+                [Lalamove Event] -> [POST /api/webhooks/lalamove]<br>
+                &nbsp;&nbsp;&nbsp;&nbsp;|<br>
+                &nbsp;&nbsp;&nbsp;&nbsp;V<br>
+                [Verify Signature] -> (Fail: 401 Unauthorized)<br>
+                &nbsp;&nbsp;&nbsp;&nbsp;|<br>
+                &nbsp;&nbsp;&nbsp;&nbsp;V<br>
+                [Log Event in DB] (WebhookEvent table)<br>
+                &nbsp;&nbsp;&nbsp;&nbsp;|<br>
+                &nbsp;&nbsp;&nbsp;&nbsp;V<br>
+                [Lookup Order by bookingId]<br>
+                &nbsp;&nbsp;&nbsp;&nbsp;|<br>
+                &nbsp;&nbsp;&nbsp;&nbsp;V<br>
+                [Execute State Machine Transition]<br>
+                &nbsp;&nbsp;&nbsp;&nbsp;|<br>
+                &nbsp;&nbsp;&nbsp;&nbsp;V<br>
+                [Update Order & Shipping Data]<br>
+                &nbsp;&nbsp;&nbsp;&nbsp;|<br>
+                &nbsp;&nbsp;&nbsp;&nbsp;V<br>
+                [Trigger Realtime Events (Pusher)]<br>
+                &nbsp;&nbsp;&nbsp;&nbsp;|<br>
+                &nbsp;&nbsp;&nbsp;&nbsp;V<br>
+                [Return 200 OK to Lalamove]
+            </div>
+
+            <h2>Retry & Error Strategy</h2>
+            <p>
+                The webhook handler is designed to be idempotent and robust:
+            </p>
+            <ul>
+                <li><strong>Immediate Acknowledgement:</strong> Returns 200 OK even if non-fatal processing errors occur to prevent Lalamove from retrying unnecessarily.</li>
+                <li><strong>Error Logging:</strong> Fatal errors are logged in the <code>WebhookEvent</code> table with the <code>FAILED</code> status and the error message.</li>
+            </ul>
+        </div>
+    </div>
+</body>
+</html>

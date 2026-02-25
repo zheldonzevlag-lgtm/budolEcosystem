@@ -1,0 +1,586 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Payment Error Handling Guide - Budolshap</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            line-height: 1.6;
+            color: #333;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 20px;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+            overflow: hidden;
+        }
+
+        .header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 40px;
+            text-align: center;
+        }
+
+        .header h1 {
+            font-size: 2.5rem;
+            margin-bottom: 10px;
+        }
+
+        .header p {
+            font-size: 1.2rem;
+            opacity: 0.9;
+        }
+
+        .content {
+            padding: 40px;
+        }
+
+        .section {
+            margin-bottom: 40px;
+        }
+
+        .section h2 {
+            color: #667eea;
+            font-size: 2rem;
+            margin-bottom: 20px;
+            padding-bottom: 10px;
+            border-bottom: 3px solid #667eea;
+        }
+
+        .section h3 {
+            color: #764ba2;
+            font-size: 1.5rem;
+            margin: 20px 0 10px 0;
+        }
+
+        .problem-box {
+            background: #fee;
+            border-left: 5px solid #e53e3e;
+            padding: 20px;
+            margin: 20px 0;
+            border-radius: 5px;
+        }
+
+        .solution-box {
+            background: #efe;
+            border-left: 5px solid #38a169;
+            padding: 20px;
+            margin: 20px 0;
+            border-radius: 5px;
+        }
+
+        .info-box {
+            background: #eff6ff;
+            border-left: 5px solid #3b82f6;
+            padding: 20px;
+            margin: 20px 0;
+            border-radius: 5px;
+        }
+
+        .warning-box {
+            background: #fffbeb;
+            border-left: 5px solid #f59e0b;
+            padding: 20px;
+            margin: 20px 0;
+            border-radius: 5px;
+        }
+
+        .state-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 20px;
+            margin: 20px 0;
+        }
+
+        .state-card {
+            background: #f7fafc;
+            border-radius: 10px;
+            padding: 20px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+            transition: transform 0.3s;
+        }
+
+        .state-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 8px 12px rgba(0, 0, 0, 0.15);
+        }
+
+        .state-card .icon {
+            font-size: 3rem;
+            margin-bottom: 10px;
+        }
+
+        .state-card h4 {
+            color: #2d3748;
+            font-size: 1.3rem;
+            margin-bottom: 10px;
+        }
+
+        .state-card ul {
+            list-style: none;
+            padding-left: 0;
+        }
+
+        .state-card ul li {
+            padding: 5px 0;
+            padding-left: 20px;
+            position: relative;
+        }
+
+        .state-card ul li:before {
+            content: "✓";
+            position: absolute;
+            left: 0;
+            color: #38a169;
+            font-weight: bold;
+        }
+
+        .code-block {
+            background: #1a202c;
+            color: #e2e8f0;
+            padding: 20px;
+            border-radius: 10px;
+            overflow-x: auto;
+            margin: 20px 0;
+            font-family: 'Courier New', monospace;
+        }
+
+        .comparison-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 20px 0;
+        }
+
+        .comparison-table th,
+        .comparison-table td {
+            padding: 15px;
+            text-align: left;
+            border-bottom: 1px solid #e2e8f0;
+        }
+
+        .comparison-table th {
+            background: #667eea;
+            color: white;
+            font-weight: bold;
+        }
+
+        .comparison-table tr:hover {
+            background: #f7fafc;
+        }
+
+        .bad {
+            color: #e53e3e;
+            font-weight: bold;
+        }
+
+        .good {
+            color: #38a169;
+            font-weight: bold;
+        }
+
+        .checklist {
+            list-style: none;
+            padding: 0;
+        }
+
+        .checklist li {
+            padding: 10px;
+            margin: 5px 0;
+            background: #f7fafc;
+            border-radius: 5px;
+            padding-left: 40px;
+            position: relative;
+        }
+
+        .checklist li:before {
+            content: "☐";
+            position: absolute;
+            left: 15px;
+            font-size: 1.5rem;
+            color: #667eea;
+        }
+
+        .flow-diagram {
+            background: #f7fafc;
+            padding: 30px;
+            border-radius: 10px;
+            margin: 20px 0;
+            text-align: center;
+        }
+
+        .flow-step {
+            background: white;
+            padding: 15px;
+            margin: 10px auto;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+            max-width: 400px;
+        }
+
+        .flow-arrow {
+            font-size: 2rem;
+            color: #667eea;
+            margin: 10px 0;
+        }
+
+        .btn {
+            display: inline-block;
+            padding: 12px 24px;
+            background: #667eea;
+            color: white;
+            text-decoration: none;
+            border-radius: 8px;
+            transition: background 0.3s;
+            margin: 10px 5px;
+        }
+
+        .btn:hover {
+            background: #764ba2;
+        }
+
+        .footer {
+            background: #2d3748;
+            color: white;
+            padding: 30px;
+            text-align: center;
+        }
+
+        @media (max-width: 768px) {
+            .header h1 {
+                font-size: 1.8rem;
+            }
+
+            .content {
+                padding: 20px;
+            }
+
+            .state-grid {
+                grid-template-columns: 1fr;
+            }
+        }
+    </style>
+</head>
+
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>💳 Payment Error Handling Guide</h1>
+            <p>E-Commerce Best Practices for Budolshap</p>
+        </div>
+
+        <div class="content">
+            <!-- Problem Section -->
+            <div class="section">
+                <h2>🔴 The Problem</h2>
+                <div class="problem-box">
+                    <h3>What Happened?</h3>
+                    <p>After authorizing a GCash payment through PayMongo's test environment, users were redirected to a
+                        <strong>404 error page</strong> instead of a proper payment status page.</p>
+                </div>
+
+                <h3>Root Causes:</h3>
+                <ul style="padding-left: 30px; margin-top: 10px;">
+                    <li><strong>Missing Environment Variable:</strong> NEXT_PUBLIC_SITE_URL not set in production</li>
+                    <li><strong>No Fallback Handling:</strong> Application didn't gracefully handle redirect failures
+                    </li>
+                    <li><strong>Incomplete Error States:</strong> Limited error handling for edge cases</li>
+                    <li><strong>No Retry Mechanism:</strong> Users couldn't easily retry failed payments</li>
+                </ul>
+            </div>
+
+            <!-- Solution Section -->
+            <div class="section">
+                <h2>✅ The Solution</h2>
+                <div class="solution-box">
+                    <h3>What We Implemented:</h3>
+                    <ul style="padding-left: 30px; margin-top: 10px;">
+                        <li>✅ Enhanced <code>/payment/return</code> page with comprehensive error handling</li>
+                        <li>✅ Created <code>/payment/pending</code> page for in-progress payments</li>
+                        <li>✅ Added 5 distinct payment states with proper UX</li>
+                        <li>✅ Implemented automatic retry mechanisms</li>
+                        <li>✅ Added timeout protection (60 seconds max)</li>
+                        <li>✅ Preserved order context for recovery</li>
+                    </ul>
+                </div>
+            </div>
+
+            <!-- Best Practices Section -->
+            <div class="section">
+                <h2>🏪 E-Commerce Best Practices</h2>
+
+                <h3>1. Never Show Raw Errors</h3>
+                <table class="comparison-table">
+                    <thead>
+                        <tr>
+                            <th>❌ Before (Bad)</th>
+                            <th>✅ After (Good)</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td class="bad">404 Not Found</td>
+                            <td class="good">Unable to verify payment. Please check your orders.</td>
+                        </tr>
+                        <tr>
+                            <td class="bad">500 Internal Server Error</td>
+                            <td class="good">We're having technical difficulties. Your payment is safe.</td>
+                        </tr>
+                        <tr>
+                            <td class="bad">Error: undefined</td>
+                            <td class="good">Payment verification incomplete. Please contact support.</td>
+                        </tr>
+                    </tbody>
+                </table>
+
+                <h3>2. Always Provide Next Steps</h3>
+                <div class="info-box">
+                    <p>Every error page now answers three critical questions:</p>
+                    <ul style="padding-left: 30px; margin-top: 10px;">
+                        <li><strong>What happened?</strong> Clear status message</li>
+                        <li><strong>Why did it happen?</strong> Possible reasons</li>
+                        <li><strong>What can I do?</strong> Action buttons</li>
+                    </ul>
+                </div>
+            </div>
+
+            <!-- Payment States Section -->
+            <div class="section">
+                <h2>📊 5 Payment States Implemented</h2>
+
+                <div class="state-grid">
+                    <div class="state-card">
+                        <div class="icon">⏳</div>
+                        <h4>CHECKING</h4>
+                        <p><strong>When:</strong> User just returned from PayMongo</p>
+                        <ul>
+                            <li>Animated spinner</li>
+                            <li>Polls API every 2s</li>
+                            <li>Max 60 seconds</li>
+                            <li>Progress indicator</li>
+                        </ul>
+                    </div>
+
+                    <div class="state-card">
+                        <div class="icon">✅</div>
+                        <h4>SUCCEEDED</h4>
+                        <p><strong>When:</strong> Payment confirmed</p>
+                        <ul>
+                            <li>Green checkmark</li>
+                            <li>Order details shown</li>
+                            <li>DB updated</li>
+                            <li>Email sent</li>
+                        </ul>
+                    </div>
+
+                    <div class="state-card">
+                        <div class="icon">❌</div>
+                        <h4>FAILED</h4>
+                        <p><strong>When:</strong> Payment declined</p>
+                        <ul>
+                            <li>Red X icon</li>
+                            <li>Failure reasons</li>
+                            <li>Retry button</li>
+                            <li>Order preserved</li>
+                        </ul>
+                    </div>
+
+                    <div class="state-card">
+                        <div class="icon">⏰</div>
+                        <h4>TIMEOUT</h4>
+                        <p><strong>When:</strong> Verification > 60s</p>
+                        <ul>
+                            <li>Clock icon</li>
+                            <li>Check later message</li>
+                            <li>Retry option</li>
+                            <li>Support guidance</li>
+                        </ul>
+                    </div>
+
+                    <div class="state-card">
+                        <div class="icon">⚠️</div>
+                        <h4>ERROR</h4>
+                        <p><strong>When:</strong> Technical issues</p>
+                        <ul>
+                            <li>Alert icon</li>
+                            <li>Error explanation</li>
+                            <li>Payment safety note</li>
+                            <li>Support contact</li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Flow Diagram Section -->
+            <div class="section">
+                <h2>🔄 Payment Flow</h2>
+                <div class="flow-diagram">
+                    <div class="flow-step">User Completes Checkout</div>
+                    <div class="flow-arrow">↓</div>
+                    <div class="flow-step">Redirect to PayMongo GCash</div>
+                    <div class="flow-arrow">↓</div>
+                    <div class="flow-step">User Authorizes Payment</div>
+                    <div class="flow-arrow">↓</div>
+                    <div class="flow-step">Return to /payment/return</div>
+                    <div class="flow-arrow">↓</div>
+                    <div class="flow-step">⏳ Poll Payment Status (2s intervals)</div>
+                    <div class="flow-arrow">↓</div>
+                    <div style="display: flex; justify-content: center; gap: 10px; flex-wrap: wrap;">
+                        <div class="flow-step" style="background: #d4edda;">✅ Success</div>
+                        <div class="flow-step" style="background: #f8d7da;">❌ Failed</div>
+                        <div class="flow-step" style="background: #fff3cd;">⏰ Timeout</div>
+                        <div class="flow-step" style="background: #e2e3e5;">⚠️ Error</div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Technical Implementation -->
+            <div class="section">
+                <h2>🔧 Technical Implementation</h2>
+
+                <h3>Automatic Retry Logic</h3>
+                <div class="code-block">
+                    // Retry failed API calls up to 3 times
+                    const pollStatus = async (id, oid, count = 0) => {
+                    try {
+                    const resp = await fetch(`/api/paymongo/status?intent_id=${id}`);
+                    // ... process response
+                    } catch (e) {
+                    if (count < 3) { // Retry after 3 seconds setTimeout(()=> pollStatus(id, oid, count + 1), 3000);
+                        } else {
+                        // Give up after 3 retries
+                        setStatus('error');
+                        }
+                        }
+                        };
+                </div>
+
+                <h3>Timeout Protection</h3>
+                <div class="code-block">
+                    const MAX_POLLS = 30; // 30 × 2 seconds = 60 seconds
+
+                    if (count >= MAX_POLLS) {
+                    setStatus('timeout');
+                    setErrorMessage('Verification taking longer than expected');
+                    }
+                </div>
+            </div>
+
+            <!-- Environment Variables -->
+            <div class="section">
+                <h2>🌐 Environment Variables</h2>
+                <div class="warning-box">
+                    <h3>⚠️ CRITICAL - Must Be Set in Vercel</h3>
+                    <div class="code-block">
+                        # PayMongo Keys
+                        PAYMONGO_SECRET_KEY=sk_test_xxxxxxxxxxxxx
+                        PAYMONGO_PUBLIC_KEY=pk_test_xxxxxxxxxxxxx
+
+                        # Application URLs (MUST match production domain)
+                        NEXT_PUBLIC_SITE_URL=https://budolshap.vercel.app
+                        NEXT_PUBLIC_BASE_URL=https://budolshap.vercel.app
+
+                        # Database
+                        DATABASE_URL=prisma+postgres://...
+                        DIRECT_URL=postgres://...
+                    </div>
+                </div>
+            </div>
+
+            <!-- Testing Checklist -->
+            <div class="section">
+                <h2>🧪 Testing Checklist</h2>
+                <ul class="checklist">
+                    <li>Test successful payment flow</li>
+                    <li>Test failed payment (click "Fail" in PayMongo)</li>
+                    <li>Test direct navigation to /payment/return (no params)</li>
+                    <li>Test network timeout scenario</li>
+                    <li>Test with invalid API key</li>
+                    <li>Verify email notifications</li>
+                    <li>Check mobile responsiveness</li>
+                    <li>Test retry payment functionality</li>
+                    <li>Verify order status updates in database</li>
+                    <li>Test from different browsers</li>
+                </ul>
+            </div>
+
+            <!-- Deployment Checklist -->
+            <div class="section">
+                <h2>🚀 Deployment Checklist</h2>
+                <div class="info-box">
+                    <h3>Before Deploying:</h3>
+                    <ul class="checklist">
+                        <li>Set NEXT_PUBLIC_SITE_URL in Vercel</li>
+                        <li>Set NEXT_PUBLIC_BASE_URL in Vercel</li>
+                        <li>Verify PayMongo API keys</li>
+                        <li>Test all payment flows in staging</li>
+                        <li>Check database migrations</li>
+                        <li>Test error scenarios</li>
+                        <li>Verify SSL certificates</li>
+                    </ul>
+                </div>
+            </div>
+
+            <!-- What We Learned -->
+            <div class="section">
+                <h2>🎓 What We Learned from Big E-Commerce</h2>
+
+                <h3>Amazon's Approach:</h3>
+                <ul style="padding-left: 30px;">
+                    <li>Never shows technical errors to customers</li>
+                    <li>Always provides order tracking</li>
+                    <li>Multiple retry options</li>
+                    <li>24/7 support links on error pages</li>
+                </ul>
+
+                <h3>Shopify's Approach:</h3>
+                <ul style="padding-left: 30px;">
+                    <li>Clear payment status pages</li>
+                    <li>Immediate email confirmations</li>
+                    <li>Order recovery flows</li>
+                    <li>Detailed but user-friendly error messages</li>
+                </ul>
+
+                <h3>Stripe's Approach:</h3>
+                <ul style="padding-left: 30px;">
+                    <li>Comprehensive error codes</li>
+                    <li>Automatic retry logic with exponential backoff</li>
+                    <li>Webhook verification for security</li>
+                    <li>Idempotent API requests</li>
+                </ul>
+            </div>
+
+            <!-- Quick Actions -->
+            <div class="section" style="text-align: center;">
+                <h2>🎯 Quick Actions</h2>
+                <a href="file:///c:/wamp64/www/budolshap/PAYMENT_ERROR_HANDLING_GUIDE.md" class="btn">📖 Full
+                    Documentation</a>
+                <a href="file:///c:/wamp64/www/budolshap/PAYMENT_ERROR_HANDLING_SUMMARY.md" class="btn">📋 Quick
+                    Reference</a>
+                <a href="https://budolshap.vercel.app" class="btn">🚀 View Live Site</a>
+            </div>
+        </div>
+
+        <div class="footer">
+            <p><strong>Budolshap Payment Error Handling Implementation</strong></p>
+            <p>Following industry best practices from Amazon, Shopify, and Stripe</p>
+            <p style="margin-top: 10px; opacity: 0.8;">Last Updated: November 24, 2025</p>
+        </div>
+    </div>
+</body>
+
+</html>

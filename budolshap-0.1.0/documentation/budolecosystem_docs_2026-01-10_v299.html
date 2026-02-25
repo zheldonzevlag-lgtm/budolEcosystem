@@ -1,0 +1,108 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>BudolEcosystem Documentation - v299</title>
+    <style>
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; line-height: 1.6; color: #333; max-width: 1200px; margin: 0 auto; padding: 20px; background-color: #f4f7f6; }
+        header { background-color: #2c3e50; color: #fff; padding: 20px; text-align: center; border-radius: 8px 8px 0 0; }
+        section { background: #fff; padding: 20px; margin-top: 20px; border-radius: 8px; box-shadow: 0 2px 5px rgba(0,0,0,0.1); }
+        h2 { color: #2c3e50; border-bottom: 2px solid #eee; padding-bottom: 10px; }
+        h3 { color: #34495e; }
+        pre { background: #f8f9fa; padding: 15px; border-radius: 5px; overflow-x: auto; border: 1px solid #ddd; }
+        code { font-family: 'Consolas', 'Monaco', 'Courier New', monospace; color: #e74c3c; }
+        .success { color: #27ae60; font-weight: bold; }
+        .warning { color: #f39c12; font-weight: bold; }
+        .danger { color: #e74c3c; font-weight: bold; }
+        .nav-links { margin-top: 20px; display: flex; justify-content: space-between; }
+        .nav-links a { color: #3498db; text-decoration: none; font-weight: bold; }
+        .nav-links a:hover { text-decoration: underline; }
+    </style>
+</head>
+<body>
+    <header>
+        <h1>BudolEcosystem Technical Documentation</h1>
+        <p>Version: 2026-01-10_v299</p>
+    </header>
+
+    <section id="purpose">
+        <h2>Purpose</h2>
+        <p>This update focuses on standardizing administrative authentication across all API endpoints, securing sensitive system settings, and ensuring full menu access for the elevated admin account (reynaldomgalvez@gmail.com).</p>
+    </section>
+
+    <section id="explanation">
+        <h2>Explanation</h2>
+        <p>Previous audits revealed several unprotected administrative API endpoints and inconsistent authentication logic. This version centralizes authentication using the <code>requireAdmin</code> helper and <code>isUserAdmin</code> utility, ensuring a consistent security posture across the entire admin dashboard.</p>
+    </section>
+
+    <section id="technical-details">
+        <h2>Technical Details</h2>
+        <h3>Centralized Auth Logic</h3>
+        <p>Updated <code>isUserAdmin</code> in <code>lib/adminAccess.js</code> to prioritize the database <code>isAdmin</code> flag, followed by account type and email checks.</p>
+        <pre><code>export function isUserAdmin(user, adminEmailSet) {
+    if (!user) return false;
+    
+    // Priority 1: Database isAdmin flag (Primary source of truth)
+    if (user.isAdmin === true) return true;
+    
+    // Priority 2: Account Type
+    if (isAccountTypeAdmin(user.accountType)) return true;
+    
+    // Priority 3: Email list
+    if (isEmailConfiguredAsAdmin(user.email, adminEmailSet)) return true;
+    
+    return false;
+}</code></pre>
+
+        <h3>API Route Protection</h3>
+        <p>The following categories of routes were secured:</p>
+        <ul>
+            <li><strong>System Settings:</strong> <code>/api/system/settings</code>, <code>/api/system/cache</code>, <code>/api/system/error-tracking</code>, <code>/api/system/realtime</code></li>
+            <li><strong>Order Management:</strong> <code>/api/orders</code>, <code>/api/orders/[orderId]</code></li>
+            <li><strong>Admin Features:</strong> Coupons, Store Approvals, Memberships, Payouts, etc.</li>
+        </ul>
+    </section>
+
+    <section id="test-results">
+        <h2>Test Results</h2>
+        <p class="success">Simulation Test Passed:</p>
+        <ul>
+            <li>Admin Status Verification: <span class="success">SUCCESS</span></li>
+            <li>Analytics Data Access: <span class="success">SUCCESS</span></li>
+            <li>User Management Access: <span class="success">SUCCESS</span></li>
+            <li>Webhook Log Access: <span class="success">SUCCESS</span></li>
+            <li>Unauthorized Access Rejection: <span class="success">VERIFIED (401/403)</span></li>
+        </ul>
+    </section>
+
+    <section id="issues-fixes">
+        <h2>Issues & Fixes</h2>
+        <ul>
+            <li><strong>Issue:</strong> Unprotected <code>/api/orders</code> allowed anyone to view all orders.</li>
+            <li><strong>Fix:</strong> Implemented <code>getAuthFromCookies</code> and <code>isUserAdmin</code> checks. Non-admins are now restricted to their own <code>userId</code>.</li>
+            <li><strong>Issue:</strong> Inconsistent admin check in <code>/api/system/settings</code> using manual JWT decoding.</li>
+            <li><strong>Fix:</strong> Standardized to use <code>requireAdmin</code> helper for all PUT/DELETE operations.</li>
+        </ul>
+    </section>
+
+    <section id="risk-mitigation">
+        <h2>Risk & Mitigation</h2>
+        <ul>
+            <li><strong>Risk:</strong> Session hijacking if tokens are compromised.</li>
+            <li><strong>Mitigation:</strong> Implemented <code>useIdleTimeout</code> hook to auto-logout inactive sessions and <code>requireAdmin</code> for server-side validation on every request.</li>
+        </ul>
+    </section>
+
+    <section id="recommendations">
+        <h2>Recommendations for Future Enhancement</h2>
+        <p>Consolidated recommendations can be found in <a href="future_enhancements.html">future_enhancements.html</a>.</p>
+    </section>
+
+    <div class="nav-links">
+        <a href="budolecosystem_docs_2026-01-10_v298.html">← Previous Version (v298)</a>
+        <a href="index.html">Main Index</a>
+        <span>Next Version (TBD) →</span>
+    </div>
+</body>
+</html>

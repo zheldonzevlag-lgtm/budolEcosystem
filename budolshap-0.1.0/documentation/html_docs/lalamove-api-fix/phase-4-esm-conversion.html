@@ -1,0 +1,58 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Phase 4: ESM Conversion & Module Compatibility - Lalamove API Fix</title>
+    <style>
+        body { font-family: -apple-system, sans-serif; line-height: 1.6; color: #333; max-width: 800px; margin: 0 auto; padding: 20px; background: #f4f7f6; }
+        .card { background: white; padding: 2rem; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); margin-bottom: 2rem; }
+        h1, h2 { color: #4f46e5; }
+        pre { background: #1e293b; color: #f8fafc; padding: 1rem; border-radius: 4px; overflow-x: auto; }
+        code { font-family: monospace; background: #e2e8f0; padding: 0.2rem 0.4rem; border-radius: 4px; }
+        .nav { margin-bottom: 1rem; }
+        .nav a { color: #4f46e5; text-decoration: none; }
+    </style>
+</head>
+<body>
+    <div class="nav"><a href="index.html">&larr; Back to Index</a></div>
+    <div class="card">
+        <h1>Phase 4: ESM Conversion & Module Compatibility</h1>
+        <p><strong>Status:</strong> <span style="color: #166534;">Completed</span></p>
+        
+        <h2>Issue Identification</h2>
+        <p>A secondary error was identified: <code>Class extends value #&lt;Object&gt; is not a constructor or null</code>. This occurred because the project is configured with <code>"type": "module"</code> in <code>package.json</code>, but several service files were using CommonJS <code>require</code> and <code>module.exports</code>.</p>
+
+        <h2>Root Cause Analysis</h2>
+        <ul>
+            <li><strong>Module Type Conflict:</strong> In a <code>"type": "module"</code> project, <code>.js</code> files are treated as ES Modules. Mixing <code>require</code> and <code>import</code> can lead to incorrect resolution of exported values, especially for classes.</li>
+            <li><strong>Turbopack Strictness:</strong> Next.js with Turbopack is more strict about module boundaries and expected export formats compared to standard Webpack or Node.js.</li>
+        </ul>
+
+        <h2>Implementation Details</h2>
+        <p>All files in the <code>services/</code> directory were converted to proper ES Modules:</p>
+        <ul>
+            <li><strong>shippingProvider.js</strong>: Converted to <code>export default class</code>.</li>
+            <li><strong>lalamove.js</strong>: Updated to <code>import</code> dependencies with <code>.js</code> extensions and <code>export default</code>.</li>
+            <li><strong>shippingFactory.js</strong>: Converted to use <code>import</code> and named exports for helper functions.</li>
+            <li><strong>shippingService.js</strong>: Replaced internal <code>require</code> calls with top-level <code>import</code> statements.</li>
+        </ul>
+
+        <pre><code>// Example of ESM Conversion in lalamove.js
+import ShippingProvider from './shippingProvider.js';
+import axios from 'axios';
+import crypto from 'crypto';
+
+export default class Lalamove extends ShippingProvider {
+    // ...
+}</code></pre>
+
+        <h2>Key Improvements</h2>
+        <ul>
+            <li><strong>Standard Compliance:</strong> Aligning the codebase with the <code>"type": "module"</code> configuration.</li>
+            <li><strong>Better Performance:</strong> Turbopack and other modern tools can optimize ES Modules more effectively.</li>
+            <li><strong>Fixed Constructor Error:</strong> Classes are now correctly resolved during inheritance, eliminating the "not a constructor" error.</li>
+        </ul>
+    </div>
+</body>
+</html>

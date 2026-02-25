@@ -1,0 +1,168 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Phase 1: Investigation & Environment Setup | Lalamove Real-time Status Fix</title>
+    <style>
+        :root {
+            --primary: #2563eb;
+            --secondary: #64748b;
+            --bg: #f8fafc;
+            --card-bg: #ffffff;
+            --text: #1e293b;
+            --border: #e2e8f0;
+            --code-bg: #1e1e1e;
+        }
+        body {
+            font-family: 'Inter', -apple-system, sans-serif;
+            line-height: 1.6;
+            color: var(--text);
+            background: var(--bg);
+            margin: 0;
+            display: flex;
+        }
+        nav {
+            width: 280px;
+            height: 100vh;
+            background: var(--card-bg);
+            border-right: 1px solid var(--border);
+            position: fixed;
+            padding: 2rem;
+            box-sizing: border-box;
+        }
+        main {
+            margin-left: 280px;
+            padding: 4rem;
+            max-width: 900px;
+        }
+        .nav-item {
+            display: block;
+            padding: 0.75rem 1rem;
+            color: var(--secondary);
+            text-decoration: none;
+            border-radius: 0.5rem;
+            margin-bottom: 0.5rem;
+        }
+        .nav-item.active {
+            background: var(--primary);
+            color: white;
+        }
+        h1, h2, h3 { color: #0f172a; }
+        .card {
+            background: var(--card-bg);
+            border: 1px solid var(--border);
+            border-radius: 0.75rem;
+            padding: 1.5rem;
+            margin-bottom: 2rem;
+        }
+        pre {
+            background: var(--code-bg);
+            color: #d4d4d4;
+            padding: 1.5rem;
+            border-radius: 0.5rem;
+            overflow-x: auto;
+            font-size: 0.9rem;
+        }
+        code { font-family: 'Fira Code', monospace; }
+        .tag {
+            display: inline-block;
+            padding: 0.25rem 0.75rem;
+            border-radius: 9999px;
+            font-size: 0.8rem;
+            font-weight: 600;
+            background: #dbeafe;
+            color: #1e40af;
+        }
+        .status-badge {
+            float: right;
+            background: #fef3c7;
+            color: #92400e;
+            padding: 0.25rem 0.75rem;
+            border-radius: 0.25rem;
+            font-size: 0.85rem;
+        }
+    </style>
+</head>
+<body>
+    <nav>
+        <h3>Implementation Plan</h3>
+        <a href="index.html" class="nav-item">Overview</a>
+        <a href="phase-1-setup.html" class="nav-item active">Phase 1: Setup</a>
+        <a href="phase-2-identification.html" class="nav-item">Phase 2: Identification</a>
+        <a href="phase-3-testing.html" class="nav-item">Phase 3: Testing</a>
+        <a href="implementation-summary.html" class="nav-item">Final Summary</a>
+    </nav>
+    <main>
+        <h1>Phase 1: Investigation & Environment Setup</h1>
+        <div class="status-badge">Completed</div>
+        
+        <div class="card">
+            <h2>Executive Summary</h2>
+            <p>This phase focused on analyzing the existing Lalamove webhook integration and real-time event system to identify why automatic status updates were failing while manual sync remained functional.</p>
+        </div>
+
+        <div class="card">
+            <h2>Technical Objectives</h2>
+            <ul>
+                <li>Map the data flow from Lalamove Webhook to UI Update.</li>
+                <li>Analyze <code>triggerRealtimeEvent</code> logic and its dependency on <code>SystemSettings</code>.</li>
+                <li>Inspect environment-specific behaviors for webhook execution.</li>
+            </ul>
+        </div>
+
+        <div class="card">
+            <h2>Key Components Analyzed</h2>
+            <p>The following files were identified as critical to the synchronization flow:</p>
+            <ul>
+                <li><code>app/api/webhooks/lalamove/route.js</code>: Webhook entry point.</li>
+                <li><code>lib/realtime.js</code>: Server-side event triggering logic.</li>
+                <li><code>hooks/useRealtimeOrders.js</code>: Client-side subscription logic.</li>
+            </ul>
+        </div>
+
+        <div class="card">
+            <h2>Diagnostic Findings</h2>
+            <h3>1. Webhook Lookup Logic</h3>
+            <p>The webhook finds orders using the <code>bookingId</code> stored in a JSON column:</p>
+            <pre><code>const order = await prisma.order.findFirst({
+    where: {
+        shipping: {
+            path: ['bookingId'],
+            equals: lalamoveOrderId
+        }
+    }
+});</code></pre>
+            <p>Verification confirms this logic is correct, but relies on <code>lalamoveOrderId</code> being present in the webhook payload.</p>
+
+            <h3>2. Real-time Trigger Fallback</h3>
+            <p>The <code>getSettings()</code> function in <code>lib/realtime.js</code> uses a 1-minute cache and falls back to <code>POLLING</code> mode if the database is unreachable. This could cause webhooks to silently skip Pusher events during high-traffic bursts.</p>
+        </div>
+
+        <div class="card">
+            <h2>Risk Assessment</h2>
+            <table>
+                <thead>
+                    <tr>
+                        <th>Risk</th>
+                        <th>Impact</th>
+                        <th>Mitigation</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td>DB Connection Limits</td>
+                        <td>High</td>
+                        <td>Implement connection pooling or retries.</td>
+                    </tr>
+                    <tr>
+                        <td>Inconsistent Status Mapping</td>
+                        <td>Medium</td>
+                        <td>Normalize status labels across all triggers.</td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+    </main>
+</body>
+</html>

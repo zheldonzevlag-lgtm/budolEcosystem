@@ -1,0 +1,145 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>BudolPay Service Requirements | BudolShap Integration</title>
+    <style>
+        body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; line-height: 1.6; color: #333; max-width: 900px; margin: 0 auto; padding: 20px; }
+        header { border-bottom: 2px solid #eee; padding-bottom: 20px; margin-bottom: 30px; }
+        h1 { color: #2c3e50; margin-bottom: 10px; }
+        h2 { color: #34495e; border-left: 5px solid #3498db; padding-left: 15px; margin-top: 40px; }
+        h3 { color: #2980b9; margin-top: 25px; }
+        code { background: #f4f4f4; padding: 2px 5px; border-radius: 3px; font-family: "SFMono-Regular", Consolas, "Liberation Mono", Menlo, monospace; font-size: 0.9em; }
+        pre { background: #2d3436; color: #dfe6e9; padding: 20px; border-radius: 8px; overflow-x: auto; font-family: "SFMono-Regular", Consolas, "Liberation Mono", Menlo, monospace; }
+        .endpoint { font-weight: bold; color: #e67e22; }
+        .method { font-weight: bold; color: #27ae60; }
+        .tag { display: inline-block; padding: 3px 10px; border-radius: 20px; font-size: 0.8em; font-weight: bold; text-transform: uppercase; margin-right: 10px; }
+        .tag-req { background: #e74c3c; color: white; }
+        .tag-opt { background: #95a5a6; color: white; }
+        table { width: 100%; border-collapse: collapse; margin: 20px 0; }
+        th, td { text-align: left; padding: 12px; border-bottom: 1px solid #eee; }
+        th { background: #f8f9fa; }
+        .card { background: #fff; border: 1px solid #ddd; border-radius: 8px; padding: 20px; margin: 20px 0; box-shadow: 0 2px 4px rgba(0,0,0,0.05); }
+        .nav { margin-bottom: 40px; }
+        .nav a { color: #3498db; text-decoration: none; font-weight: bold; }
+        .nav a:hover { text-decoration: underline; }
+    </style>
+</head>
+<body>
+    <div class="nav">
+        <a href="index.html">← Back to Implementation Overview</a>
+    </div>
+
+    <header>
+        <h1>BudolPay Service Requirements</h1>
+        <p>Technical specifications for the BudolPay team to support BudolShap integration.</p>
+    </header>
+
+    <section>
+        <h2>Overview</h2>
+        <p>To successfully integrate BudolShap with BudolPay, the BudolPay team must provide a functional API Gateway and several backend services. This document outlines the expected endpoints, data formats, and communication protocols.</p>
+        
+        <div class="card">
+            <strong>Base Configuration:</strong><br>
+            - Gateway URL: <code>http://localhost:8004</code><br>
+            - Protocol: HTTP/JSON<br>
+            - Authentication: Header <code>x-api-key: bs_key_2025</code>
+        </div>
+    </section>
+
+    <section>
+        <h2>1. API Gateway Requirements</h2>
+        <p>The API Gateway must act as the central entry point and route requests to the appropriate microservices.</p>
+        
+        <h3>Endpoints to Expose:</h3>
+        
+        <div class="card">
+            <span class="method">POST</span> <span class="endpoint">/payments/create-intent</span><br>
+            <p><strong>Description:</strong> Creates a new payment intent and returns a redirect URL for the customer.</p>
+            <p><strong>Request Body:</strong></p>
+            <pre>{
+  "amount": 100.00, // Decimal format (e.g. 100.00 for PHP 100)
+  "currency": "PHP",
+  "description": "Order from budolShap",
+  "paymentMethod": "gcash", // Optional
+  "metadata": {
+    "orderId": "clp1234567890",
+    "app": "budolShap",
+    "customer_email": "user@example.com"
+  }
+}</pre>
+            <p><strong>Expected Response (201 Created):</strong></p>
+            <pre>{
+  "id": "pi_8yH2j9K...",
+  "status": "pending",
+  "checkoutUrl": "http://localhost:8000/checkout/pi_8yH2j9K...",
+  "amount": 100.00,
+  "currency": "PHP"
+}</pre>
+        </div>
+
+        <div class="card">
+            <span class="method">GET</span> <span class="endpoint">/transactions/:id</span><br>
+            <p><strong>Description:</strong> Verifies the status of a specific transaction or payment intent.</p>
+            <p><strong>Expected Response (200 OK):</strong></p>
+            <pre>{
+  "id": "pi_8yH2j9K...",
+  "status": "success", // or "paid", "failed", "pending"
+  "amount": 100.00,
+  "currency": "PHP",
+  "paymentMethod": "gcash",
+  "updatedAt": "2025-12-31T12:00:00Z"
+}</pre>
+        </div>
+    </section>
+
+    <section>
+        <h2>2. Webhook Notification Service</h2>
+        <p>BudolPay must notify BudolShap when a payment status changes. This is critical for updating order records in real-time.</p>
+        
+        <div class="card">
+            <strong>Target URL:</strong> <code>http://localhost:3000/api/webhooks/budolpay</code><br>
+            <strong>Method:</strong> <span class="method">POST</span><br>
+            <strong>Event Type:</strong> <code>payment.success</code>
+        </div>
+
+        <h3>Payload Format:</h3>
+        <pre>{
+  "event": "payment.success",
+  "data": {
+    "id": "pi_8yH2j9K...",
+    "amount": 100.00,
+    "currency": "PHP",
+    "status": "paid",
+    "metadata": {
+      "orderId": "clp1234567890",
+      "app": "budolShap"
+    }
+  }
+}</pre>
+    </section>
+
+    <section>
+        <h2>3. Checkout UI (Redirection)</h2>
+        <p>The <code>checkoutUrl</code> returned by the Gateway should lead to a hosted payment page where the user can complete the transaction.</p>
+        <ul>
+            <li>Must handle the payment intent ID passed in the URL.</li>
+            <li>Upon successful payment, it should trigger the Webhook mentioned above.</li>
+            <li>Should provide a "Return to Merchant" button pointing back to BudolShap (e.g., <code>http://localhost:3001/auth/callback</code> or order success page).</li>
+        </ul>
+    </section>
+
+    <section>
+        <h2>4. Security & Compliance</h2>
+        <ul>
+            <li><strong>API Key Validation:</strong> The Gateway must verify the <code>x-api-key</code> header for all incoming requests from BudolShap.</li>
+            <li><strong>Data Integrity:</strong> Future phases will require HMAC signatures for webhooks to prevent spoofing.</li>
+        </ul>
+    </section>
+
+    <footer style="margin-top: 50px; border-top: 1px solid #eee; padding-top: 20px; font-size: 0.8em; color: #777;">
+        <p>Documentation generated for BudolPay Integration Project | Date: 2025-12-31</p>
+    </footer>
+</body>
+</html>

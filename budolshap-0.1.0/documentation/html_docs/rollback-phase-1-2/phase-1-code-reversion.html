@@ -1,0 +1,93 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Phase 1: Code Reversion - Rollback Plan</title>
+    <style>
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; line-height: 1.6; color: #333; max-width: 900px; margin: 0 auto; padding: 20px; background-color: #f4f7f6; }
+        header { background-color: #2c3e50; color: white; padding: 20px; border-radius: 8px 8px 0 0; margin-bottom: 20px; }
+        h1, h2, h3 { color: #2c3e50; }
+        header h1 { color: white; margin: 0; }
+        .container { background-color: white; padding: 30px; border-radius: 0 0 8px 8px; box-shadow: 0 2px 5px rgba(0,0,0,0.1); }
+        .phase-meta { background-color: #ecf0f1; padding: 15px; border-radius: 5px; margin-bottom: 20px; border-left: 5px solid #3498db; }
+        code { background-color: #f8f9fa; border: 1px solid #e9ecef; padding: 2px 4px; border-radius: 4px; font-family: 'Courier New', Courier, monospace; color: #e83e8c; }
+        pre { background-color: #2d3436; color: #dfe6e9; padding: 15px; border-radius: 5px; overflow-x: auto; font-family: 'Courier New', Courier, monospace; }
+        .success-criteria { background-color: #d4edda; border-left: 5px solid #28a745; padding: 15px; margin: 20px 0; }
+        .risk-assessment { background-color: #fff3cd; border-left: 5px solid #ffc107; padding: 15px; margin: 20px 0; }
+        nav { margin-bottom: 20px; }
+        nav a { text-decoration: none; color: #3498db; font-weight: bold; }
+        nav a:hover { text-decoration: underline; }
+    </style>
+</head>
+<body>
+    <nav>
+        <a href="index.html">← Back to Index</a>
+    </nav>
+    <header>
+        <h1>Phase 1: Code Reversion</h1>
+        <p>Restoration of core system files to pre-Phase 1 & 2 state</p>
+    </header>
+    <div class="container">
+        <div class="phase-meta">
+            <strong>Status:</strong> Completed<br>
+            <strong>Date:</strong> 2025-12-28<br>
+            <strong>Objective:</strong> Revert all core logic and UI components modified during Phase 1 (Shipping Logic) and Phase 2 (Shopee-style UI Sync).
+        </div>
+
+        <h2>Overview</h2>
+        <p>This phase focused on identifying and restoring files that were modified during the implementation of shipping providers and the synchronized tracking UI. Both automated restoration from backups and manual code adjustments were employed.</p>
+
+        <h2>Restoration Steps</h2>
+        <h3>1. Restoration from Phase-Specific Backups</h3>
+        <p>Files were restored from the <code>backups/phase-1-shipping/</code> and <code>backups/phase-2-ui-sync/</code> directories using the following procedure:</p>
+        <pre># Example restoration command
+Copy-Item -Path "backups/phase-2-ui-sync/OrderItem.jsx" -Destination "components/OrderItem.jsx" -Force</pre>
+        
+        <p><strong>Restored Files:</strong></p>
+        <ul>
+            <li><code>components/OrderItem.jsx</code></li>
+            <li><code>components/OrderProgressTracker.jsx</code></li>
+            <li><code>components/TrackingTimeline.jsx</code></li>
+            <li><code>components/UniversalTrackingMap.jsx</code></li>
+            <li><code>app/store/orders/page.jsx</code></li>
+            <li><code>components/OrderSummary.jsx</code></li>
+            <li><code>app/api/payment/checkout/route.js</code></li>
+            <li><code>app/store/returns/page.jsx</code></li>
+            <li><code>app/api/webhooks/lalamove/route.js</code></li>
+        </ul>
+
+        <h3>2. Manual Logic Reversion</h3>
+        <p>Files without direct backups or containing residual changes were manually edited to remove Phase 1 & 2 logic.</p>
+        
+        <h4>A. Shipping Configuration (<code>lib/shipping/config.js</code>)</h4>
+        <p>Removed <code>SHIP24</code> and <code>TRACKINGMORE</code> provider definitions and their associated stage mappings and timeline events.</p>
+
+        <h4>B. Lalamove Service (<code>services/lalamove.js</code>)</h4>
+        <p>Reverted the <code>trackOrder</code> method to its original state, removing:</p>
+        <ul>
+            <li>Status override logic based on stop information.</li>
+            <li>Separate driver detail fetching fallback.</li>
+            <li>Enhanced driver info extraction (rating, vehicle type, etc.).</li>
+        </ul>
+
+        <h4>C. Wallet UI (<code>app/store/wallet/page.jsx</code>)</h4>
+        <p>Updated escrow terminology from <code>COMPLETED</code> back to <code>DELIVERED</code> for consistency with the pre-rollback state.</p>
+
+        <div class="success-criteria">
+            <h3>Success Criteria</h3>
+            <ul>
+                <li>All core UI components match their pre-implementation state.</li>
+                <li>Shipping configuration only contains supported providers (Standard, Lalamove).</li>
+                <li>API services no longer contain experimental tracking logic.</li>
+            </ul>
+        </div>
+
+        <div class="risk-assessment">
+            <h3>Risk Assessment & Mitigation</h3>
+            <p><strong>Risk:</strong> Residual configuration in non-restored files might cause runtime errors.<br>
+            <strong>Mitigation:</strong> Global search for provider-specific keywords (e.g., "SHIP24") was conducted to identify and clean up all instances.</p>
+        </div>
+    </div>
+</body>
+</html>

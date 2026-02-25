@@ -1,0 +1,247 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Session Management & Login Refactor Documentation</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            line-height: 1.6;
+            color: #333;
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+            background-color: #f5f5f5;
+        }
+
+        .container {
+            background-color: white;
+            padding: 40px;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+        }
+
+        h1 {
+            color: #2c3e50;
+            border-bottom: 2px solid #3498db;
+            padding-bottom: 10px;
+        }
+
+        h2 {
+            color: #2980b9;
+            margin-top: 30px;
+            border-left: 5px solid #3498db;
+            padding-left: 10px;
+        }
+
+        h3 {
+            color: #16a085;
+            margin-top: 20px;
+        }
+
+        code {
+            background-color: #f8f9fa;
+            border: 1px solid #e9ecef;
+            border-radius: 4px;
+            padding: 2px 4px;
+            font-family: 'Consolas', 'Monaco', monospace;
+            color: #e83e8c;
+        }
+
+        pre {
+            background-color: #282c34;
+            color: #abb2bf;
+            padding: 15px;
+            border-radius: 5px;
+            overflow-x: auto;
+            font-family: 'Consolas', 'Monaco', monospace;
+        }
+
+        .status-badge {
+            display: inline-block;
+            padding: 4px 8px;
+            border-radius: 4px;
+            font-size: 0.8em;
+            font-weight: bold;
+        }
+
+        .status-fixed {
+            background-color: #d4edda;
+            color: #155724;
+        }
+
+        .status-pending {
+            background-color: #fff3cd;
+            color: #856404;
+        }
+
+        .section {
+            margin-bottom: 40px;
+        }
+
+        .alert {
+            padding: 15px;
+            background-color: #d1ecf1;
+            color: #0c5460;
+            border: 1px solid #bee5eb;
+            border-radius: 4px;
+            margin: 10px 0;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="container">
+        <h1>Session Management & Login Refactor Documentation</h1>
+        <p><strong>Date:</strong> December 13, 2025</p>
+        <p><strong>Author:</strong> Antigravity (AI Assistant)</p>
+
+        <div class="section">
+            <h2>1. Executive Summary</h2>
+            <p>
+                This report documents the comprehensive refactoring of the authentication system, specifically focusing
+                on session management, user interface consistency, and role-based security policies.
+                The goal was to align the application's behavior with industry standards (similar to Shopee/Lazada) by
+                implementing persistent sessions for buyers while maintaining strict security timeouts for
+                high-privilege accounts (Admins and Sellers).
+                Additionally, the login interface was unified across the application using a shared component.
+            </p>
+        </div>
+
+        <div class="section">
+            <h2>2. Processes & Implementation</h2>
+
+            <h3>2.1 UI Refactoring: Shared AuthForm</h3>
+            <p>
+                The `LoginModal`, `StoreLoginPage`, and `AdminLoginPage` previously used disparate code for their forms.
+                We refactored `AuthForm` to be a highly reusable component that handles both login and registration
+                (where applicable), supports custom submit labels, and exposes an `onSuccess` callback for
+                parent-specific logic.
+            </p>
+
+            <h3>2.2 Session Expiration Handling</h3>
+            <p>
+                We enhanced the `AuthContext` and `AuthUIContext` to handle session expiration gracefully.
+                Instead of simple redirects or silent failures, the system now detects invalid tokens/sessions and
+                triggers the Login Modal with a specific visual warning.
+            </p>
+
+            <h3>2.3 Idle Timeout Integration</h3>
+            <p>
+                For Admins and Sellers, we integrated the `useIdleTimeout` hook into their respective layouts
+                (`AdminLayout`, `StoreLayout`).
+                Upon 15 minutes of inactivity, the user is logged out and the "Not Authorized" view is triggered,
+                overlaid immediately by the Login Modal.
+            </p>
+
+            <h3>2.4 Role-Based Session Durations</h3>
+            <p>
+                We updated the backend login API to issue JWTs with variable expiration times based on user roles:
+            <ul>
+                <li><strong>Buyers:</strong> 30 Days (Persistent session for better UX)</li>
+                <li><strong>Admins/Sellers:</strong> 24 Hours (Strict security + 15min idle timeout)</li>
+            </ul>
+            </p>
+        </div>
+
+        <div class="section">
+            <h2>3. Issues & Fixes</h2>
+
+            <h3>Issue 1: Inconsistent Login UI</h3>
+            <p><strong>Problem:</strong> Store and Admin login pages had duplicated, divergent code from the main Login
+                Modal.</p>
+            <p><span class="status-badge status-fixed">Fixed</span> Replaced all manual forms with the enhanced `
+                <AuthForm />` component. This ensures that any future changes to authentication logic only need to be
+                made in one place.
+            </p>
+
+            <h3>Issue 2: Silent Logout on Expiry</h3>
+            <p><strong>Problem:</strong> When a session expired, users would simply find themselves unable to perform
+                actions or redirected without explanation.</p>
+            <p><span class="status-badge status-fixed">Fixed</span> Implemented `loginMessage` in `AuthUIContext`. The
+                Login Modal now displays a red warning banner: <em>"Your session has expired. Please login again."</em>
+            </p>
+
+            <h3>Issue 3: Generic Timeout for All Users</h3>
+            <p><strong>Problem:</strong> Buyers were subject to the same strict session limits as admins, causing
+                frustration.</p>
+            <p><span class="status-badge status-fixed">Fixed</span> Modified `api/auth/login/route.js` to set `maxAge`
+                dynamically. Buyer cookies now last 30 days, while Admin/Seller cookies expire in 24 hours.</p>
+
+            <h3>Issue 4: Context Nesting Issue</h3>
+            <p><strong>Problem:</strong> `AuthProvider` could not use `AuthUIContext`'s `showLogin` method because it
+                was a parent provider.</p>
+            <p><span class="status-badge status-fixed">Fixed</span> Swapped provider hierarchy in `app/layout.jsx`.
+                `AuthUIProvider` now wraps `AuthProvider`.</p>
+        </div>
+
+        <div class="section">
+            <h2>4. Technical Details & Code</h2>
+
+            <h3>4.1 Dynamic JWT Generation</h3>
+            <p>The login route now determines token lifespan based on user account type.</p>
+            <pre>
+// app/api/auth/login/route.js
+
+const isBuyer = !user.accountType || user.accountType === 'BUYER';
+const tokenDuration = isBuyer ? '30d' : '24h'; 
+const cookieMaxAge = isBuyer ? 60 * 60 * 24 * 30 : 60 * 60 * 24;
+
+const token = generateToken({ ...payload }, tokenDuration);
+
+response.cookies.set('token', token, {
+    ...COOKIE_OPTIONS,
+    maxAge: cookieMaxAge
+});
+</pre>
+
+            <h3>4.2 Layout-Based Idle Timeout</h3>
+            <p>High-security layouts enforce stricter inactivity rules.</p>
+            <pre>
+// components/admin/AdminLayout.jsx
+
+const { showLogin } = useAuthUI();
+
+const handleLogout = useCallback(async () => {
+    // 1. Perform server logout
+    await fetch('/api/auth/logout', { method: 'POST' });
+    
+    // 2. Clear local admin state to trigger "Not Authorized" view
+    setIsAdmin(false); 
+    
+    // 3. Show Re-login Modal
+    setTimeout(() => {
+        showLogin(null, 'You have been logged out due to inactivity.');
+    }, 100);
+}, [showLogin]);
+</pre>
+        </div>
+
+        <div class="section">
+            <h2>5. Future Recommendations</h2>
+            <ul>
+                <li>
+                    <strong>Refresh Token Mechanism:</strong>
+                    Currently, we use long-lived access tokens for buyers. Implementing a Refresh Token rotation
+                    strategy (short-lived access token + long-lived httpOnly refresh cookie) would further improve
+                    security by allowing token revocation without waiting for expiration.
+                </li>
+                <li>
+                    <strong>Force Logout Event:</strong>
+                    Implement a server-side "security stamp" check. If an admin changes a user's password or disables an
+                    account, the valid JWT should be invalidated immediately on the next request, not just when it
+                    expires.
+                </li>
+                <li>
+                    <strong>"Remember Me" Checkbox:</strong>
+                    Give users explicit control over whether they want a persistent 30-day session or a transient
+                    session that ends when the browser closes.
+                </li>
+            </ul>
+        </div>
+    </div>
+</body>
+
+</html>

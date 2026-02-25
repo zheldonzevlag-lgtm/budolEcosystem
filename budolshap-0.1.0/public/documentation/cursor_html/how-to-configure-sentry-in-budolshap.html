@@ -1,0 +1,749 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>How to Configure Sentry in budolShap - Step by Step Guide</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+            line-height: 1.6;
+            color: #333;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            padding: 20px;
+        }
+        
+        .container {
+            max-width: 1000px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 12px;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+            overflow: hidden;
+        }
+        
+        .header {
+            background: linear-gradient(135deg, #f36265 0%, #961276 100%);
+            color: white;
+            padding: 40px;
+            text-align: center;
+        }
+        
+        .header h1 {
+            font-size: 2.5em;
+            margin-bottom: 10px;
+        }
+        
+        .content {
+            padding: 40px;
+        }
+        
+        .section {
+            margin-bottom: 40px;
+        }
+        
+        .section h2 {
+            color: #f36265;
+            font-size: 1.8em;
+            margin-bottom: 20px;
+            padding-bottom: 10px;
+            border-bottom: 3px solid #f36265;
+        }
+        
+        .step {
+            background: #f8f9fa;
+            border-left: 4px solid #f36265;
+            padding: 25px;
+            margin-bottom: 25px;
+            border-radius: 4px;
+            position: relative;
+        }
+        
+        .step-number {
+            display: inline-block;
+            background: #f36265;
+            color: white;
+            width: 35px;
+            height: 35px;
+            border-radius: 50%;
+            text-align: center;
+            line-height: 35px;
+            font-weight: bold;
+            margin-right: 15px;
+            font-size: 1.1em;
+        }
+        
+        .step h3 {
+            display: inline-block;
+            color: #333;
+            font-size: 1.3em;
+            margin-bottom: 15px;
+        }
+        
+        .step-content {
+            margin-left: 50px;
+        }
+        
+        .screenshot-box {
+            background: #f0f0f0;
+            border: 2px dashed #ccc;
+            padding: 30px;
+            text-align: center;
+            border-radius: 8px;
+            margin: 20px 0;
+            color: #666;
+            font-style: italic;
+        }
+        
+        .code-block {
+            background: #2d2d2d;
+            color: #f8f8f2;
+            padding: 15px;
+            border-radius: 6px;
+            overflow-x: auto;
+            margin: 15px 0;
+            font-family: 'Courier New', monospace;
+            font-size: 0.9em;
+        }
+        
+        .info-box {
+            background: #e3f2fd;
+            border-left: 4px solid #2196f3;
+            padding: 15px;
+            margin: 20px 0;
+            border-radius: 4px;
+        }
+        
+        .warning-box {
+            background: #fff3cd;
+            border-left: 4px solid #ffc107;
+            padding: 15px;
+            margin: 20px 0;
+            border-radius: 4px;
+        }
+        
+        .success-box {
+            background: #d4edda;
+            border-left: 4px solid #28a745;
+            padding: 15px;
+            margin: 20px 0;
+            border-radius: 4px;
+        }
+        
+        .highlight {
+            background: #fff3cd;
+            padding: 2px 6px;
+            border-radius: 3px;
+            font-weight: 500;
+        }
+        
+        ul, ol {
+            margin-left: 25px;
+            margin-top: 10px;
+        }
+        
+        li {
+            margin-bottom: 10px;
+        }
+        
+        .form-field {
+            background: #f8f9fa;
+            border: 1px solid #dee2e6;
+            padding: 15px;
+            border-radius: 6px;
+            margin: 15px 0;
+        }
+        
+        .form-field label {
+            display: block;
+            font-weight: 600;
+            margin-bottom: 8px;
+            color: #333;
+        }
+        
+        .form-field input,
+        .form-field select {
+            width: 100%;
+            padding: 10px;
+            border: 1px solid #ced4da;
+            border-radius: 4px;
+            font-size: 0.95em;
+        }
+        
+        .button {
+            display: inline-block;
+            background: #f36265;
+            color: white;
+            padding: 12px 24px;
+            text-decoration: none;
+            border-radius: 6px;
+            font-weight: 600;
+            margin-top: 10px;
+            transition: background 0.3s;
+            border: none;
+            cursor: pointer;
+        }
+        
+        .button:hover {
+            background: #d84343;
+        }
+        
+        .navigation-path {
+            background: #e9ecef;
+            padding: 10px 15px;
+            border-radius: 6px;
+            margin: 15px 0;
+            font-family: monospace;
+            font-size: 0.9em;
+        }
+        
+        .footer {
+            background: #f8f9fa;
+            padding: 30px;
+            text-align: center;
+            color: #666;
+            border-top: 1px solid #e9ecef;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>📝 How to Configure Sentry in budolShap</h1>
+            <p>Step-by-step guide to input DSN and configure error tracking</p>
+        </div>
+        
+        <div class="content">
+            <div class="section">
+                <h2>🎯 Quick Overview</h2>
+                <p>
+                    You can configure Sentry directly from the budolShap admin panel. No need to edit files manually!
+                    All configuration is done through a user-friendly interface.
+                </p>
+            </div>
+            
+            <div class="section">
+                <h2>📍 Step 1: Access Error Tracking Settings</h2>
+                
+                <div class="step">
+                    <span class="step-number">1</span>
+                    <h3>Login to Admin Panel</h3>
+                    <div class="step-content">
+                        <p>First, make sure you're logged in as an admin user:</p>
+                        <ol>
+                            <li>Go to <strong>http://localhost:3000/admin/login</strong> (or your production URL)</li>
+                            <li>Enter your admin email and password</li>
+                            <li>Click <strong>"Login"</strong></li>
+                        </ol>
+                    </div>
+                </div>
+                
+                <div class="step">
+                    <span class="step-number">2</span>
+                    <h3>Navigate to Error Tracking</h3>
+                    <div class="step-content">
+                        <p>Once logged in, follow this navigation path:</p>
+                        <div class="navigation-path">
+                            Admin Dashboard → Settings (in sidebar) → Error Tracking
+                        </div>
+                        <p><strong>Direct URL:</strong> <code>http://localhost:3000/admin/settings/error-tracking</code></p>
+                        
+                        <div class="info-box">
+                            <strong>💡 Tip:</strong> The "Error Tracking" option is located in the Settings submenu 
+                            in the left sidebar of the admin panel.
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="section">
+                <h2>⚙️ Step 2: Configure Sentry Settings</h2>
+                
+                <div class="step">
+                    <span class="step-number">3</span>
+                    <h3>Enable Error Tracking</h3>
+                    <div class="step-content">
+                        <p>On the Error Tracking page, you'll see a form. First, enable error tracking:</p>
+                        <div class="form-field">
+                            <label>☑️ Enable Error Tracking (Sentry)</label>
+                            <p style="margin-top: 8px; font-size: 0.9em; color: #666;">
+                                Check this checkbox to enable Sentry error tracking for your application.
+                            </p>
+                        </div>
+                        <p>Once you check this box, additional configuration fields will appear below.</p>
+                    </div>
+                </div>
+                
+                <div class="step">
+                    <span class="step-number">4</span>
+                    <h3>Enter Your Sentry DSN</h3>
+                    <div class="step-content">
+                        <p><strong>What is a DSN?</strong> DSN (Data Source Name) is a unique identifier that tells your app where to send error reports.</p>
+                        
+                        <div class="form-field">
+                            <label>Sentry DSN * (Required)</label>
+                            <input type="text" placeholder="https://xxxxx@xxxxx.ingest.sentry.io/xxxxx" readonly style="background: #fff;">
+                            <p style="margin-top: 8px; font-size: 0.85em; color: #666;">
+                                Your Sentry Data Source Name (DSN). Found in your Sentry project settings.
+                            </p>
+                        </div>
+                        
+                        <p><strong>How to get your DSN:</strong></p>
+                        <ol>
+                            <li>Go to your <a href="https://sentry.io" target="_blank">Sentry dashboard</a></li>
+                            <li>Select your project (or create one if you haven't)</li>
+                            <li>Go to <strong>Settings → Projects → [Your Project] → Client Keys (DSN)</strong></li>
+                            <li>Copy the DSN (it looks like: <code>https://xxxxx@xxxxx.ingest.sentry.io/xxxxx</code>)</li>
+                            <li>Paste it into the DSN field in budolShap</li>
+                        </ol>
+                        
+                        <div class="info-box">
+                            <strong>💡 Quick Actions:</strong> The admin interface has buttons to help you:
+                            <ul style="margin-top: 10px;">
+                                <li><strong>"Get DSN"</strong> button - Opens Sentry DSN settings in a new tab</li>
+                                <li><strong>"Copy DSN"</strong> button - Copies your entered DSN to clipboard</li>
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="step">
+                    <span class="step-number">5</span>
+                    <h3>Select Environment</h3>
+                    <div class="step-content">
+                        <p>Choose the environment where your application is running:</p>
+                        <div class="form-field">
+                            <label>Environment</label>
+                            <select readonly style="background: #fff;">
+                                <option value="development">Development</option>
+                                <option value="staging">Staging</option>
+                                <option value="production" selected>Production</option>
+                            </select>
+                            <p style="margin-top: 8px; font-size: 0.85em; color: #666;">
+                                Environment name to tag errors in Sentry (e.g., development, staging, production).
+                            </p>
+                        </div>
+                        
+                        <ul>
+                            <li><strong>Development</strong> - For local development</li>
+                            <li><strong>Staging</strong> - For pre-production testing</li>
+                            <li><strong>Production</strong> - For live production environment (recommended)</li>
+                        </ul>
+                    </div>
+                </div>
+                
+                <div class="step">
+                    <span class="step-number">6</span>
+                    <h3>Set Traces Sample Rate</h3>
+                    <div class="step-content">
+                        <p>This controls what percentage of transactions are monitored for performance:</p>
+                        <div class="form-field">
+                            <label>Traces Sample Rate</label>
+                            <input type="number" value="0.1" min="0" max="1" step="0.1" readonly style="background: #fff;">
+                            <p style="margin-top: 8px; font-size: 0.85em; color: #666;">
+                                Percentage of transactions to trace (0.0 to 1.0). Lower values reduce Sentry usage. Recommended: 0.1 (10%).
+                            </p>
+                        </div>
+                        
+                        <ul>
+                            <li><strong>0.0</strong> - No performance monitoring (errors only) - Best for staying within free tier</li>
+                            <li><strong>0.1</strong> - 10% of transactions (recommended for production)</li>
+                            <li><strong>1.0</strong> - 100% of transactions (use for development/debugging)</li>
+                        </ul>
+                        
+                        <div class="warning-box">
+                            <strong>⚠️ Free Tier Limit:</strong> Sentry free tier allows 5,000 events per month. 
+                            Lower sample rates help you stay within this limit.
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="section">
+                <h2>💾 Step 3: Save and Sync Configuration</h2>
+                
+                <div class="step">
+                    <span class="step-number">7</span>
+                    <h3>Click Save Button</h3>
+                    <div class="step-content">
+                        <p>After filling in all the fields:</p>
+                        <ol>
+                            <li>Review your settings</li>
+                            <li>Click the <strong>"Save Error Tracking Settings"</strong> button at the bottom of the form</li>
+                            <li>Wait for the success message</li>
+                        </ol>
+                        
+                        <div class="success-box">
+                            <strong>✅ What happens when you save:</strong>
+                            <ul style="margin-top: 10px;">
+                                <li>Settings are saved to the database</li>
+                                <li>You'll see a success notification</li>
+                                <li>Next, use the Sync Configuration button to apply changes</li>
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="step">
+                    <span class="step-number">8</span>
+                    <h3>Select Sync Target Environment</h3>
+                    <div class="step-content">
+                        <p><strong>NEW FEATURE:</strong> You can now choose which environment to sync to!</p>
+                        
+                        <p>After saving, you'll see a <strong>"Sync Target Environment"</strong> dropdown with two options:</p>
+                        
+                        <div style="background: #f8f9fa; padding: 20px; border-radius: 8px; margin: 15px 0; border-left: 4px solid #f36265;">
+                            <h4 style="color: #f36265; margin-bottom: 10px;">🖥️ Development (Local)</h4>
+                            <p style="margin-bottom: 10px;">
+                                <strong>Use this for:</strong> Local development on your computer
+                            </p>
+                            <ul style="margin-left: 20px;">
+                                <li>Automatically updates <code>.env.local</code> file</li>
+                                <li>No manual configuration needed</li>
+                                <li>Just restart your dev server after syncing</li>
+                            </ul>
+                        </div>
+                        
+                        <div style="background: #f8f9fa; padding: 20px; border-radius: 8px; margin: 15px 0; border-left: 4px solid #ffc107;">
+                            <h4 style="color: #ffc107; margin-bottom: 10px;">☁️ Production (Vercel)</h4>
+                            <p style="margin-bottom: 10px;">
+                                <strong>Use this for:</strong> Production deployment on Vercel
+                            </p>
+                            <ul style="margin-left: 20px;">
+                                <li>Shows environment variables to set in Vercel Dashboard</li>
+                                <li>Validates your configuration</li>
+                                <li>Provides step-by-step instructions</li>
+                                <li>Requires manual setup in Vercel Dashboard</li>
+                            </ul>
+                        </div>
+                        
+                        <div class="info-box">
+                            <strong>💡 How to choose:</strong>
+                            <ul style="margin-top: 10px;">
+                                <li>If you're developing locally → Choose <strong>"Development (Local)"</strong></li>
+                                <li>If you're deploying to Vercel → Choose <strong>"Production (Vercel)"</strong></li>
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="step">
+                    <span class="step-number">9</span>
+                    <h3>Sync Configuration</h3>
+                    <div class="step-content">
+                        <p>After selecting your target environment:</p>
+                        <ol>
+                            <li>Select the appropriate environment from the dropdown</li>
+                            <li>Click the <strong>"Sync Configuration"</strong> button</li>
+                            <li>Wait for the sync to complete</li>
+                        </ol>
+                        
+                        <h4 style="margin-top: 20px; color: #333;">For Development (Local):</h4>
+                        <div style="background: #e3f2fd; padding: 15px; border-radius: 6px; margin: 10px 0;">
+                            <p>When you click "Sync Configuration" with <strong>"Development (Local)"</strong> selected:</p>
+                            <ol style="margin-left: 20px; margin-top: 10px;">
+                                <li>The script automatically updates your <code>.env.local</code> file</li>
+                                <li>You'll see a success message: "Configuration synced to .env.local successfully!"</li>
+                                <li>Restart your local development server</li>
+                            </ol>
+                        </div>
+                        
+                        <h4 style="margin-top: 20px; color: #333;">For Production (Vercel):</h4>
+                        <div style="background: #fff3cd; padding: 15px; border-radius: 6px; margin: 10px 0;">
+                            <p>When you click "Sync Configuration" with <strong>"Production (Vercel)"</strong> selected:</p>
+                            <ol style="margin-left: 20px; margin-top: 10px;">
+                                <li>An alert dialog will appear with all environment variables</li>
+                                <li>Copy each variable from the alert</li>
+                                <li>Go to Vercel Dashboard → Your Project → Settings → Environment Variables</li>
+                                <li>Add or update each variable in Vercel</li>
+                                <li>Select the appropriate environment (Production/Preview/Development)</li>
+                                <li>Save and redeploy your application</li>
+                            </ol>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="step">
+                    <span class="step-number">10</span>
+                    <h3>Restart Your Application</h3>
+                    <div class="step-content">
+                        <p><strong>Important:</strong> After syncing, you must restart your application for changes to take effect.</p>
+                        
+                        <h4 style="margin-top: 15px;">For Local Development:</h4>
+                        <div class="code-block">
+# Stop your current server (Ctrl+C)
+# Then restart:
+npm run dev
+                        </div>
+                        
+                        <h4 style="margin-top: 15px;">For Production (Vercel):</h4>
+                        <p>After setting environment variables in Vercel Dashboard, redeploy:</p>
+                        <div class="code-block">
+# Via Vercel Dashboard:
+# Go to Deployments → Click "Redeploy" on latest deployment
+
+# Or via CLI:
+vercel --prod
+                        </div>
+                        
+                        <div class="warning-box">
+                            <strong>⚠️ Don't Skip This Step!</strong> Sentry won't work until you restart/redeploy the application.
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="section">
+                <h2>✅ Step 4: Verify Configuration</h2>
+                
+                <div class="step">
+                    <span class="step-number">11</span>
+                    <h3>Check Status</h3>
+                    <div class="step-content">
+                        <p>After restarting/redeploying, go back to the Error Tracking page and check the status card at the top:</p>
+                        <ul>
+                            <li><strong>🟢 Active</strong> - Sentry is working correctly</li>
+                            <li><strong>🟡 Not Configured</strong> - DSN is missing or invalid</li>
+                            <li><strong>⚪ Disabled</strong> - Error tracking is turned off</li>
+                        </ul>
+                    </div>
+                </div>
+                
+                <div class="step">
+                    <span class="step-number">12</span>
+                    <h3>Test Connection</h3>
+                    <div class="step-content">
+                        <p>If status shows "Active", you can test the connection:</p>
+                        <ol>
+                            <li>Click the <strong>"Test Connection"</strong> button in the status card</li>
+                            <li>This will send a test error to Sentry</li>
+                            <li>Check your Sentry dashboard - you should see a test error appear within a few seconds</li>
+                        </ol>
+                        
+                        <div class="success-box">
+                            <strong>✅ Success!</strong> If you see the test error in Sentry, your configuration is working perfectly!
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="section">
+                <h2>🎨 Using the Setup Wizard</h2>
+                
+                <div class="info-box">
+                    <strong>💡 Interactive Setup Wizard:</strong> If this is your first time setting up Sentry, 
+                    the admin interface includes a helpful setup wizard that guides you through the process!
+                </div>
+                
+                <p>The setup wizard provides:</p>
+                <ul>
+                    <li><strong>Step-by-step instructions</strong> with visual progress indicators</li>
+                    <li><strong>Quick action buttons</strong> to open Sentry signup, project creation, and DSN settings</li>
+                    <li><strong>Auto-navigation</strong> through the setup process</li>
+                    <li><strong>Helpful tips</strong> at each step</li>
+                </ul>
+                
+                <p>To use the wizard:</p>
+                <ol>
+                    <li>Go to Error Tracking settings page</li>
+                    <li>If not configured, you'll see a <strong>"Show Setup Guide"</strong> button</li>
+                    <li>Click it to reveal the interactive wizard</li>
+                    <li>Follow the steps and use the quick action buttons</li>
+                </ol>
+            </div>
+            
+            <div class="section">
+                <h2>📋 Complete Configuration Checklist</h2>
+                
+                <div class="step">
+                    <h3>Before You Start:</h3>
+                    <div class="step-content">
+                        <ul>
+                            <li>☐ You have a Sentry account (sign up at <a href="https://sentry.io/signup/" target="_blank">sentry.io</a>)</li>
+                            <li>☐ You've created a Next.js project in Sentry</li>
+                            <li>☐ You have your DSN copied to clipboard</li>
+                            <li>☐ You're logged in as admin in budolShap</li>
+                        </ul>
+                    </div>
+                </div>
+                
+                <div class="step">
+                    <h3>Configuration Steps:</h3>
+                    <div class="step-content">
+                        <ul>
+                            <li>☐ Navigated to Admin → Settings → Error Tracking</li>
+                            <li>☐ Enabled "Enable Error Tracking (Sentry)" checkbox</li>
+                            <li>☐ Pasted Sentry DSN in the DSN field</li>
+                            <li>☐ Selected appropriate Environment (development/staging/production)</li>
+                            <li>☐ Set Traces Sample Rate (recommended: 0.1)</li>
+                            <li>☐ Clicked "Save Error Tracking Settings"</li>
+                            <li>☐ Selected sync target environment (Development or Production)</li>
+                            <li>☐ Clicked "Sync Configuration" button</li>
+                            <li>☐ <strong>For Local:</strong> Restarted development server</li>
+                            <li>☐ <strong>For Vercel:</strong> Set environment variables in Vercel Dashboard and redeployed</li>
+                            <li>☐ Verified status shows "Active"</li>
+                            <li>☐ Tested connection successfully</li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="section">
+                <h2>🔄 Environment Selector Feature</h2>
+                
+                <div class="step">
+                    <h3>Understanding the Sync Target Environment</h3>
+                    <div class="step-content">
+                        <p>The new <strong>"Sync Target Environment"</strong> dropdown allows you to choose where to apply your Sentry configuration:</p>
+                        
+                        <table style="margin-top: 20px;">
+                            <thead>
+                                <tr>
+                                    <th>Option</th>
+                                    <th>What It Does</th>
+                                    <th>When to Use</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr>
+                                    <td><strong>🖥️ Development (Local)</strong></td>
+                                    <td>
+                                        <ul style="margin: 0; padding-left: 20px;">
+                                            <li>Updates <code>.env.local</code> automatically</li>
+                                            <li>No manual file editing needed</li>
+                                            <li>Instant sync to local environment</li>
+                                        </ul>
+                                    </td>
+                                    <td>
+                                        When developing on your local machine<br>
+                                        Testing configuration changes<br>
+                                        Quick iteration during development
+                                    </td>
+                                </tr>
+                                <tr>
+                                    <td><strong>☁️ Production (Vercel)</strong></td>
+                                    <td>
+                                        <ul style="margin: 0; padding-left: 20px;">
+                                            <li>Validates configuration</li>
+                                            <li>Shows environment variables to set</li>
+                                            <li>Provides Vercel setup instructions</li>
+                                        </ul>
+                                    </td>
+                                    <td>
+                                        When deploying to Vercel<br>
+                                        Setting up production environment<br>
+                                        Configuring staging/preview environments
+                                    </td>
+                                </tr>
+                            </tbody>
+                        </table>
+                        
+                        <div class="info-box" style="margin-top: 20px;">
+                            <strong>💡 Pro Tip:</strong> You can sync to both environments! 
+                            First sync to Development to test locally, then sync to Production when ready to deploy.
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="section">
+                <h2>🐛 Troubleshooting</h2>
+                
+                <div class="step">
+                    <h3>Status shows "Not Configured"</h3>
+                    <div class="step-content">
+                        <p><strong>Possible causes:</strong></p>
+                        <ul>
+                            <li>DSN field is empty - Make sure you've entered a valid DSN</li>
+                            <li>DSN format is incorrect - Should start with <code>https://</code></li>
+                            <li>Application not restarted - Restart after saving settings</li>
+                        </ul>
+                    </div>
+                </div>
+                
+                <div class="step">
+                    <h3>Test Connection doesn't work</h3>
+                    <div class="step-content">
+                        <p><strong>Solutions:</strong></p>
+                        <ul>
+                            <li>Make sure you've restarted the application after saving</li>
+                            <li>Check browser console for errors</li>
+                            <li>Verify DSN is correct in Sentry dashboard</li>
+                            <li>Check if Sentry is enabled in the checkbox</li>
+                        </ul>
+                    </div>
+                </div>
+                
+                <div class="step">
+                    <h3>Settings not saving</h3>
+                    <div class="step-content">
+                        <p><strong>Check:</strong></p>
+                        <ul>
+                            <li>You're logged in as admin</li>
+                            <li>Browser console for error messages</li>
+                            <li>Network tab to see if API request succeeded</li>
+                            <li>Try refreshing the page and checking again</li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="section">
+                <h2>📸 Visual Guide</h2>
+                
+                <div class="screenshot-box">
+                    <p><strong>Error Tracking Settings Page Layout:</strong></p>
+                    <br>
+                    <p style="text-align: left; margin: 20px;">
+                        <strong>Top Section:</strong><br>
+                        • Status Card (shows current status)<br>
+                        • Setup Wizard (if not configured)<br><br>
+                        
+                        <strong>Form Section:</strong><br>
+                        • ☑️ Enable Error Tracking checkbox<br>
+                        • 📝 Sentry DSN input field (with copy button)<br>
+                        • 🌍 Environment dropdown (development/staging/production)<br>
+                        • 📊 Traces Sample Rate input<br>
+                        • 💾 Save button<br><br>
+                        
+                        <strong>Sync Section (NEW!):</strong><br>
+                        • 🔄 Sync Target Environment dropdown<br>
+                        &nbsp;&nbsp;&nbsp;→ 🖥️ Development (Local)<br>
+                        &nbsp;&nbsp;&nbsp;→ ☁️ Production (Vercel)<br>
+                        • ⚙️ Sync Configuration button<br>
+                        • 📋 Environment-specific instructions<br><br>
+                        
+                        <strong>Bottom Section:</strong><br>
+                        • Next steps instructions (dynamic based on selected environment)<br>
+                        • Restart/redeploy reminders
+                    </p>
+                </div>
+                
+                <div class="info-box" style="margin-top: 20px;">
+                    <strong>🎨 Visual Flow:</strong>
+                    <ol style="margin-top: 10px; margin-left: 20px;">
+                        <li>Save settings → Settings saved to database</li>
+                        <li>Select environment → Choose Development or Production</li>
+                        <li>Click Sync → Configuration synced to selected environment</li>
+                        <li>Restart/Redeploy → Changes take effect</li>
+                    </ol>
+                </div>
+            </div>
+        </div>
+        
+        <div class="footer">
+            <p><strong>budolShap Sentry Configuration Guide</strong></p>
+            <p>Last updated: December 2024</p>
+            <p><strong>✨ New Feature:</strong> Environment Selector - Choose between Development (Local) and Production (Vercel) sync targets!</p>
+            <p>For more details, see the <a href="sentry-setup-guide.html" style="color: #f36265;">Complete Sentry Setup Guide</a> | 
+            <a href="vercel-sentry-sync-compatibility.html" style="color: #f36265;">Vercel Compatibility Guide</a></p>
+        </div>
+    </div>
+</body>
+</html>

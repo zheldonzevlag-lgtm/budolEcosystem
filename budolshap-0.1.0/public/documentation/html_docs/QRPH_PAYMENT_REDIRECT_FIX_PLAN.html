@@ -1,0 +1,149 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>QRPH Payment Redirect Fix Plan</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            line-height: 1.6;
+            color: #333;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+
+        h1 {
+            color: #2c3e50;
+            border-bottom: 2px solid #eee;
+            padding-bottom: 10px;
+        }
+
+        h2 {
+            color: #34495e;
+            margin-top: 30px;
+        }
+
+        h3 {
+            color: #7f8c8d;
+        }
+
+        .alert {
+            padding: 15px;
+            border-radius: 4px;
+            margin: 20px 0;
+            border: 1px solid transparent;
+        }
+
+        .alert-important {
+            background-color: #d4edda;
+            color: #155724;
+            border-color: #c3e6cb;
+        }
+
+        .alert-warning {
+            background-color: #fff3cd;
+            color: #856404;
+            border-color: #ffeeba;
+        }
+
+        code {
+            background-color: #f8f9fa;
+            padding: 2px 4px;
+            border-radius: 4px;
+            font-family: Consolas, Monaco, 'Andale Mono', monospace;
+            color: #e83e8c;
+        }
+
+        pre {
+            background-color: #f8f9fa;
+            padding: 15px;
+            border-radius: 4px;
+            overflow-x: auto;
+            border: 1px solid #e9ecef;
+        }
+
+        .file-link {
+            color: #0366d6;
+            text-decoration: none;
+        }
+
+        .file-link:hover {
+            text-decoration: underline;
+        }
+
+        ul {
+            padding-left: 20px;
+        }
+
+        li {
+            margin-bottom: 8px;
+        }
+    </style>
+</head>
+
+<body>
+
+    <h1>Implementation Plan - Fix QRPH Premature Redirection</h1>
+
+    <p>The user reported that choosing QRPH redirects to "Order Complete" immediately without showing the QR code.</p>
+    <p>My analysis suggests that the logic in <code>OrderSummary.jsx</code> falls through to the "Success" block
+        (intended for COD) because it fails to recognize <code>QRPH</code> as a QR payment method in some cases, or
+        simply because the fall-through logic is too permissive.</p>
+
+    <h2>User Review Required</h2>
+    <div class="alert alert-warning">
+        <strong>IMPORTANT:</strong> I am changing the success redirection logic to explicitly check for <code>COD</code>
+        and <code>BUDOL_PAY</code>. If <code>QRPH</code> fails to match the <code>isQRPayment</code> check, it will now
+        throw an error "Unhandled payment method" instead of incorrectly marking the order as successful. This is a
+        safety mechanism.
+    </div>
+
+    <h2>Proposed Changes</h2>
+
+    <h3>Components</h3>
+
+    <h4>[MODIFY] OrderSummary.jsx</h4>
+    <ul>
+        <li>Update <code>handlePlaceOrder</code> function regarding the success/redirect block.</li>
+        <li>Refactor the "Success" block at the end of the function.</li>
+        <li>Instead of <code>if (!isQRPayment && !hasQRCode)</code>, use
+            <code>if (['COD', 'BUDOL_PAY'].includes(paymentMethod))</code>.</li>
+        <li>Add a final <code>else</code> block to catch unhandled payment methods and throw an error/toast, preventing
+            silent failures or premature redirections.</li>
+    </ul>
+
+    <h2>Verification Plan</h2>
+
+    <h3>Manual Verification</h3>
+    <ol>
+        <li><strong>COD Order</strong>:
+            <ul>
+                <li>Select standard delivery and "COD".</li>
+                <li>Click "Place Order".</li>
+                <li>Verify it redirects to <code>/orders</code> and shows success.</li>
+            </ul>
+        </li>
+        <li><strong>QRPH Order</strong>:
+            <ul>
+                <li>Select "QRPh".</li>
+                <li>Click "Place Order".</li>
+                <li>Open DevTools Console.</li>
+                <li>Verify logs show <code>Payment Method: QRPH</code>.</li>
+                <li>Verify it does NOT redirect to <code>/orders</code> immediately.</li>
+                <li>Verify <code>QRCodeModal</code> appears.</li>
+            </ul>
+        </li>
+        <li><strong>GCash Order</strong>:
+            <ul>
+                <li>Select "GCash".</li>
+                <li>Verify existing logic works (should redirect to PayMongo/GCash checkout).</li>
+            </ul>
+        </li>
+    </ol>
+
+</body>
+
+</html>

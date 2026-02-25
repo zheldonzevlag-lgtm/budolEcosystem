@@ -1,0 +1,63 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Phase 3: Logic Updates - Escrow Dynamic Period Implementation</title>
+    <style>
+        body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; line-height: 1.6; color: #333; max-width: 1000px; margin: 0 auto; padding: 2rem; background-color: #f8f9fa; }
+        h1 { color: #1a202c; border-bottom: 2px solid #e2e8f0; padding-bottom: 0.5rem; }
+        h2 { color: #2d3748; margin-top: 2rem; }
+        .card { background: white; border-radius: 8px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); padding: 1.5rem; margin-bottom: 1.5rem; border: 1px solid #e2e8f0; }
+        code { background-color: #edf2f7; padding: 0.2rem 0.4rem; border-radius: 4px; font-family: "SFMono-Regular", Consolas, "Liberation Mono", Menlo, monospace; font-size: 0.9em; }
+        pre { background-color: #1a202c; color: #fff; padding: 1rem; border-radius: 8px; overflow-x: auto; font-family: "SFMono-Regular", Consolas, "Liberation Mono", Menlo, monospace; font-size: 0.9em; }
+        .badge { display: inline-block; padding: 0.25rem 0.5rem; border-radius: 9999px; font-size: 0.75rem; font-weight: 600; text-transform: uppercase; }
+        .badge-success { background-color: #c6f6d5; color: #22543d; }
+        .nav { margin-bottom: 2rem; }
+        .nav a { color: #4299e1; text-decoration: none; margin-right: 1rem; }
+        .nav a:hover { text-decoration: underline; }
+    </style>
+</head>
+<body>
+    <div class="nav">
+        <a href="index.html">← Back to Index</a>
+    </div>
+
+    <h1>Phase 3: Logic Updates</h1>
+    <p>The final phase ensured that the underlying business logic for order auto-completion and fund release respects the dynamic settings.</p>
+
+    <div class="card">
+        <h2>Order Auto-Completion Utility</h2>
+        <p>Updated <code>lib/orderAutoComplete.js</code> to fetch <code>protectionWindowDays</code> directly from system settings when scheduling a new completion date.</p>
+        <pre><code>
+export async function scheduleAutoComplete(orderId, days) {
+    let thresholdDays = days;
+    if (thresholdDays === undefined || thresholdDays === null) {
+        const { getSystemSettings } = await import('./services/systemSettingsService');
+        const settings = await getSystemSettings();
+        thresholdDays = settings?.protectionWindowDays || 7;
+    }
+    // ... calculate date based on thresholdDays
+}
+        </code></pre>
+    </div>
+
+    <div class="card">
+        <h2>Lalamove Sync Integration</h2>
+        <p>The Lalamove synchronization route (<code>/api/orders/[orderId]/sync-lalamove</code>) was updated to use the dynamic <code>scheduleAutoComplete</code> function instead of a hardcoded 7-day calculation.</p>
+    </div>
+
+    <div class="card">
+        <h2>Code Cleanup</h2>
+        <ul>
+            <li>Updated comments in <code>lib/escrow.js</code> and <code>lib/orderAutoComplete.js</code> to remove references to specific day counts (e.g., "7 days").</li>
+            <li>Replaced direct imports of <code>lib/settings.js</code> with the centralized <code>lib/services/systemSettingsService.js</code> where appropriate.</li>
+        </ul>
+    </div>
+
+    <div class="card">
+        <h2>System Consistency</h2>
+        <p>By centralizing the logic in <code>scheduleAutoComplete</code>, any future status changes to <code>DELIVERED</code> (via webhooks, manual updates, or provider syncs) will automatically use the correct configured window.</p>
+    </div>
+</body>
+</html>

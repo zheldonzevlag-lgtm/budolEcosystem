@@ -1,0 +1,441 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Lalamove Webhook Fix - Status 200 Requirement</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            line-height: 1.6;
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+            background: #f5f5f5;
+        }
+
+        .container {
+            background: white;
+            padding: 30px;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+        }
+
+        h1 {
+            color: #e74c3c;
+            border-bottom: 3px solid #e74c3c;
+            padding-bottom: 10px;
+        }
+
+        h2 {
+            color: #34495e;
+            margin-top: 30px;
+            border-left: 4px solid #3498db;
+            padding-left: 15px;
+        }
+
+        .critical {
+            background: #fee;
+            border-left: 4px solid #e74c3c;
+            padding: 15px;
+            margin: 15px 0;
+        }
+
+        .success {
+            background: #efe;
+            border-left: 4px solid #2ecc71;
+            padding: 15px;
+            margin: 15px 0;
+        }
+
+        .info {
+            background: #e8f4f8;
+            border-left: 4px solid #3498db;
+            padding: 15px;
+            margin: 15px 0;
+        }
+
+        .warning {
+            background: #fff3cd;
+            border-left: 4px solid #f39c12;
+            padding: 15px;
+            margin: 15px 0;
+        }
+
+        code {
+            background: #ecf0f1;
+            padding: 2px 6px;
+            border-radius: 3px;
+            font-family: 'Courier New', monospace;
+        }
+
+        pre {
+            background: #2c3e50;
+            color: #ecf0f1;
+            padding: 15px;
+            border-radius: 5px;
+            overflow-x: auto;
+        }
+
+        .step {
+            background: #f8f9fa;
+            border: 1px solid #dee2e6;
+            padding: 15px;
+            margin: 10px 0;
+            border-radius: 5px;
+        }
+
+        .step-number {
+            display: inline-block;
+            background: #3498db;
+            color: white;
+            width: 30px;
+            height: 30px;
+            border-radius: 50%;
+            text-align: center;
+            line-height: 30px;
+            font-weight: bold;
+            margin-right: 10px;
+        }
+
+        ol {
+            counter-reset: step-counter;
+            list-style: none;
+            padding-left: 0;
+        }
+
+        ol li {
+            counter-increment: step-counter;
+            margin-bottom: 20px;
+        }
+
+        ol li::before {
+            content: counter(step-counter);
+            background: #3498db;
+            color: white;
+            width: 30px;
+            height: 30px;
+            border-radius: 50%;
+            display: inline-block;
+            text-align: center;
+            line-height: 30px;
+            font-weight: bold;
+            margin-right: 10px;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="container">
+        <h1>🚨 CRITICAL: Lalamove Webhook Fix - Status 200 Requirement</h1>
+        <p><strong>Date:</strong> December 4, 2025, 19:44 PHT</p>
+        <p><strong>Status:</strong> ✅ FIXED AND DEPLOYED</p>
+
+        <div class="critical">
+            <h3>⚠️ Root Cause Identified</h3>
+            <p><strong>The webhook was returning HTTP 401 status codes</strong> for signature validation errors, which
+                caused Lalamove to reject the webhook registration and stop sending events.</p>
+            <p><strong>Lalamove Requirement:</strong> Webhooks MUST return HTTP 200 status code for ALL requests, even
+                errors.</p>
+        </div>
+
+        <h2>🔍 Problem Analysis</h2>
+
+        <h3>What Was Wrong</h3>
+        <p>Our webhook endpoint had two places returning non-200 status codes:</p>
+
+        <pre>// ❌ WRONG - Returns 401
+if (!signature) {
+    return NextResponse.json(
+        { error: 'Signature missing' },
+        { status: 401 }  // ❌ This causes Lalamove to reject webhook
+    );
+}
+
+// ❌ WRONG - Returns 401
+if (!isValid) {
+    return NextResponse.json(
+        { error: 'Invalid signature' },
+        { status: 401 }  // ❌ This causes Lalamove to reject webhook
+    );
+}</pre>
+
+        <h3>Why This Matters</h3>
+        <ul>
+            <li>Lalamove tests webhook URLs before accepting them</li>
+            <li>If they receive ANY non-200 status code, they mark the webhook as "non-200 webhook response" error</li>
+            <li>Once marked as error, Lalamove <strong>stops sending webhook events</strong></li>
+            <li>This means <strong>no driver information is received</strong>, causing the app to show mock data</li>
+        </ul>
+
+        <h2>✅ Solution Implemented</h2>
+
+        <pre>// ✅ CORRECT - Always returns 200
+if (!signature) {
+    console.error('Webhook signature missing');
+    // IMPORTANT: Lalamove requires 200 status code even for errors
+    return NextResponse.json({
+        received: true,
+        error: 'Signature missing',
+        message: 'Webhook acknowledged but signature was missing'
+    });  // ✅ Returns 200 by default
+}
+
+// ✅ CORRECT - Always returns 200
+if (!isValid) {
+    console.error('Invalid webhook signature');
+    // IMPORTANT: Lalamove requires 200 status code even for errors
+    return NextResponse.json({
+        received: true,
+        error: 'Invalid signature',
+        message: 'Webhook acknowledged but signature validation failed'
+    });  // ✅ Returns 200 by default
+}</pre>
+
+        <h2>📋 Steps to Re-register Webhook</h2>
+
+        <div class="info">
+            <p><strong>Important:</strong> Follow these steps EXACTLY as provided by Lalamove support.</p>
+        </div>
+
+        <ol>
+            <li>
+                <strong>Delete the existing webhook URL</strong>
+                <ul>
+                    <li>Go to Lalamove Partner Portal</li>
+                    <li>Navigate to: <strong>Developers > Webhook</strong> tab</li>
+                    <li>Delete the current webhook URL</li>
+                    <li>Click <strong>Save</strong></li>
+                </ul>
+            </li>
+
+            <li>
+                <strong>Log out from Partner Portal</strong>
+                <ul>
+                    <li>Completely log out of your Lalamove Partner Portal account</li>
+                    <li>This clears any cached webhook validation status</li>
+                </ul>
+            </li>
+
+            <li>
+                <strong>Verify the fix is deployed</strong>
+                <ul>
+                    <li>The fix has been deployed to: <code>https://budolshap.vercel.app</code></li>
+                    <li>Test the webhook endpoint returns 200:</li>
+                </ul>
+                <pre>curl -X GET https://budolshap.vercel.app/api/webhooks/lalamove</pre>
+                <p>Should return:</p>
+                <pre>{
+  "status": "ok",
+  "service": "Lalamove Webhook Receiver",
+  "timestamp": "2025-12-04T..."
+}</pre>
+            </li>
+
+            <li>
+                <strong>Log back into Partner Portal</strong>
+                <ul>
+                    <li>Log back into your Lalamove Partner Portal account</li>
+                </ul>
+            </li>
+
+            <li>
+                <strong>Re-enter the webhook URL</strong>
+                <ul>
+                    <li>Go to: <strong>Developers > Webhook</strong> tab</li>
+                    <li>Enter webhook URL: <code>https://budolshap.vercel.app/api/webhooks/lalamove</code></li>
+                    <li>Click <strong>Save</strong></li>
+                    <li>Lalamove will send a test webhook to verify it returns 200</li>
+                </ul>
+            </li>
+
+            <li>
+                <strong>Verify webhook registration</strong>
+                <ul>
+                    <li>Check that there's NO error message</li>
+                    <li>The webhook should be successfully registered</li>
+                </ul>
+            </li>
+
+            <li>
+                <strong>Test with a new order</strong>
+                <ul>
+                    <li>Create a new test order with Lalamove delivery</li>
+                    <li>Wait for driver assignment (ON_GOING event)</li>
+                    <li>Check Vercel logs to see the webhook payload</li>
+                    <li>Verify driver information appears in the app</li>
+                </ul>
+            </li>
+        </ol>
+
+        <h2>🔍 How to Verify It's Working</h2>
+
+        <h3>Check Vercel Logs</h3>
+        <div class="step">
+            <p>After webhook registration, you should see logs like this in Vercel:</p>
+            <pre>Lalamove webhook received: {
+  event: 'ON_GOING',
+  orderId: '3378364575488889845',
+  status: 'ON_GOING',
+  timestamp: '2025-12-04T...'
+}
+
+Full webhook payload: {
+  "orderId": "3378364575488889845",
+  "event": "ON_GOING",
+  "status": "ON_GOING",
+  "driver": {
+    "name": "TestDriver 34567",
+    "phone": "+63100123456",
+    "plateNumber": "VP******4",
+    "vehicleType": "Motorcycle"
+  },
+  ...
+}
+
+Extracted driver data: {
+  name: 'TestDriver 34567',
+  phone: '+63100123456',
+  plateNumber: 'VP******4',
+  vehicleType: 'Motorcycle'
+}</pre>
+        </div>
+
+        <h3>Check Database</h3>
+        <div class="step">
+            <p>Run this script to verify driver info is stored:</p>
+            <pre>node scripts/check-latest-lalamove-order.js</pre>
+            <p>Should show:</p>
+            <pre>=== DRIVER INFORMATION ===
+Driver found in database:
+{
+  "name": "TestDriver 34567",
+  "phone": "+63100123456",
+  "plateNumber": "VP******4",
+  "vehicleType": "Motorcycle"
+}</pre>
+        </div>
+
+        <h3>Check in App</h3>
+        <div class="step">
+            <p>The driver information section should now show:</p>
+            <ul>
+                <li>✅ Real driver name (e.g., "TestDriver 34567")</li>
+                <li>✅ Real vehicle type (e.g., "Motorcycle")</li>
+                <li>✅ Real plate number (e.g., "VP******4")</li>
+                <li>✅ Real phone number (e.g., "+63100123456")</li>
+            </ul>
+            <p>Instead of the mock data:</p>
+            <ul>
+                <li>❌ Juan Dela Cruz</li>
+                <li>❌ ABC 1234</li>
+                <li>❌ Motorcycle (mock)</li>
+            </ul>
+        </div>
+
+        <h2>📝 Technical Details</h2>
+
+        <h3>Why Driver Info Isn't in GET API</h3>
+        <div class="info">
+            <p>Lalamove's GET /v3/orders/{orderId} endpoint does NOT return driver information. It only returns:</p>
+            <ul>
+                <li><code>driverId</code>: Just a numeric ID</li>
+                <li><code>status</code>: Order status</li>
+                <li><code>shareLink</code>: Tracking URL</li>
+            </ul>
+            <p><strong>Driver details (name, phone, plate, vehicle type) are ONLY sent via webhooks.</strong></p>
+            <p>This is why the webhook must work correctly - it's the ONLY way to get driver information.</p>
+        </div>
+
+        <h3>Webhook Events</h3>
+        <table border="1" cellpadding="10" style="width: 100%; border-collapse: collapse;">
+            <thead>
+                <tr style="background: #3498db; color: white;">
+                    <th>Event</th>
+                    <th>When Sent</th>
+                    <th>Driver Info Included?</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td><code>ASSIGNING_DRIVER</code></td>
+                    <td>Looking for a driver</td>
+                    <td>❌ No</td>
+                </tr>
+                <tr style="background: #e8f4f8;">
+                    <td><code>ON_GOING</code></td>
+                    <td>Driver assigned and accepted</td>
+                    <td>✅ Yes - This is when we get driver info!</td>
+                </tr>
+                <tr>
+                    <td><code>PICKED_UP</code></td>
+                    <td>Driver picked up package</td>
+                    <td>✅ Yes</td>
+                </tr>
+                <tr>
+                    <td><code>IN_TRANSIT</code></td>
+                    <td>On the way to destination</td>
+                    <td>✅ Yes</td>
+                </tr>
+                <tr>
+                    <td><code>COMPLETED</code></td>
+                    <td>Delivered successfully</td>
+                    <td>✅ Yes</td>
+                </tr>
+                <tr>
+                    <td><code>CANCELLED</code></td>
+                    <td>Order cancelled</td>
+                    <td>Maybe</td>
+                </tr>
+            </tbody>
+        </table>
+
+        <h2>🎯 Expected Outcome</h2>
+
+        <div class="success">
+            <h3>After Following These Steps:</h3>
+            <ol>
+                <li>✅ Webhook successfully registered in Lalamove Partner Portal</li>
+                <li>✅ No "non-200 webhook response" error</li>
+                <li>✅ Webhooks are being sent by Lalamove</li>
+                <li>✅ Driver information appears in Vercel logs</li>
+                <li>✅ Driver information stored in database</li>
+                <li>✅ Real driver info displayed in app (not mock data)</li>
+            </ol>
+        </div>
+
+        <h2>🐛 Troubleshooting</h2>
+
+        <h3>If webhook still shows error:</h3>
+        <ul>
+            <li>Check SSL certificate is valid for budolshap.vercel.app</li>
+            <li>Verify the webhook URL is exactly: <code>https://budolshap.vercel.app/api/webhooks/lalamove</code></li>
+            <li>Check Vercel deployment is successful</li>
+            <li>Test the GET endpoint returns 200</li>
+        </ul>
+
+        <h3>If driver info still not showing:</h3>
+        <ul>
+            <li>Check Vercel logs for incoming webhooks</li>
+            <li>Run <code>node scripts/check-latest-lalamove-order.js</code> to see database</li>
+            <li>Verify the order has <code>ON_GOING</code> status in Lalamove</li>
+            <li>Create a NEW order to test (old orders won't receive webhooks)</li>
+        </ul>
+
+        <h2>📚 Files Modified</h2>
+        <ul>
+            <li><code>app/api/webhooks/lalamove/route.js</code> - Fixed to always return 200</li>
+            <li><code>components/LalamoveTracking.jsx</code> - Fixed property name</li>
+            <li><code>scripts/check-latest-lalamove-order.js</code> - Debug script</li>
+            <li><code>scripts/debug-lalamove-api.js</code> - API response checker</li>
+        </ul>
+
+        <hr>
+        <p><strong>Status:</strong> ✅ Fix deployed and ready for webhook re-registration</p>
+        <p><strong>Next Action:</strong> Follow the 7 steps above to re-register the webhook in Lalamove Partner Portal
+        </p>
+    </div>
+</body>
+
+</html>

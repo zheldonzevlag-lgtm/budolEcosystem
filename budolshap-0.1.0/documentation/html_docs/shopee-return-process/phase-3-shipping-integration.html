@@ -1,0 +1,173 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Phase 3: Courier & Shipping Integration - Shopee Return Process</title>
+    <style>
+        :root {
+            --primary: #ee4d2d;
+            --primary-dark: #d73211;
+            --secondary: #26aa99;
+            --bg: #f5f5f5;
+            --card-bg: #ffffff;
+            --text: #333333;
+            --text-light: #666666;
+            --border: #e8e8e8;
+            --code-bg: #2d2d2d;
+            --code-text: #f8f8f2;
+        }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            line-height: 1.6;
+            color: var(--text);
+            background-color: var(--bg);
+            margin: 0;
+            padding: 0;
+        }
+        .container {
+            max-width: 1000px;
+            margin: 40px auto;
+            padding: 20px;
+        }
+        nav {
+            margin-bottom: 20px;
+        }
+        nav a {
+            color: var(--primary);
+            text-decoration: none;
+            font-weight: bold;
+        }
+        .card {
+            background: var(--card-bg);
+            padding: 40px;
+            border-radius: 8px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.05);
+            margin-bottom: 20px;
+        }
+        h1 {
+            color: var(--primary);
+            margin-top: 0;
+        }
+        h2 {
+            color: var(--primary-dark);
+            border-bottom: 1px solid var(--border);
+            padding-bottom: 10px;
+            margin-top: 30px;
+        }
+        .shipping-flow {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin: 30px 0;
+            gap: 10px;
+        }
+        .flow-node {
+            background: #f8f9fa;
+            border: 1px solid var(--border);
+            padding: 15px;
+            border-radius: 8px;
+            text-align: center;
+            flex: 1;
+            font-size: 0.85rem;
+        }
+        .flow-arrow {
+            color: var(--primary);
+            font-weight: bold;
+        }
+        .code-block {
+            background-color: var(--code-bg);
+            color: var(--code-text);
+            padding: 20px;
+            border-radius: 8px;
+            overflow-x: auto;
+            font-family: 'Courier New', Courier, monospace;
+            font-size: 0.9rem;
+            margin: 20px 0;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <nav>
+            <a href="index.html">← Back to Overview</a>
+        </nav>
+
+        <div class="card">
+            <h1>Phase 3: Courier & Shipping Integration</h1>
+            <p>This phase details the automation of return shipping using Lalamove, including address swapping and webhook status tracking.</p>
+
+            <h2>1. Return Booking Logic</h2>
+            <p>Unlike forward delivery, return booking swaps the pickup and delivery locations. The Buyer's address becomes the <strong>Pickup</strong>, and the Store's address becomes the <strong>Delivery</strong>.</p>
+            <div class="shipping-flow">
+                <div class="flow-node"><strong>Pickup:</strong><br>Buyer Address</div>
+                <div class="flow-arrow">→</div>
+                <div class="flow-node"><strong>Courier:</strong><br>Lalamove</div>
+                <div class="flow-arrow">→</div>
+                <div class="flow-node"><strong>Delivery:</strong><br>Store Address</div>
+            </div>
+
+            <h2>2. Implementation in <code>shippingService.js</code></h2>
+            <div class="code-block">
+<pre>export async function bookReturnShipping({ orderId, returnId }) {
+    // 1. Fetch addresses (Buyer as Pickup, Store as Delivery)
+    // 2. Get Lalamove quote
+    // 3. Create Lalamove order
+    // 4. Update Return status to BOOKED
+    // 5. Store tracking number and share link
+}</pre>
+            </div>
+
+            <h2>3. Webhook Synchronization & Re-booking</h2>
+            <p>The Lalamove webhook (<code>/api/shipping/lalamove/webhook</code>) is enhanced to handle both status updates and dynamic changes like new tracking numbers or cancellations that require re-booking.</p>
+            
+            <h3>Status Mapping</h3>
+            <table style="width: 100%; border-collapse: collapse; margin: 20px 0;">
+                <thead>
+                    <tr style="background: #f8f9fa;">
+                        <th style="padding: 10px; border: 1px solid var(--border); text-align: left;">Lalamove Status</th>
+                        <th style="padding: 10px; border: 1px solid var(--border); text-align: left;">Return Status</th>
+                        <th style="padding: 10px; border: 1px solid var(--border); text-align: left;">Effect</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td style="padding: 10px; border: 1px solid var(--border);">PICKED_UP</td>
+                        <td style="padding: 10px; border: 1px solid var(--border);">SHIPPED</td>
+                        <td style="padding: 10px; border: 1px solid var(--border);">Notifies Seller that item is on the way</td>
+                    </tr>
+                    <tr>
+                        <td style="padding: 10px; border: 1px solid var(--border);">COMPLETED</td>
+                        <td style="padding: 10px; border: 1px solid var(--border);">RECEIVED</td>
+                        <td style="padding: 10px; border: 1px solid var(--border);">Starts the verification window for Seller</td>
+                    </tr>
+                    <tr>
+                        <td style="padding: 10px; border: 1px solid var(--border);">CANCELLED</td>
+                        <td style="padding: 10px; border: 1px solid var(--border);"><strong>BOOKING_REQUESTED</strong></td>
+                        <td style="padding: 10px; border: 1px solid var(--border);">Allows Seller to re-book a new courier</td>
+                    </tr>
+                </tbody>
+            </table>
+
+            <h3>Dynamic Tracking Number Capture</h3>
+            <p>If Lalamove assigns a new tracking number (e.g., during driver re-assignment or manual intervention), the webhook captures the <code>lalamoveOrderId</code> from the payload and automatically updates the Return record's <code>trackingNumber</code> and <code>bookingId</code>. This ensures the tracking link remains valid for both Buyer and Seller.</p>
+
+            <h3>Re-booking Workflow</h3>
+            <p>When a Lalamove order is cancelled (e.g., no rider found), the system automatically reverts the return status to <code>BOOKING_REQUESTED</code>. This triggers the following:</p>
+            <ul>
+                <li>The "Book Courier" button reappears on the Seller's dashboard.</li>
+                <li>The previous failed tracking number is preserved in history but replaced by the new one upon re-booking.</li>
+                <li>Notifications are sent to the Seller to prompt action.</li>
+            </ul>
+
+            <h2>4. Shipping Cost Handling</h2>
+            <p>The platform determines who pays for return shipping based on the return reason:</p>
+            <ul>
+                <li><strong>Seller Fault</strong> (Damaged, Wrong Item): Seller pays (deducted from refund).</li>
+                <li><strong>Buyer Fault</strong> (Change of Mind): Buyer pays (deducted from refund).</li>
+                <li><strong>BudolShap Guarantee:</strong> Platform may subsidize costs.</li>
+            </ul>
+        </div>
+    </div>
+</body>
+</html>

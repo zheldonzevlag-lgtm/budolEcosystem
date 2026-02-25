@@ -1,0 +1,227 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <title>Budolshap – Vercel Deployment Guide (MySQL via Railway)</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            line-height: 1.6;
+            margin: 2rem;
+            color: #333;
+        }
+
+        h1,
+        h2,
+        h3 {
+            color: #2c3e50;
+        }
+
+        pre {
+            background: #f4f4f4;
+            padding: 1rem;
+            overflow: auto;
+        }
+
+        code {
+            background: #e8e8e8;
+            padding: 2px 4px;
+            border-radius: 3px;
+        }
+
+        table {
+            border-collapse: collapse;
+            width: 100%;
+            margin-top: 1rem;
+        }
+
+        th,
+        td {
+            border: 1px solid #ddd;
+            padding: 8px;
+        }
+
+        th {
+            background: #f2f2f2;
+        }
+
+        ul {
+            margin-left: 1.5rem;
+        }
+    </style>
+</head>
+
+<body>
+    <h1>Budolshap – Vercel Deployment Guide (Free Tier + MySQL via Railway)</h1>
+    <p><strong>Project:</strong> <code>budolshap</code> (Next.js – App Router)</p>
+    <p><strong>Date:</strong> 2025‑11‑23</p>
+    <hr>
+    <h2>1️⃣ Prerequisites</h2>
+    <ul>
+        <li>Git installed on Windows.</li>
+        <li>Node.js (v18+) and npm (or Yarn).</li>
+        <li>A GitHub/GitLab/Bitbucket account (Vercel pulls code from a Git repo).</li>
+        <li>A Vercel account (free tier).</li>
+        <li>A free MySQL instance on <a href="https://railway.app" target="_blank">Railway</a>.</li>
+    </ul>
+    <h2>2️⃣ Create a free MySQL instance on Railway</h2>
+    <ol>
+        <li>Sign‑up or log in at <a href="https://railway.app" target="_blank">railway.app</a>.</li>
+        <li>Click **New Project** → **Create a New Service** → choose **MySQL**.</li>
+        <li>Give the service a name (e.g., <code>budolshap‑db</code>) and click **Create**.</li>
+        <li>Once the database is ready, open the **Settings** tab and copy the **Connection URL**. It looks like:
+            <pre><code>mysql://username:password@containers-us-west-123.railway.app:5432/database_name?sslmode=require</code></pre>
+            Keep this URL handy – you will add it as an environment variable on Vercel.
+        </li>
+    </ol>
+    <h2>3️⃣ Wire the MySQL DB into the Next.js app (Prisma)</h2>
+    <ul>
+        <li>Add the connection string to <code>.env.local</code> (do NOT commit this file):
+            <pre><code>DATABASE_URL="mysql://username:password@containers-us-west-123.railway.app:5432/database_name?sslmode=require"</code></pre>
+        </li>
+        <li>Update your Prisma schema to use the MySQL provider (if it still says PostgreSQL):
+            <pre><code>datasource db {
+  provider = "mysql"
+  url      = env("DATABASE_URL")
+}</code></pre>
+        </li>
+        <li>Install the MySQL driver (if not already present):
+            <pre><code>npm install mysql2</code></pre>
+        </li>
+        <li>Run a local migration to verify the connection works:
+            <pre><code>npx prisma migrate dev --name init</code></pre>
+            This will create the tables in your Railway MySQL dev branch.
+        </li>
+    </ul>
+    <h2>4️⃣ Prepare the repository for Vercel</h2>
+    <ol>
+        <li>Initialize Git (if not already): <code>git init</code></li>
+        <li>Create a <code>.gitignore</code> (if missing):
+            <pre><code># .gitignore
+node_modules/
+/.next/
+.env.local
+.DS_Store</code></pre>
+        </li>
+        <li>Commit all files:
+            <pre><code>git add .
+git commit -m "Initial commit – ready for Vercel with MySQL (Railway)"
+</code></pre>
+        </li>
+        <li>Push to a remote (GitHub example):
+            <pre><code>git remote add origin https://github.com/&lt;YOUR_USER&gt;/budolshap.git
+git branch -M main
+git push -u origin main
+</code></pre>
+        </li>
+        <li>Update <code>package.json</code> so Prisma runs on Vercel. Add a <code>postinstall</code> script:
+            <pre><code>{
+  "scripts": {
+    "dev": "next dev",
+    "build": "next build",
+    "start": "next start",
+    "postinstall": "prisma generate && prisma migrate deploy"
+  }
+}
+</code></pre>
+            Commit the change.
+        </li>
+    </ol>
+    <h2>5️⃣ Create the Vercel project</h2>
+    <ol>
+        <li>Log in to <a href="https://vercel.com" target="_blank">vercel.com</a>.</li>
+        <li>Click **New Project** → **Import Git Repository** → select the repo you just pushed.</li>
+        <li>Vercel auto‑detects **Next.js** (Framework Preset: Next.js, Build Command: <code>npm run build</code>,
+            Output Directory: <code>.next</code>).</li>
+        <li>Deploy – the first deployment will fail until the DB env var is added.</li>
+    </ol>
+    <h2>6️⃣ Add <code>DATABASE_URL</code> environment variable on Vercel</h2>
+    <ol>
+        <li>In the Vercel dashboard, go to **Project Settings → Environment Variables**.</li>
+        <li>Click **Add** and fill in:
+            <ul>
+                <li><strong>Key:</strong> <code>DATABASE_URL</code></li>
+                <li><strong>Value:</strong> paste the Railway MySQL connection URL (including
+                    <code>?sslmode=require</code>)</li>
+                <li><strong>Environment:</strong> Production (and optionally Preview)</li>
+            </ul>
+        </li>
+        <li>Save – Vercel will automatically redeploy.
+        </li>
+    </ol>
+    <h2>7️⃣ Prisma migrations on Vercel</h2>
+    <p>Because of the <code>postinstall</code> script, each deployment runs:</p>
+    <pre><code>prisma generate && prisma migrate deploy</code></pre>
+    <p>If you prefer a manual one‑off migration, use the Vercel CLI:</p>
+    <pre><code>npm i -g vercel
+vercel login
+vercel exec -- npx prisma migrate deploy
+</code></pre>
+    <h2>8️⃣ Verify the live deployment</h2>
+    <ol>
+        <li>Open the Vercel‑provided URL (e.g., <code>https://&lt;project&gt;.vercel.app</code>).</li>
+        <li>Test a feature that hits the DB (view products, place an order, admin dashboard).</li>
+        <li>If data persists, the MySQL connection via Railway is successful.
+        </li>
+    </ol>
+    <h2>9️⃣ Troubleshooting</h2>
+    <table>
+        <thead>
+            <tr>
+                <th>Symptom</th>
+                <th>Likely cause</th>
+                <th>Fix</th>
+            </tr>
+        </thead>
+        <tbody>
+            <tr>
+                <td>404 on API routes</td>
+                <td>Incorrect <code>DATABASE_URL</code> or missing <code>?sslmode=require</code></td>
+                <td>Re‑enter the env var with the exact Railway connection string.</td>
+            </tr>
+            <tr>
+                <td>Build fails – missing <code>mysql2</code> module</td>
+                <td>Dependency not installed</td>
+                <td>Run <code>npm install mysql2</code> locally, commit <code>package-lock.json</code>, push.</td>
+            </tr>
+            <tr>
+                <td>Prisma migration pending</td>
+                <td>Postinstall script missing or not executed</td>
+                <td>Ensure <code>postinstall</code> is present in <code>package.json</code> or run manual migration via
+                    Vercel CLI.</td>
+            </tr>
+            <tr>
+                <td>Env var not found</td>
+                <td>Added only to Preview, not Production</td>
+                <td>Add it to Production environment as well.</td>
+            </tr>
+        </tbody>
+    </table>
+    <h2>🔟 Optional: Custom domain</h2>
+    <ol>
+        <li>Project Settings → Domains → Add your domain (e.g., <code>www.myshop.com</code>).</li>
+        <li>Follow DNS instructions (CNAME to <code>cname.vercel-dns.com</code> or A record to Vercel IPs).</li>
+        <li>After propagation (<30 min), the domain points to your Vercel deployment.</li>
+    </ol>
+    <h2>📊 Monitor free‑tier limits (Vercel)</h2>
+    <ul>
+        <li>Build minutes: 100 hrs/month</li>
+        <li>Serverless execution: 125 k GB‑seconds/month</li>
+        <li>Bandwidth: 100 GB/month</li>
+        <li>Concurrent builds: 1</li>
+        <li>Custom domains: Unlimited</li>
+    </ul>
+    <h2>🚀 Next steps</h2>
+    <ul>
+        <li>Enable Vercel Analytics for traffic insights.</li>
+        <li>Set up Preview Deployments for pull‑request testing.</li>
+        <li>Explore Edge Functions for ultra‑low‑latency APIs.</li>
+        <li>If you need heavy read scaling, Railway offers read‑replica configurations – add them as separate env vars
+            and reference them in your Prisma schema.</li>
+    </ul>
+    <hr>
+    <p><em>End of guide</em></p>
+</body>
+
+</html>
