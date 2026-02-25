@@ -197,7 +197,7 @@ export default function StoreManageProducts() {
                                     {product.category ? (
                                         <span className="inline-flex items-center gap-1.5 bg-slate-100 text-slate-600 text-xs px-2.5 py-1 rounded-full font-medium">
                                             {/* Lucide icon replaces emoji for the product category badge */}
-                                            {(() => { const MI = getCategoryLucideIcon(product.categorySlug || product.category, product.category); return <MI size={14} className="text-slate-500 flex-shrink-0" /> })()}
+                                            {(() => { const MI = getCategoryLucideIcon(product.categorySlug || product.category, product.category, product.categoryData?.icon); return <MI size={14} className="text-slate-500 flex-shrink-0" /> })()}
                                             <span className="truncate max-w-[80px]">{product.category}</span>
                                         </span>
                                     ) : (

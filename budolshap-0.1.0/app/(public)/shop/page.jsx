@@ -271,8 +271,8 @@ function CategorySidebar({ categories, activeSlug, onSelect, filters, setFilters
                             level3.filter(c => c.parentId === s.id).some(t => t.slug === activeSlug)
                         )
                         const isExpanded = expanded[cat.id] || hasActiveSub || isActive
-                        // Resolve Lucide icon component for this Level-1 category
-                        const CatIcon = getCategoryLucideIcon(cat.slug, cat.name)
+                        // Resolve Lucide icon component for this Level-1 category, prioritizing DB override
+                        const CatIcon = getCategoryLucideIcon(cat.slug, cat.name, cat.icon)
 
                         return (
                             <div key={cat.id}>
@@ -431,9 +431,9 @@ function ShopContent() {
     // Find active category name for display
     const activeCat = categories.find(c => c.slug === category)
 
-    // Category icon for breadcrumb
+    // Category icon for breadcrumb, prioritizing DB override
     // Resolve Lucide icon component for the active breadcrumb category
-    const ActiveCatIcon = activeCat ? getCategoryLucideIcon(activeCat.slug, activeCat.name) : null
+    const ActiveCatIcon = activeCat ? getCategoryLucideIcon(activeCat.slug, activeCat.name, activeCat.icon) : null
 
     return (
         <div className="min-h-[70vh] mx-4 sm:mx-6">

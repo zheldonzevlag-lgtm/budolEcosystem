@@ -293,17 +293,25 @@ const SLUG_ICON_MAP = {
 /**
  * getCategoryLucideIcon
  *
- * Returns the best-matching Lucide React component for a given category slug
- * or name. Falls back to the generic `Package` icon when nothing matches.
+ * Returns the best-matching Lucide React component for a given category.
+ * Prioritizes the explicit icon name from the database, then falls back
+ * to slug/name string matching.
  *
- * @param {string} slug   - URL slug (preferred, e.g. "home-living")
- * @param {string} name   - Human-readable name (fallback key)
+ * @param {string} slug    - URL slug (e.g. "home-living")
+ * @param {string} name    - Human-readable name (fallback key)
+ * @param {string} dbIcon  - Explicit icon name stored in DB (e.g. "Smartphone")
  * @returns {React.ComponentType} Lucide icon component
  */
-export const getCategoryLucideIcon = (slug, name) => {
+export const getCategoryLucideIcon = (slug, name, dbIcon = null) => {
+    // 1. Prioritize explicit DB override
+    if (dbIcon) {
+        const component = resolveIconByName(dbIcon)
+        if (component) return component
+    }
+
     const key = (slug || name || '').toLowerCase()
 
-    // 1. Exact slug match
+    // 2. Exact slug match
     if (SLUG_ICON_MAP[key]) return SLUG_ICON_MAP[key]
 
     // 2. Partial match – slug contains a known key or vice versa
@@ -318,15 +326,16 @@ export const getCategoryLucideIcon = (slug, name) => {
 /**
  * renderCategoryIcon
  *
- * Renders a Lucide icon for a category slug / name in JSX.
+ * Renders a Lucide icon for a category in JSX.
  *
  * @param {string} slug
  * @param {string} name
- * @param {string} className  Tailwind / CSS classes forwarded to the SVG
+ * @param {string} dbIcon
+ * @param {string} className
  * @returns {JSX.Element}
  */
-export const renderCategoryIcon = (slug, name, className = 'w-6 h-6') => {
-    const IconComponent = getCategoryLucideIcon(slug, name)
+export const renderCategoryIcon = (slug, name, dbIcon = null, className = 'w-6 h-6') => {
+    const IconComponent = getCategoryLucideIcon(slug, name, dbIcon)
     return <IconComponent className={className} />
 }
 

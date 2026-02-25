@@ -72,6 +72,14 @@ export async function GET(request) {
                         },
                     },
                 },
+                categoryData: {
+                    select: {
+                        id: true,
+                        name: true,
+                        slug: true,
+                        icon: true
+                    }
+                },
                 orderItems: {
                     select: {
                         quantity: true,
@@ -216,6 +224,14 @@ export async function POST(request) {
                                 image: true
                             }
                         }
+                    }
+                },
+                categoryData: {
+                    select: {
+                        id: true,
+                        name: true,
+                        slug: true,
+                        icon: true
                     }
                 },
                 orderItems: {

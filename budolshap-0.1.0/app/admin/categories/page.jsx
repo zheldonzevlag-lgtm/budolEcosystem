@@ -2,93 +2,15 @@
 
 import { useState, useEffect } from 'react'
 import toast from 'react-hot-toast'
-import { Plus, Edit2, Trash2, ChevronRight, ChevronDown, Search, FolderTree, X, Tag, Package, BarChart3, Eye, EyeOff, RefreshCw, Smartphone, Laptop, Camera, Headphones, Tv, Watch, Shirt, ShoppingBag, Gem, Glasses, Crown, Hat, Home, Sofa, Utensils, Blend, Lamp, Wrench, Heart, Droplets, Sparkles, UtensilsCrossed, Dumbbell, Baby, BookOpen, Car, Dog, Flower2, Plane, Briefcase, Scissors, Palette, Gamepad2, Music, Wallet, CreditCard, TrendingUp, Package2, Box, Archive, Send, ShoppingCart, Store, Users, User, Star, HeartHandshake, Gift, Tag as TagIcon, Layers, Grid, List, ChevronLeft } from 'lucide-react'
-import { getCategoryLucideIcon, getCategoryColor } from '@/components/CategoryIcons'
+import { Plus, Edit2, Trash2, ChevronRight, ChevronDown, Search, FolderTree, X, Tag, Package, BarChart3, Eye, EyeOff, RefreshCw, Smartphone, Laptop, Camera, Headphones, Tv, Watch, Shirt, ShoppingBag, Gem, Glasses, Crown, Hat, Home, Sofa, Utensils, Blend, Lamp, Wrench, Heart, Droplets, Sparkles, UtensilsCrossed, Dumbbell, Baby, BookOpen, Car, Dog, Flower2, Plane, Briefcase, Scissors, Palette, Gamepad2, Music, Wallet, CreditCard, TrendingUp, Package2, Box, Archive, Send, ShoppingCart, Store, Users, User, Star, HeartHandshake, Gift, Tag as TagIcon, Layers, Grid, List, ChevronLeft, Check } from 'lucide-react'
+import { getCategoryLucideIcon, getCategoryColor, PROFESSIONAL_ICON_MAP, resolveIconByName } from '@/components/CategoryIcons'
 
 // Professional icon options for categories
-const PROFESSIONAL_ICONS = [
-    // Electronics
-    { name: 'Smartphone', icon: Smartphone },
-    { name: 'Laptop', icon: Laptop },
-    { name: 'Camera', icon: Camera },
-    { name: 'Headphones', icon: Headphones },
-    { name: 'TV', icon: Tv },
-    { name: 'Watch', icon: Watch },
-    { name: 'Gamepad', icon: Gamepad2 },
-    { name: 'Speaker', icon: Box },
-    // Fashion
-    { name: 'Shirt', icon: Shirt },
-    { name: 'Shopping Bag', icon: ShoppingBag },
-    { name: 'Jewelry', icon: Gem },
-    { name: 'Glasses', icon: Glasses },
-    { name: 'Crown', icon: Crown },
-    { name: 'Hat', icon: Hat },
-    { name: 'Shoes', icon: User },
-    { name: 'Scissors', icon: Scissors },
-    // Home & Living
-    { name: 'Home', icon: Home },
-    { name: 'Sofa', icon: Sofa },
-    { name: 'Kitchen', icon: Utensils },
-    { name: 'Blender', icon: Blend },
-    { name: 'Lamp', icon: Lamp },
-    { name: 'Tools', icon: Wrench },
-    { name: 'Package', icon: Package },
-    { name: 'Box', icon: Box },
-    // Health & Beauty
-    { name: 'Heart', icon: Heart },
-    { name: 'Droplets', icon: Droplets },
-    { name: 'Sparkles', icon: Sparkles },
-    { name: 'Spa', icon: Sparkles },
-    // Food & Drinks
-    { name: 'Food', icon: UtensilsCrossed },
-    { name: 'Coffee', icon: Utensils },
-    { name: 'Restaurant', icon: Utensils },
-    // Sports & Fitness
-    { name: 'Fitness', icon: Dumbbell },
-    { name: 'Sports', icon: Dumbbell },
-    // Baby & Kids
-    { name: 'Baby', icon: Baby },
-    { name: 'Toys', icon: Package2 },
-    // Books & Media
-    { name: 'Books', icon: BookOpen },
-    { name: 'Music', icon: Music },
-    { name: 'Movies', icon: Tv },
-    // Automotive
-    { name: 'Car', icon: Car },
-    // Pets
-    { name: 'Pets', icon: Dog },
-    // Garden
-    { name: 'Garden', icon: Flower2 },
-    // Travel
-    { name: 'Travel', icon: Plane },
-    // Office & Business
-    { name: 'Office', icon: Briefcase },
-    { name: 'Business', icon: Briefcase },
-    { name: 'Stationery', icon: Archive },
-    // Art & Craft
-    { name: 'Art', icon: Palette },
-    { name: 'Craft', icon: Scissors },
-    // Shopping
-    { name: 'Store', icon: Store },
-    { name: 'Cart', icon: ShoppingCart },
-    { name: 'Tag', icon: TagIcon },
-    { name: 'Gift', icon: Gift },
-    // General
-    { name: 'Star', icon: Star },
-    { name: 'Users', icon: Users },
-    { name: 'Trending', icon: TrendingUp },
-    { name: 'Layers', icon: Layers },
-    { name: 'Grid', icon: Grid },
-    { name: 'List', icon: List },
-]
+// Professional icon options for categories removed, using centralized PROFESSIONAL_ICON_MAP
 
 export default function CategoryManagementPage() {
     // Helper to get icon component by name
-    const getIconByName = (iconName) => {
-        if (!iconName) return null
-        const found = PROFESSIONAL_ICONS.find(i => i.name.toLowerCase() === iconName.toLowerCase())
-        return found ? found.icon : null
-    }
+    const getIconByName = (iconName) => resolveIconByName(iconName)
 
     // Render icon from stored name or fallback
     const renderIcon = (iconName, className = "w-5 h-5") => {
@@ -306,8 +228,8 @@ export default function CategoryManagementPage() {
     const renderCategoryRow = (category, level = 0) => {
         const hasChildren = category.children?.length > 0
         const isExpanded = expandedCategories.has(category.id)
-        // Resolve Lucide icon component for this category row
-        const CategoryRowIcon = getCategoryLucideIcon(category.slug, category.name)
+        // Resolve Lucide icon component, prioritizing the DB-stored icon name
+        const CategoryRowIcon = getCategoryLucideIcon(category.slug, category.name, category.icon)
         const color = getCategoryColor(level)
 
         return (
@@ -557,27 +479,72 @@ export default function CategoryManagementPage() {
                             </button>
                         </div>
 
-                        <form onSubmit={handleSubmit} className="p-5 space-y-4">
-                            {/* Icon preview */}
-                            {formData.name && (
-                                <div className="flex items-center gap-3 p-3 bg-slate-50 rounded-xl">
-                                    {/* Modal icon preview – shows Lucide icon on a light background */}
-                                    {formData.image ? (
-                                        <img src={formData.image} alt="Category" className="w-12 h-12 rounded-lg object-cover" />
-                                    ) : (() => {
-                                        const ModalIcon = getCategoryLucideIcon(formData.slug, formData.name)
+                        <form onSubmit={handleSubmit} className="p-5 space-y-4 max-h-[70vh] overflow-y-auto">
+                            {/* Icon preview & Searchable Picker */}
+                            <div className="space-y-3">
+                                <label className="block text-sm font-medium text-slate-700">Category Icon</label>
+                                <div className="flex items-center gap-3 p-3 bg-slate-50 rounded-xl border border-slate-100">
+                                    {/* Component resolution based on current selection or fallback */}
+                                    {(() => {
+                                        const ModalIcon = getCategoryLucideIcon(formData.slug, formData.name, formData.icon)
                                         return (
-                                            <span className="w-12 h-12 rounded-lg bg-slate-100 flex items-center justify-center">
-                                                <ModalIcon size={28} className="text-slate-500" />
+                                            <span className="w-12 h-12 rounded-lg bg-white shadow-sm flex items-center justify-center border border-slate-200">
+                                                <ModalIcon size={28} className="text-green-600" />
                                             </span>
                                         )
                                     })()}
-                                    <div>
-                                        <p className="font-medium text-slate-700">{formData.name || 'Category Name'}</p>
-                                        <p className="text-xs text-slate-400">{formData.slug || 'slug'}</p>
+                                    <div className="flex-1">
+                                        <p className="font-medium text-slate-700 text-sm">
+                                            {formData.icon || 'Auto-Detected'}
+                                        </p>
+                                        <p className="text-[10px] text-slate-400 uppercase font-bold tracking-wider">
+                                            {formData.icon ? 'Custom Override' : 'Smart Selection'}
+                                        </p>
+                                    </div>
+                                    {formData.icon && (
+                                        <button
+                                            type="button"
+                                            onClick={() => setFormData(p => ({ ...p, icon: '' }))}
+                                            className="text-xs text-red-500 hover:text-red-600 font-medium underline"
+                                        >
+                                            Reset
+                                        </button>
+                                    )}
+                                </div>
+
+                                {/* Icon Grid Searchable */}
+                                <div className="border border-slate-100 rounded-xl overflow-hidden bg-slate-50/50">
+                                    <div className="p-2 border-b border-slate-100 bg-white">
+                                        <div className="relative">
+                                            <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 text-slate-400" size={14} />
+                                            <input
+                                                type="text"
+                                                placeholder="Search Lucide icons..."
+                                                className="w-full pl-8 pr-3 py-1.5 text-xs bg-slate-50 border-none rounded-md focus:ring-1 focus:ring-green-500"
+                                                onChange={(e) => {
+                                                    // Local filter if needed, otherwise just shows all
+                                                }}
+                                            />
+                                        </div>
+                                    </div>
+                                    <div className="grid grid-cols-6 gap-1 p-2 max-h-[160px] overflow-y-auto scrollbar-thin">
+                                        {Object.entries(PROFESSIONAL_ICON_MAP).map(([name, Icon]) => (
+                                            <button
+                                                key={name}
+                                                type="button"
+                                                onClick={() => setFormData(p => ({ ...p, icon: name }))}
+                                                className={`
+                                                    p-2 rounded-lg flex flex-col items-center justify-center gap-1 transition-all
+                                                    ${formData.icon === name ? 'bg-green-600 text-white shadow-md scale-110 z-10' : 'bg-white hover:bg-slate-100 text-slate-500'}
+                                                `}
+                                                title={name}
+                                            >
+                                                <Icon size={18} />
+                                            </button>
+                                        ))}
                                     </div>
                                 </div>
-                            )}
+                            </div>
 
                             {/* Image Upload */}
                             <div>

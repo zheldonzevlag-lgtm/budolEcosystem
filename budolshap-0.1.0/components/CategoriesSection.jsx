@@ -3,14 +3,7 @@
  *
  * WHY THIS EXISTS:
  *   Renders the "Shop by Category" tiles on the public homepage.
- *   Previously displayed emoji icons which were inconsistent across
- *   browsers/OS and looked unprofessional.
- *
- * WHAT IT DOES:
- *   - Fetches only Level-1 (top-level) categories from the API.
- *   - Renders each as a coloured tile with a Lucide React icon and label.
- *   - Falls back to a static list of categories when the DB is empty.
- *   - Includes an "All Categories" tile that links to /shop.
+ *   Upgraded to use Framer Motion for a premium, alive feel.
  */
 
 'use client'
@@ -19,6 +12,7 @@ import { useState, useEffect } from 'react'
 import Link from 'next/link'
 import { getCategoryLucideIcon, getCategoryColor } from '@/components/CategoryIcons'
 import { ChevronRight, LayoutGrid, ShoppingCart } from 'lucide-react'
+import { motion, AnimatePresence } from 'framer-motion'
 
 // ─── Loading skeleton ─────────────────────────────────────────────────────────
 const CategoriesSkeleton = () => (
@@ -31,6 +25,22 @@ const CategoriesSkeleton = () => (
         ))}
     </div>
 )
+
+// ─── Animation Variants ───────────────────────────────────────────────────
+const containerVariants = {
+    hidden: { opacity: 0 },
+    visible: {
+        opacity: 1,
+        transition: {
+            staggerChildren: 0.05
+        }
+    }
+}
+
+const itemVariants = {
+    hidden: { y: 20, opacity: 0 },
+    visible: { y: 0, opacity: 1 }
+}
 
 // ─── Main component ───────────────────────────────────────────────────────────
 export default function CategoriesSection() {
@@ -87,63 +97,85 @@ export default function CategoriesSection() {
             {loading ? (
                 <CategoriesSkeleton />
             ) : categories.length === 0 ? (
-                /* Fallback: static categories when DB is empty */
                 <FallbackCategories />
             ) : (
-                <div className="grid grid-cols-5 sm:grid-cols-6 md:grid-cols-8 lg:grid-cols-10 gap-2">
-                    {visible.map((cat, idx) => {
-                        const color = getCategoryColor(idx)
-                        // Resolve the Lucide icon component for this category
-                        const IconComponent = getCategoryLucideIcon(cat.slug, cat.name)
-                        return (
+                <motion.div
+                    layout
+                    variants={containerVariants}
+                    initial="hidden"
+                    animate="visible"
+                    className="grid grid-cols-5 sm:grid-cols-6 md:grid-cols-8 lg:grid-cols-10 gap-2"
+                >
+                    <AnimatePresence mode='popLayout'>
+                        {visible.map((cat, idx) => {
+                            const color = getCategoryColor(idx)
+                            // Resolve the Lucide icon component, prioritizing DB icon if available
+                            const IconComponent = getCategoryLucideIcon(cat.slug, cat.name, cat.icon)
+
+                            return (
+                                <motion.div
+                                    key={cat.id}
+                                    layout
+                                    variants={itemVariants}
+                                    initial="hidden"
+                                    animate="visible"
+                                    exit={{ opacity: 0, scale: 0.8 }}
+                                    whileHover={{ y: -5, scale: 1.05 }}
+                                    whileTap={{ scale: 0.95 }}
+                                >
+                                    <Link
+                                        href={`/shop?category=${encodeURIComponent(cat.slug)}`}
+                                        className={`
+                                            group flex flex-col items-center gap-1.5 p-2 sm:p-3 rounded-xl
+                                            border border-transparent ${color.bg} ${color.hover}
+                                            hover:border-current hover:shadow-md
+                                            transition-all duration-200 cursor-pointer h-full
+                                        `}
+                                    >
+                                        <span className={`flex items-center justify-center w-8 h-8 ${color.text}`}>
+                                            <IconComponent className="w-6 h-6 sm:w-7 sm:h-7" />
+                                        </span>
+                                        <span className={`
+                                            text-[10px] sm:text-xs font-medium text-center leading-tight
+                                            text-slate-600 group-hover:text-slate-800
+                                            line-clamp-2
+                                        `}>
+                                            {cat.name}
+                                        </span>
+                                    </Link>
+                                </motion.div>
+                            )
+                        })}
+
+                        {/* "All" tile */}
+                        <motion.div
+                            layout
+                            variants={itemVariants}
+                            whileHover={{ y: -5, scale: 1.05 }}
+                            whileTap={{ scale: 0.95 }}
+                        >
                             <Link
-                                key={cat.id}
-                                href={`/shop?category=${encodeURIComponent(cat.slug)}`}
-                                className={`
-                                    group flex flex-col items-center gap-1.5 p-2 sm:p-3 rounded-xl
-                                    border border-transparent ${color.bg} ${color.hover}
-                                    hover:border-current hover:shadow-sm
-                                    transition-all duration-200 active:scale-95 cursor-pointer
-                                `}
+                                href="/shop"
+                                className="flex flex-col items-center gap-1.5 p-2 sm:p-3 rounded-xl
+                                    border border-dashed border-slate-200 bg-slate-50 hover:bg-slate-100
+                                    hover:shadow-md transition-all duration-200 cursor-pointer group h-full"
                             >
-                                {/* Lucide icon – replaces emojis for cross-platform consistency */}
-                                <span className={`flex items-center justify-center w-8 h-8 ${color.text}`}>
-                                    <IconComponent className="w-6 h-6 sm:w-7 sm:h-7" />
+                                <span className="flex items-center justify-center w-8 h-8 text-slate-500">
+                                    <ShoppingCart className="w-6 h-6 sm:w-7 sm:h-7" />
                                 </span>
-                                <span className={`
-                                    text-[10px] sm:text-xs font-medium text-center leading-tight
-                                    text-slate-600 group-hover:text-slate-800
-                                    line-clamp-2
-                                `}>
-                                    {cat.name}
+                                <span className="text-[10px] sm:text-xs font-medium text-center text-slate-500 group-hover:text-slate-700 leading-tight">
+                                    All
                                 </span>
                             </Link>
-                        )
-                    })}
-
-                    {/* "All" tile */}
-                    <Link
-                        href="/shop"
-                        className="flex flex-col items-center gap-1.5 p-2 sm:p-3 rounded-xl
-                            border border-dashed border-slate-200 bg-slate-50 hover:bg-slate-100
-                            transition-all duration-200 active:scale-95 cursor-pointer group"
-                    >
-                        <span className="flex items-center justify-center w-8 h-8 text-slate-500">
-                            <ShoppingCart className="w-6 h-6 sm:w-7 sm:h-7" />
-                        </span>
-                        <span className="text-[10px] sm:text-xs font-medium text-center text-slate-500 group-hover:text-slate-700 leading-tight">
-                            All
-                        </span>
-                    </Link>
-                </div>
+                        </motion.div>
+                    </AnimatePresence>
+                </motion.div>
             )}
         </section>
     )
 }
 
 // ─── Fallback static categories (DB empty) ────────────────────────────────────
-// WHY: Ensures the homepage always shows something meaningful even before
-// any categories have been seeded into the database.
 function FallbackCategories() {
     const fallback = [
         { name: 'Electronics', slug: 'electronics', color: getCategoryColor(0) },
@@ -159,39 +191,56 @@ function FallbackCategories() {
     ]
 
     return (
-        <div className="grid grid-cols-5 sm:grid-cols-6 md:grid-cols-8 lg:grid-cols-10 gap-2">
+        <motion.div
+            variants={containerVariants}
+            initial="hidden"
+            animate="visible"
+            className="grid grid-cols-5 sm:grid-cols-6 md:grid-cols-8 lg:grid-cols-10 gap-2"
+        >
             {fallback.map((cat, idx) => {
                 const IconComponent = getCategoryLucideIcon(cat.slug, cat.name)
                 return (
-                    <Link
+                    <motion.div
                         key={idx}
-                        href={`/shop?category=${cat.slug}`}
-                        className={`
-                            group flex flex-col items-center gap-1.5 p-2 sm:p-3 rounded-xl
-                            border border-transparent ${cat.color.bg} ${cat.color.hover}
-                            hover:shadow-sm transition-all duration-200 active:scale-95
-                        `}
+                        variants={itemVariants}
+                        whileHover={{ y: -5, scale: 1.05 }}
+                        whileTap={{ scale: 0.95 }}
                     >
-                        <span className={`flex items-center justify-center w-8 h-8 ${cat.color.text}`}>
-                            <IconComponent className="w-6 h-6 sm:w-7 sm:h-7" />
-                        </span>
-                        <span className="text-[10px] sm:text-xs font-medium text-center text-slate-600 group-hover:text-slate-800 leading-tight line-clamp-2">
-                            {cat.name}
-                        </span>
-                    </Link>
+                        <Link
+                            href={`/shop?category=${cat.slug}`}
+                            className={`
+                                group flex flex-col items-center gap-1.5 p-2 sm:p-3 rounded-xl
+                                border border-transparent ${cat.color.bg} ${cat.color.hover}
+                                hover:shadow-md transition-all duration-200 h-full
+                            `}
+                        >
+                            <span className={`flex items-center justify-center w-8 h-8 ${cat.color.text}`}>
+                                <IconComponent className="w-6 h-6 sm:w-7 sm:h-7" />
+                            </span>
+                            <span className="text-[10px] sm:text-xs font-medium text-center text-slate-600 group-hover:text-slate-800 leading-tight line-clamp-2">
+                                {cat.name}
+                            </span>
+                        </Link>
+                    </motion.div>
                 )
             })}
-            <Link
-                href="/shop"
-                className="flex flex-col items-center gap-1.5 p-2 sm:p-3 rounded-xl
-                    border border-dashed border-slate-200 bg-slate-50 hover:bg-slate-100
-                    transition-all duration-200 active:scale-95 cursor-pointer group"
+            <motion.div
+                variants={itemVariants}
+                whileHover={{ y: -5, scale: 1.05 }}
+                whileTap={{ scale: 0.95 }}
             >
-                <span className="flex items-center justify-center w-8 h-8 text-slate-500">
-                    <ShoppingCart className="w-6 h-6 sm:w-7 sm:h-7" />
-                </span>
-                <span className="text-[10px] sm:text-xs font-medium text-center text-slate-500 group-hover:text-slate-700 leading-tight">All</span>
-            </Link>
-        </div>
+                <Link
+                    href="/shop"
+                    className="flex flex-col items-center gap-1.5 p-2 sm:p-3 rounded-xl
+                        border border-dashed border-slate-200 bg-slate-50 hover:bg-slate-100
+                        hover:shadow-md transition-all duration-200 cursor-pointer group h-full"
+                >
+                    <span className="flex items-center justify-center w-8 h-8 text-slate-500">
+                        <ShoppingCart className="w-6 h-6 sm:w-7 sm:h-7" />
+                    </span>
+                    <span className="text-[10px] sm:text-xs font-medium text-center text-slate-500 group-hover:text-slate-700 leading-tight">All</span>
+                </Link>
+            </motion.div>
+        </motion.div>
     )
 }
