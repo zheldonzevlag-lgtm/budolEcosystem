@@ -17,10 +17,13 @@ export default function CategoryManagementPage() {
         parentId: '',
         level: 1,
         sortOrder: 0,
-        isActive: true
+        isActive: true,
+        image: '',
+        icon: ''
     })
     const [expandedCategories, setExpandedCategories] = useState(new Set())
     const [filterLevel, setFilterLevel] = useState('all')
+    const [uploadingImage, setUploadingImage] = useState(false)
 
     useEffect(() => {
         fetchCategories()
@@ -41,6 +44,40 @@ export default function CategoryManagementPage() {
         } finally {
             setLoading(false)
         }
+    }
+
+    const handleImageUpload = async (e) => {
+        const file = e.target.files?.[0]
+        if (!file) return
+
+        setUploadingImage(true)
+        try {
+            const reader = new FileReader()
+            reader.onload = async (event) => {
+                const base64 = event.target.result
+                const res = await fetch('/api/upload', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ image: base64, type: 'category' })
+                })
+                const data = await res.json()
+                if (res.ok) {
+                    setFormData({ ...formData, image: data.url })
+                    toast.success('Image uploaded!')
+                } else {
+                    toast.error(data.error || 'Failed to upload image')
+                }
+                setUploadingImage(false)
+            }
+            reader.readAsDataURL(file)
+        } catch (error) {
+            toast.error('Failed to upload image')
+            setUploadingImage(false)
+        }
+    }
+
+    const removeImage = () => {
+        setFormData({ ...formData, image: '' })
     }
 
     const handleSubmit = async (e) => {
@@ -95,7 +132,9 @@ export default function CategoryManagementPage() {
             parentId: category.parentId || '',
             level: category.level,
             sortOrder: category.sortOrder || 0,
-            isActive: category.isActive
+            isActive: category.isActive,
+            image: category.image || '',
+            icon: category.icon || ''
         })
         setShowModal(true)
     }
@@ -111,7 +150,7 @@ export default function CategoryManagementPage() {
 
     const resetForm = () => {
         setEditingCategory(null)
-        setFormData({ name: '', slug: '', parentId: '', level: 1, sortOrder: 0, isActive: true })
+        setFormData({ name: '', slug: '', parentId: '', level: 1, sortOrder: 0, isActive: true, image: '', icon: '' })
     }
 
     const toggleExpand = (id) => {
@@ -195,8 +234,12 @@ export default function CategoryManagementPage() {
                                 <span className="w-7" />
                             )}
                             {/* Icon preview */}
-                            <span className={`w-8 h-8 rounded-lg ${color.bg} flex items-center justify-center text-base mr-2.5 flex-shrink-0`}>
-                                {icon}
+                            <span className="w-8 h-8 rounded-lg flex items-center justify-center text-base mr-2.5 flex-shrink-0 overflow-hidden">
+                                {category.image ? (
+                                    <img src={category.image} alt={category.name} className="w-full h-full object-cover" />
+                                ) : (
+                                    <span className={color.bg}>{icon}</span>
+                                )}
                             </span>
                             <div>
                                 <span className="font-medium text-slate-700 text-sm">{category.name}</span>
@@ -423,13 +466,72 @@ export default function CategoryManagementPage() {
                             {/* Icon preview */}
                             {formData.name && (
                                 <div className="flex items-center gap-3 p-3 bg-slate-50 rounded-xl">
-                                    <span className="text-3xl">{getCategoryIcon(formData.slug, formData.name)}</span>
+                                    {formData.image ? (
+                                        <img src={formData.image} alt="Category" className="w-12 h-12 rounded-lg object-cover" />
+                                    ) : (
+                                        <span className="text-3xl">{getCategoryIcon(formData.slug, formData.name)}</span>
+                                    )}
                                     <div>
                                         <p className="font-medium text-slate-700">{formData.name || 'Category Name'}</p>
                                         <p className="text-xs text-slate-400">{formData.slug || 'slug'}</p>
                                     </div>
                                 </div>
                             )}
+
+                            {/* Image Upload */}
+                            <div>
+                                <label className="block text-sm font-medium text-slate-700 mb-1.5">Category Image</label>
+                                {formData.image ? (
+                                    <div className="relative inline-block">
+                                        <img
+                                            src={formData.image}
+                                            alt="Category"
+                                            className="w-24 h-24 rounded-xl object-cover border border-slate-200"
+                                        />
+                                        <button
+                                            type="button"
+                                            onClick={removeImage}
+                                            className="absolute -top-2 -right-2 w-6 h-6 bg-red-500 text-white rounded-full flex items-center justify-center hover:bg-red-600 transition shadow-md"
+                                        >
+                                            <X size={14} />
+                                        </button>
+                                    </div>
+                                ) : (
+                                    <label className="flex flex-col items-center justify-center w-full h-24 border-2 border-dashed border-slate-200 rounded-xl cursor-pointer hover:border-green-400 hover:bg-green-50/50 transition">
+                                        <div className="flex flex-col items-center justify-center pt-5 pb-6">
+                                            {uploadingImage ? (
+                                                <RefreshCw size={20} className="animate-spin text-slate-400 mb-1" />
+                                            ) : (
+                                                <FolderTree size={20} className="text-slate-400 mb-1" />
+                                            )}
+                                            <p className="text-xs text-slate-500">
+                                                {uploadingImage ? 'Uploading...' : 'Click to upload image'}
+                                            </p>
+                                        </div>
+                                        <input
+                                            type="file"
+                                            className="hidden"
+                                            accept="image/*"
+                                            onChange={handleImageUpload}
+                                            disabled={uploadingImage}
+                                        />
+                                    </label>
+                                )}
+                            </div>
+
+                            {/* Icon/Emoji Input */}
+                            <div>
+                                <label className="block text-sm font-medium text-slate-700 mb-1.5">Icon (Emoji)</label>
+                                <input
+                                    type="text"
+                                    value={formData.icon}
+                                    onChange={(e) => setFormData({ ...formData, icon: e.target.value })}
+                                    className="w-full px-3 py-2.5 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-green-500 text-sm"
+                                    placeholder="e.g. 📦 or 🛒 (single emoji)"
+                                    maxLength={10}
+                                />
+                                <p className="text-xs text-slate-400 mt-1">Enter an emoji or icon to display alongside the category</p>
+                            </div>
 
                             <div>
                                 <label className="block text-sm font-medium text-slate-700 mb-1.5">Category Name <span className="text-red-500">*</span></label>

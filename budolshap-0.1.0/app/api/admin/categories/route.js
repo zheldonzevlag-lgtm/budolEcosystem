@@ -11,7 +11,9 @@ const categorySchema = z.object({
     parentId: z.string().optional(),
     level: z.number().min(1).max(3),
     sortOrder: z.number().optional(),
-    isActive: z.boolean().optional()
+    isActive: z.boolean().optional(),
+    image: z.string().optional(),
+    icon: z.string().optional()
 })
 
 // GET /api/admin/categories - List all categories

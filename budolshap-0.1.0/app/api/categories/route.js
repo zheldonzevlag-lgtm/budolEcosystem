@@ -22,7 +22,9 @@ export async function GET(request) {
                 slug: true,
                 parentId: true,
                 level: true,
-                sortOrder: true
+                sortOrder: true,
+                image: true,
+                icon: true
             }
         })
 
