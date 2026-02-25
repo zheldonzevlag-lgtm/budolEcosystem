@@ -45,7 +45,10 @@ export async function POST(request) {
         const body = await request.json();
         const { image, removeBackground, type } = body;
         const uploadType = type === 'video' ? 'video' : 'image';
-        console.log('[Upload] Image payload received. length:', image?.length);
+
+        // Detect if the image is an SVG
+        const isSVG = image && (image.startsWith('data:image/svg') || image.includes('data:image/svg+xml'));
+        console.log('[Upload] Image payload received. length:', image?.length, 'isSVG:', isSVG);
 
         if (!image) {
             console.log('[Upload] No image provided in request body');
@@ -91,7 +94,7 @@ export async function POST(request) {
             resource_type: uploadType
         }
 
-        if (uploadType === 'image') {
+        if (uploadType === 'image' && !isSVG) {
             uploadOptions.quality = 'auto'
             uploadOptions.fetch_format = 'auto'
             uploadOptions.width = type === 'profile' ? 500 : 1200
@@ -99,7 +102,7 @@ export async function POST(request) {
             uploadOptions.crop = 'limit'
         }
 
-        if (removeBackground && uploadType === 'image') {
+        if (removeBackground && uploadType === 'image' && !isSVG) {
             uploadOptions.transformation = [
                 { effect: "background_removal" }
             ]

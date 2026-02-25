@@ -511,7 +511,7 @@ export default function CategoryManagementPage() {
                                         <input
                                             type="file"
                                             className="hidden"
-                                            accept="image/*"
+                                            accept="image/*,.svg"
                                             onChange={handleImageUpload}
                                             disabled={uploadingImage}
                                         />
