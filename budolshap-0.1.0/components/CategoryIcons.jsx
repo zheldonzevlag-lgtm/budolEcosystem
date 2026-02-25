@@ -1,4 +1,62 @@
 // Category icon mappings - emoji icons for common categories
+// Also supports professional icons from Lucide
+import { Smartphone, Laptop, Camera, Headphones, Tv, Watch, Shirt, ShoppingBag, Gem, Glasses, Crown, Hat, Home, Sofa, Utensils, Blend, Lamp, Wrench, Heart, Droplets, Sparkles, UtensilsCrossed, Dumbbell, Baby, BookOpen, Car, Dog, Flower2, Plane, Briefcase, Scissors, Palette, Gamepad2, Music, Package, Package2, Box, Archive, ShoppingCart, Store, Users, Star, Gift, Tag, Layers, Grid, List } from 'lucide-react'
+
+export const PROFESSIONAL_ICON_MAP = {
+    'Smartphone': Smartphone,
+    'Laptop': Laptop,
+    'Camera': Camera,
+    'Headphones': Headphones,
+    'TV': Tv,
+    'Watch': Watch,
+    'Shirt': Shirt,
+    'Shopping Bag': ShoppingBag,
+    'Jewelry': Gem,
+    'Glasses': Glasses,
+    'Crown': Crown,
+    'Hat': Hat,
+    'Home': Home,
+    'Sofa': Sofa,
+    'Kitchen': Utensils,
+    'Blender': Blend,
+    'Lamp': Lamp,
+    'Tools': Wrench,
+    'Heart': Heart,
+    'Droplets': Droplets,
+    'Sparkles': Sparkles,
+    'Spa': Sparkles,
+    'Food': UtensilsCrossed,
+    'Coffee': Utensils,
+    'Restaurant': Utensils,
+    'Fitness': Dumbbell,
+    'Sports': Dumbbell,
+    'Baby': Baby,
+    'Toys': Package2,
+    'Books': BookOpen,
+    'Music': Music,
+    'Movies': Tv,
+    'Car': Car,
+    'Pets': Dog,
+    'Garden': Flower2,
+    'Travel': Plane,
+    'Office': Briefcase,
+    'Business': Briefcase,
+    'Stationery': Archive,
+    'Art': Palette,
+    'Craft': Scissors,
+    'Store': Store,
+    'Cart': ShoppingCart,
+    'Tag': Tag,
+    'Gift': Gift,
+    'Star': Star,
+    'Users': Users,
+    'Layers': Layers,
+    'Grid': Grid,
+    'List': List,
+    'Package': Package,
+    'Box': Box,
+}
+
 export const getCategoryIcon = (slug, name) => {
     const key = (slug || name || '').toLowerCase()
 
@@ -146,3 +204,16 @@ export const categoryColors = [
 ]
 
 export const getCategoryColor = (index) => categoryColors[index % categoryColors.length]
+
+// Get professional Lucide icon component by name
+export const getProfessionalIcon = (iconName) => {
+    if (!iconName) return null
+    return PROFESSIONAL_ICON_MAP[iconName] || null
+}
+
+// Render professional icon with className
+export const renderProfessionalIcon = (iconName, className = "w-5 h-5") => {
+    const IconComponent = getProfessionalIcon(iconName)
+    if (!IconComponent) return null
+    return <IconComponent className={className} />
+}
