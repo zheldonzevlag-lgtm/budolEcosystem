@@ -2,10 +2,102 @@
 
 import { useState, useEffect } from 'react'
 import toast from 'react-hot-toast'
-import { Plus, Edit2, Trash2, ChevronRight, ChevronDown, Search, FolderTree, X, Tag, Package, BarChart3, Eye, EyeOff, RefreshCw } from 'lucide-react'
+import { Plus, Edit2, Trash2, ChevronRight, ChevronDown, Search, FolderTree, X, Tag, Package, BarChart3, Eye, EyeOff, RefreshCw, Smartphone, Laptop, Camera, Headphones, Tv, Watch, Shirt, ShoppingBag, Gem, Glasses, Crown, Hat, Home, Sofa, Utensils, Blend, Lamp, Wrench, Heart, Droplets, Sparkles, UtensilsCrossed, Dumbbell, Baby, BookOpen, Car, Dog, Flower2, Plane, Briefcase, Scissors, Palette, Gamepad2, Music, Wallet, CreditCard, TrendingUp, Package2, Box, Archive, Send, ShoppingCart, Store, Users, User, Star, HeartHandshake, Gift, Tag as TagIcon, Layers, Grid, List, ChevronLeft } from 'lucide-react'
 import { getCategoryIcon, getCategoryColor } from '@/components/CategoryIcons'
 
+// Professional icon options for categories
+const PROFESSIONAL_ICONS = [
+    // Electronics
+    { name: 'Smartphone', icon: Smartphone },
+    { name: 'Laptop', icon: Laptop },
+    { name: 'Camera', icon: Camera },
+    { name: 'Headphones', icon: Headphones },
+    { name: 'TV', icon: Tv },
+    { name: 'Watch', icon: Watch },
+    { name: 'Gamepad', icon: Gamepad2 },
+    { name: 'Speaker', icon: Box },
+    // Fashion
+    { name: 'Shirt', icon: Shirt },
+    { name: 'Shopping Bag', icon: ShoppingBag },
+    { name: 'Jewelry', icon: Gem },
+    { name: 'Glasses', icon: Glasses },
+    { name: 'Crown', icon: Crown },
+    { name: 'Hat', icon: Hat },
+    { name: 'Shoes', icon: User },
+    { name: 'Scissors', icon: Scissors },
+    // Home & Living
+    { name: 'Home', icon: Home },
+    { name: 'Sofa', icon: Sofa },
+    { name: 'Kitchen', icon: Utensils },
+    { name: 'Blender', icon: Blend },
+    { name: 'Lamp', icon: Lamp },
+    { name: 'Tools', icon: Wrench },
+    { name: 'Package', icon: Package },
+    { name: 'Box', icon: Box },
+    // Health & Beauty
+    { name: 'Heart', icon: Heart },
+    { name: 'Droplets', icon: Droplets },
+    { name: 'Sparkles', icon: Sparkles },
+    { name: 'Spa', icon: Sparkles },
+    // Food & Drinks
+    { name: 'Food', icon: UtensilsCrossed },
+    { name: 'Coffee', icon: Utensils },
+    { name: 'Restaurant', icon: Utensils },
+    // Sports & Fitness
+    { name: 'Fitness', icon: Dumbbell },
+    { name: 'Sports', icon: Dumbbell },
+    // Baby & Kids
+    { name: 'Baby', icon: Baby },
+    { name: 'Toys', icon: Package2 },
+    // Books & Media
+    { name: 'Books', icon: BookOpen },
+    { name: 'Music', icon: Music },
+    { name: 'Movies', icon: Tv },
+    // Automotive
+    { name: 'Car', icon: Car },
+    // Pets
+    { name: 'Pets', icon: Dog },
+    // Garden
+    { name: 'Garden', icon: Flower2 },
+    // Travel
+    { name: 'Travel', icon: Plane },
+    // Office & Business
+    { name: 'Office', icon: Briefcase },
+    { name: 'Business', icon: Briefcase },
+    { name: 'Stationery', icon: Archive },
+    // Art & Craft
+    { name: 'Art', icon: Palette },
+    { name: 'Craft', icon: Scissors },
+    // Shopping
+    { name: 'Store', icon: Store },
+    { name: 'Cart', icon: ShoppingCart },
+    { name: 'Tag', icon: TagIcon },
+    { name: 'Gift', icon: Gift },
+    // General
+    { name: 'Star', icon: Star },
+    { name: 'Users', icon: Users },
+    { name: 'Trending', icon: TrendingUp },
+    { name: 'Layers', icon: Layers },
+    { name: 'Grid', icon: Grid },
+    { name: 'List', icon: List },
+]
+
 export default function CategoryManagementPage() {
+    // Helper to get icon component by name
+    const getIconByName = (iconName) => {
+        if (!iconName) return null
+        const found = PROFESSIONAL_ICONS.find(i => i.name.toLowerCase() === iconName.toLowerCase())
+        return found ? found.icon : null
+    }
+
+    // Render icon from stored name or fallback
+    const renderIcon = (iconName, className = "w-5 h-5") => {
+        const IconComponent = getIconByName(iconName)
+        if (IconComponent) {
+            return <IconComponent className={className} />
+        }
+        return null
+    }
     const [categories, setCategories] = useState([])
     const [loading, setLoading] = useState(true)
     const [searchTerm, setSearchTerm] = useState('')
@@ -24,6 +116,8 @@ export default function CategoryManagementPage() {
     const [expandedCategories, setExpandedCategories] = useState(new Set())
     const [filterLevel, setFilterLevel] = useState('all')
     const [uploadingImage, setUploadingImage] = useState(false)
+    const [showIconPicker, setShowIconPicker] = useState(false)
+    const [iconSearch, setIconSearch] = useState('')
 
     useEffect(() => {
         fetchCategories()
@@ -519,18 +613,79 @@ export default function CategoryManagementPage() {
                                 )}
                             </div>
 
-                            {/* Icon/Emoji Input */}
+                            {/* Icon Picker */}
                             <div>
-                                <label className="block text-sm font-medium text-slate-700 mb-1.5">Icon (Emoji)</label>
-                                <input
-                                    type="text"
-                                    value={formData.icon}
-                                    onChange={(e) => setFormData({ ...formData, icon: e.target.value })}
-                                    className="w-full px-3 py-2.5 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-green-500 text-sm"
-                                    placeholder="e.g. 📦 or 🛒 (single emoji)"
-                                    maxLength={10}
-                                />
-                                <p className="text-xs text-slate-400 mt-1">Enter an emoji or icon to display alongside the category</p>
+                                <label className="block text-sm font-medium text-slate-700 mb-1.5">Icon</label>
+                                <div className="relative">
+                                    <button
+                                        type="button"
+                                        onClick={() => setShowIconPicker(!showIconPicker)}
+                                        className="w-full px-3 py-2.5 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-green-500 text-sm flex items-center justify-between hover:bg-slate-50"
+                                    >
+                                        <span className="flex items-center gap-2">
+                                            {formData.icon ? (
+                                                <>
+                                                    {renderIcon(formData.icon, "w-5 h-5 text-slate-600")}
+                                                    <span className="text-slate-700">{formData.icon}</span>
+                                                </>
+                                            ) : (
+                                                <span className="text-slate-400">Select an icon</span>
+                                            )}
+                                        </span>
+                                        <ChevronDown size={16} className={`text-slate-400 transition-transform ${showIconPicker ? 'rotate-180' : ''}`} />
+                                    </button>
+
+                                    {showIconPicker && (
+                                        <div className="absolute z-10 mt-1 w-full bg-white border border-slate-200 rounded-xl shadow-lg max-h-64 overflow-hidden">
+                                            <div className="p-2 border-b border-slate-100">
+                                                <div className="relative">
+                                                    <Search size={14} className="absolute left-2.5 top-1/2 -translate-y-1/2 text-slate-400" />
+                                                    <input
+                                                        type="text"
+                                                        value={iconSearch}
+                                                        onChange={(e) => setIconSearch(e.target.value)}
+                                                        placeholder="Search icons..."
+                                                        className="w-full pl-8 pr-3 py-2 text-xs border border-slate-200 rounded-lg focus:outline-none focus:ring-1 focus:ring-green-500"
+                                                    />
+                                                </div>
+                                            </div>
+                                            <div className="p-2 overflow-y-auto max-h-44">
+                                                <div className="grid grid-cols-5 gap-1">
+                                                    {PROFESSIONAL_ICONS
+                                                        .filter(icon => icon.name.toLowerCase().includes(iconSearch.toLowerCase()))
+                                                        .map(icon => (
+                                                            <button
+                                                                key={icon.name}
+                                                                type="button"
+                                                                onClick={() => {
+                                                                    setFormData({ ...formData, icon: icon.name })
+                                                                    setShowIconPicker(false)
+                                                                    setIconSearch('')
+                                                                }}
+                                                                className={`p-2 rounded-lg flex flex-col items-center justify-center gap-0.5 transition ${formData.icon === icon.name
+                                                                        ? 'bg-green-100 text-green-700'
+                                                                        : 'hover:bg-slate-100 text-slate-600'
+                                                                    }`}
+                                                            >
+                                                                <icon.icon size={18} />
+                                                                <span className="text-[10px] truncate w-full text-center">{icon.name}</span>
+                                                            </button>
+                                                        ))
+                                                    }
+                                                </div>
+                                            </div>
+                                        </div>
+                                    )}
+                                </div>
+                                {formData.icon && (
+                                    <button
+                                        type="button"
+                                        onClick={() => setFormData({ ...formData, icon: '' })}
+                                        className="text-xs text-red-500 hover:text-red-700 mt-1"
+                                    >
+                                        Clear icon
+                                    </button>
+                                )}
                             </div>
 
                             <div>
