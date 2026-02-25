@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react'
 import toast from 'react-hot-toast'
 import { Plus, Edit2, Trash2, ChevronRight, ChevronDown, Search, FolderTree, X, Tag, Package, BarChart3, Eye, EyeOff, RefreshCw, Smartphone, Laptop, Camera, Headphones, Tv, Watch, Shirt, ShoppingBag, Gem, Glasses, Crown, Hat, Home, Sofa, Utensils, Blend, Lamp, Wrench, Heart, Droplets, Sparkles, UtensilsCrossed, Dumbbell, Baby, BookOpen, Car, Dog, Flower2, Plane, Briefcase, Scissors, Palette, Gamepad2, Music, Wallet, CreditCard, TrendingUp, Package2, Box, Archive, Send, ShoppingCart, Store, Users, User, Star, HeartHandshake, Gift, Tag as TagIcon, Layers, Grid, List, ChevronLeft } from 'lucide-react'
-import { getCategoryIcon, getCategoryColor } from '@/components/CategoryIcons'
+import { getCategoryLucideIcon, getCategoryColor } from '@/components/CategoryIcons'
 
 // Professional icon options for categories
 const PROFESSIONAL_ICONS = [
@@ -306,7 +306,8 @@ export default function CategoryManagementPage() {
     const renderCategoryRow = (category, level = 0) => {
         const hasChildren = category.children?.length > 0
         const isExpanded = expandedCategories.has(category.id)
-        const icon = getCategoryIcon(category.slug, category.name)
+        // Resolve Lucide icon component for this category row
+        const CategoryRowIcon = getCategoryLucideIcon(category.slug, category.name)
         const color = getCategoryColor(level)
 
         return (
@@ -327,12 +328,12 @@ export default function CategoryManagementPage() {
                             ) : (
                                 <span className="w-7" />
                             )}
-                            {/* Icon preview */}
-                            <span className="w-8 h-8 rounded-lg flex items-center justify-center text-base mr-2.5 flex-shrink-0 overflow-hidden">
+                            {/* Icon preview: image takes priority, otherwise a Lucide icon on coloured background */}
+                            <span className={`w-8 h-8 rounded-lg flex items-center justify-center mr-2.5 flex-shrink-0 overflow-hidden ${color.bg}`}>
                                 {category.image ? (
                                     <img src={category.image} alt={category.name} className="w-full h-full object-cover" />
                                 ) : (
-                                    <span className={color.bg}>{icon}</span>
+                                    <CategoryRowIcon size={18} className={color.text} />
                                 )}
                             </span>
                             <div>
@@ -560,11 +561,17 @@ export default function CategoryManagementPage() {
                             {/* Icon preview */}
                             {formData.name && (
                                 <div className="flex items-center gap-3 p-3 bg-slate-50 rounded-xl">
+                                    {/* Modal icon preview – shows Lucide icon on a light background */}
                                     {formData.image ? (
                                         <img src={formData.image} alt="Category" className="w-12 h-12 rounded-lg object-cover" />
-                                    ) : (
-                                        <span className="text-3xl">{getCategoryIcon(formData.slug, formData.name)}</span>
-                                    )}
+                                    ) : (() => {
+                                        const ModalIcon = getCategoryLucideIcon(formData.slug, formData.name)
+                                        return (
+                                            <span className="w-12 h-12 rounded-lg bg-slate-100 flex items-center justify-center">
+                                                <ModalIcon size={28} className="text-slate-500" />
+                                            </span>
+                                        )
+                                    })()}
                                     <div>
                                         <p className="font-medium text-slate-700">{formData.name || 'Category Name'}</p>
                                         <p className="text-xs text-slate-400">{formData.slug || 'slug'}</p>
@@ -663,8 +670,8 @@ export default function CategoryManagementPage() {
                                                                     setIconSearch('')
                                                                 }}
                                                                 className={`p-2 rounded-lg flex flex-col items-center justify-center gap-0.5 transition ${formData.icon === icon.name
-                                                                        ? 'bg-green-100 text-green-700'
-                                                                        : 'hover:bg-slate-100 text-slate-600'
+                                                                    ? 'bg-green-100 text-green-700'
+                                                                    : 'hover:bg-slate-100 text-slate-600'
                                                                     }`}
                                                             >
                                                                 <icon.icon size={18} />
@@ -738,7 +745,7 @@ export default function CategoryManagementPage() {
                                         .filter(c => c.level < 3)
                                         .map(cat => (
                                             <option key={cat.id} value={cat.id}>
-                                                {'  '.repeat(cat.level - 1)}{getCategoryIcon(cat.slug, cat.name)} {cat.name} (Level {cat.level})
+                                                {'  '.repeat(cat.level - 1)}{cat.name} (Level {cat.level})
                                             </option>
                                         ))}
                                 </select>

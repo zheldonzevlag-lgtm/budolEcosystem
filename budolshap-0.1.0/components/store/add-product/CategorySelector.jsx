@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useRef } from 'react'
 import { ChevronRight, Check, Loader2, X, ChevronDown, Search } from 'lucide-react'
-import { getCategoryIcon, getCategoryColor } from '@/components/CategoryIcons'
+import { getCategoryLucideIcon, getCategoryColor } from '@/components/CategoryIcons'
 
 export default function CategorySelector({ value, onChange, error }) {
     const [categories, setCategories] = useState([])
@@ -207,7 +207,8 @@ export default function CategorySelector({ value, onChange, error }) {
                                             onClick={() => handleSearchSelect(cat)}
                                             className="w-full flex items-center gap-2 px-3 py-2 rounded-lg hover:bg-green-50 transition text-left"
                                         >
-                                            <span className="text-base">{getCategoryIcon(cat.slug, cat.name)}</span>
+                                            {/* Lucide icon for search results – replaces emoji */}
+                                            {(() => { const SI = getCategoryLucideIcon(cat.slug, cat.name); return <SI size={16} className="flex-shrink-0 text-slate-500" /> })()}
                                             <div>
                                                 <p className="text-sm font-medium text-slate-700">{cat.name}</p>
                                                 {(parent1 || parent2) && (
@@ -240,7 +241,9 @@ export default function CategorySelector({ value, onChange, error }) {
                                             className={`flex items-center gap-2 w-full px-3 py-2.5 text-left text-sm transition
                                                 ${active ? `${color.bg} font-semibold text-slate-800 border-r-2 border-green-500` : 'text-slate-600 hover:bg-slate-50'}`}
                                         >
-                                            <span className="text-base flex-shrink-0">{getCategoryIcon(cat.slug, cat.name)}</span>
+                                            {/* Lucide icon for Level-1 column */}
+                                            {(() => { const L1I = getCategoryLucideIcon(cat.slug, cat.name); return <L1I size={16} className={`flex-shrink-0 ${active ? color.text : 'text-slate-400'}`} /> })()
+                                            }
                                             <span className="truncate flex-1">{cat.name}</span>
                                             {level2Categories.length > 0 && active && (
                                                 <ChevronRight size={12} className="text-green-500 flex-shrink-0" />

@@ -8,7 +8,8 @@ import { useDispatch, useSelector } from "react-redux"
 import { setProduct } from "@/lib/features/product/productSlice"
 import { useSearch } from "@/context/SearchContext"
 import useSWR from 'swr'
-import { getCategoryIcon, getCategoryColor } from "@/components/CategoryIcons"
+import { getCategoryLucideIcon, getCategoryColor } from "@/components/CategoryIcons"
+import { ShoppingCart as AllIcon } from 'lucide-react'
 
 function StarRating({ rating }) {
     return (
@@ -257,7 +258,9 @@ function CategorySidebar({ categories, activeSlug, onSelect, filters, setFilters
                         className={`flex items-center gap-2 w-full pl-4 pr-6 py-2.5 text-sm transition-colors text-left
                             ${!activeSlug ? 'text-green-600 font-bold' : 'text-slate-700 hover:bg-slate-50'}`}
                     >
-                        🛒 All Products
+                        {/* Lucide icon replaces 🛒 emoji for consistency */}
+                        <AllIcon size={16} className="flex-shrink-0" />
+                        All Products
                     </button>
 
                     {level1.map((cat, idx) => {
@@ -268,7 +271,8 @@ function CategorySidebar({ categories, activeSlug, onSelect, filters, setFilters
                             level3.filter(c => c.parentId === s.id).some(t => t.slug === activeSlug)
                         )
                         const isExpanded = expanded[cat.id] || hasActiveSub || isActive
-                        const icon = getCategoryIcon(cat.slug, cat.name)
+                        // Resolve Lucide icon component for this Level-1 category
+                        const CatIcon = getCategoryLucideIcon(cat.slug, cat.name)
 
                         return (
                             <div key={cat.id}>
@@ -280,7 +284,8 @@ function CategorySidebar({ categories, activeSlug, onSelect, filters, setFilters
                                     className={`flex items-center gap-2 w-full pl-4 pr-6 py-2.5 text-sm transition-colors text-left
                                         ${isActive || hasActiveSub ? 'text-green-600 font-bold' : 'text-slate-700 hover:bg-slate-50'}`}
                                 >
-                                    <span className="text-base">{icon}</span>
+                                    {/* Lucide icon – vector, scales cleanly, no OS variation */}
+                                    <CatIcon size={16} className="flex-shrink-0" />
                                     <span className="flex-1 truncate">{cat.name}</span>
                                     {subs.length > 0 && (
                                         <ChevronDown
@@ -427,7 +432,8 @@ function ShopContent() {
     const activeCat = categories.find(c => c.slug === category)
 
     // Category icon for breadcrumb
-    const catIcon = activeCat ? getCategoryIcon(activeCat.slug, activeCat.name) : null
+    // Resolve Lucide icon component for the active breadcrumb category
+    const ActiveCatIcon = activeCat ? getCategoryLucideIcon(activeCat.slug, activeCat.name) : null
 
     return (
         <div className="min-h-[70vh] mx-4 sm:mx-6">
@@ -446,7 +452,8 @@ function ShopContent() {
                         <>
                             <ChevronRight size={14} className="text-slate-300" />
                             <span className="flex items-center gap-1.5 text-sm font-medium text-slate-700">
-                                {catIcon && <span>{catIcon}</span>}
+                                {/* Render Lucide icon component, not emoji string */}
+                                {ActiveCatIcon && <ActiveCatIcon size={14} className="text-slate-500" />}
                                 {activeCat.name}
                             </span>
                         </>
@@ -496,7 +503,8 @@ function ShopContent() {
                                     onClick={() => router.push('/shop')}
                                     className="flex items-center gap-1.5 text-xs bg-green-50 border border-green-200 text-green-700 rounded-full px-3 py-1.5 hover:bg-green-100 transition"
                                 >
-                                    {catIcon && <span>{catIcon}</span>}
+                                    {/* Category chip: show Lucide icon if resolved */}
+                                    {ActiveCatIcon && <ActiveCatIcon size={12} />}
                                     {activeCat?.name || category}
                                     <X size={12} />
                                 </button>

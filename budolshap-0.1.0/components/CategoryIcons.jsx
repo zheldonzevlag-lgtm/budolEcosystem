@@ -1,49 +1,135 @@
-// Category icon mappings - emoji icons for common categories
-// Also supports professional icons from Lucide
-import { Smartphone, Laptop, Camera, Headphones, Tv, Watch, Shirt, ShoppingBag, Gem, Glasses, Crown, Hat, Home, Sofa, Utensils, Blend, Lamp, Wrench, Heart, Droplets, Sparkles, UtensilsCrossed, Dumbbell, Baby, BookOpen, Car, Dog, Flower2, Plane, Briefcase, Scissors, Palette, Gamepad2, Music, Package, Package2, Box, Archive, ShoppingCart, Store, Users, Star, Gift, Tag, Layers, Grid, List } from 'lucide-react'
+/**
+ * CategoryIcons.jsx
+ *
+ * WHY THIS FILE EXISTS:
+ *   Centralises all category icon logic for the BudolShap platform.
+ *   Previously used emojis which look inconsistent across OS / browsers
+ *   and appear unprofessional in a marketplace context.
+ *
+ * WHAT IT DOES:
+ *   - Maps every known category slug / name to a Lucide React icon component.
+ *   - Exports a `getCategoryLucideIcon(slug, name)` function that returns
+ *     the best-matching Lucide component (falls back to `Package`).
+ *   - Exports `renderCategoryIcon(slug, name, className)` for easy JSX rendering.
+ *   - Keeps `categoryColors` and `getCategoryColor()` for consistent colour theming.
+ *   - Retains the PROFESSIONAL_ICON_MAP used by the admin icon-picker.
+ *
+ * TODO:
+ *   - When the Category DB model gains an `icon` field that stores a Lucide
+ *     icon name, this file should be the single source of truth for resolving
+ *     that name to a component (use `resolveIconByName`).
+ */
 
+import {
+    // Electronics
+    Smartphone, Laptop, Camera, Headphones, Tv, Watch, Gamepad2, Monitor, Keyboard, Mouse, Tablet, Speaker,
+    // Fashion
+    Shirt, ShoppingBag, Gem, Glasses, Crown, Hat, Scissors, Footprints,
+    // Home & Living
+    Home, Sofa, Utensils, Blend, Lamp, Wrench, BedDouble,
+    // Health & Beauty
+    Heart, Droplets, Sparkles,
+    // Food & Grocery
+    UtensilsCrossed, ShoppingCart, Coffee, Apple,
+    // Sports & Outdoors
+    Dumbbell, Bike, Waves, Tent,
+    // Toys, Games & Hobbies
+    Baby, Blocks, Puzzle, Dice5,
+    // Books & Media
+    BookOpen, Music, Film,
+    // Automotive
+    Car,
+    // Pets
+    Dog, Cat, PawPrint,
+    // Garden & Outdoors
+    Flower2, Sprout, TreePine,
+    // Travel
+    Plane, Luggage,
+    // Office & Business
+    Briefcase, Archive, Printer,
+    // Art & Craft
+    Palette,
+    // General / fallback
+    Package, Package2, Box, Store, Tag, Gift, Star, Users, Layers, Grid, List, TrendingUp,
+} from 'lucide-react'
+
+// ─── PROFESSIONAL ICON MAP ────────────────────────────────────────────────────
+// Used by the admin Category editor icon-picker.
+// Key = display name shown in the picker UI.
 export const PROFESSIONAL_ICON_MAP = {
     'Smartphone': Smartphone,
     'Laptop': Laptop,
     'Camera': Camera,
     'Headphones': Headphones,
     'TV': Tv,
+    'Monitor': Monitor,
     'Watch': Watch,
+    'Gamepad': Gamepad2,
+    'Tablet': Tablet,
+    'Speaker': Speaker,
+    'Keyboard': Keyboard,
+    // Fashion
     'Shirt': Shirt,
     'Shopping Bag': ShoppingBag,
     'Jewelry': Gem,
     'Glasses': Glasses,
     'Crown': Crown,
     'Hat': Hat,
+    'Scissors': Scissors,
+    'Footprints': Footprints,
+    // Home & Living
     'Home': Home,
     'Sofa': Sofa,
     'Kitchen': Utensils,
     'Blender': Blend,
     'Lamp': Lamp,
     'Tools': Wrench,
+    'Bed': BedDouble,
+    // Health & Beauty
     'Heart': Heart,
     'Droplets': Droplets,
     'Sparkles': Sparkles,
     'Spa': Sparkles,
+    // Food
     'Food': UtensilsCrossed,
-    'Coffee': Utensils,
-    'Restaurant': Utensils,
+    'Coffee': Coffee,
+    'Restaurant': UtensilsCrossed,
+    'Grocery': ShoppingCart,
+    // Sports
     'Fitness': Dumbbell,
     'Sports': Dumbbell,
+    'Cycling': Bike,
+    'Swimming': Waves,
+    'Camping': Tent,
+    // Kids & Toys
     'Baby': Baby,
-    'Toys': Package2,
+    'Toys': Blocks,
+    'Puzzle': Puzzle,
+    // Books & Media
     'Books': BookOpen,
     'Music': Music,
-    'Movies': Tv,
+    'Movies': Film,
+    // Automotive
     'Car': Car,
-    'Pets': Dog,
+    // Pets
+    'Pets': PawPrint,
+    'Dog': Dog,
+    'Cat': Cat,
+    // Garden
     'Garden': Flower2,
+    'Plants': Sprout,
+    // Travel
     'Travel': Plane,
+    'Luggage': Luggage,
+    // Office & Business
     'Office': Briefcase,
     'Business': Briefcase,
     'Stationery': Archive,
+    'Printer': Printer,
+    // Art & Craft
     'Art': Palette,
     'Craft': Scissors,
+    // General
     'Store': Store,
     'Cart': ShoppingCart,
     'Tag': Tag,
@@ -55,141 +141,198 @@ export const PROFESSIONAL_ICON_MAP = {
     'List': List,
     'Package': Package,
     'Box': Box,
+    'Trending': TrendingUp,
 }
 
-export const getCategoryIcon = (slug, name) => {
+// ─── SLUG → LUCIDE ICON MAP ───────────────────────────────────────────────────
+// Maps category slugs (and name keywords) to Lucide icon components.
+// This replaces the old emoji-based getCategoryIcon() function.
+const SLUG_ICON_MAP = {
+    // ── Electronics & Gadgets ─────────────────────────────────────────────────
+    'electronics': Tv,
+    'gadgets': Smartphone,
+    'mobile': Smartphone,
+    'phones': Smartphone,
+    'smartphones': Smartphone,
+    'laptop': Laptop,
+    'laptops': Laptop,
+    'computers': Monitor,
+    'computer': Monitor,
+    'tablets': Tablet,
+    'tablet': Tablet,
+    'camera': Camera,
+    'cameras': Camera,
+    'headphones': Headphones,
+    'earphones': Headphones,
+    'earbuds': Headphones,
+    'speakers': Speaker,
+    'audio': Music,
+    'mouse': Mouse,
+    'keyboard': Keyboard,
+    'monitor': Monitor,
+    'tv': Tv,
+    'television': Tv,
+    'gaming': Gamepad2,
+    'watch': Watch,
+    'watches': Watch,
+    'smartwatch': Watch,
+    'home-theater': Tv,
+    'cleaner': Wrench,
+
+    // ── Fashion ───────────────────────────────────────────────────────────────
+    'fashion': ShoppingBag,
+    'clothing': Shirt,
+    'clothes': Shirt,
+    'shirts': Shirt,
+    'tops': Shirt,
+    'bottoms': Shirt,
+    'pants': Shirt,
+    'jeans': Shirt,
+    'dresses': ShoppingBag,
+    'shoes': Footprints,
+    'footwear': Footprints,
+    'sneakers': Footprints,
+    'bags': ShoppingBag,
+    'handbags': ShoppingBag,
+    'accessories': Gem,
+    'jewelry': Gem,
+    'sunglasses': Glasses,
+    'hats': Hat,
+    'caps': Hat,
+    'underwear': Shirt,
+    'swimwear': Waves,
+
+    // ── Home & Living ─────────────────────────────────────────────────────────
+    'home': Home,
+    'home-living': Home,
+    'furniture': Sofa,
+    'kitchen': Utensils,
+    'appliances': Home,
+    'home-appliances': Home,
+    'decoration': Flower2,
+    'decor': Flower2,
+    'bedding': BedDouble,
+    'lighting': Lamp,
+    'tools': Wrench,
+
+    // ── Health & Beauty ───────────────────────────────────────────────────────
+    'health': Heart,
+    'beauty': Sparkles,
+    'beauty-personal-care': Sparkles,
+    'personal-care': Droplets,
+    'skincare': Droplets,
+    'makeup': Sparkles,
+    'cosmetics': Sparkles,
+    'wellness': Heart,
+    'vitamins': Heart,
+    'supplements': Heart,
+
+    // ── Food & Grocery ────────────────────────────────────────────────────────
+    'food': UtensilsCrossed,
+    'food-groceries': ShoppingCart,
+    'food-grocery': ShoppingCart,
+    'grocery': ShoppingCart,
+    'groceries': ShoppingCart,
+    'snacks': Apple,
+    'beverages': Coffee,
+    'drinks': Coffee,
+
+    // ── Sports & Outdoors ─────────────────────────────────────────────────────
+    'sports': Dumbbell,
+    'sports-outdoors': Dumbbell,
+    'outdoor': Tent,
+    'outdoors': Tent,
+    'fitness': Dumbbell,
+    'gym': Dumbbell,
+    'cycling': Bike,
+    'swimming': Waves,
+
+    // ── Toys, Games & Hobbies ─────────────────────────────────────────────────
+    'toys': Blocks,
+    'toys-games-hobbies': Blocks,
+    'games': Dice5,
+    'hobbies': Puzzle,
+    'kids': Baby,
+    'baby': Baby,
+    'children': Baby,
+    'baby-kids': Baby,
+
+    // ── Books & Media ─────────────────────────────────────────────────────────
+    'books': BookOpen,
+    'book': BookOpen,
+    'music': Music,
+    'movies': Film,
+
+    // ── Automotive ────────────────────────────────────────────────────────────
+    'automotive': Car,
+    'car': Car,
+    'motors': Car,
+
+    // ── Pets ──────────────────────────────────────────────────────────────────
+    'pets': PawPrint,
+    'pet-supplies': PawPrint,
+
+    // ── Garden ────────────────────────────────────────────────────────────────
+    'garden': Flower2,
+
+    // ── Travel ────────────────────────────────────────────────────────────────
+    'travel': Plane,
+
+    // ── Office & Business ─────────────────────────────────────────────────────
+    'office': Briefcase,
+    'stationery': Archive,
+    'craft': Scissors,
+    'art': Palette,
+
+    // ── "All" shortcut ─────────────────────────────────────────────────────────
+    'all': ShoppingCart,
+}
+
+// ─── PUBLIC API ───────────────────────────────────────────────────────────────
+
+/**
+ * getCategoryLucideIcon
+ *
+ * Returns the best-matching Lucide React component for a given category slug
+ * or name. Falls back to the generic `Package` icon when nothing matches.
+ *
+ * @param {string} slug   - URL slug (preferred, e.g. "home-living")
+ * @param {string} name   - Human-readable name (fallback key)
+ * @returns {React.ComponentType} Lucide icon component
+ */
+export const getCategoryLucideIcon = (slug, name) => {
     const key = (slug || name || '').toLowerCase()
 
-    const iconMap = {
-        // Electronics & Gadgets
-        'electronics': '🖥️',
-        'gadgets': '📱',
-        'mobile': '📱',
-        'phones': '📱',
-        'smartphones': '📱',
-        'laptop': '💻',
-        'laptops': '💻',
-        'computers': '💻',
-        'computer': '💻',
-        'tablets': '📲',
-        'tablet': '📲',
-        'camera': '📷',
-        'cameras': '📷',
-        'headphones': '🎧',
-        'earphones': '🎧',
-        'earbuds': '🎵',
-        'speakers': '🔊',
-        'audio': '🎵',
-        'mouse': '🖱️',
-        'keyboard': '⌨️',
-        'monitor': '🖥️',
-        'tv': '📺',
-        'television': '📺',
-        'gaming': '🎮',
-        'watch': '⌚',
-        'watches': '⌚',
-        'smartwatch': '⌚',
-        'pen': '✏️',
-        'theater': '🎬',
-        'home-theater': '🎬',
-        'cleaner': '🧹',
-        'robot-cleaner': '🤖',
-        // Fashion
-        'fashion': '👗',
-        'clothing': '👕',
-        'clothes': '👕',
-        'shirts': '👕',
-        'tops': '👚',
-        'bottoms': '👖',
-        'pants': '👖',
-        'jeans': '👖',
-        'dresses': '👗',
-        'shoes': '👟',
-        'footwear': '👟',
-        'sneakers': '👟',
-        'bags': '👜',
-        'handbags': '👜',
-        'accessories': '💍',
-        'jewelry': '💍',
-        'watches-fashion': '⌚',
-        'sunglasses': '🕶️',
-        'hats': '🧢',
-        'caps': '🧢',
-        'underwear': '🩲',
-        'swimwear': '🩱',
-        // Home & Living
-        'home': '🏠',
-        'home-living': '🏠',
-        'furniture': '🛋️',
-        'kitchen': '🍳',
-        'appliances': '🏠',
-        'home-appliances': '🏠',
-        'decoration': '🪴',
-        'decor': '🪴',
-        'bedding': '🛏️',
-        'lighting': '💡',
-        'tools': '🔧',
-        // Health & Beauty
-        'health': '💊',
-        'beauty': '💄',
-        'skincare': '🧴',
-        'makeup': '💄',
-        'cosmetics': '💄',
-        'wellness': '💆',
-        'vitamins': '💊',
-        'supplements': '💊',
-        // Food & Grocery
-        'food': '🥘',
-        'grocery': '🛒',
-        'groceries': '🛒',
-        'snacks': '🍿',
-        'beverages': '🥤',
-        'drinks': '🥤',
-        // Sports & Outdoors
-        'sports': '⚽',
-        'outdoor': '🏕️',
-        'outdoors': '🏕️',
-        'fitness': '💪',
-        'gym': '💪',
-        'cycling': '🚲',
-        'swimming': '🏊',
-        // Toys & Kids
-        'toys': '🧸',
-        'kids': '🧒',
-        'baby': '👶',
-        'children': '🧒',
-        // Books & Media
-        'books': '📚',
-        'book': '📚',
-        'music': '🎵',
-        'movies': '🎬',
-        // Automotive
-        'automotive': '🚗',
-        'car': '🚗',
-        'motors': '🏍️',
-        // Others
-        'pets': '🐾',
-        'garden': '🌱',
-        'travel': '✈️',
-        'office': '💼',
-        'stationery': '📎',
-        'craft': '✂️',
-        'art': '🎨',
-    }
+    // 1. Exact slug match
+    if (SLUG_ICON_MAP[key]) return SLUG_ICON_MAP[key]
 
-    // Direct match
-    if (iconMap[key]) return iconMap[key]
-
-    // Partial match
-    for (const [k, icon] of Object.entries(iconMap)) {
+    // 2. Partial match – slug contains a known key or vice versa
+    for (const [k, icon] of Object.entries(SLUG_ICON_MAP)) {
         if (key.includes(k) || k.includes(key)) return icon
     }
 
-    // Default
-    return '📦'
+    // 3. Default fallback
+    return Package
 }
 
-// Color palettes for categories (cycles through)
+/**
+ * renderCategoryIcon
+ *
+ * Renders a Lucide icon for a category slug / name in JSX.
+ *
+ * @param {string} slug
+ * @param {string} name
+ * @param {string} className  Tailwind / CSS classes forwarded to the SVG
+ * @returns {JSX.Element}
+ */
+export const renderCategoryIcon = (slug, name, className = 'w-6 h-6') => {
+    const IconComponent = getCategoryLucideIcon(slug, name)
+    return <IconComponent className={className} />
+}
+
+// ─── COLOUR PALETTE ───────────────────────────────────────────────────────────
+// Cycles through these palettes based on array index so each category tile
+// has a unique, harmonious background/text pairing.
 export const categoryColors = [
     { bg: 'bg-orange-50', hover: 'hover:bg-orange-100', text: 'text-orange-600', border: 'border-orange-100' },
     { bg: 'bg-blue-50', hover: 'hover:bg-blue-100', text: 'text-blue-600', border: 'border-blue-100' },
@@ -205,15 +348,43 @@ export const categoryColors = [
 
 export const getCategoryColor = (index) => categoryColors[index % categoryColors.length]
 
-// Get professional Lucide icon component by name
-export const getProfessionalIcon = (iconName) => {
+// ─── ADMIN ICON PICKER HELPERS ────────────────────────────────────────────────
+
+/**
+ * resolveIconByName
+ *
+ * Look up a Lucide icon component by its display name (as stored in the DB
+ * `icon` field).  Used by admin pages that store a chosen icon name.
+ *
+ * @param {string} iconName
+ * @returns {React.ComponentType|null}
+ */
+export const resolveIconByName = (iconName) => {
     if (!iconName) return null
     return PROFESSIONAL_ICON_MAP[iconName] || null
 }
 
-// Render professional icon with className
-export const renderProfessionalIcon = (iconName, className = "w-5 h-5") => {
-    const IconComponent = getProfessionalIcon(iconName)
+/**
+ * renderIconByName
+ *
+ * Convenience wrapper – renders a named Lucide icon in JSX.
+ *
+ * @param {string} iconName
+ * @param {string} className
+ * @returns {JSX.Element|null}
+ */
+export const renderIconByName = (iconName, className = 'w-5 h-5') => {
+    const IconComponent = resolveIconByName(iconName)
     if (!IconComponent) return null
     return <IconComponent className={className} />
 }
+
+// ─── LEGACY SHIMS ─────────────────────────────────────────────────────────────
+// These deprecated aliases keep old callers from breaking while we migrate.
+// TODO: Remove once all call-sites are updated to use the new API.
+
+/** @deprecated Use getCategoryLucideIcon() instead */
+export const getProfessionalIcon = resolveIconByName
+
+/** @deprecated Use renderIconByName() instead */
+export const renderProfessionalIcon = renderIconByName

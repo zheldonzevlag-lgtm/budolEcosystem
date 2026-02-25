@@ -6,7 +6,7 @@ import Loading from "@/components/Loading"
 import { useAuth } from "@/context/AuthContext"
 import { useRouter } from "next/navigation"
 import { Edit, Trash2, Plus } from "lucide-react"
-import { getCategoryIcon } from "@/components/CategoryIcons"
+import { getCategoryLucideIcon } from "@/components/CategoryIcons"
 
 // Helper function to convert HTML to plain text and truncate
 const formatDescription = (html, maxLength = 50) => {
@@ -196,7 +196,8 @@ export default function StoreManageProducts() {
                                 <td className="px-4 py-3 hidden sm:table-cell align-middle">
                                     {product.category ? (
                                         <span className="inline-flex items-center gap-1.5 bg-slate-100 text-slate-600 text-xs px-2.5 py-1 rounded-full font-medium">
-                                            <span>{getCategoryIcon(product.categorySlug || product.category, product.category)}</span>
+                                            {/* Lucide icon replaces emoji for the product category badge */}
+                                            {(() => { const MI = getCategoryLucideIcon(product.categorySlug || product.category, product.category); return <MI size={14} className="text-slate-500 flex-shrink-0" /> })()}
                                             <span className="truncate max-w-[80px]">{product.category}</span>
                                         </span>
                                     ) : (

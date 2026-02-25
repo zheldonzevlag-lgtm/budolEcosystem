@@ -1,10 +1,26 @@
+/**
+ * CategoriesSection.jsx
+ *
+ * WHY THIS EXISTS:
+ *   Renders the "Shop by Category" tiles on the public homepage.
+ *   Previously displayed emoji icons which were inconsistent across
+ *   browsers/OS and looked unprofessional.
+ *
+ * WHAT IT DOES:
+ *   - Fetches only Level-1 (top-level) categories from the API.
+ *   - Renders each as a coloured tile with a Lucide React icon and label.
+ *   - Falls back to a static list of categories when the DB is empty.
+ *   - Includes an "All Categories" tile that links to /shop.
+ */
+
 'use client'
 
 import { useState, useEffect } from 'react'
 import Link from 'next/link'
-import { getCategoryIcon, getCategoryColor } from '@/components/CategoryIcons'
-import { ChevronRight, LayoutGrid } from 'lucide-react'
+import { getCategoryLucideIcon, getCategoryColor } from '@/components/CategoryIcons'
+import { ChevronRight, LayoutGrid, ShoppingCart } from 'lucide-react'
 
+// ─── Loading skeleton ─────────────────────────────────────────────────────────
 const CategoriesSkeleton = () => (
     <div className="grid grid-cols-5 sm:grid-cols-6 md:grid-cols-8 lg:grid-cols-10 gap-3 mt-4">
         {Array(10).fill(0).map((_, i) => (
@@ -16,6 +32,7 @@ const CategoriesSkeleton = () => (
     </div>
 )
 
+// ─── Main component ───────────────────────────────────────────────────────────
 export default function CategoriesSection() {
     const [categories, setCategories] = useState([])
     const [loading, setLoading] = useState(true)
@@ -26,7 +43,7 @@ export default function CategoriesSection() {
             .then(r => r.json())
             .then(data => {
                 if (Array.isArray(data)) {
-                    // Only show level 1 categories (top-level)
+                    // Only show Level-1 (main) categories on the homepage
                     const top = data.filter(c => c.level === 1)
                     setCategories(top)
                 }
@@ -35,14 +52,13 @@ export default function CategoriesSection() {
             .finally(() => setLoading(false))
     }, [])
 
-    // Decide how many to show
     const MAX_VISIBLE = 10
     const visible = showAll ? categories : categories.slice(0, MAX_VISIBLE)
     const hasMore = categories.length > MAX_VISIBLE
 
     return (
         <section className="max-w-7xl mx-auto px-6 py-6">
-            {/* Header */}
+            {/* ── Header ── */}
             <div className="flex items-center justify-between mb-4">
                 <div className="flex items-center gap-2">
                     <LayoutGrid size={20} className="text-green-600" />
@@ -64,19 +80,21 @@ export default function CategoriesSection() {
                 )}
             </div>
 
-            {/* Divider */}
+            {/* Decorative divider */}
             <div className="h-px bg-gradient-to-r from-green-500 via-green-200 to-transparent mb-5" />
 
+            {/* ── Content ── */}
             {loading ? (
                 <CategoriesSkeleton />
             ) : categories.length === 0 ? (
-                /* Fallback: static categories if DB is empty */
+                /* Fallback: static categories when DB is empty */
                 <FallbackCategories />
             ) : (
                 <div className="grid grid-cols-5 sm:grid-cols-6 md:grid-cols-8 lg:grid-cols-10 gap-2">
                     {visible.map((cat, idx) => {
                         const color = getCategoryColor(idx)
-                        const icon = getCategoryIcon(cat.slug, cat.name)
+                        // Resolve the Lucide icon component for this category
+                        const IconComponent = getCategoryLucideIcon(cat.slug, cat.name)
                         return (
                             <Link
                                 key={cat.id}
@@ -88,8 +106,9 @@ export default function CategoriesSection() {
                                     transition-all duration-200 active:scale-95 cursor-pointer
                                 `}
                             >
-                                <span className="text-2xl sm:text-3xl leading-none select-none">
-                                    {icon}
+                                {/* Lucide icon – replaces emojis for cross-platform consistency */}
+                                <span className={`flex items-center justify-center w-8 h-8 ${color.text}`}>
+                                    <IconComponent className="w-6 h-6 sm:w-7 sm:h-7" />
                                 </span>
                                 <span className={`
                                     text-[10px] sm:text-xs font-medium text-center leading-tight
@@ -102,14 +121,16 @@ export default function CategoriesSection() {
                         )
                     })}
 
-                    {/* "All Categories" tile */}
+                    {/* "All" tile */}
                     <Link
                         href="/shop"
                         className="flex flex-col items-center gap-1.5 p-2 sm:p-3 rounded-xl
                             border border-dashed border-slate-200 bg-slate-50 hover:bg-slate-100
                             transition-all duration-200 active:scale-95 cursor-pointer group"
                     >
-                        <span className="text-2xl sm:text-3xl leading-none select-none">🛒</span>
+                        <span className="flex items-center justify-center w-8 h-8 text-slate-500">
+                            <ShoppingCart className="w-6 h-6 sm:w-7 sm:h-7" />
+                        </span>
                         <span className="text-[10px] sm:text-xs font-medium text-center text-slate-500 group-hover:text-slate-700 leading-tight">
                             All
                         </span>
@@ -120,46 +141,55 @@ export default function CategoriesSection() {
     )
 }
 
-// Fallback static categories when DB is empty
+// ─── Fallback static categories (DB empty) ────────────────────────────────────
+// WHY: Ensures the homepage always shows something meaningful even before
+// any categories have been seeded into the database.
 function FallbackCategories() {
     const fallback = [
-        { name: 'Electronics', slug: 'electronics', icon: '🖥️', color: getCategoryColor(0) },
-        { name: 'Fashion', slug: 'fashion', icon: '👗', color: getCategoryColor(1) },
-        { name: 'Home & Living', slug: 'home-living', icon: '🏠', color: getCategoryColor(2) },
-        { name: 'Health & Beauty', slug: 'health-beauty', icon: '💄', color: getCategoryColor(3) },
-        { name: 'Sports', slug: 'sports', icon: '⚽', color: getCategoryColor(4) },
-        { name: 'Toys & Kids', slug: 'toys', icon: '🧸', color: getCategoryColor(5) },
-        { name: 'Food & Grocery', slug: 'food', icon: '🥘', color: getCategoryColor(6) },
-        { name: 'Books', slug: 'books', icon: '📚', color: getCategoryColor(7) },
-        { name: 'Automotive', slug: 'automotive', icon: '🚗', color: getCategoryColor(8) },
-        { name: 'Pets', slug: 'pets', icon: '🐾', color: getCategoryColor(9) },
+        { name: 'Electronics', slug: 'electronics', color: getCategoryColor(0) },
+        { name: 'Fashion', slug: 'fashion', color: getCategoryColor(1) },
+        { name: 'Home & Living', slug: 'home-living', color: getCategoryColor(2) },
+        { name: 'Health & Beauty', slug: 'beauty-personal-care', color: getCategoryColor(3) },
+        { name: 'Sports', slug: 'sports-outdoors', color: getCategoryColor(4) },
+        { name: 'Toys & Kids', slug: 'toys-games-hobbies', color: getCategoryColor(5) },
+        { name: 'Food & Grocery', slug: 'food-groceries', color: getCategoryColor(6) },
+        { name: 'Books', slug: 'books', color: getCategoryColor(7) },
+        { name: 'Automotive', slug: 'automotive', color: getCategoryColor(8) },
+        { name: 'Pets', slug: 'pet-supplies', color: getCategoryColor(9) },
     ]
 
     return (
         <div className="grid grid-cols-5 sm:grid-cols-6 md:grid-cols-8 lg:grid-cols-10 gap-2">
-            {fallback.map((cat, idx) => (
-                <Link
-                    key={idx}
-                    href={`/shop?category=${cat.slug}`}
-                    className={`
-                        group flex flex-col items-center gap-1.5 p-2 sm:p-3 rounded-xl
-                        border border-transparent ${cat.color.bg} ${cat.color.hover}
-                        hover:shadow-sm transition-all duration-200 active:scale-95
-                    `}
-                >
-                    <span className="text-2xl sm:text-3xl leading-none select-none">{cat.icon}</span>
-                    <span className="text-[10px] sm:text-xs font-medium text-center text-slate-600 group-hover:text-slate-800 leading-tight line-clamp-2">
-                        {cat.name}
-                    </span>
-                </Link>
-            ))}
+            {fallback.map((cat, idx) => {
+                const IconComponent = getCategoryLucideIcon(cat.slug, cat.name)
+                return (
+                    <Link
+                        key={idx}
+                        href={`/shop?category=${cat.slug}`}
+                        className={`
+                            group flex flex-col items-center gap-1.5 p-2 sm:p-3 rounded-xl
+                            border border-transparent ${cat.color.bg} ${cat.color.hover}
+                            hover:shadow-sm transition-all duration-200 active:scale-95
+                        `}
+                    >
+                        <span className={`flex items-center justify-center w-8 h-8 ${cat.color.text}`}>
+                            <IconComponent className="w-6 h-6 sm:w-7 sm:h-7" />
+                        </span>
+                        <span className="text-[10px] sm:text-xs font-medium text-center text-slate-600 group-hover:text-slate-800 leading-tight line-clamp-2">
+                            {cat.name}
+                        </span>
+                    </Link>
+                )
+            })}
             <Link
                 href="/shop"
                 className="flex flex-col items-center gap-1.5 p-2 sm:p-3 rounded-xl
                     border border-dashed border-slate-200 bg-slate-50 hover:bg-slate-100
                     transition-all duration-200 active:scale-95 cursor-pointer group"
             >
-                <span className="text-2xl sm:text-3xl leading-none">🛒</span>
+                <span className="flex items-center justify-center w-8 h-8 text-slate-500">
+                    <ShoppingCart className="w-6 h-6 sm:w-7 sm:h-7" />
+                </span>
                 <span className="text-[10px] sm:text-xs font-medium text-center text-slate-500 group-hover:text-slate-700 leading-tight">All</span>
             </Link>
         </div>
