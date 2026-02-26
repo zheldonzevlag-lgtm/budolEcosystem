@@ -33,17 +33,21 @@ const Hero = () => {
             setBestSellingProduct(bestProduct)
 
             // Calculate max discount product
-            const maxDiscount = [...products].sort((a, b) => {
-                const discountA = ((a.mrp - a.price) / a.mrp) * 100
-                const discountB = ((b.mrp - b.price) / b.mrp) * 100
-                return discountB - discountA
-            })[0]
+            const maxDiscount = [...products]
+                .filter(p => p.mrp > p.price) // Only products with a discount
+                .sort((a, b) => {
+                    const discountA = ((a.mrp - a.price) / a.mrp) * 100
+                    const discountB = ((b.mrp - b.price) / b.mrp) * 100
+                    return discountB - discountA
+                })[0]
             setMaxDiscountProduct(maxDiscount)
 
             // Calculate max discount percentage
-            if (maxDiscount) {
+            if (maxDiscount && maxDiscount.mrp > 0) {
                 const percentage = Math.round(((maxDiscount.mrp - maxDiscount.price) / maxDiscount.mrp) * 100)
                 setMaxDiscountPercentage(percentage)
+            } else {
+                setMaxDiscountPercentage(0)
             }
 
             // Calculate min price
@@ -139,7 +143,7 @@ const Hero = () => {
                     >
                         <Link href={mounted && maxDiscountProduct ? `/product/${maxDiscountProduct.id}` : '/shop'} className='flex h-full items-center justify-between w-full bg-blue-200 rounded-3xl p-6 px-8 group cursor-pointer shadow-sm hover:shadow-md transition-shadow'>
                             <div>
-                                <p className='text-xl sm:text-2xl font-medium bg-gradient-to-r from-slate-800 to-[#78B2FF] bg-clip-text text-transparent max-w-40'>{mounted ? maxDiscountPercentage : 0}% discounts</p>
+                                <p className='text-xl sm:text-2xl font-medium bg-gradient-to-r from-slate-800 to-[#78B2FF] bg-clip-text text-transparent max-w-40'>{mounted ? (maxDiscountPercentage || 0) : 0}% discounts</p>
                                 <p className='flex items-center gap-1 mt-4'>View more <ArrowRightIcon className='group-hover:ml-2 transition-all' size={18} /> </p>
                             </div>
                             {isLoading && !maxDiscountProduct ? (
