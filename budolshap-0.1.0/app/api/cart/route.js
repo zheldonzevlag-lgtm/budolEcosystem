@@ -61,7 +61,7 @@ export async function PUT(request) {
         console.log('[CART API] PUT request received for userId:', userId, 'cart payload:', cart);
 
         // Use transaction to replace cart items atomically
-        await prisma.$transaction(async (tx) => {
+        const cartObj = await prisma.$transaction(async (tx) => {
             // Ensure cart exists
             let userCart = await tx.cart.findUnique({ where: { userId } });
             if (!userCart) {
@@ -73,7 +73,7 @@ export async function PUT(request) {
             await tx.cartItem.deleteMany({ where: { cartId: userCart.id } });
 
             // Prepare new items
-            const cartItems = Object.entries(cart).map(([key, quantity]) => {
+            const rawCartItems = Object.entries(cart).map(([key, quantity]) => {
                 const parts = key.split('_');
                 const productId = parts[0];
                 const variationId = parts.length > 1 ? parts.slice(1).join('_') : null;
@@ -86,24 +86,39 @@ export async function PUT(request) {
                 };
             });
 
+            // Filter out items where the product no longer exists to prevent foreign key violations
+            const productIds = [...new Set(rawCartItems.map(item => item.productId))];
+            const existingProducts = await tx.product.findMany({
+                where: { id: { in: productIds } },
+                select: { id: true }
+            });
+            const existingProductIds = new Set(existingProducts.map(p => p.id));
+
+            const cartItems = rawCartItems.filter(item => existingProductIds.has(item.productId));
+
+            if (rawCartItems.length !== cartItems.length) {
+                console.warn('[CART API] Filtered out', rawCartItems.length - cartItems.length, 'invalid product items from cart sync');
+            }
+
             if (cartItems.length > 0) {
+                // Batch insert using createMany (supported by PostgreSQL/MySQL)
+                // If using SQLite, this might need a different approach, but prisma createMany is generally safe for modern DBs
                 await tx.cartItem.createMany({ data: cartItems, skipDuplicates: true });
                 console.log('[CART API] Inserted', cartItems.length, 'items into cart');
             }
-        });
 
-        // Fetch the updated cart to return the persisted state
-        const updatedCart = await prisma.cart.findUnique({
-            where: { userId },
-            include: { items: true }
-        });
+            // Fetch updated items within the same transaction to ensure consistency
+            const items = await tx.cartItem.findMany({
+                where: { cartId: userCart.id }
+            });
 
-        // Transform to { key: quantity } format for the response
-        const cartObj = updatedCart?.items?.reduce((acc, item) => {
-            const key = item.variationId ? `${item.productId}_${item.variationId}` : item.productId;
-            acc[key] = item.quantity;
-            return acc;
-        }, {}) || {};
+            // Transform to { key: quantity } format for the response
+            return items.reduce((acc, item) => {
+                const key = item.variationId ? `${item.productId}_${item.variationId}` : item.productId;
+                acc[key] = item.quantity;
+                return acc;
+            }, {});
+        });
 
         console.log('[CART API] Updated cart response:', cartObj);
         return NextResponse.json(cartObj);

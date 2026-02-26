@@ -1,4 +1,4 @@
-import { PrismaClient } from '@prisma/client-custom-v4';
+import { PrismaClient } from '@prisma/client';
 import { configureDatabaseEnv, getDatabaseInfo, isProduction } from './db-config.js'
 
 // Configure database environment before creating Prisma Client

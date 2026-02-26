@@ -77,11 +77,13 @@ export async function POST(request) {
 
         let folder;
         if (type === 'profile') {
-            folder = `budolshap/assets/profile_images/${displayName}/${displayName}-${date}-${time}`;
+            folder = `assets/media_library/folder/budolshap/assets/profile_images/${displayName}/${displayName}-${date}-${time}`;
         } else if (uploadType === 'video') {
-            folder = `budolshap/assets/product_videos/${displayName}/${displayName}-${date}-${time}`;
+            folder = `assets/media_library/folder/budolshap/assets/product_videos/${displayName}/${displayName}-${date}-${time}`;
+        } else if (body.folder === 'stores' || type === 'store') {
+            folder = `assets/media_library/folder/budolshap/assets/stores/${displayName}/${displayName}-${date}-${time}`;
         } else {
-            folder = `budolshap/assets/products/${displayName}/${displayName}-${date}-${time}`;
+            folder = `assets/media_library/folder/budolshap/assets/products/${displayName}/${displayName}-${date}-${time}`;
         }
         await ensureFolderPath(folder)
 

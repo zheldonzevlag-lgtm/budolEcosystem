@@ -5,7 +5,7 @@ import { Plus, Trash2, Image as ImageIcon, Check, X, Eye, Loader2, Wand2 } from 
 import Image from 'next/image';
 import { toast } from 'react-hot-toast';
 
-const VariationMatrixManager = ({ initialData, onUpdate }) => {
+const VariationMatrixManager = ({ initialData, onUpdate, errors = [] }) => {
     // State for Tiers (e.g., Color, Size)
     const [tiers, setTiers] = useState(initialData?.tier_variations || [
         { name: 'Color', options: [''] }
@@ -14,6 +14,7 @@ const VariationMatrixManager = ({ initialData, onUpdate }) => {
     // State for the generated SKU Matrix
     const [matrix, setMatrix] = useState(initialData?.variation_matrix || []);
     const [parentSku, setParentSku] = useState(initialData?.parent_sku || '');
+    const [hiddenCombos, setHiddenCombos] = useState(initialData?.hidden_combos || []);
     
     // Preview Modal State
     const [previewImage, setPreviewImage] = useState(null); // { url: string, index: number, raw: File|string }
@@ -132,7 +133,7 @@ const VariationMatrixManager = ({ initialData, onUpdate }) => {
     // 3. Generate Matrix Grid based on Tiers
     useEffect(() => {
         generateMatrix();
-    }, [tiers, parentSku]);
+    }, [tiers, parentSku, hiddenCombos]);
 
     // Sync state with initialData (crucial for edit mode when data is fetched asynchronously)
     useEffect(() => {
@@ -146,6 +147,9 @@ const VariationMatrixManager = ({ initialData, onUpdate }) => {
             }
             if (initialData.parent_sku !== undefined && initialData.parent_sku !== parentSku) {
                 setParentSku(initialData.parent_sku);
+            }
+            if (initialData.hidden_combos && JSON.stringify(initialData.hidden_combos) !== JSON.stringify(hiddenCombos)) {
+                setHiddenCombos(initialData.hidden_combos);
             }
         }
     }, [initialData]);
@@ -166,31 +170,45 @@ const VariationMatrixManager = ({ initialData, onUpdate }) => {
             combinations = newCombinations;
         });
 
-        const newMatrix = combinations.map(combo => {
-            // Try to find existing data for this combo
-            const existing = matrix.find(m =>
-                JSON.stringify(m.tier_index) === JSON.stringify(combo)
-            );
+        const newMatrix = combinations
+            .filter(combo => !hiddenCombos.some(hc => JSON.stringify(hc) === JSON.stringify(combo)))
+            .map(combo => {
+                // Try to find existing data for this combo
+                const existing = matrix.find(m =>
+                    JSON.stringify(m.tier_index) === JSON.stringify(combo)
+                );
 
-            if (existing) return existing;
+                if (existing) return existing;
 
-            // Generate SKU name
-            const skuParts = combo.map((oIdx, tIdx) => validTiers[tIdx].options[oIdx]);
-            const generatedSku = `${parentSku}-${skuParts.join('-')}`.toUpperCase();
+                // Generate SKU name
+                const skuParts = combo.map((oIdx, tIdx) => validTiers[tIdx].options[oIdx]);
+                const generatedSku = `${parentSku}-${skuParts.join('-')}`.toUpperCase();
 
-            return {
-                sku: generatedSku,
-                tier_index: combo,
-                price: initialData?.price || 0,
-                mrp: initialData?.mrp || 0,
-                stock: 0,
-                image: null
-            };
-        });
+                return {
+                    sku: generatedSku,
+                    tier_index: combo,
+                    price: initialData?.price || 0,
+                    mrp: initialData?.mrp || 0,
+                    stock: 0,
+                    image: null
+                };
+            });
 
         setMatrix(newMatrix);
         isSelfUpdate.current = true;
-        onUpdate({ tier_variations: tiers, variation_matrix: newMatrix, parent_sku: parentSku });
+        onUpdate({ tier_variations: tiers, variation_matrix: newMatrix, parent_sku: parentSku, hidden_combos: hiddenCombos });
+    };
+
+    const removeMatrixItem = (index) => {
+        const itemToRemove = matrix[index];
+        const comboToHide = itemToRemove.tier_index;
+        
+        setHiddenCombos([...hiddenCombos, comboToHide]);
+        // useEffect will trigger generateMatrix and update onUpdate automatically
+    };
+
+    const restoreHiddenItems = () => {
+        setHiddenCombos([]);
     };
 
     const updateMatrixItem = (index, field, value) => {
@@ -198,7 +216,7 @@ const VariationMatrixManager = ({ initialData, onUpdate }) => {
         newMatrix[index][field] = value;
         setMatrix(newMatrix);
         isSelfUpdate.current = true;
-        onUpdate({ tier_variations: tiers, variation_matrix: newMatrix, parent_sku: parentSku });
+        onUpdate({ tier_variations: tiers, variation_matrix: newMatrix, parent_sku: parentSku, hidden_combos: hiddenCombos });
     };
 
     return (
@@ -292,7 +310,18 @@ const VariationMatrixManager = ({ initialData, onUpdate }) => {
             {/* SKU Matrix Table */}
             {matrix.length > 0 && (
                 <div className="overflow-x-auto">
-                    <h3 className="text-sm font-bold text-slate-500 uppercase mb-4">Variation Matrix</h3>
+                    <div className="flex justify-between items-center mb-4">
+                        <h3 className="text-sm font-bold text-slate-500 uppercase">Variation Matrix</h3>
+                        {hiddenCombos.length > 0 && (
+                            <button
+                                type="button"
+                                onClick={restoreHiddenItems}
+                                className="text-xs text-indigo-600 hover:text-indigo-800 font-medium transition flex items-center gap-1"
+                            >
+                                <Plus size={14} /> Restore {hiddenCombos.length} Hidden Variations
+                            </button>
+                        )}
+                    </div>
                     <table className="w-full border-collapse">
                         <thead>
                             <tr className="bg-slate-50 text-left">
@@ -302,38 +331,48 @@ const VariationMatrixManager = ({ initialData, onUpdate }) => {
                                 <th className="p-3 border border-slate-200 text-xs font-semibold text-slate-600">Stock</th>
                                 <th className="p-3 border border-slate-200 text-xs font-semibold text-slate-600">SKU</th>
                                 <th className="p-3 border border-slate-200 text-xs font-semibold text-slate-600">Image</th>
+                                <th className="p-3 border border-slate-200 text-xs font-semibold text-slate-600 text-center">Action</th>
                             </tr>
                         </thead>
                         <tbody>
-                            {matrix.map((item, idx) => (
-                                <tr key={idx} className="hover:bg-slate-50 transition">
-                                    <td className="p-3 border border-slate-200 text-sm font-medium text-slate-700">
+                            {matrix.map((item, idx) => {
+                                const rowError = Array.isArray(errors) ? errors[idx] : null;
+                                return (
+                                <tr key={idx} className={`hover:bg-slate-50 transition group ${rowError ? 'bg-red-50/50' : ''}`}>
+                                    <td className={`p-3 border border-slate-200 text-sm font-medium text-slate-700 bg-slate-50/50 ${rowError ? 'text-red-700' : ''}`}>
                                         {item.tier_index.map((oIdx, tIdx) => tiers[tIdx]?.options?.[oIdx] || '').join(' / ')}
                                     </td>
-                                    <td className="p-3 border border-slate-200">
-                                        <input
-                                            type="number"
-                                            value={item.price}
-                                            onChange={(e) => updateMatrixItem(idx, 'price', parseFloat(e.target.value))}
-                                            className="w-20 bg-transparent outline-none text-sm"
-                                            placeholder="Price"
-                                        />
+                                    <td className={`p-3 border border-slate-200 ${rowError?.price ? 'ring-1 ring-red-400' : ''}`}>
+                                        <div className="flex items-center gap-1">
+                                            <span className={`text-slate-400 text-xs ${rowError?.price ? 'text-red-400' : ''}`}>₱</span>
+                                            <input
+                                                type="number"
+                                                value={item.price}
+                                                onChange={(e) => updateMatrixItem(idx, 'price', parseFloat(e.target.value))}
+                                                className={`w-20 bg-transparent outline-none text-sm font-medium focus:bg-white focus:ring-1 ring-slate-200 rounded px-1 ${rowError?.price ? 'text-red-600' : ''}`}
+                                                placeholder="0.00"
+                                            />
+                                        </div>
                                     </td>
                                     <td className="p-3 border border-slate-200">
-                                        <input
-                                            type="number"
-                                            value={item.mrp}
-                                            onChange={(e) => updateMatrixItem(idx, 'mrp', parseFloat(e.target.value))}
-                                            className="w-20 bg-transparent outline-none text-sm"
-                                            placeholder="MRP"
-                                        />
+                                        <div className="flex items-center gap-1">
+                                            <span className="text-slate-400 text-xs">₱</span>
+                                            <input
+                                                type="number"
+                                                value={item.mrp}
+                                                onChange={(e) => updateMatrixItem(idx, 'mrp', parseFloat(e.target.value))}
+                                                className="w-20 bg-transparent outline-none text-sm text-slate-500 focus:bg-white focus:ring-1 ring-slate-200 rounded px-1"
+                                                placeholder="0.00"
+                                            />
+                                        </div>
                                     </td>
                                     <td className="p-3 border border-slate-200">
                                         <input
                                             type="number"
                                             value={item.stock}
                                             onChange={(e) => updateMatrixItem(idx, 'stock', parseInt(e.target.value))}
-                                            className="w-16 bg-transparent outline-none text-sm"
+                                            className="w-16 bg-transparent outline-none text-sm font-medium focus:bg-white focus:ring-1 ring-slate-200 rounded px-1"
+                                            placeholder="0"
                                         />
                                     </td>
                                     <td className="p-3 border border-slate-200">
@@ -341,14 +380,23 @@ const VariationMatrixManager = ({ initialData, onUpdate }) => {
                                             type="text"
                                             value={item.sku}
                                             onChange={(e) => updateMatrixItem(idx, 'sku', e.target.value)}
-                                            className="w-full bg-transparent outline-none text-xs text-slate-500"
+                                            className="w-full bg-transparent outline-none text-xs text-slate-500 focus:bg-white focus:ring-1 ring-slate-200 rounded px-1 font-mono"
+                                            placeholder="AUTO-SKU"
                                         />
                                     </td>
                                     <td className="p-3 border border-slate-200 text-center">
                                         {item.image ? (
                                             <div className="relative group w-10 h-10 mx-auto">
                                                 <Image
-                                                    src={typeof item.image === 'string' ? item.image : URL.createObjectURL(item.image)}
+                                                    src={
+                                                        typeof item.image === 'string' 
+                                                            ? item.image 
+                                                            : (item.image instanceof Blob || item.image instanceof File) 
+                                                                ? URL.createObjectURL(item.image) 
+                                                                : (item.image && typeof item.image === 'object' && item.image.url)
+                                                                    ? item.image.url
+                                                                    : ''
+                                                    }
                                                     alt="Variant"
                                                     width={40}
                                                     height={40}
@@ -365,11 +413,22 @@ const VariationMatrixManager = ({ initialData, onUpdate }) => {
                                                 {/* Hover Eye Overlay */}
                                                 <div 
                                                     className="absolute inset-0 bg-black/40 flex items-center justify-center opacity-0 group-hover:opacity-100 transition rounded cursor-pointer z-10"
-                                                    onClick={() => setPreviewImage({
-                                                        url: typeof item.image === 'string' ? item.image : URL.createObjectURL(item.image),
-                                                        index: idx,
-                                                        raw: item.image
-                                                    })}
+                                                    onClick={() => {
+                                                        let previewUrl = '';
+                                                        if (typeof item.image === 'string') {
+                                                            previewUrl = item.image;
+                                                        } else if (item.image instanceof Blob || item.image instanceof File) {
+                                                            previewUrl = URL.createObjectURL(item.image);
+                                                        } else if (item.image && typeof item.image === 'object' && item.image.url) {
+                                                            previewUrl = item.image.url;
+                                                        }
+
+                                                        setPreviewImage({
+                                                            url: previewUrl,
+                                                            index: idx,
+                                                            raw: item.image
+                                                        });
+                                                    }}
                                                 >
                                                     <Eye size={16} className="text-white" />
                                                 </div>
@@ -384,8 +443,18 @@ const VariationMatrixManager = ({ initialData, onUpdate }) => {
                                             </button>
                                         )}
                                     </td>
+                                    <td className="p-3 border border-slate-200 text-center">
+                                        <button
+                                            type="button"
+                                            onClick={() => removeMatrixItem(idx)}
+                                            className="text-slate-300 hover:text-red-500 transition-colors p-1 rounded-lg hover:bg-red-50 opacity-0 group-hover:opacity-100"
+                                            title="Hide this variation"
+                                        >
+                                            <Trash2 size={16} />
+                                        </button>
+                                    </td>
                                 </tr>
-                            ))}
+                            )})}
                         </tbody>
                     </table>
                 </div>

@@ -183,7 +183,7 @@ const Navbar = () => {
                         method: 'PUT',
                         headers: { 'Content-Type': 'application/json' },
                         body: JSON.stringify({ userId: user.id, cart: cartItems }),
-                        keepalive: true
+                        // keepalive: true // Temporarily disable to see if it affects the 500 error
                     });
                     if (!response.ok) {
                         throw new Error(`Sync failed with status: ${response.status}`);

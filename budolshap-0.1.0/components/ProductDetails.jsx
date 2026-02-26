@@ -123,9 +123,14 @@ const ProductDetails = ({ product }) => {
     // Logic for the requested "Price Range" to be shown after stock
     const priceRange = minPrice !== maxPrice ? `${currency}${minPrice.toLocaleString()} - ${currency}${maxPrice.toLocaleString()}` : null;
 
-    // Price: If selected, show SKU price. If not, show product default price (Reverted per user request)
-    const displayPrice = isSelectionComplete && currentSKU ? currentSKU.price : product.price;
-    const displayMrp = isSelectionComplete && currentSKU ? currentSKU.mrp : product.mrp;
+    // Price Logic: Prioritize variation matrix if it exists
+    const displayPrice = (isSelectionComplete && currentSKU) 
+        ? currentSKU.price 
+        : (matrix.length > 0 ? minPrice : product.price);
+
+    const displayMrp = (isSelectionComplete && currentSKU) 
+        ? currentSKU.mrp 
+        : (matrix.length > 0 ? minMrp : product.mrp);
 
     // Stock: If selected, show specific stock. If not, show total.
     const totalStock = matrix.reduce((acc, item) => acc + item.stock, 0); // Approx total
@@ -418,8 +423,13 @@ const ProductDetails = ({ product }) => {
                                     // Check if this option is available based on current selection of other tiers
                                     let isOptionDisabled = false;
 
-                                    // Complex dependency check for multiple tiers
-                                    if (tiers.length > 1) {
+                                    // 1. Check if this option has ANY valid combination in the matrix at all
+                                    const hasAnyValidCombo = matrix.some(item => item.tier_index[tIdx] === oIdx);
+                                    if (!hasAnyValidCombo) {
+                                        isOptionDisabled = true;
+                                    } 
+                                    // 2. Complex dependency check for multiple tiers if not already disabled
+                                    else if (tiers.length > 1) {
                                         // Create a hypothetical selection including this option
                                         const potentialSelection = { ...selectedIndices, [tIdx]: oIdx };
 

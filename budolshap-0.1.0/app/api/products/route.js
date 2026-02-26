@@ -130,6 +130,24 @@ export async function GET(request) {
         const productsWithSold = products.map(product => {
             const sold = product.orderItems.reduce((acc, item) => acc + item.quantity, 0);
 
+            // Determine location based on store address
+            let location = 'Domestic';
+            const storeAddress = product.store?.addresses?.[0] || {};
+            const province = storeAddress.province || '';
+            const city = storeAddress.city || '';
+
+            if (province.toLowerCase().includes('metro manila') || city.toLowerCase().includes('metro manila') || province.toLowerCase() === 'ncr') {
+                location = 'Metro Manila';
+            } else if (['bulacan', 'pampanga', 'tarlac', 'bataan', 'zambales', 'nueva ecija', 'aurora', 'pangasinan', 'la union', 'ilocos norte', 'ilocos sur', 'cagayan', 'isabela', 'nueva vizcaya', 'quirino', 'batanes', 'abra', 'apayao', 'benguet', 'ifugao', 'kalinga', 'mountain province'].some(p => province.toLowerCase().includes(p))) {
+                location = 'North Luzon';
+            } else if (['cavite', 'laguna', 'batangas', 'rizal', 'quezon', 'oriental mindoro', 'occidental mindoro', 'marinduque', 'romblon', 'palawan', 'albay', 'camarines norte', 'camarines sur', 'catanduanes', 'masbate', 'sorsogon'].some(p => province.toLowerCase().includes(p))) {
+                location = 'South Luzon';
+            } else if (['aklan', 'antique', 'capiz', 'guimaras', 'iloilo', 'negros occidental', 'bohol', 'cebu', 'negros oriental', 'siquijor', 'biliran', 'eastern samar', 'leyte', 'northern samar', 'samar', 'southern leyte'].some(p => province.toLowerCase().includes(p))) {
+                location = 'Visayas';
+            } else if (['zamboanga', 'bukidnon', 'camiguin', 'lanao', 'misamis', 'compostela', 'davao', 'cotabato', 'sarangani', 'sultan kudarat', 'agusan', 'dinagat', 'surigao', 'basilan', 'maguindanao', 'sulu', 'tawi-tawi'].some(p => province.toLowerCase().includes(p))) {
+                location = 'Mindanao';
+            }
+
             // Ensure images is always an array
             let images = product.images;
             if (typeof images === 'string') {
@@ -171,6 +189,7 @@ export async function GET(request) {
                 images,
                 videos,
                 sold,
+                location,
                 categoryFull,
                 categorySlug: product.categoryData?.slug || product.category?.toLowerCase().replace(/\s+/g, '-')
             };
@@ -192,11 +211,11 @@ export async function POST(request) {
         const body = await request.json()
         let {
             name, description, mrp, price, stock, images, videos, categoryId, storeId, category,
-            parent_sku, tier_variations, variation_matrix,
+            parent_sku, tier_variations, variation_matrix, hidden_combos,
             weight, length, width, height, condition, preOrder
         } = body
 
-        if (!name || !description || !mrp || !price || !images || !categoryId || !storeId) {
+        if (!name || !description || price === undefined || mrp === undefined || !images || !categoryId || !storeId) {
             return NextResponse.json(
                 { error: 'Missing required fields' },
                 { status: 400 }
@@ -238,28 +257,35 @@ export async function POST(request) {
             )
         }
 
+        const productData = {
+            name,
+            description,
+            mrp: Number(mrp),
+            price: Number(price),
+            stock: stock ? Number(stock) : 0,
+            images: (Array.isArray(images) ? images : (images ? [images] : [])).filter(isValidImage),
+            videos: (Array.isArray(videos) ? videos : (videos ? [videos] : [])).filter(isValidVideo),
+            category,
+            categoryId,
+            storeId,
+            parent_sku: parent_sku || null,
+            tier_variations: tier_variations || [],
+            variation_matrix: variation_matrix || [],
+            weight: weight ? Number(weight) : 0,
+            length: length ? Number(length) : 0,
+            width: width ? Number(width) : 0,
+            height: height ? Number(height) : 0,
+            condition: condition || 'New',
+            preOrder: preOrder || false
+        };
+
+        // Dynamically add hidden_combos to avoid Prisma validation errors if client is stale
+        if (hidden_combos !== undefined) {
+            productData['hidden_combos'] = hidden_combos || [];
+        }
+
         const product = await prisma.product.create({
-            data: {
-                name,
-                description,
-                mrp: Number(mrp),
-                price: Number(price),
-                stock: stock ? Number(stock) : 0,
-                images: (Array.isArray(images) ? images : (images ? [images] : [])).filter(isValidImage),
-                videos: (Array.isArray(videos) ? videos : (videos ? [videos] : [])).filter(isValidVideo),
-                category,
-                categoryId,
-                storeId,
-                parent_sku: parent_sku || null,
-                tier_variations: tier_variations || [],
-                variation_matrix: variation_matrix || [],
-                weight: weight ? Number(weight) : 0,
-                length: length ? Number(length) : 0,
-                width: width ? Number(width) : 0,
-                height: height ? Number(height) : 0,
-                condition: condition || 'New',
-                preOrder: preOrder || false
-            },
+            data: productData,
             include: {
                 store: {
                     select: {
@@ -297,9 +323,9 @@ export async function POST(request) {
         })
 
         const sold = product.orderItems.reduce((acc, item) => acc + item.quantity, 0)
-        const { orderItems, ...productData } = product
+        const { orderItems, ...productRest } = product
 
-        const payload = { ...productData, sold }
+        const payload = { ...productRest, sold }
 
         // Realtime Broadcast
         await triggerRealtimeEvent('marketplace-updates', 'product-added', payload)

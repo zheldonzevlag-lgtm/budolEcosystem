@@ -171,29 +171,36 @@ export async function PUT(request, { params }) {
             if (catData) categoryName = catData.name;
         }
 
+        const updateData = {
+            ...(body.name && { name: body.name }),
+            ...(body.description && { description: body.description }),
+            ...(body.mrp !== undefined && { mrp: Number(body.mrp) }),
+            ...(body.price !== undefined && { price: Number(body.price) }),
+            ...(body.stock !== undefined && { stock: Number(body.stock) }),
+            ...(body.images && { images: (Array.isArray(body.images) ? body.images : (body.images ? [body.images] : [])).filter(isValidImage) }),
+            ...(body.videos !== undefined && { videos: (Array.isArray(body.videos) ? body.videos : (body.videos ? [body.videos] : [])).filter(isValidVideo) }),
+            ...(categoryName && { category: categoryName }),
+            ...(body.categoryId && { categoryId: body.categoryId }),
+            ...(body.inStock !== undefined && { inStock: body.inStock }),
+            ...(body.parent_sku !== undefined && { parent_sku: body.parent_sku }),
+            ...(body.tier_variations !== undefined && { tier_variations: body.tier_variations }),
+            ...(body.variation_matrix !== undefined && { variation_matrix: body.variation_matrix }),
+            ...(body.weight !== undefined && { weight: Number(body.weight) }),
+            ...(body.length !== undefined && { length: Number(body.length) }),
+            ...(body.width !== undefined && { width: Number(body.width) }),
+            ...(body.height !== undefined && { height: Number(body.height) }),
+            ...(body.condition && { condition: body.condition }),
+            ...(body.preOrder !== undefined && { preOrder: body.preOrder })
+        };
+
+        // Dynamically add hidden_combos to avoid Prisma validation errors if client is stale
+        if (body.hidden_combos !== undefined) {
+            updateData['hidden_combos'] = body.hidden_combos || [];
+        }
+
         const product = await prisma.product.update({
             where: { id: productId },
-            data: {
-                ...(body.name && { name: body.name }),
-                ...(body.description && { description: body.description }),
-                ...(body.mrp !== undefined && { mrp: Number(body.mrp) }),
-                ...(body.price !== undefined && { price: Number(body.price) }),
-                ...(body.stock !== undefined && { stock: Number(body.stock) }),
-                ...(body.images && { images: (Array.isArray(body.images) ? body.images : (body.images ? [body.images] : [])).filter(isValidImage) }),
-                ...(body.videos !== undefined && { videos: (Array.isArray(body.videos) ? body.videos : (body.videos ? [body.videos] : [])).filter(isValidVideo) }),
-                ...(categoryName && { category: categoryName }),
-                ...(body.categoryId && { categoryId: body.categoryId }),
-                ...(body.inStock !== undefined && { inStock: body.inStock }),
-                ...(body.parent_sku !== undefined && { parent_sku: body.parent_sku }),
-                ...(body.tier_variations !== undefined && { tier_variations: body.tier_variations }),
-                ...(body.variation_matrix !== undefined && { variation_matrix: body.variation_matrix }),
-                ...(body.weight !== undefined && { weight: Number(body.weight) }),
-                ...(body.length !== undefined && { length: Number(body.length) }),
-                ...(body.width !== undefined && { width: Number(body.width) }),
-                ...(body.height !== undefined && { height: Number(body.height) }),
-                ...(body.condition && { condition: body.condition }),
-                ...(body.preOrder !== undefined && { preOrder: body.preOrder })
-            },
+            data: updateData,
             include: {
                 store: {
                     select: {

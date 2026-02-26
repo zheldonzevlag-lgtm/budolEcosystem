@@ -216,8 +216,30 @@ export default function StoreManageProducts() {
                                         <span className="text-xs text-slate-300">—</span>
                                     )}
                                 </td>
-                                <td className="px-4 py-3 hidden md:table-cell whitespace-nowrap align-middle">{currency} {product.mrp.toLocaleString()}</td>
-                                <td className="px-4 py-3 whitespace-nowrap align-middle">{currency} {product.price.toLocaleString()}</td>
+                                <td className="px-4 py-3 hidden md:table-cell whitespace-nowrap align-middle">
+                                    {currency} {(() => {
+                                        const hasVariations = Array.isArray(product.variation_matrix) && product.variation_matrix.length > 0;
+                                        if (hasVariations) {
+                                            const mrps = product.variation_matrix.map(m => m.mrp || m.price);
+                                            const min = Math.min(...mrps);
+                                            const max = Math.max(...mrps);
+                                            return min === max ? min.toLocaleString() : `${min.toLocaleString()} - ${max.toLocaleString()}`;
+                                        }
+                                        return (product.mrp || 0).toLocaleString();
+                                    })()}
+                                </td>
+                                <td className="px-4 py-3 whitespace-nowrap align-middle">
+                                    {currency} {(() => {
+                                        const hasVariations = Array.isArray(product.variation_matrix) && product.variation_matrix.length > 0;
+                                        if (hasVariations) {
+                                            const prices = product.variation_matrix.map(m => m.price);
+                                            const min = Math.min(...prices);
+                                            const max = Math.max(...prices);
+                                            return min === max ? min.toLocaleString() : `${min.toLocaleString()} - ${max.toLocaleString()}`;
+                                        }
+                                        return (product.price || 0).toLocaleString();
+                                    })()}
+                                </td>
                                 <td className="px-4 py-3 text-center align-middle">
                                     <label className="relative inline-flex items-center cursor-pointer text-gray-900 gap-3">
                                         <input type="checkbox" className="sr-only peer" onChange={() => toast.promise(toggleStock(product.id), { loading: "Updating data..." })} checked={product.inStock} />

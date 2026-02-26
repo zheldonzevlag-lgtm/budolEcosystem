@@ -8,7 +8,7 @@ import { useDispatch, useSelector } from "react-redux"
 import { setProduct } from "@/lib/features/product/productSlice"
 import { useSearch } from "@/context/SearchContext"
 import useSWR from 'swr'
-import { getCategoryLucideIcon, getCategoryColor } from "@/components/CategoryIcons"
+import { getCategoryLucideIcon, getCategoryColor, renderCategoryIcon } from "@/components/CategoryIcons"
 import { ShoppingCart as AllIcon } from 'lucide-react'
 import { motion, AnimatePresence } from "framer-motion"
 import { ProductSkeleton } from "@/components/ui/Skeleton"
@@ -29,6 +29,7 @@ function StarRating({ rating }) {
 
 function SearchFilters({ filters, setFilters, onClear, products = [] }) {
     const locations = ['Domestic', 'Overseas', 'Metro Manila', 'North Luzon', 'South Luzon', 'Visayas', 'Mindanao']
+    const [showMoreLocations, setShowMoreLocations] = useState(false)
 
     // Calculate realistic max price from products or fallback to 50k
     const maxVal = (products && products.length > 0) ? Math.max(...products.map(p => Number(p.price) || 0)) : 50000
@@ -90,8 +91,27 @@ function SearchFilters({ filters, setFilters, onClear, products = [] }) {
                             <span className="text-xs text-slate-600 group-hover:text-slate-900">{loc}</span>
                         </label>
                     ))}
-                    <button className="flex items-center gap-1 text-[11px] text-slate-500 hover:text-slate-800">
-                        More <ChevronDown size={10} />
+                    {showMoreLocations && (
+                        <div className="space-y-2">
+                            {locations.slice(4).map(loc => (
+                                <label key={loc} className="flex items-center gap-2 cursor-pointer group">
+                                    <input
+                                        type="checkbox"
+                                        checked={filters.locations.includes(loc)}
+                                        onChange={() => toggleLocation(loc)}
+                                        className="w-3.5 h-3.5 accent-green-600 border-slate-300 rounded"
+                                    />
+                                    <span className="text-xs text-slate-600 group-hover:text-slate-900">{loc}</span>
+                                </label>
+                            ))}
+                        </div>
+                    )}
+                    <button
+                        type="button"
+                        onClick={() => setShowMoreLocations(prev => !prev)}
+                        className="flex items-center gap-1 text-[11px] text-slate-500 hover:text-slate-800"
+                    >
+                        {showMoreLocations ? 'Less' : 'More'} <ChevronDown size={10} className={`${showMoreLocations ? 'rotate-180' : ''} transition-transform`} />
                     </button>
                 </div>
             </div>
@@ -424,18 +444,28 @@ function ShopContent() {
         // Rating filtering (if product has rating data)
         const matchesRating = filters.rating ? (product.rating || 0) >= filters.rating : true
 
-        // Note: Location filtering requires product origin data, adding placeholder logic
-        const matchesLocation = filters.locations.length > 0 ? (filters.locations.includes(product.location || 'Domestic')) : true
+        // Location filtering logic
+        let matchesLocation = true
+        if (filters.locations.length > 0) {
+            const productLoc = product.location || 'Domestic'
+            matchesLocation = filters.locations.some(loc => {
+                if (loc === 'Domestic') {
+                    // "Domestic" matches any Philippine region
+                    return ['Metro Manila', 'North Luzon', 'South Luzon', 'Visayas', 'Mindanao', 'Domestic'].includes(productLoc)
+                }
+                if (loc === 'Overseas') {
+                    return productLoc === 'Overseas'
+                }
+                // Specific region match
+                return loc === productLoc
+            })
+        }
 
         return matchesSearch && matchesCategory && matchesPriceMin && matchesPriceMax && matchesRating && matchesLocation
     })
 
     // Find active category name for display
     const activeCat = categories.find(c => c.slug === category)
-
-    // Category icon for breadcrumb, prioritizing DB override
-    // Resolve Lucide icon component for the active breadcrumb category
-    const ActiveCatIcon = activeCat ? getCategoryLucideIcon(activeCat.slug, activeCat.name, activeCat.icon) : null
 
     return (
         <div className="min-h-[70vh] mx-4 sm:mx-6">
@@ -454,8 +484,7 @@ function ShopContent() {
                         <>
                             <ChevronRight size={14} className="text-slate-300" />
                             <span className="flex items-center gap-1.5 text-sm font-medium text-slate-700">
-                                {/* Render Lucide icon component, not emoji string */}
-                                {ActiveCatIcon && <ActiveCatIcon size={20} className="text-slate-500" />}
+                                {renderCategoryIcon(activeCat.slug, activeCat.name, activeCat.icon, 'w-5 h-5 text-slate-500')}
                                 {activeCat.name}
                             </span>
                         </>
@@ -505,8 +534,7 @@ function ShopContent() {
                                     onClick={() => router.push('/shop')}
                                     className="flex items-center gap-1.5 text-xs bg-green-50 border border-green-200 text-green-700 rounded-full px-3 py-1.5 hover:bg-green-100 transition"
                                 >
-                                    {/* Category chip: show Lucide icon if resolved */}
-                                    {ActiveCatIcon && <ActiveCatIcon size={12} />}
+                                {renderCategoryIcon(activeCat?.slug, activeCat?.name, activeCat?.icon, 'w-3 h-3')}
                                     {activeCat?.name || category}
                                     <X size={12} />
                                 </button>

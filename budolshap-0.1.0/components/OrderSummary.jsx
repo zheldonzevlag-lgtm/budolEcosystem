@@ -349,15 +349,16 @@ const OrderSummary = ({ totalPrice, items, hasOutOfStock = false, onProcessing }
                 }
 
                 // 2. Update Local Cart (Remove purchased items only)
-                // Note: Server cart is already updated by the createOrder backend logic
-                if (orderItems && orderItems.length > 0) {
+                // ONLY clear for COD immediately. For async payments, we wait for success.
+                const isAsyncPayment = ['GCASH', 'MAYA', 'GRAB_PAY', 'QRPH', 'BUDOL_PAY', 'budolPay'].includes(paymentMethod.toUpperCase());
+                if (!isAsyncPayment && orderItems && orderItems.length > 0) {
                     orderItems.forEach(item => {
                         dispatch(deleteItemFromCart({
                             productId: item.productId,
                             variationId: item.variationId
                         }));
                     });
-                    console.log('🛒 [OrderSummary] Local cart updated (purchased items removed).');
+                    console.log('🛒 [OrderSummary] Local cart updated for COD (purchased items removed).');
                 }
             }
 
@@ -543,7 +544,6 @@ const OrderSummary = ({ totalPrice, items, hasOutOfStock = false, onProcessing }
                 
                 setQrData(qrData);
                 setIsPlacingOrder(false);
-                if (onProcessing) onProcessing(false);
                 return;
 
             } else if (paymentData.checkoutUrl || paymentData.data?.checkoutUrl) {
@@ -631,6 +631,7 @@ const OrderSummary = ({ totalPrice, items, hasOutOfStock = false, onProcessing }
         const provider = (qrData?.paymentMethod === 'BUDOL_PAY' || qrData?.paymentMethod === 'budolPay') ? 'budolpay' : 'paymongo';
         
         setQrData(null);
+        if (onProcessing) onProcessing(false);
         dispatch(clearCart());
         
         // Redirect to the unified return page to show the "Payment Successful" UI
@@ -659,6 +660,7 @@ const OrderSummary = ({ totalPrice, items, hasOutOfStock = false, onProcessing }
             console.error('❌ [OrderSummary] Error cancelling order:', error);
         } finally {
             setQrData(null);
+            if (onProcessing) onProcessing(false);
         }
     };
 

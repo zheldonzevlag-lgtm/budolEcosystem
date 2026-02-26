@@ -66,6 +66,11 @@ const ProductCard = ({ product, index = 0 }) => {
         setIsPlaying(false)
     }
 
+    const hasVariations = Array.isArray(product.variation_matrix) && product.variation_matrix.length > 0
+    const price = hasVariations
+        ? Math.min(...product.variation_matrix.map(m => m.price))
+        : (product.price || 0)
+
     return (
         <motion.div
             initial={{ opacity: 0, y: 20 }}
@@ -133,7 +138,7 @@ const ProductCard = ({ product, index = 0 }) => {
                 <div className='flex flex-col text-sm text-slate-800 pt-3 px-1 w-full sm:max-w-60'>
                     <h3 className='font-medium line-clamp-2 min-h-[2.5rem] group-hover:text-green-600 transition-colors duration-300'>{product.name}</h3>
                     <div className="flex items-baseline gap-2 mt-1">
-                        <p className='font-bold text-lg text-slate-900'>{currency}{product.price.toLocaleString()}</p>
+                        <p className='font-bold text-lg text-slate-900'>{currency}{price.toLocaleString()}</p>
                     </div>
                     <div className='flex items-center gap-0.5 mt-1.5'>
                         {Array(5).fill('').map((_, i) => (

@@ -98,7 +98,8 @@ export default function AddProductWizard({ initialData, storeId }) {
             hasVariations: false,
             variation_matrix: [],
             tier_variations: [],
-            parent_sku: ''
+            parent_sku: '',
+            hidden_combos: []
         },
         mode: 'onChange'
     });
@@ -726,19 +727,27 @@ export default function AddProductWizard({ initialData, storeId }) {
                                         control={control}
                                         render={({ field: { value, onChange } }) => (
                                             <VariationMatrixManager
+                                                errors={errors.variation_matrix}
                                                 initialData={{
                                                     tier_variations: watch('tier_variations'),
                                                     variation_matrix: value,
-                                                    parent_sku: watch('parent_sku')
+                                                    parent_sku: watch('parent_sku'),
+                                                    hidden_combos: watch('hidden_combos')
                                                 }}
                                                 onUpdate={(data) => {
                                                     setValue('tier_variations', data.tier_variations);
                                                     setValue('variation_matrix', data.variation_matrix);
                                                     setValue('parent_sku', data.parent_sku);
+                                                    setValue('hidden_combos', data.hidden_combos);
                                                 }}
                                             />
                                         )}
                                     />
+                                    {errors.variation_matrix && (
+                                        <p className="text-red-500 text-xs mt-3 animate-pulse font-medium bg-red-50 p-2 rounded border border-red-100">
+                                            ⚠️ {errors.variation_matrix.message}
+                                        </p>
+                                    )}
                                 </div>
                             ) : (
                                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6 animate-in fade-in slide-in-from-top-4 duration-300">

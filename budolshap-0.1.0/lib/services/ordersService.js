@@ -1,5 +1,5 @@
 import { prisma } from '@/lib/prisma';
-import { Prisma } from '@prisma/client-custom-v4';
+import { Prisma } from '@prisma/client';
 import { triggerRealtimeEvent } from '@/lib/realtime';
 import { creditPendingBalance } from '@/lib/escrow';
 import { createAuditLog } from '@/lib/audit';
@@ -447,13 +447,14 @@ export async function createOrder(orderData) {
 
         // 6. Clear cart for these items
         // Fix: Delete only specific variations that were purchased
-        // We fetch the cart first to ensure we have the correct cartId and to log the operation
+        // ONLY clear for COD immediately. For async payments, we wait for webhook or success.
+        const isAsyncPayment = ['GCASH', 'MAYA', 'GRAB_PAY', 'QRPH', 'BUDOL_PAY', 'budolPay'].includes(paymentMethod.toUpperCase());
         const userCart = await tx.cart.findUnique({ 
             where: { userId },
             select: { id: true }
         });
 
-        if (userCart) {
+        if (userCart && !isAsyncPayment) {
             const cartCleanupConditions = orderItems.map(item => {
                 const product = products.find(p => p.id === item.productId);
                 const hasVariations = product?.variation_matrix && 
@@ -558,7 +559,12 @@ export async function cancelOrder(orderId, restoreCart = true) {
         });
 
         // 3. Restore cart items if requested
-        if (restoreCart) {
+        // ONLY restore if the payment method is one that clears the cart immediately (like COD)
+        // For async payments, we don't clear the cart until payment is successful, 
+        // so if cancelled before payment, the items are still in the cart.
+        const isAsyncPayment = ['GCASH', 'MAYA', 'GRAB_PAY', 'QRPH', 'BUDOL_PAY', 'budolPay'].includes(order.paymentMethod.toUpperCase());
+        
+        if (restoreCart && !isAsyncPayment) {
             const cart = await tx.cart.findFirst({
                 where: { userId: order.userId }
             });
