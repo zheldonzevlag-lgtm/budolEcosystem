@@ -72,7 +72,7 @@ export default function CategoriesSection() {
             <div className="flex items-center justify-between mb-4">
                 <div className="flex items-center gap-2">
                     <LayoutGrid size={20} className="text-green-600" />
-                    <h2 className="text-base font-semibold text-slate-700 uppercase tracking-wide">
+                    <h2 className="text-base font-semibold text-slate-700 tracking-wide">
                         Shop by Category
                     </h2>
                 </div>
@@ -128,7 +128,7 @@ export default function CategoriesSection() {
                                         className={`
                                             group flex flex-col items-center gap-1.5 p-2 sm:p-3 rounded-xl
                                             border border-transparent ${color.bg} ${color.hover}
-                                            hover:border-current hover:shadow-md
+                                            hover:shadow-md
                                             transition-all duration-200 cursor-pointer h-full
                                         `}
                                     >

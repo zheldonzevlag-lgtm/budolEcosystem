@@ -86,12 +86,14 @@ export async function POST(request) {
         await ensureFolderPath(folder)
 
         // Upload to Cloudinary with optimization settings
-        console.log(`[Upload] Uploading to Cloudinary folder: ${folder}...`);
+        console.log(`[Upload] Uploading ${uploadType} to Cloudinary folder: ${folder}...`);
         const cloudinaryStartTime = Date.now();
 
         const uploadOptions = {
             folder: folder,
-            resource_type: uploadType
+            resource_type: uploadType,
+            timeout: 300000, // 5 minutes timeout for Cloudinary SDK
+            chunk_size: 6000000, // 6MB chunks for large uploads
         }
 
         if (uploadType === 'image' && !isSVG) {
@@ -109,7 +111,13 @@ export async function POST(request) {
             uploadOptions.fetch_format = "png"
         }
 
-        const uploadResponse = await cloudinary.uploader.upload(image, uploadOptions);
+        // Use upload_large for videos to handle chunking better
+        let uploadResponse;
+        if (uploadType === 'video') {
+            uploadResponse = await cloudinary.uploader.upload_large(image, uploadOptions);
+        } else {
+            uploadResponse = await cloudinary.uploader.upload(image, uploadOptions);
+        }
         const cloudinaryDuration = Date.now() - cloudinaryStartTime;
         console.log(`[Upload] Cloudinary upload successful in ${cloudinaryDuration}ms:`, uploadResponse.secure_url);
 
@@ -123,9 +131,14 @@ export async function POST(request) {
     } catch (error) {
         const totalDuration = Date.now() - startTime;
         console.error(`[Upload] Error in upload route after ${totalDuration}ms:`, error);
+
+        // Return more specific error message if available
+        let errorMessage = error.message || 'Unknown upload error';
+        if (error.http_code === 413) errorMessage = 'File is too large for the runtime limit.';
+
         return NextResponse.json(
-            { error: error.message || 'Failed to upload image' },
-            { status: 500 }
+            { error: `Upload failed: ${errorMessage}` },
+            { status: error.status || 500 }
         )
     }
 }

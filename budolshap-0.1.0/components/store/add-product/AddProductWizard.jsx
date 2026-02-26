@@ -57,6 +57,7 @@ export default function AddProductWizard({ initialData, storeId }) {
     const [videosExpanded, setVideosExpanded] = useState(false);
     const [descriptionExpanded, setDescriptionExpanded] = useState(false);
 
+
     useEffect(() => {
         fetch('/api/system/settings')
             .then(res => res.json())
@@ -75,7 +76,8 @@ export default function AddProductWizard({ initialData, storeId }) {
         trigger,
         watch,
         setValue,
-        getValues
+        getValues,
+        reset
     } = useForm({
         resolver: zodResolver(productSchema),
         defaultValues: initialData || {
@@ -101,7 +103,40 @@ export default function AddProductWizard({ initialData, storeId }) {
         mode: 'onChange'
     });
 
+    // Synchronize form with initialData when it arrives (essential for async loading)
+    useEffect(() => {
+        if (initialData) {
+            reset(initialData);
+        }
+    }, [initialData, reset]);
+
     const hasVariations = watch('hasVariations');
+
+    const handleStepClick = async (targetStep) => {
+        if (targetStep < currentStep) {
+            // Always allow going back
+            setCurrentStep(targetStep);
+            window.scrollTo(0, 0);
+            return;
+        }
+
+        // To jump ahead to targetStep, we must validate intermediate steps
+        let allValid = true;
+        for (let i = currentStep; i < targetStep; i++) {
+            const stepValid = await trigger(getFieldsForStep(i));
+            if (!stepValid) {
+                allValid = false;
+                setCurrentStep(i); // Stop at the first step with errors
+                toast.error(`Please fix errors in ${STEPS[i].label} first.`);
+                break;
+            }
+        }
+
+        if (allValid) {
+            setCurrentStep(targetStep);
+            window.scrollTo(0, 0);
+        }
+    };
 
     const handleNext = async () => {
         const fieldsToValidate = getFieldsForStep(currentStep);
@@ -110,6 +145,16 @@ export default function AddProductWizard({ initialData, storeId }) {
         if (isValid) {
             setCurrentStep((prev) => Math.min(prev + 1, STEPS.length - 1));
             window.scrollTo(0, 0);
+        } else {
+            // Find first error and scroll to it
+            const firstErrorField = fieldsToValidate.find(field => errors[field]);
+            if (firstErrorField) {
+                const element = document.getElementsByName(firstErrorField)[0] || document.getElementById(firstErrorField);
+                if (element) {
+                    element.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                }
+            }
+            toast.error("Please fix the validation errors before proceeding.");
         }
     };
 
@@ -206,8 +251,14 @@ export default function AddProductWizard({ initialData, storeId }) {
             });
 
             if (!response.ok) {
-                const errorData = await response.json();
-                throw new Error(errorData.error || 'Upload failed');
+                let errorMessage = 'Upload failed';
+                try {
+                    const errorData = await response.json();
+                    errorMessage = errorData.error || errorMessage;
+                } catch (e) {
+                    errorMessage = `Server error (${response.status}): ${response.statusText || 'Unable to process upload'}`;
+                }
+                throw new Error(errorMessage);
             }
 
             const data = await response.json();
@@ -254,8 +305,15 @@ export default function AddProductWizard({ initialData, storeId }) {
             });
 
             if (!response.ok) {
-                const errorData = await response.json();
-                throw new Error(errorData.error || 'Upload failed');
+                let errorMessage = 'Upload failed';
+                try {
+                    const errorData = await response.json();
+                    errorMessage = errorData.error || errorMessage;
+                } catch (e) {
+                    // Fallback for non-JSON errors (like server timeouts)
+                    errorMessage = `Server error (${response.status}): ${response.statusText || 'Unable to process upload'}`;
+                }
+                throw new Error(errorMessage);
             }
 
             const data = await response.json();
@@ -271,14 +329,40 @@ export default function AddProductWizard({ initialData, storeId }) {
 
     const handleSaveDraft = () => {
         const data = getValues();
-        // Save to local storage
+
+        // Helper to strip base64 from media arrays to prevent QuotaExceededError (5MB limit)
+        const cleanMedia = (media) => (media || []).map(item => {
+            if (typeof item === 'string') {
+                return item.startsWith('data:') ? null : item;
+            }
+            if (item && typeof item === 'object' && item.url) {
+                return item.url && item.url.startsWith('data:') ? { ...item, url: null } : item;
+            }
+            return item;
+        }).filter(item => typeof item === 'string' ? !!item : !!item.url);
+
+        const sanitizedData = {
+            ...data,
+            images: cleanMedia(data.images),
+            videos: cleanMedia(data.videos),
+            // Also clean variation images
+            variation_matrix: (data.variation_matrix || []).map(v => ({
+                ...v,
+                image: (typeof v.image === 'string' && v.image.startsWith('data:')) ? null : v.image
+            }))
+        };
+
         try {
             const draftKey = `budol-product-draft-${storeId}`;
-            localStorage.setItem(draftKey, JSON.stringify(data));
-            toast.success("Draft saved locally! You can resume later.");
+            localStorage.setItem(draftKey, JSON.stringify(sanitizedData));
+            toast.success("Progress saved! (Note: Images/Videos are not stored in local drafts)");
         } catch (error) {
             console.error("Failed to save draft", error);
-            toast.error("Failed to save draft.");
+            if (error.name === 'QuotaExceededError' || error.code === 22) {
+                toast.error("Draft too large to save. Try reducing description length.");
+            } else {
+                toast.error("Failed to save draft locally.");
+            }
         }
     };
 
@@ -401,6 +485,16 @@ export default function AddProductWizard({ initialData, storeId }) {
         }
     };
 
+    const onInvalid = (errors) => {
+        console.error("Validation Errors:", errors);
+        const firstError = Object.values(errors)[0];
+        if (firstError?.message) {
+            toast.error(`Validation Error: ${firstError.message}`);
+        } else {
+            toast.error("Please check all steps for missing or incorrect information.");
+        }
+    };
+
     return (
         <div className="max-w-5xl mx-auto pb-24">
             {draftAvailable && (
@@ -427,9 +521,13 @@ export default function AddProductWizard({ initialData, storeId }) {
             )}
 
             <Stepper
-                steps={STEPS}
+                steps={STEPS.map((step, idx) => ({
+                    ...step,
+                    hasError: getFieldsForStep(idx).some(field => !!errors[field])
+                }))}
                 currentStep={currentStep}
-                setCurrentStep={setCurrentStep}
+                setCurrentStep={handleStepClick}
+                isDisabled={isSaving}
             />
 
             <form onSubmit={handleSubmit(onSubmit)} className="space-y-8">
@@ -439,14 +537,15 @@ export default function AddProductWizard({ initialData, storeId }) {
                     <FormSection isActive={currentStep === 0}>
                         <h2 className="text-xl font-bold mb-6 text-slate-800">Basic Information</h2>
 
-                        <div className="grid gap-6">
+                        <fieldset disabled={isSaving} className="grid gap-6 disabled:opacity-90">
                             {/* Product Images */}
                             {/* Collapsible Product Images Section */}
                             <div className="border border-slate-200 rounded-lg overflow-hidden">
                                 <button
                                     type="button"
-                                    onClick={() => setImagesExpanded(!imagesExpanded)}
-                                    className="w-full flex items-center justify-between px-4 py-3 bg-slate-50 hover:bg-slate-100 transition-colors"
+                                    onClick={() => !isSaving && setImagesExpanded(!imagesExpanded)}
+                                    disabled={isSaving}
+                                    className="w-full flex items-center justify-between px-4 py-3 bg-slate-50 hover:bg-slate-100 transition-colors disabled:opacity-75 disabled:cursor-not-allowed"
                                 >
                                     <div className="flex items-center gap-2">
                                         <Image className="w-5 h-5 text-slate-600" />
@@ -482,8 +581,9 @@ export default function AddProductWizard({ initialData, storeId }) {
                             <div className="border border-slate-200 rounded-lg overflow-hidden">
                                 <button
                                     type="button"
-                                    onClick={() => setVideosExpanded(!videosExpanded)}
-                                    className="w-full flex items-center justify-between px-4 py-3 bg-slate-50 hover:bg-slate-100 transition-colors"
+                                    onClick={() => !isSaving && setVideosExpanded(!videosExpanded)}
+                                    disabled={isSaving}
+                                    className="w-full flex items-center justify-between px-4 py-3 bg-slate-50 hover:bg-slate-100 transition-colors disabled:opacity-75 disabled:cursor-not-allowed"
                                 >
                                     <div className="flex items-center gap-2">
                                         <Video className="w-5 h-5 text-slate-600" />
@@ -523,10 +623,10 @@ export default function AddProductWizard({ initialData, storeId }) {
                                 <input
                                     id="name"
                                     {...register('name')}
-                                    className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none"
+                                    className={`w-full px-4 py-2 border rounded-lg focus:ring-2 outline-none transition-all ${errors.name ? 'border-red-500 ring-red-100 ring-2' : 'border-slate-300 focus:ring-blue-500'}`}
                                     placeholder="Ex: Nike Air Max 90"
                                 />
-                                {errors.name && <p className="text-red-500 text-sm mt-1">{errors.name.message}</p>}
+                                {errors.name && <p className="text-red-500 text-xs mt-1 animate-pulse font-medium">⚠️ {errors.name.message}</p>}
                                 <div className="flex justify-end mt-1 text-xs text-slate-400">
                                     {watch('name')?.length || 0}/120
                                 </div>
@@ -543,6 +643,7 @@ export default function AddProductWizard({ initialData, storeId }) {
                                             value={field.value}
                                             onChange={field.onChange}
                                             error={fieldState.error?.message}
+                                            fallbackName={watch('category')}
                                         />
                                     )}
                                 />
@@ -552,8 +653,9 @@ export default function AddProductWizard({ initialData, storeId }) {
                             <div className="border border-slate-200 rounded-lg overflow-hidden">
                                 <button
                                     type="button"
-                                    onClick={() => setDescriptionExpanded(!descriptionExpanded)}
-                                    className="w-full flex items-center justify-between px-4 py-3 bg-slate-50 hover:bg-slate-100 transition-colors"
+                                    onClick={() => !isSaving && setDescriptionExpanded(!descriptionExpanded)}
+                                    disabled={isSaving}
+                                    className="w-full flex items-center justify-between px-4 py-3 bg-slate-50 hover:bg-slate-100 transition-colors disabled:opacity-75 disabled:cursor-not-allowed"
                                 >
                                     <div className="flex items-center gap-2">
                                         <FileText className="w-5 h-5 text-slate-600" />
@@ -573,7 +675,7 @@ export default function AddProductWizard({ initialData, storeId }) {
                                             <button
                                                 type="button"
                                                 onClick={generateDescription}
-                                                disabled={isGenerating}
+                                                disabled={isGenerating || isSaving}
                                                 className="text-xs flex items-center gap-1 px-3 py-1 bg-gradient-to-r from-purple-600 to-pink-600 text-white rounded-full hover:shadow-md transition-all disabled:opacity-50"
                                             >
                                                 {isGenerating ? <Loader2 size={12} className="animate-spin" /> : <Wand2 size={12} />}
@@ -584,16 +686,16 @@ export default function AddProductWizard({ initialData, storeId }) {
                                             name="description"
                                             control={control}
                                             render={({ field: { value, onChange } }) => (
-                                                <div className="prose max-w-none">
+                                                <div className={`prose max-w-none border rounded-lg overflow-hidden transition-all ${errors.description ? 'border-red-500 ring-2 ring-red-50' : 'border-slate-200'}`}>
                                                     <CKEditorCustom value={value} onChange={onChange} placeholder="Product description..." />
                                                 </div>
                                             )}
                                         />
-                                        {errors.description && <p className="text-red-500 text-sm mt-1">{errors.description.message}</p>}
+                                        {errors.description && <p className="text-red-500 text-xs mt-1 animate-pulse font-medium">⚠️ {errors.description.message}</p>}
                                     </div>
                                 )}
                             </div>
-                        </div>
+                        </fieldset>
                     </FormSection>
                 )}
 
@@ -602,83 +704,85 @@ export default function AddProductWizard({ initialData, storeId }) {
                     <FormSection isActive={currentStep === 1}>
                         <h2 className="text-xl font-bold mb-6 text-slate-800">Sales Information</h2>
 
-                        {/* Variations Toggle */}
-                        <div className="mb-6 p-4 bg-slate-50 rounded-lg border border-slate-200">
-                            <label className="flex items-center gap-3 cursor-pointer">
-                                <input
-                                    type="checkbox"
-                                    {...register('hasVariations')}
-                                    className="w-5 h-5 text-blue-600 rounded focus:ring-blue-500"
-                                />
-                                <div>
-                                    <span className="font-medium text-slate-700">Enable Variations</span>
-                                    <p className="text-sm text-slate-500">Enable this if your product has options like size, color, etc.</p>
-                                </div>
-                            </label>
-                        </div>
-
-                        {hasVariations ? (
-                            <div className="animate-in fade-in slide-in-from-top-4 duration-300">
-                                <Controller
-                                    name="variation_matrix"
-                                    control={control}
-                                    render={({ field: { value, onChange } }) => (
-                                        <VariationMatrixManager
-                                            initialData={{
-                                                tier_variations: watch('tier_variations'),
-                                                variation_matrix: value,
-                                                parent_sku: watch('parent_sku')
-                                            }}
-                                            onUpdate={(data) => {
-                                                setValue('tier_variations', data.tier_variations);
-                                                setValue('variation_matrix', data.variation_matrix);
-                                                setValue('parent_sku', data.parent_sku);
-                                            }}
-                                        />
-                                    )}
-                                />
-                            </div>
-                        ) : (
-                            <div className="grid grid-cols-1 md:grid-cols-2 gap-6 animate-in fade-in slide-in-from-top-4 duration-300">
-                                <div>
-                                    <label className="block text-sm font-medium text-slate-700 mb-1">Price <span className="text-red-500">*</span></label>
-                                    <div className="relative">
-                                        <span className="absolute left-3 top-2 text-slate-400">₱</span>
-                                        <input
-                                            type="number"
-                                            step="0.01"
-                                            {...register('price')}
-                                            className="w-full pl-8 px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none"
-                                        />
-                                    </div>
-                                    {errors.price && <p className="text-red-500 text-sm mt-1">{errors.price.message}</p>}
-                                </div>
-
-                                <div>
-                                    <label className="block text-sm font-medium text-slate-700 mb-1">MRP (Original Price)</label>
-                                    <div className="relative">
-                                        <span className="absolute left-3 top-2 text-slate-400">₱</span>
-                                        <input
-                                            type="number"
-                                            step="0.01"
-                                            {...register('mrp')}
-                                            className="w-full pl-8 px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none"
-                                        />
-                                    </div>
-                                    <p className="text-xs text-slate-400 mt-1">Leave 0 if not applicable</p>
-                                </div>
-
-                                <div>
-                                    <label className="block text-sm font-medium text-slate-700 mb-1">Stock <span className="text-red-500">*</span></label>
+                        <fieldset disabled={isSaving} className="disabled:opacity-90">
+                            <div className="mb-6 p-4 bg-slate-50 rounded-lg border border-slate-200">
+                                <label className="flex items-center gap-3 cursor-pointer">
                                     <input
-                                        type="number"
-                                        {...register('stock')}
-                                        className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none"
+                                        type="checkbox"
+                                        {...register('hasVariations')}
+                                        className="w-5 h-5 text-blue-600 rounded focus:ring-blue-500"
                                     />
-                                    {errors.stock && <p className="text-red-500 text-sm mt-1">{errors.stock.message}</p>}
-                                </div>
+                                    <div>
+                                        <span className="font-medium text-slate-700">Enable Variations</span>
+                                        <p className="text-sm text-slate-500">Enable this if your product has options like size, color, etc.</p>
+                                    </div>
+                                </label>
                             </div>
-                        )}
+
+                            {hasVariations ? (
+                                <div className="animate-in fade-in slide-in-from-top-4 duration-300">
+                                    <Controller
+                                        name="variation_matrix"
+                                        control={control}
+                                        render={({ field: { value, onChange } }) => (
+                                            <VariationMatrixManager
+                                                initialData={{
+                                                    tier_variations: watch('tier_variations'),
+                                                    variation_matrix: value,
+                                                    parent_sku: watch('parent_sku')
+                                                }}
+                                                onUpdate={(data) => {
+                                                    setValue('tier_variations', data.tier_variations);
+                                                    setValue('variation_matrix', data.variation_matrix);
+                                                    setValue('parent_sku', data.parent_sku);
+                                                }}
+                                            />
+                                        )}
+                                    />
+                                </div>
+                            ) : (
+                                <div className="grid grid-cols-1 md:grid-cols-2 gap-6 animate-in fade-in slide-in-from-top-4 duration-300">
+                                    <div>
+                                        <label className="block text-sm font-medium text-slate-700 mb-1">Price <span className="text-red-500">*</span></label>
+                                        <div className="relative">
+                                            <span className="absolute left-3 top-2 text-slate-400">₱</span>
+                                            <input
+                                                type="number"
+                                                step="0.01"
+                                                {...register('price')}
+                                                className={`w-full pl-8 px-4 py-2 border rounded-lg focus:ring-2 outline-none transition-all ${errors.price ? 'border-red-500 ring-red-100 ring-2' : 'border-slate-300 focus:ring-blue-500'}`}
+                                            />
+                                        </div>
+                                        {errors.price && <p className="text-red-500 text-xs mt-1 animate-pulse font-medium">⚠️ {errors.price.message}</p>}
+                                    </div>
+
+                                    <div>
+                                        <label className="block text-sm font-medium text-slate-700 mb-1">MRP (Original Price)</label>
+                                        <div className="relative">
+                                            <span className="absolute left-3 top-2 text-slate-400">₱</span>
+                                            <input
+                                                type="number"
+                                                step="0.01"
+                                                {...register('mrp')}
+                                                className={`w-full pl-8 px-4 py-2 border rounded-lg focus:ring-2 outline-none transition-all ${errors.mrp ? 'border-red-500 ring-red-100 ring-2' : 'border-slate-300 focus:ring-blue-500'}`}
+                                            />
+                                        </div>
+                                        {errors.mrp && <p className="text-red-500 text-xs mt-1 animate-pulse font-medium">⚠️ {errors.mrp.message}</p>}
+                                        <p className="text-[10px] text-slate-400 mt-1 uppercase tracking-tighter">Optional: Strike-through price</p>
+                                    </div>
+
+                                    <div>
+                                        <label className="block text-sm font-medium text-slate-700 mb-1">Stock <span className="text-red-500">*</span></label>
+                                        <input
+                                            type="number"
+                                            {...register('stock')}
+                                            className={`w-full px-4 py-2 border rounded-lg focus:ring-2 outline-none transition-all ${errors.stock ? 'border-red-500 ring-red-100 ring-2' : 'border-slate-300 focus:ring-blue-500'}`}
+                                        />
+                                        {errors.stock && <p className="text-red-500 text-xs mt-1 animate-pulse font-medium">⚠️ {errors.stock.message}</p>}
+                                    </div>
+                                </div>
+                            )}
+                        </fieldset>
                     </FormSection>
                 )}
 
@@ -687,16 +791,16 @@ export default function AddProductWizard({ initialData, storeId }) {
                     <FormSection isActive={currentStep === 2}>
                         <h2 className="text-xl font-bold mb-6 text-slate-800">Shipping Information</h2>
 
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                        <fieldset disabled={isSaving} className="grid grid-cols-1 md:grid-cols-2 gap-6 disabled:opacity-90">
                             <div className="col-span-1 md:col-span-2">
                                 <label className="block text-sm font-medium text-slate-700 mb-1">Weight (kg) <span className="text-red-500">*</span></label>
                                 <input
                                     type="number" step="0.01"
                                     {...register('weight')}
-                                    className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none"
+                                    className={`w-full px-4 py-2 border rounded-lg focus:ring-2 outline-none transition-all ${errors.weight ? 'border-red-500 ring-red-100 ring-2' : 'border-slate-300 focus:ring-blue-500'}`}
                                     placeholder="0.5"
                                 />
-                                {errors.weight && <p className="text-red-500 text-sm mt-1">{errors.weight.message}</p>}
+                                {errors.weight && <p className="text-red-500 text-xs mt-1 animate-pulse font-medium">⚠️ {errors.weight.message}</p>}
                             </div>
 
                             <div>
@@ -728,7 +832,7 @@ export default function AddProductWizard({ initialData, storeId }) {
                                     placeholder="10"
                                 />
                             </div>
-                        </div>
+                        </fieldset>
                     </FormSection>
                 )}
 
@@ -737,7 +841,7 @@ export default function AddProductWizard({ initialData, storeId }) {
                     <FormSection isActive={currentStep === 3}>
                         <h2 className="text-xl font-bold mb-6 text-slate-800">Other Information</h2>
 
-                        <div className="grid gap-6">
+                        <fieldset disabled={isSaving} className="grid gap-6 disabled:opacity-90">
                             <div>
                                 <label className="block text-sm font-medium text-slate-700 mb-1">Condition</label>
                                 <select
@@ -761,7 +865,7 @@ export default function AddProductWizard({ initialData, storeId }) {
                                     <p className="text-sm text-slate-500">Check this if the item is available for pre-order.</p>
                                 </div>
                             </div>
-                        </div>
+                        </fieldset>
                     </FormSection>
                 )}
             </form>
@@ -769,7 +873,7 @@ export default function AddProductWizard({ initialData, storeId }) {
             <StickyFooter
                 isFirstStep={currentStep === 0}
                 isLastStep={currentStep === STEPS.length - 1}
-                onNext={currentStep === STEPS.length - 1 ? handleSubmit(onSubmit) : handleNext}
+                onNext={currentStep === STEPS.length - 1 ? handleSubmit(onSubmit, onInvalid) : handleNext}
                 onPrev={handlePrev}
                 isSaving={isSaving}
                 onSaveDraft={handleSaveDraft}

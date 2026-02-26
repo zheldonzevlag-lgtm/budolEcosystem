@@ -10,6 +10,8 @@ import { useSearch } from "@/context/SearchContext"
 import useSWR from 'swr'
 import { getCategoryLucideIcon, getCategoryColor } from "@/components/CategoryIcons"
 import { ShoppingCart as AllIcon } from 'lucide-react'
+import { motion, AnimatePresence } from "framer-motion"
+import { ProductSkeleton } from "@/components/ui/Skeleton"
 
 function StarRating({ rating }) {
     return (
@@ -106,11 +108,11 @@ function SearchFilters({ filters, setFilters, onClear, products = [] }) {
                 {/* Visual Dual Slider */}
                 <div className="relative h-6 flex items-center group px-1">
                     {/* Track Background */}
-                    <div className="absolute h-1.5 w-full bg-slate-100 rounded-full left-0" />
+                    <div className="absolute h-[2px] w-full bg-slate-100 rounded-full left-0" />
 
                     {/* Active Track Overlay */}
                     <div
-                        className="absolute h-1.5 bg-green-500 rounded-full"
+                        className="absolute h-[2px] bg-green-500 rounded-full"
                         style={{
                             left: `${(priceMin / maxProductPrice) * 100}%`,
                             width: `${((priceMax - priceMin) / maxProductPrice) * 100}%`
@@ -130,7 +132,7 @@ function SearchFilters({ filters, setFilters, onClear, products = [] }) {
                             setFilters(prev => ({ ...prev, priceRange: { ...prev.priceRange, min: val } }))
                         }}
                         style={{ zIndex: priceMin > maxProductPrice / 2 ? 10 : 9 }}
-                        className="absolute w-full h-1.5 appearance-none bg-transparent pointer-events-none left-0 cursor-pointer [&::-webkit-slider-thumb]:pointer-events-auto [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:w-5 [&::-webkit-slider-thumb]:h-5 [&::-webkit-slider-thumb]:rounded-full [&::-webkit-slider-thumb]:bg-white [&::-webkit-slider-thumb]:border-2 [&::-webkit-slider-thumb]:border-green-600 [&::-webkit-slider-thumb]:shadow-md [&::-moz-range-thumb]:pointer-events-auto [&::-moz-range-thumb]:w-5 [&::-moz-range-thumb]:h-5 [&::-moz-range-thumb]:rounded-full [&::-moz-range-thumb]:bg-white [&::-moz-range-thumb]:border-2 [&::-moz-range-thumb]:border-green-600 [&::-moz-range-thumb]:shadow-md"
+                        className="absolute w-full h-[2px] appearance-none bg-transparent pointer-events-none left-0 cursor-pointer [&::-webkit-slider-thumb]:pointer-events-auto [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:w-5 [&::-webkit-slider-thumb]:h-5 [&::-webkit-slider-thumb]:rounded-full [&::-webkit-slider-thumb]:bg-white [&::-webkit-slider-thumb]:border-2 [&::-webkit-slider-thumb]:border-green-600 [&::-webkit-slider-thumb]:shadow-md [&::-moz-range-thumb]:pointer-events-auto [&::-moz-range-thumb]:w-5 [&::-moz-range-thumb]:h-5 [&::-moz-range-thumb]:rounded-full [&::-moz-range-thumb]:bg-white [&::-moz-range-thumb]:border-2 [&::-moz-range-thumb]:border-green-600 [&::-moz-range-thumb]:shadow-md"
                     />
 
                     {/* Max Handle Input */}
@@ -146,7 +148,7 @@ function SearchFilters({ filters, setFilters, onClear, products = [] }) {
                             setFilters(prev => ({ ...prev, priceRange: { ...prev.priceRange, max: val } }))
                         }}
                         style={{ zIndex: priceMax < maxProductPrice / 2 ? 10 : 8 }}
-                        className="absolute w-full h-1.5 appearance-none bg-transparent pointer-events-none left-0 cursor-pointer [&::-webkit-slider-thumb]:pointer-events-auto [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:w-5 [&::-webkit-slider-thumb]:h-5 [&::-webkit-slider-thumb]:rounded-full [&::-webkit-slider-thumb]:bg-white [&::-webkit-slider-thumb]:border-2 [&::-webkit-slider-thumb]:border-green-600 [&::-webkit-slider-thumb]:shadow-md [&::-moz-range-thumb]:pointer-events-auto [&::-moz-range-thumb]:w-5 [&::-moz-range-thumb]:h-5 [&::-moz-range-thumb]:rounded-full [&::-moz-range-thumb]:bg-white [&::-moz-range-thumb]:border-2 [&::-moz-range-thumb]:border-green-600 [&::-moz-range-thumb]:shadow-md"
+                        className="absolute w-full h-[2px] appearance-none bg-transparent pointer-events-none left-0 cursor-pointer [&::-webkit-slider-thumb]:pointer-events-auto [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:w-5 [&::-webkit-slider-thumb]:h-5 [&::-webkit-slider-thumb]:rounded-full [&::-webkit-slider-thumb]:bg-white [&::-webkit-slider-thumb]:border-2 [&::-webkit-slider-thumb]:border-green-600 [&::-webkit-slider-thumb]:shadow-md [&::-moz-range-thumb]:pointer-events-auto [&::-moz-range-thumb]:w-5 [&::-moz-range-thumb]:h-5 [&::-moz-range-thumb]:rounded-full [&::-moz-range-thumb]:bg-white [&::-moz-range-thumb]:border-2 [&::-moz-range-thumb]:border-green-600 [&::-moz-range-thumb]:shadow-md"
                     />
                 </div>
 
@@ -203,7 +205,7 @@ function SearchFilters({ filters, setFilters, onClear, products = [] }) {
                         setRating(val)
                         setFilters(prev => ({ ...prev, rating: val }))
                     }}
-                    className="w-full h-1.5 bg-slate-100 rounded-full appearance-none accent-green-600 cursor-pointer"
+                    className="w-full h-[2px] bg-slate-100 rounded-full appearance-none accent-green-600 cursor-pointer"
                 />
 
                 <div className="flex items-center gap-2">
@@ -453,7 +455,7 @@ function ShopContent() {
                             <ChevronRight size={14} className="text-slate-300" />
                             <span className="flex items-center gap-1.5 text-sm font-medium text-slate-700">
                                 {/* Render Lucide icon component, not emoji string */}
-                                {ActiveCatIcon && <ActiveCatIcon size={14} className="text-slate-500" />}
+                                {ActiveCatIcon && <ActiveCatIcon size={20} className="text-slate-500" />}
                                 {activeCat.name}
                             </span>
                         </>
@@ -512,10 +514,14 @@ function ShopContent() {
                         </div>
 
                         {/* Products grid */}
-                        {isLoading ? (
-                            <Loading />
-                        ) : error ? (
+                        {error ? (
                             <p className="text-red-500">{error.message || 'Failed to load products'}</p>
+                        ) : (isLoading && products.length === 0) ? (
+                            <div className="grid grid-cols-2 sm:grid-cols-3 xl:grid-cols-4 gap-4 mb-32">
+                                {Array(8).fill(0).map((_, i) => (
+                                    <ProductSkeleton key={i} />
+                                ))}
+                            </div>
                         ) : filteredProducts.length === 0 ? (
                             <div className="flex flex-col items-center justify-center py-20 text-center">
                                 <Search size={48} className="text-slate-200 mb-4" />
@@ -529,9 +535,20 @@ function ShopContent() {
                                 </button>
                             </div>
                         ) : (
-                            <div className="grid grid-cols-2 sm:grid-cols-3 xl:grid-cols-4 gap-4 mb-32">
-                                {filteredProducts.map((product) => <ProductCard key={product.id} product={product} />)}
-                            </div>
+                            <motion.div
+                                layout
+                                className="grid grid-cols-2 sm:grid-cols-3 xl:grid-cols-4 gap-4 mb-32"
+                            >
+                                <AnimatePresence mode='popLayout'>
+                                    {filteredProducts.map((product, index) => (
+                                        <ProductCard
+                                            key={product.id}
+                                            product={product}
+                                            index={index % 12}
+                                        />
+                                    ))}
+                                </AnimatePresence>
+                            </motion.div>
                         )}
                     </div>
                 </div>

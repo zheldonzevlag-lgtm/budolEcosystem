@@ -4,7 +4,7 @@ import { useState, useEffect, useRef } from 'react'
 import { ChevronRight, Check, Loader2, X, ChevronDown, Search } from 'lucide-react'
 import { getCategoryLucideIcon, getCategoryColor } from '@/components/CategoryIcons'
 
-export default function CategorySelector({ value, onChange, error }) {
+export default function CategorySelector({ value, onChange, error, fallbackName }) {
     const [categories, setCategories] = useState([])
     const [loading, setLoading] = useState(true)
     const [isOpen, setIsOpen] = useState(false)
@@ -51,11 +51,16 @@ export default function CategorySelector({ value, onChange, error }) {
         : []
 
     const getDisplayText = () => {
-        if (!selectedLevel1) return null
-        const parts = [selectedLevel1.name]
-        if (selectedLevel2) parts.push(selectedLevel2.name)
-        if (selectedLevel3) parts.push(selectedLevel3.name)
-        return parts
+        if (selectedLevel1) {
+            const parts = [selectedLevel1.name]
+            if (selectedLevel2) parts.push(selectedLevel2.name)
+            if (selectedLevel3) parts.push(selectedLevel3.name)
+            return parts
+        }
+
+        // Use fallback if ID lookup hasn't finished or failed
+        if (value && fallbackName) return [fallbackName]
+        return null
     }
 
     const displayParts = getDisplayText()
@@ -112,9 +117,30 @@ export default function CategorySelector({ value, onChange, error }) {
         onChange('')
     }
 
-    // Reset when value cleared externally
+    // Initialize states based on value and categories
     useEffect(() => {
-        if (!value && categories.length > 0) {
+        if (value && categories.length > 0) {
+            const currentCat = categories.find(c => c.id === value)
+            if (!currentCat) return
+
+            // Avoid infinite updates if the object references are technically different but IDs are same
+            if (currentCat.level === 1 && selectedLevel1?.id !== currentCat.id) {
+                setSelectedLevel1(currentCat)
+                setSelectedLevel2(null)
+                setSelectedLevel3(null)
+            } else if (currentCat.level === 2 && selectedLevel2?.id !== currentCat.id) {
+                const parent = categories.find(c => c.id === currentCat.parentId)
+                setSelectedLevel1(parent || null)
+                setSelectedLevel2(currentCat)
+                setSelectedLevel3(null)
+            } else if (currentCat.level === 3 && selectedLevel3?.id !== currentCat.id) {
+                const parent2 = categories.find(c => c.id === currentCat.parentId)
+                const parent1 = parent2 ? categories.find(c => c.id === parent2.parentId) : null
+                setSelectedLevel1(parent1 || null)
+                setSelectedLevel2(parent2 || null)
+                setSelectedLevel3(currentCat)
+            }
+        } else if (!value && categories.length > 0) {
             setSelectedLevel1(null)
             setSelectedLevel2(null)
             setSelectedLevel3(null)

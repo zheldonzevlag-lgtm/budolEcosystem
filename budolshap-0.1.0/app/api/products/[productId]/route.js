@@ -161,6 +161,16 @@ export async function PUT(request, { params }) {
             }
         }
 
+        // Auto-lookup category name if categoryId is updated
+        let categoryName = body.category;
+        if (body.categoryId && !body.category) {
+            const catData = await prisma.category.findUnique({
+                where: { id: body.categoryId },
+                select: { name: true }
+            });
+            if (catData) categoryName = catData.name;
+        }
+
         const product = await prisma.product.update({
             where: { id: productId },
             data: {
@@ -171,7 +181,7 @@ export async function PUT(request, { params }) {
                 ...(body.stock !== undefined && { stock: Number(body.stock) }),
                 ...(body.images && { images: (Array.isArray(body.images) ? body.images : (body.images ? [body.images] : [])).filter(isValidImage) }),
                 ...(body.videos !== undefined && { videos: (Array.isArray(body.videos) ? body.videos : (body.videos ? [body.videos] : [])).filter(isValidVideo) }),
-                ...(body.category && { category: body.category }),
+                ...(categoryName && { category: categoryName }),
                 ...(body.categoryId && { categoryId: body.categoryId }),
                 ...(body.inStock !== undefined && { inStock: body.inStock }),
                 ...(body.parent_sku !== undefined && { parent_sku: body.parent_sku }),

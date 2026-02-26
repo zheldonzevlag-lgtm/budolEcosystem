@@ -195,11 +195,23 @@ export default function StoreManageProducts() {
                                 </td>
                                 <td className="px-4 py-3 hidden sm:table-cell align-middle">
                                     {product.category ? (
-                                        <span className="inline-flex items-center gap-1.5 bg-slate-100 text-slate-600 text-xs px-2.5 py-1 rounded-full font-medium">
-                                            {/* Lucide icon replaces emoji for the product category badge */}
-                                            {(() => { const MI = getCategoryLucideIcon(product.categorySlug || product.category, product.category, product.categoryData?.icon); return <MI size={14} className="text-slate-500 flex-shrink-0" /> })()}
-                                            <span className="truncate max-w-[80px]">{product.category}</span>
-                                        </span>
+                                        <div className="relative group/cat inline-block">
+                                            <span className="inline-flex items-center gap-1.5 bg-slate-100 text-slate-600 text-xs px-2.5 py-1 rounded-full font-medium cursor-help transition-all group-hover/cat:bg-slate-200">
+                                                {/* Lucide icon replaces emoji for the product category badge */}
+                                                {(() => { const MI = getCategoryLucideIcon(product.categorySlug || product.category, product.category, product.categoryData?.icon); return <MI size={14} className="text-slate-500 flex-shrink-0" /> })()}
+                                                <span className="truncate max-w-[100px]">{product.category}</span>
+                                            </span>
+
+                                            {/* Professional Tooltip for Full Category Path */}
+                                            <div className="absolute bottom-full left-0 mb-2 px-3 py-2 bg-slate-900/95 backdrop-blur-sm text-white text-[10px] rounded-lg opacity-0 group-hover/cat:opacity-100 transition-all duration-200 pointer-events-none whitespace-nowrap z-30 shadow-xl border border-white/10 translate-y-1 group-hover/cat:translate-y-0">
+                                                <div className="flex items-center gap-2">
+                                                    <span className="text-slate-400 font-medium">Category Path:</span>
+                                                    <span className="font-bold tracking-wide">{product.categoryFull || product.category}</span>
+                                                </div>
+                                                {/* Tiny Arrow */}
+                                                <div className="absolute top-full left-4 -translate-y-[1px] border-8 border-transparent border-t-slate-900/95"></div>
+                                            </div>
+                                        </div>
                                     ) : (
                                         <span className="text-xs text-slate-300">—</span>
                                     )}

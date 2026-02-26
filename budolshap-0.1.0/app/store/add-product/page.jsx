@@ -11,7 +11,7 @@ export default function StoreAddProductPage() {
     const { user, isLoading: authLoading } = useAuth();
     const searchParams = useSearchParams();
     const productId = searchParams.get('id');
-    
+
     const [initialData, setInitialData] = useState(null);
     const [storeId, setStoreId] = useState(null);
     const [loading, setLoading] = useState(true);
@@ -30,7 +30,7 @@ export default function StoreAddProductPage() {
                 const storeRes = await fetch(`/api/stores/user/${user.id}`);
                 if (!storeRes.ok) throw new Error("Failed to fetch store info");
                 const storeData = await storeRes.json();
-                
+
                 if (!storeData || !storeData.id) {
                     toast.error("You need to create a store first!");
                     // TODO: Redirect to create store
@@ -43,13 +43,14 @@ export default function StoreAddProductPage() {
                     const response = await fetch(`/api/products/${productId}`);
                     if (!response.ok) throw new Error("Failed to fetch product");
                     const data = await response.json();
-                    
+
                     // Transform data to match schema
                     setInitialData({
                         id: data.id, // Important for Edit mode
                         name: data.name,
                         description: data.description || "",
                         category: data.category,
+                        categoryId: data.categoryId, // Pass categoryId for the form
                         price: data.price,
                         mrp: data.mrp,
                         stock: data.stock,
@@ -79,7 +80,7 @@ export default function StoreAddProductPage() {
     }, [productId, authLoading, user]);
 
     if (authLoading || loading) return <Loading />;
-    
+
     if (!user) {
         return <div className="p-8 text-center text-red-500">Please login to manage products.</div>;
     }
@@ -98,7 +99,7 @@ export default function StoreAddProductPage() {
                     {productId ? 'Update your product details and variations.' : 'Follow the steps to list your product on BudolShap.'}
                 </p>
             </div>
-            
+
             <AddProductWizard initialData={initialData} storeId={storeId} />
         </div>
     );

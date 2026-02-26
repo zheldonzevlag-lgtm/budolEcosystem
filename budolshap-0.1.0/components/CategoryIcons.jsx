@@ -24,7 +24,7 @@ import {
     // Electronics
     Smartphone, Laptop, Camera, Headphones, Tv, Watch, Gamepad2, Monitor, Keyboard, Mouse, Tablet, Speaker,
     // Fashion
-    Shirt, ShoppingBag, Gem, Glasses, Crown, Hat, Scissors, Footprints,
+    Shirt, ShoppingBag, Gem, Glasses, Crown, Scissors, Footprints,
     // Home & Living
     Home, Sofa, Utensils, Blend, Lamp, Wrench, BedDouble,
     // Health & Beauty
@@ -74,7 +74,7 @@ export const PROFESSIONAL_ICON_MAP = {
     'Jewelry': Gem,
     'Glasses': Glasses,
     'Crown': Crown,
-    'Hat': Hat,
+    'Hat': ShoppingBag,
     'Scissors': Scissors,
     'Footprints': Footprints,
     // Home & Living
@@ -103,7 +103,7 @@ export const PROFESSIONAL_ICON_MAP = {
     'Camping': Tent,
     // Kids & Toys
     'Baby': Baby,
-    'Toys': Blocks,
+    'Toys': Gamepad2,
     'Puzzle': Puzzle,
     // Books & Media
     'Books': BookOpen,
@@ -180,7 +180,7 @@ const SLUG_ICON_MAP = {
     'cleaner': Wrench,
 
     // ── Fashion ───────────────────────────────────────────────────────────────
-    'fashion': ShoppingBag,
+    'fashion': Shirt,
     'clothing': Shirt,
     'clothes': Shirt,
     'shirts': Shirt,
@@ -197,8 +197,8 @@ const SLUG_ICON_MAP = {
     'accessories': Gem,
     'jewelry': Gem,
     'sunglasses': Glasses,
-    'hats': Hat,
-    'caps': Hat,
+    'hats': ShoppingBag,
+    'caps': ShoppingBag,
     'underwear': Shirt,
     'swimwear': Waves,
 
@@ -249,7 +249,7 @@ const SLUG_ICON_MAP = {
 
     // ── Toys, Games & Hobbies ─────────────────────────────────────────────────
     'toys': Blocks,
-    'toys-games-hobbies': Blocks,
+    'toys-games-hobbies': Gamepad2,
     'games': Dice5,
     'hobbies': Puzzle,
     'kids': Baby,

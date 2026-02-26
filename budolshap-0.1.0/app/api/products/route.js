@@ -24,18 +24,36 @@ export async function GET(request) {
         if (limit > 100) limit = 100;
 
         const where = {};
-        if (category) where.category = category;
+        const conditions = [];
+
+        if (category) {
+            conditions.push({
+                OR: [
+                    { category: category },
+                    { categoryData: { slug: category } }
+                ]
+            });
+        }
+
         if (storeId) where.storeId = storeId;
+
         if (ids) {
             where.id = {
                 in: ids.split(',')
             };
         }
+
         if (search) {
-            where.OR = [
-                { name: { contains: search } },
-                { description: { contains: search } },
-            ];
+            conditions.push({
+                OR: [
+                    { name: { contains: search, mode: 'insensitive' } },
+                    { description: { contains: search, mode: 'insensitive' } },
+                ]
+            });
+        }
+
+        if (conditions.length > 0) {
+            where.AND = conditions;
         }
 
         // Only filter by inStock if we're not fetching specific IDs
@@ -77,7 +95,25 @@ export async function GET(request) {
                         id: true,
                         name: true,
                         slug: true,
-                        icon: true
+                        icon: true,
+                        parent: {
+                            select: {
+                                id: true,
+                                name: true,
+                                slug: true,
+                                icon: true,
+                                parent: {
+                                    select: {
+                                        name: true,
+                                        parent: {
+                                            select: {
+                                                name: true
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        }
                     }
                 },
                 orderItems: {
@@ -120,7 +156,24 @@ export async function GET(request) {
             }
 
             const { orderItems, ...rest } = product;
-            return { ...rest, images, videos, sold };
+            // Construct full category path
+            let categoryFull = product.category;
+            if (product.categoryData) {
+                const parts = [];
+                if (product.categoryData.parent?.parent?.name) parts.push(product.categoryData.parent.parent.name);
+                if (product.categoryData.parent?.name) parts.push(product.categoryData.parent.name);
+                parts.push(product.categoryData.name);
+                categoryFull = parts.join(' > ');
+            }
+
+            return {
+                ...rest,
+                images,
+                videos,
+                sold,
+                categoryFull,
+                categorySlug: product.categoryData?.slug || product.category?.toLowerCase().replace(/\s+/g, '-')
+            };
         });
 
         return NextResponse.json(productsWithSold);
@@ -136,6 +189,7 @@ export async function GET(request) {
 // POST create new product
 export async function POST(request) {
     try {
+        const body = await request.json()
         let {
             name, description, mrp, price, stock, images, videos, categoryId, storeId, category,
             parent_sku, tier_variations, variation_matrix,
