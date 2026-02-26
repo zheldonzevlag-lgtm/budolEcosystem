@@ -71,28 +71,57 @@ const ProductDetails = ({ product }) => {
             setSelectedIndices(newIndices);
 
             // Revert image to default if main variation is deselected
-            // Assuming 1st tier (index 0) is usually the "Image" tier (e.g. Color)
             if (tierIndex === 0) {
                 const fallbackImage = images[0] || '/images/placeholder-product.png'
                 setMainImage(fallbackImage);
                 setMainMedia({ type: 'image', src: fallbackImage });
+                setActiveIndex(0);
+                setStartIndex(0);
             }
         } else {
             setSelectedIndices(prev => ({
                 ...prev,
                 [tierIndex]: optionIndex
             }));
-
-            // Smart Image Update:
-            // If the user selects a variation that has specific images (usually Tier 1), update main image
-            // even if the full combination isn't selected yet.
-            const potentialMatch = matrix.find(item => item.tier_index[tierIndex] === optionIndex);
-            if (potentialMatch && potentialMatch.image) {
-                setMainImage(potentialMatch.image);
-                setMainMedia({ type: 'image', src: potentialMatch.image });
-            }
+            
+            // Image update will be handled by useEffect to ensure consistency
         }
     };
+
+    // Sync Gallery with selected variants
+    useEffect(() => {
+        if (Object.keys(selectedIndices).length > 0) {
+            // Find the best matching SKU in matrix to get its image
+            const match = matrix.find(item => {
+                return Object.entries(selectedIndices).every(([tIdx, oIdx]) => {
+                    return item.tier_index[tIdx] === oIdx;
+                });
+            }) || matrix.find(item => {
+                // Fallback to Tier 0 match if full match not found
+                return item.tier_index[0] === selectedIndices[0];
+            });
+
+            if (match && match.image) {
+                // Only update if the image is actually different to prevent infinite loops
+                if (mainImage !== match.image) {
+                    setMainImage(match.image);
+                    setMainMedia({ type: 'image', src: match.image });
+                }
+
+                const galleryIndex = galleryItems.findIndex(item => item.src === match.image);
+                if (galleryIndex !== -1 && galleryIndex !== activeIndex) {
+                    setActiveIndex(galleryIndex);
+                    
+                    // Auto-scroll
+                    if (galleryIndex < startIndex) {
+                        setStartIndex(galleryIndex);
+                    } else if (galleryIndex >= startIndex + 4) {
+                        setStartIndex(Math.max(0, Math.min(galleryIndex, galleryItems.length - 4)));
+                    }
+                }
+            }
+        }
+    }, [selectedIndices, matrix, galleryItems, mainImage, activeIndex, startIndex]);
 
     // Find the matching SKU model from the matrix based on selected indices
     const currentSKU = matrix.find(item => {
@@ -177,6 +206,9 @@ const ProductDetails = ({ product }) => {
     const handleScrollUp = (e) => {
         e.stopPropagation();
         if (activeIndex > 0) {
+            // Clear selected variants when navigating gallery
+            setSelectedIndices({});
+            
             const newIndex = activeIndex - 1;
             setActiveIndex(newIndex);
             const nextItem = galleryItems[newIndex];
@@ -198,6 +230,9 @@ const ProductDetails = ({ product }) => {
     const handleScrollDown = (e) => {
         e.stopPropagation();
         if (activeIndex < galleryItems.length - 1) {
+            // Clear selected variants when navigating gallery
+            setSelectedIndices({});
+
             const newIndex = activeIndex + 1;
             setActiveIndex(newIndex);
             const nextItem = galleryItems[newIndex];
@@ -245,6 +280,10 @@ const ProductDetails = ({ product }) => {
             if (galleryItems.length > 4) {
                 e.preventDefault();
                 e.stopPropagation();
+
+                // Clear selected variants when mouse scrolling in thumbnail area
+                setSelectedIndices({});
+
                 if (e.deltaY > 0) {
                     setStartIndex(prev => Math.min(prev + 1, galleryItems.length - 4));
                 } else {
@@ -280,6 +319,9 @@ const ProductDetails = ({ product }) => {
                         <div 
                             key={globalIndex} 
                             onClick={() => {
+                                // Clear selected variants when a thumbnail is clicked
+                                setSelectedIndices({});
+
                                 if (item.type === 'image') {
                                     setMainImage(item.src);
                                 }
@@ -290,6 +332,9 @@ const ProductDetails = ({ product }) => {
                                 setActiveIndex(globalIndex);
                             }} 
                             onMouseEnter={() => {
+                                // Clear selected variants when a thumbnail is hovered
+                                setSelectedIndices({});
+
                                 if (item.type === 'image') {
                                     setMainImage(item.src);
                                 }
