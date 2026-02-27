@@ -372,7 +372,7 @@ const ProductDetails = ({ product }) => {
             <div className="flex flex-col gap-4">
                 <div className="flex max-sm:flex-col-reverse gap-3">
                     <div
-                        className="flex sm:flex-col gap-3 overflow-x-auto sm:overflow-visible custom-scrollbar"
+                        className="flex sm:flex-col gap-3 overflow-x-auto sm:overflow-visible custom-scrollbar snap-x snap-mandatory"
                         ref={thumbnailRef}
                         onMouseLeave={() => setHoveredMedia(null)}
                         onMouseMove={(e) => {
@@ -391,7 +391,7 @@ const ProductDetails = ({ product }) => {
                                         applyThumbnailItem(item, index);
                                     }}
                                     data-thumb-index={index}
-                                    className={`flex-shrink-0 bg-slate-100 flex items-center justify-center size-26 rounded-lg group cursor-pointer border-2 
+                                    className={`flex-shrink-0 snap-start bg-slate-100 flex items-center justify-center size-26 rounded-lg group cursor-pointer border-2 
                                 ${index === activeIndex ? 'border-blue-500' : 'border-transparent'}
                                 ${isVisibleOnDesktop ? 'flex' : 'flex sm:hidden'}`}
                                 >

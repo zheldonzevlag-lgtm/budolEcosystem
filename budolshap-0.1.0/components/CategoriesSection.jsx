@@ -104,7 +104,7 @@ export default function CategoriesSection() {
                     variants={containerVariants}
                     initial="hidden"
                     animate="visible"
-                    className="flex sm:grid overflow-x-auto sm:overflow-visible sm:grid-cols-6 md:grid-cols-8 lg:grid-cols-10 gap-2 pb-2 no-scrollbar"
+                    className="flex sm:grid overflow-x-auto sm:overflow-visible sm:grid-cols-6 md:grid-cols-8 lg:grid-cols-10 gap-2 pb-2 no-scrollbar snap-x snap-mandatory"
                 >
                     <AnimatePresence mode='popLayout'>
                         {visible.map((cat, idx) => {
@@ -122,6 +122,7 @@ export default function CategoriesSection() {
                                     exit={{ opacity: 0, scale: 0.8 }}
                                     whileHover={{ y: -5, scale: 1.05 }}
                                     whileTap={{ scale: 0.95 }}
+                                    className="snap-start"
                                 >
                                     <Link
                                         href={`/shop?category=${encodeURIComponent(cat.slug)}`}
@@ -154,6 +155,7 @@ export default function CategoriesSection() {
                             variants={itemVariants}
                             whileHover={{ y: -5, scale: 1.05 }}
                             whileTap={{ scale: 0.95 }}
+                            className="snap-start"
                         >
                             <Link
                                 href="/shop"
