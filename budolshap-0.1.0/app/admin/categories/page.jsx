@@ -521,27 +521,27 @@ export default function CategoryManagementPage() {
                                                 type="text"
                                                 placeholder="Search Lucide icons..."
                                                 className="w-full pl-8 pr-3 py-1.5 text-xs bg-slate-50 border-none rounded-md focus:ring-1 focus:ring-green-500"
-                                                onChange={(e) => {
-                                                    // Local filter if needed, otherwise just shows all
-                                                }}
+                                                onChange={(e) => setIconSearch(e.target.value)}
                                             />
                                         </div>
                                     </div>
                                     <div className="grid grid-cols-6 gap-1 p-2 max-h-[160px] overflow-y-auto scrollbar-thin">
-                                        {Object.entries(PROFESSIONAL_ICON_MAP).map(([name, Icon]) => (
-                                            <button
-                                                key={name}
-                                                type="button"
-                                                onClick={() => setFormData(p => ({ ...p, icon: name }))}
-                                                className={`
+                                        {Object.entries(PROFESSIONAL_ICON_MAP)
+                                            .filter(([name]) => name.toLowerCase().includes(iconSearch.toLowerCase()))
+                                            .map(([name, Icon]) => (
+                                                <button
+                                                    key={name}
+                                                    type="button"
+                                                    onClick={() => setFormData(p => ({ ...p, icon: name }))}
+                                                    className={`
                                                     p-2 rounded-lg flex flex-col items-center justify-center gap-1 transition-all
                                                     ${formData.icon === name ? 'bg-green-600 text-white shadow-md scale-110 z-10' : 'bg-white hover:bg-slate-100 text-slate-500'}
                                                 `}
-                                                title={name}
-                                            >
-                                                <Icon size={18} />
-                                            </button>
-                                        ))}
+                                                    title={name}
+                                                >
+                                                    <Icon size={18} />
+                                                </button>
+                                            ))}
                                     </div>
                                 </div>
                             </div>
@@ -625,24 +625,24 @@ export default function CategoryManagementPage() {
                                             </div>
                                             <div className="p-2 overflow-y-auto max-h-44">
                                                 <div className="grid grid-cols-5 gap-1">
-                                                    {PROFESSIONAL_ICONS
-                                                        .filter(icon => icon.name.toLowerCase().includes(iconSearch.toLowerCase()))
-                                                        .map(icon => (
+                                                    {Object.entries(PROFESSIONAL_ICON_MAP)
+                                                        .filter(([name]) => name.toLowerCase().includes(iconSearch.toLowerCase()))
+                                                        .map(([name, Icon]) => (
                                                             <button
-                                                                key={icon.name}
+                                                                key={name}
                                                                 type="button"
                                                                 onClick={() => {
-                                                                    setFormData({ ...formData, icon: icon.name })
+                                                                    setFormData({ ...formData, icon: name })
                                                                     setShowIconPicker(false)
                                                                     setIconSearch('')
                                                                 }}
-                                                                className={`p-2 rounded-lg flex flex-col items-center justify-center gap-0.5 transition ${formData.icon === icon.name
+                                                                className={`p-2 rounded-lg flex flex-col items-center justify-center gap-0.5 transition ${formData.icon === name
                                                                     ? 'bg-green-100 text-green-700'
                                                                     : 'hover:bg-slate-100 text-slate-600'
                                                                     }`}
                                                             >
-                                                                <icon.icon size={18} />
-                                                                <span className="text-[10px] truncate w-full text-center">{icon.name}</span>
+                                                                <Icon size={18} />
+                                                                <span className="text-[10px] truncate w-full text-center">{name}</span>
                                                             </button>
                                                         ))
                                                     }
