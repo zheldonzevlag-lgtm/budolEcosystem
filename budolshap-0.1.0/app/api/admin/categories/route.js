@@ -8,7 +8,7 @@ import { z } from 'zod'
 const categorySchema = z.object({
     name: z.string().min(1, 'Category name is required'),
     slug: z.string().min(1, 'Slug is required'),
-    parentId: z.string().optional(),
+    parentId: z.string().nullable().optional(),
     level: z.number().min(1).max(3),
     sortOrder: z.number().optional(),
     isActive: z.boolean().optional(),
@@ -100,8 +100,13 @@ export async function POST(request) {
                 .replace(/^-|-$/g, '')
         }
 
+        // Normalize parentId: empty string should be null
+        if (validatedData.parentId === '') {
+            validatedData.parentId = null
+        }
+
         // Auto-detect level based on parent
-        let level = validatedData.level
+        let level = validatedData.parentId ? validatedData.level : 1
         if (validatedData.parentId) {
             const parent = await prisma.category.findUnique({
                 where: { id: validatedData.parentId }
@@ -168,8 +173,17 @@ export async function PUT(request) {
         // Validate the update data
         const validatedData = categorySchema.partial().parse(updateData)
 
+        // Normalize parentId: empty string should be null
+        if (updateData.parentId === '') {
+            validatedData.parentId = null
+        } else if (updateData.parentId === null) {
+            validatedData.parentId = null
+        }
+
         // Update level if parent changes
-        if (validatedData.parentId) {
+        if (validatedData.parentId === null) {
+            validatedData.level = 1
+        } else if (validatedData.parentId) {
             const parent = await prisma.category.findUnique({
                 where: { id: validatedData.parentId }
             })
