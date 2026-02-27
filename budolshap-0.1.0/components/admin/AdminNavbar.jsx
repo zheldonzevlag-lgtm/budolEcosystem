@@ -3,7 +3,6 @@ import Link from "next/link"
 import { LogOut, User } from "lucide-react"
 import { useAuth } from "@/context/AuthContext"
 import toast from "react-hot-toast"
-import BudolPayText from '@/components/payment/BudolPayText';
 
 const AdminNavbar = () => {
     const { user, logout } = useAuth()
@@ -43,10 +42,20 @@ const AdminNavbar = () => {
 
     return (
         <div className="flex items-center justify-between px-12 py-3 border-b border-slate-200 transition-all bg-white">
-            <Link href="/" target="_blank" className="relative text-4xl font-semibold text-slate-700">
-                <BudolPayText text="budolShap" />
-                <span className="text-green-600 text-5xl leading-0">.</span>
-                <p className="absolute text-xs font-semibold -top-1 -right-13 px-3 p-0.5 rounded-full flex items-center gap-2 text-white bg-green-500">
+            <Link href="/" target="_blank" className="relative shrink-0 flex items-center">
+                <img
+                    src="https://res.cloudinary.com/dasfwpg7x/image/upload/v1772205112/budolshap/assets/budolshap_logo_bag_trans.png"
+                    alt="budolShap"
+                    className="h-10 w-auto select-none sm:hidden"
+                    draggable="false"
+                />
+                <img
+                    src="https://res.cloudinary.com/dasfwpg7x/image/upload/v1771164945/budolshap/assets/budolshap_logo_transparent.png"
+                    alt="budolShap"
+                    className="hidden sm:block h-12 sm:h-16 lg:h-20 w-auto select-none"
+                    draggable="false"
+                />
+                <p className="absolute hidden sm:flex text-[9px] sm:text-[10px] font-semibold top-3 sm:top-3 -right-3 sm:-right-4 px-1 sm:px-2 py-0.5 rounded-full items-center gap-1 text-white bg-green-500">
                     Admin
                 </p>
             </Link>

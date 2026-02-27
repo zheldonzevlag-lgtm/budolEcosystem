@@ -104,7 +104,7 @@ export default function CategoriesSection() {
                     variants={containerVariants}
                     initial="hidden"
                     animate="visible"
-                    className="grid grid-cols-5 sm:grid-cols-6 md:grid-cols-8 lg:grid-cols-10 gap-2"
+                    className="flex sm:grid overflow-x-auto sm:overflow-visible sm:grid-cols-6 md:grid-cols-8 lg:grid-cols-10 gap-2 pb-2 no-scrollbar"
                 >
                     <AnimatePresence mode='popLayout'>
                         {visible.map((cat, idx) => {
@@ -130,6 +130,7 @@ export default function CategoriesSection() {
                                             border border-transparent ${color.bg} ${color.hover}
                                             hover:shadow-md
                                             transition-all duration-200 cursor-pointer h-full
+                                            flex-shrink-0 w-[80px] sm:w-auto
                                         `}
                                     >
                                         <span className={`flex items-center justify-center w-8 h-8 ${color.text}`}>
@@ -158,7 +159,8 @@ export default function CategoriesSection() {
                                 href="/shop"
                                 className="flex flex-col items-center gap-1.5 p-2 sm:p-3 rounded-xl
                                     border border-dashed border-slate-200 bg-slate-50 hover:bg-slate-100
-                                    hover:shadow-md transition-all duration-200 cursor-pointer group h-full"
+                                    hover:shadow-md transition-all duration-200 cursor-pointer group h-full
+                                    flex-shrink-0 w-[80px] sm:w-auto"
                             >
                                 <span className="flex items-center justify-center w-8 h-8 text-slate-500">
                                     <ShoppingCart className="w-6 h-6 sm:w-7 sm:h-7" />

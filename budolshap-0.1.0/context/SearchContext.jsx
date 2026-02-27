@@ -12,7 +12,9 @@ export const SearchProvider = ({ children }) => {
 
     // Reset search query when navigating to a new page
     useEffect(() => {
-        setSearchQuery('');
+        if (!pathname.includes('/shop')) {
+            setSearchQuery('');
+        }
         
         // Default placeholders based on path
         if (pathname.includes('/store/orders')) {

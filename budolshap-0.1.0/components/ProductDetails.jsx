@@ -19,6 +19,7 @@ const ProductDetails = ({ product }) => {
 
     const router = useRouter()
     const imageRef = useRef(null);
+    const mainVideoRef = useRef(null);
     const thumbnailRef = useRef(null);
     const lastPointerRef = useRef({ x: 0, y: 0 });
     const wheelPendingRef = useRef(false);
@@ -67,9 +68,28 @@ const ProductDetails = ({ product }) => {
     const [selectedIndices, setSelectedIndices] = useState({}); // { 0: optionIndex, 1: optionIndex }
     const [quantity, setQuantity] = useState(1);
     const [hoveredMedia, setHoveredMedia] = useState(null);
+    const [isMainVideoPlaying, setIsMainVideoPlaying] = useState(false);
 
     const incrementQuantity = () => setQuantity(prev => prev + 1);
     const decrementQuantity = () => setQuantity(prev => (prev > 1 ? prev - 1 : 1));
+
+    const handleMainVideoOverlayClick = () => {
+        const node = mainVideoRef.current;
+        if (!node) return;
+        node.play();
+    };
+
+    const handleMainVideoPauseClick = () => {
+        const node = mainVideoRef.current;
+        if (!node) return;
+        node.pause();
+    };
+
+    useEffect(() => {
+        if (mainMedia.type !== 'video') {
+            setIsMainVideoPlaying(false);
+        }
+    }, [mainMedia.type]);
 
     // Tier-Variation Logic (Shopee Style)
     const tiers = product.tier_variations || [];
@@ -163,12 +183,12 @@ const ProductDetails = ({ product }) => {
     const priceRange = minPrice !== maxPrice ? `${currency}${minPrice.toLocaleString()} - ${currency}${maxPrice.toLocaleString()}` : null;
 
     // Price Logic: Prioritize variation matrix if it exists
-    const displayPrice = (isSelectionComplete && currentSKU) 
-        ? currentSKU.price 
+    const displayPrice = (isSelectionComplete && currentSKU)
+        ? currentSKU.price
         : (matrix.length > 0 ? minPrice : product.price);
 
-    const displayMrp = (isSelectionComplete && currentSKU) 
-        ? currentSKU.mrp 
+    const displayMrp = (isSelectionComplete && currentSKU)
+        ? currentSKU.mrp
         : (matrix.length > 0 ? minMrp : product.mrp);
 
     // Stock: If selected, show specific stock. If not, show total.
@@ -351,101 +371,132 @@ const ProductDetails = ({ product }) => {
         <div className="flex max-lg:flex-col gap-12">
             <div className="flex flex-col gap-4">
                 <div className="flex max-sm:flex-col-reverse gap-3">
-                <div 
-                    className="flex sm:flex-col gap-3 overflow-x-auto sm:overflow-visible custom-scrollbar"
-                    ref={thumbnailRef}
-                    onMouseLeave={() => setHoveredMedia(null)}
-                    onMouseMove={(e) => {
-                        lastPointerRef.current = { x: e.clientX, y: e.clientY };
-                    }}
-                >
-                    {galleryItems.slice(startIndex, startIndex + 4).map((item, index) => {
-                        const globalIndex = startIndex + index;
-                        return (
-                        <div 
-                            key={globalIndex} 
-                            onClick={() => {
-                                applyThumbnailItem(item, globalIndex);
-                            }} 
-                            onMouseEnter={() => {
-                                applyThumbnailItem(item, globalIndex);
-                            }}
-                            data-thumb-index={globalIndex}
-                            className={`bg-slate-100 flex items-center justify-center size-26 rounded-lg group cursor-pointer border-2 ${globalIndex === activeIndex ? 'border-blue-500' : 'border-transparent'}`}
-                        >
-                            {item.type === 'image' ? (
-                                <Image src={item.src} className="group-hover:scale-103 group-active:scale-95 transition object-contain" alt="" width={95} height={95} />
-                            ) : (
-                                <div className="relative w-full h-full flex items-center justify-center bg-black">
-                                    <video src={item.src} className="w-full h-full object-cover" muted playsInline preload="metadata" />
-                                    <div className="absolute inset-0 flex items-center justify-center">
-                                        <div className="h-8 w-8 rounded-full bg-black/60 flex items-center justify-center">
-                                            <svg className="h-4 w-4 text-white ml-0.5" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+                    <div
+                        className="flex sm:flex-col gap-3 overflow-x-auto sm:overflow-visible custom-scrollbar"
+                        ref={thumbnailRef}
+                        onMouseLeave={() => setHoveredMedia(null)}
+                        onMouseMove={(e) => {
+                            lastPointerRef.current = { x: e.clientX, y: e.clientY };
+                        }}
+                    >
+                        {galleryItems.map((item, index) => {
+                            const isVisibleOnDesktop = index >= startIndex && index < startIndex + 4;
+                            return (
+                                <div
+                                    key={index}
+                                    onClick={() => {
+                                        applyThumbnailItem(item, index);
+                                    }}
+                                    onMouseEnter={() => {
+                                        applyThumbnailItem(item, index);
+                                    }}
+                                    data-thumb-index={index}
+                                    className={`flex-shrink-0 bg-slate-100 flex items-center justify-center size-26 rounded-lg group cursor-pointer border-2 
+                                ${index === activeIndex ? 'border-blue-500' : 'border-transparent'}
+                                ${isVisibleOnDesktop ? 'flex' : 'flex sm:hidden'}`}
+                                >
+                                    {/* Product media thumbnail (image or video) */}
+                                    {item.type === 'image' ? (
+                                        <Image src={item.src} className="group-hover:scale-103 group-active:scale-95 transition object-contain" alt="Thumbnail" width={95} height={95} />
+                                    ) : (
+                                        <div className="relative w-full h-full flex items-center justify-center bg-black rounded-lg overflow-hidden">
+                                            <video src={item.src} className="w-full h-full object-cover" muted playsInline preload="metadata" />
+                                            <div className="absolute inset-0 flex items-center justify-center">
+                                                <div className="h-8 w-8 rounded-full bg-black/60 flex items-center justify-center">
+                                                    <svg className="h-4 w-4 text-white ml-0.5" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+                                                        <polygon points="8,5 19,12 8,19" />
+                                                    </svg>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    )}
+                                </div>
+                            )
+                        })}
+                    </div>
+                    <div
+                        className={`relative flex justify-center items-center h-100 sm:size-113 bg-slate-100 rounded-lg overflow-hidden ${mainMedia.type === 'video' ? 'cursor-default' : 'cursor-crosshair'}`}
+                        onMouseMove={handleMouseMove}
+                        onMouseLeave={handleMouseLeave}
+                        ref={imageRef}
+                    >
+                        {mainMedia.type === 'video' ? (
+                            <div className="relative w-full h-full bg-black">
+                                <video
+                                    ref={mainVideoRef}
+                                    src={mainMedia.src}
+                                    className="w-full h-full object-cover"
+                                    controls
+                                    playsInline
+                                    onPlay={() => setIsMainVideoPlaying(true)}
+                                    onPause={() => setIsMainVideoPlaying(false)}
+                                    onEnded={() => setIsMainVideoPlaying(false)}
+                                />
+                                {!isMainVideoPlaying && (
+                                    <button
+                                        type="button"
+                                        onClick={handleMainVideoOverlayClick}
+                                        className="absolute inset-0 flex items-center justify-center"
+                                    >
+                                        <div className="h-14 w-14 rounded-full bg-black/60 flex items-center justify-center">
+                                            <svg className="h-7 w-7 text-white ml-0.5" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
                                                 <polygon points="8,5 19,12 8,19" />
                                             </svg>
                                         </div>
-                                    </div>
-                                </div>
-                            )}
-                        </div>
-                    )})}
-                </div>
-                <div
-                    className={`relative flex justify-center items-center h-100 sm:size-113 bg-slate-100 rounded-lg overflow-hidden ${mainMedia.type === 'video' ? 'cursor-default' : 'cursor-crosshair'}`}
-                    onMouseMove={handleMouseMove}
-                    onMouseLeave={handleMouseLeave}
-                    ref={imageRef}
-                >
-                    {mainMedia.type === 'video' ? (
-                        <div className="relative w-full h-full bg-black">
-                            <video src={mainMedia.src} className="w-full h-full object-cover" controls playsInline />
-                            <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
-                                <div className="h-14 w-14 rounded-full bg-black/60 flex items-center justify-center">
-                                    <svg className="h-7 w-7 text-white ml-0.5" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
-                                        <polygon points="8,5 19,12 8,19" />
-                                    </svg>
-                                </div>
+                                    </button>
+                                )}
+                                {isMainVideoPlaying && (
+                                    <button
+                                        type="button"
+                                        onClick={handleMainVideoPauseClick}
+                                        className="absolute bottom-3 right-3 h-10 w-10 rounded-full bg-black/60 flex items-center justify-center"
+                                    >
+                                        <svg className="h-5 w-5 text-white" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+                                            <rect x="6" y="5" width="4" height="14" />
+                                            <rect x="14" y="5" width="4" height="14" />
+                                        </svg>
+                                    </button>
+                                )}
                             </div>
-                        </div>
-                    ) : (
-                        <Image src={mainImage} alt="" width={250} height={250} className="object-contain w-full h-full" />
-                    )}
+                        ) : (
+                            <Image src={mainImage} alt="" width={250} height={250} className="object-contain w-full h-full" />
+                        )}
 
-                    {/* Magnifier Overlay (Desktop Only) */}
-                    <div
-                        className="absolute inset-0 pointer-events-none hidden lg:block"
-                        style={{
-                            ...zoomStyle,
-                            backgroundRepeat: 'no-repeat',
-                            backgroundColor: '#f8fafc'
-                        }}
-                    />
+                        {/* Magnifier Overlay (Desktop Only) */}
+                        <div
+                            className="absolute inset-0 pointer-events-none hidden lg:block"
+                            style={{
+                                ...zoomStyle,
+                                backgroundRepeat: 'no-repeat',
+                                backgroundColor: '#f8fafc'
+                            }}
+                        />
 
-                    {/* Navigation Arrows */}
-                    {galleryItems.length > 4 && (
-                        <div 
-                            className="absolute bottom-4 right-4 flex flex-col gap-2 z-50"
-                            onMouseEnter={() => setZoomStyle({ display: 'none' })}
-                            onMouseMove={(e) => e.stopPropagation()}
-                            onMouseLeave={(e) => e.stopPropagation()}
-                        >
-                            <button 
-                                onClick={handleScrollUp}
-                                disabled={activeIndex === 0}
-                                className={`p-2 rounded-full bg-white/80 shadow-md transition-all hover:bg-white ${activeIndex === 0 ? 'opacity-50 cursor-not-allowed' : 'hover:scale-105 active:scale-95'}`}
+                        {/* Navigation Arrows */}
+                        {galleryItems.length > 4 && (
+                            <div
+                                className="absolute bottom-4 right-4 flex flex-col gap-2 z-50"
+                                onMouseEnter={() => setZoomStyle({ display: 'none' })}
+                                onMouseMove={(e) => e.stopPropagation()}
+                                onMouseLeave={(e) => e.stopPropagation()}
                             >
-                                <ChevronUp className="w-6 h-6 text-slate-700" />
-                            </button>
-                            <button 
-                                onClick={handleScrollDown}
-                                disabled={activeIndex === galleryItems.length - 1}
-                                className={`p-2 rounded-full bg-white/80 shadow-md transition-all hover:bg-white ${activeIndex === galleryItems.length - 1 ? 'opacity-50 cursor-not-allowed' : 'hover:scale-105 active:scale-95'}`}
-                            >
-                                <ChevronDown className="w-6 h-6 text-slate-700" />
-                            </button>
-                        </div>
-                    )}
-                </div>
+                                <button
+                                    onClick={handleScrollUp}
+                                    disabled={activeIndex === 0}
+                                    className={`p-2 rounded-full bg-white/80 shadow-md transition-all hover:bg-white ${activeIndex === 0 ? 'opacity-50 cursor-not-allowed' : 'hover:scale-105 active:scale-95'}`}
+                                >
+                                    <ChevronUp className="w-6 h-6 text-slate-700" />
+                                </button>
+                                <button
+                                    onClick={handleScrollDown}
+                                    disabled={activeIndex === galleryItems.length - 1}
+                                    className={`p-2 rounded-full bg-white/80 shadow-md transition-all hover:bg-white ${activeIndex === galleryItems.length - 1 ? 'opacity-50 cursor-not-allowed' : 'hover:scale-105 active:scale-95'}`}
+                                >
+                                    <ChevronDown className="w-6 h-6 text-slate-700" />
+                                </button>
+                            </div>
+                        )}
+                    </div>
                 </div>
             </div>
             <div className="flex-1">
@@ -499,7 +550,7 @@ const ProductDetails = ({ product }) => {
                                     const hasAnyValidCombo = matrix.some(item => item.tier_index[tIdx] === oIdx);
                                     if (!hasAnyValidCombo) {
                                         isOptionDisabled = true;
-                                    } 
+                                    }
                                     // 2. Complex dependency check for multiple tiers if not already disabled
                                     else if (tiers.length > 1) {
                                         // Create a hypothetical selection including this option
@@ -559,7 +610,7 @@ const ProductDetails = ({ product }) => {
 
                     <div className="text-sm text-slate-500 flex items-center gap-4">
                         {tiers.length === 0 ? (
-                             product.inStock ? <span className="text-green-600 font-medium">In Stock</span> : <span className="text-red-500 font-medium">Out of Stock</span>
+                            product.inStock ? <span className="text-green-600 font-medium">In Stock</span> : <span className="text-red-500 font-medium">Out of Stock</span>
                         ) : (
                             Object.keys(selectedIndices).length > 0 ? (
                                 <span>Stock: <span className="font-medium text-slate-700">{displayStock}</span> pieces available</span>

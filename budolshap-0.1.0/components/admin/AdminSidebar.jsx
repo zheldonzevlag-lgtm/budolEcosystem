@@ -127,10 +127,10 @@ const AdminSidebar = ({ user: userProp }) => {
     ]
 
     const productOrderManagementSubMenu = [
-        { name: 'Products', href: '/admin/products', icon: ShoppingBasketIcon },
+        { name: 'Products Management', href: '/admin/products', icon: ShoppingBasketIcon },
         { name: 'Product Categories', href: '/admin/categories', icon: FolderTree },
-        { name: 'Orders', href: '/admin/orders', icon: PackageIcon },
-        { name: 'Returns', href: '/admin/returns', icon: RefreshCcw },
+        { name: 'Orders Management', href: '/admin/orders', icon: PackageIcon },
+        { name: 'Returns Management', href: '/admin/returns', icon: RefreshCcw },
     ]
 
     const userManagementSubMenu = [

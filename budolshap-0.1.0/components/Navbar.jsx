@@ -29,12 +29,14 @@ const Navbar = () => {
     const [isSeller, setIsSeller] = useState(false)
     const [showUserMenu, setShowUserMenu] = useState(false)
     const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false)
+    const [isMobileSearchOpen, setIsMobileSearchOpen] = useState(false)
     const [storeLogo, setStoreLogo] = useState(null)
     const [storeStatus, setStoreStatus] = useState(null)
     const cartCount = useSelector(state => state.cart.total)
     const cartItems = useSelector(state => state.cart.cartItems)
     const menuRef = useRef(null)
     const mobileMenuRef = useRef(null)
+    const mobileSearchInputRef = useRef(null)
     const [mounted, setMounted] = useState(false)
     const [isLoggingOut, setIsLoggingOut] = useState(false)
 
@@ -53,6 +55,7 @@ const Navbar = () => {
     useEffect(() => {
         setShowUserMenu(false);
         setIsMobileMenuOpen(false);
+        setIsMobileSearchOpen(false);
     }, [pathname]);
 
     const fetchStore = useCallback(async () => {
@@ -159,13 +162,18 @@ const Navbar = () => {
 
     const handleSearch = (e) => {
         e.preventDefault()
-        // If we're not on a page that handles its own search, redirect to shop
-        const searchablePages = ['/orders', '/store/orders', '/admin/orders', '/admin/products', '/admin/users', '/admin/stores'];
-        const isOnSearchablePage = searchablePages.some(page => pathname.startsWith(page));
-
-        if (!isOnSearchablePage && pathname !== '/shop') {
-            router.push(`/shop?search=${searchQuery}`)
+        const trimmedQuery = searchQuery.trim()
+        if (trimmedQuery) {
+            router.push(`/shop?search=${encodeURIComponent(trimmedQuery)}`)
+        } else {
+            router.push('/shop')
         }
+    }
+
+    const handleMobileSearchSubmit = (e) => {
+        e.preventDefault()
+        handleSearch(e)
+        setIsMobileSearchOpen(false)
     }
 
     const handleLogout = async () => {
@@ -226,6 +234,12 @@ const Navbar = () => {
         };
     }, [isMobileMenuOpen]);
 
+    useEffect(() => {
+        if (isMobileSearchOpen) {
+            mobileSearchInputRef.current?.focus()
+        }
+    }, [isMobileSearchOpen])
+
     return (
         <nav className="relative bg-white z-[1000] border-b border-green-100 shadow-sm">
             <div className="mx-4 sm:mx-6">
@@ -234,9 +248,15 @@ const Navbar = () => {
                     {/* Logo */}
                     <Link href="/" className="relative shrink-0 flex items-center">
                         <img
+                            src="https://res.cloudinary.com/dasfwpg7x/image/upload/v1772205112/budolshap/assets/budolshap_logo_bag_trans.png"
+                            alt="budolShap"
+                            className="h-10 w-auto select-none sm:hidden"
+                            draggable="false"
+                        />
+                        <img
                             src="https://res.cloudinary.com/dasfwpg7x/image/upload/v1771164945/budolshap/assets/budolshap_logo_transparent.png"
                             alt="budolShap"
-                            className="h-12 sm:h-16 lg:h-20 w-auto select-none"
+                            className="hidden sm:block h-12 sm:h-16 lg:h-20 w-auto select-none"
                             draggable="false"
                         />
                         {(isAdmin || isSeller || user?.isCoopMember || user?.isMember) && (
@@ -255,7 +275,7 @@ const Navbar = () => {
                         <Link href="/under-construction" className={`transition-colors ${pathname === '/under-construction' ? 'text-green-600 font-semibold' : 'hover:text-slate-900'}`}>About</Link>
                         <Link href="/under-construction" className={`transition-colors ${pathname === '/under-construction' ? 'text-green-600 font-semibold' : 'hover:text-slate-900'}`}>Contact</Link>
 
-                        <form onSubmit={handleSearch} className="hidden xl:flex items-center w-xs text-sm gap-2 bg-slate-100 px-4 py-3 rounded-full">
+                        <form onSubmit={handleSearch} className="hidden lg:flex items-center w-72 text-sm gap-2 bg-slate-100 px-4 py-3 rounded-full">
                             <Search size={18} className="text-slate-600" />
                             <input suppressHydrationWarning className="w-full bg-transparent outline-none placeholder-slate-600" type="text" placeholder={placeholder} value={searchQuery} onChange={(e) => updateSearchQuery(e.target.value)} required />
                         </form>
@@ -463,19 +483,41 @@ const Navbar = () => {
                     </div>
 
                     {/* Mobile Header Actions */}
-                    <div className="lg:hidden flex items-center gap-3">
-                        {/* Search Icon Trigger (Mobile) - For now just link to shop or toggle? Let's just Link to Shop */}
-                        <Link href="/shop" className="text-slate-600 p-1">
-                            <Search size={22} />
-                        </Link>
+                    <div className="lg:hidden flex items-center gap-2">
+                        {isMobileSearchOpen ? (
+                            <form onSubmit={handleMobileSearchSubmit} className="flex items-center gap-1.5 bg-slate-50 border border-slate-200 px-3 py-2 rounded-full focus-within:border-green-500 focus-within:ring-2 focus-within:ring-green-100 w-[42vw] max-w-[210px] sm:w-[48vw] sm:max-w-[240px] min-w-0">
+                                <Search size={16} className="text-slate-500" />
+                                <input
+                                    ref={mobileSearchInputRef}
+                                    className="w-full bg-transparent outline-none placeholder-slate-400 text-sm"
+                                    type="text"
+                                    placeholder={placeholder}
+                                    value={searchQuery}
+                                    onChange={(e) => updateSearchQuery(e.target.value)}
+                                />
+                                <button
+                                    type="button"
+                                    onClick={() => setIsMobileSearchOpen(false)}
+                                    className="text-slate-400 hover:text-slate-700 transition-colors"
+                                >
+                                    <X size={16} />
+                                </button>
+                            </form>
+                        ) : (
+                            <button
+                                type="button"
+                                onClick={() => setIsMobileSearchOpen(true)}
+                                className="text-slate-600 p-1"
+                            >
+                                <Search size={22} />
+                            </button>
+                        )}
 
-                        {/* Mobile Cart */}
                         <Link href="/cart" className="relative text-slate-600 p-1">
                             <ShoppingCart size={22} />
                             <button className="absolute -top-0 -right-0 text-[8px] text-white bg-slate-600 size-3.5 rounded-full">{cartCount}</button>
                         </Link>
 
-                        {/* Mobile My Orders */}
                         <Link href="/orders" className="relative text-slate-600 p-1">
                             <ShoppingBag size={22} />
                             {orderCount > 0 && (
@@ -483,9 +525,11 @@ const Navbar = () => {
                             )}
                         </Link>
 
-                        {/* Hamburger Menu */}
                         <button
-                            onClick={() => setIsMobileMenuOpen(true)}
+                            onClick={() => {
+                                setIsMobileSearchOpen(false)
+                                setIsMobileMenuOpen(true)
+                            }}
                             className="text-slate-700 p-1"
                         >
                             <Menu size={24} />

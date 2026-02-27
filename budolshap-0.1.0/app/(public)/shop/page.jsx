@@ -1,5 +1,5 @@
 'use client'
-import { Suspense, useEffect, useState } from "react"
+import { Suspense, useEffect, useRef, useState } from "react"
 import ProductCard from "@/components/ProductCard"
 import Loading from "@/components/Loading"
 import { MoveLeftIcon, ChevronRight, ChevronDown, SlidersHorizontal, X, Search, Filter, Star } from "lucide-react"
@@ -394,6 +394,7 @@ function ShopContent() {
     const router = useRouter()
     const dispatch = useDispatch()
     const { searchQuery, updateSearchQuery } = useSearch()
+    const lastUrlSearch = useRef(null)
     const [categories, setCategories] = useState([])
     const [showMobileSidebar, setShowMobileSidebar] = useState(false)
     const [filters, setFilters] = useState({
@@ -411,8 +412,12 @@ function ShopContent() {
     }
 
     useEffect(() => {
-        if (urlSearch && !searchQuery) updateSearchQuery(urlSearch)
-    }, [urlSearch])
+        if (urlSearch !== lastUrlSearch.current) {
+            updateSearchQuery(urlSearch || '')
+            lastUrlSearch.current = urlSearch
+        }
+    }, [urlSearch, updateSearchQuery])
+
 
     useEffect(() => {
         fetch('/api/categories?flat=true')
@@ -432,8 +437,10 @@ function ShopContent() {
         }
     })
 
+    const activeSearch = searchQuery.trim()
+
     const filteredProducts = products.filter(product => {
-        const matchesSearch = searchQuery ? product.name.toLowerCase().includes(searchQuery.toLowerCase()) : true
+        const matchesSearch = activeSearch ? product.name.toLowerCase().includes(activeSearch.toLowerCase()) : true
         const matchesCategory = category ? (product.category === category || product.categorySlug === category) : true
 
         // Price filtering
@@ -477,7 +484,7 @@ function ShopContent() {
                         onClick={() => router.push('/shop')}
                         className="flex items-center gap-2 text-slate-400 hover:text-slate-600 transition-colors text-sm"
                     >
-                        {(searchQuery || category) && <MoveLeftIcon size={16} />}
+                        {(activeSearch || category) && <MoveLeftIcon size={16} />}
                         All Products
                     </button>
                     {activeCat && (
@@ -489,10 +496,10 @@ function ShopContent() {
                             </span>
                         </>
                     )}
-                    {searchQuery && (
+                    {activeSearch && (
                         <>
                             <ChevronRight size={14} className="text-slate-300" />
-                            <span className="text-sm text-slate-500">"{searchQuery}"</span>
+                            <span className="text-sm text-slate-500">"{activeSearch}"</span>
                         </>
                     )}
                 </div>

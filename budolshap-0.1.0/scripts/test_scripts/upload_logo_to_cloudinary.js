@@ -26,14 +26,16 @@ if (!process.env.NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME) {
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
-const logoPath = path.join(process.cwd(), 'public/assets/budolShap/budolShap_logo_transparent-1.png');
+const defaultLogoPath = path.join(process.cwd(), 'public/assets/budolShap/budolShap_logo_transparent-1.png');
+const logoPath = process.argv[2] || defaultLogoPath;
+const publicId = process.argv[3] || 'budolshap_logo_transparent';
 
 async function uploadLogo() {
     try {
         console.log('Uploading logo from:', logoPath);
         const result = await cloudinary.uploader.upload(logoPath, {
             folder: 'budolshap/assets',
-            public_id: 'budolshap_logo_transparent',
+            public_id: publicId,
             overwrite: true,
             resource_type: 'image'
         });
