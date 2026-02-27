@@ -2,7 +2,7 @@
 
 import { NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
-import { getAuthFromCookies } from '@/lib/auth'
+import { requireAdmin } from '@/lib/adminAuth'
 import { z } from 'zod'
 
 const categorySchema = z.object({
@@ -19,11 +19,14 @@ const categorySchema = z.object({
 // GET /api/admin/categories - List all categories
 export async function GET(request) {
     try {
+        const { authorized, errorResponse } = await requireAdmin(request)
+        if (!authorized) return errorResponse
+
         const { searchParams } = new URL(request.url)
         const flat = searchParams.get('flat') === 'true'
 
         const categories = await prisma.category.findMany({
-            where: { isActive: true },
+            where: {}, // Admins should see all categories (active & hidden)
             orderBy: [
                 { level: 'asc' },
                 { sortOrder: 'asc' },
@@ -83,13 +86,8 @@ export async function GET(request) {
 export async function POST(request) {
     try {
         // Check authentication
-        const auth = await getAuthFromCookies()
-        if (!auth || !auth.isAdmin) {
-            return NextResponse.json(
-                { error: 'Unauthorized' },
-                { status: 401 }
-            )
-        }
+        const { authorized, errorResponse } = await requireAdmin(request)
+        if (!authorized) return errorResponse
 
         const body = await request.json()
         const validatedData = categorySchema.parse(body)
@@ -154,13 +152,8 @@ export async function POST(request) {
 // PUT /api/admin/categories - Update category
 export async function PUT(request) {
     try {
-        const auth = await getAuthFromCookies()
-        if (!auth || !auth.isAdmin) {
-            return NextResponse.json(
-                { error: 'Unauthorized' },
-                { status: 401 }
-            )
-        }
+        const { authorized, errorResponse } = await requireAdmin(request)
+        if (!authorized) return errorResponse
 
         const body = await request.json()
         const { id, ...updateData } = body
@@ -209,13 +202,8 @@ export async function PUT(request) {
 // DELETE /api/admin/categories - Delete category
 export async function DELETE(request) {
     try {
-        const auth = await getAuthFromCookies()
-        if (!auth || !auth.isAdmin) {
-            return NextResponse.json(
-                { error: 'Unauthorized' },
-                { status: 401 }
-            )
-        }
+        const { authorized, errorResponse } = await requireAdmin(request)
+        if (!authorized) return errorResponse
 
         const { searchParams } = new URL(request.url)
         const id = searchParams.get('id')

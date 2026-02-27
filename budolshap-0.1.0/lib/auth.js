@@ -34,7 +34,7 @@ export * from './token.js'
 export const COOKIE_OPTIONS = {
     httpOnly: false, // Changed to false to allow client-side access for debugging/sync
     // Disable secure in development and LAN IP to allow non-HTTPS cookies
-    secure: false, 
+    secure: false,
     sameSite: 'lax',
     maxAge: 60 * 60 * 24 * 7, // 7 days
     path: '/'
@@ -105,10 +105,14 @@ export async function getAuthFromCookies() {
         if (!decoded) return null
 
         // Normalize the user object for internal use
+        const accountType = decoded.role || decoded.accountType
+        const isAdmin = decoded.isAdmin === true || accountType === 'ADMIN'
+
         return {
             ...decoded,
             id: decoded.userId || decoded.id || decoded.sub,
-            accountType: decoded.role || decoded.accountType,
+            accountType,
+            isAdmin,
             token
         }
     } catch (_error) {

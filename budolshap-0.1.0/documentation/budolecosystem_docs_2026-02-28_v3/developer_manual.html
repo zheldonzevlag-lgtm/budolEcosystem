@@ -1,0 +1,67 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Developer Manual - v5.3.3 | Budol Ecosystem</title>
+    <style>
+        body {
+            font-family: 'Inter', system-ui, -apple-system, sans-serif;
+            line-height: 1.6;
+            color: #1e293b;
+            max-width: 1000px;
+            margin: 0 auto;
+            padding: 40px 20px;
+            background-color: #f8fafc;
+        }
+
+        .card {
+            background: white;
+            padding: 24px;
+            border-radius: 12px;
+            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+            margin-bottom: 24px;
+        }
+
+        pre {
+            background: #1e293b;
+            color: #f8fafc;
+            padding: 16px;
+            border-radius: 8px;
+            overflow-x: auto;
+        }
+
+        code {
+            color: #e11d48;
+        }
+    </style>
+</head>
+
+<body>
+    <h1>Developer Manual (v5.3.3)</h1>
+
+    <div class="card">
+        <h2>Auth Logic Refinement</h2>
+        <p>Previously, <code>getAuthFromCookies</code> relied on the <code>isAdmin</code> field being present in the JWT
+            payload. Some legacy tokens or tokens generated via the mobile-compatible login routes might only contain
+            <code>accountType: "ADMIN"</code>.</p>
+        <p>The fix in <code>lib/auth.js</code> now normalizes this:</p>
+        <pre><code>const accountType = decoded.role || decoded.accountType
+const isAdmin = decoded.isAdmin === true || accountType === 'ADMIN'</code></pre>
+    </div>
+
+    <div class="card">
+        <h2>Standardizing Admin Routes</h2>
+        <p>The Category Admin API was using a "light" auth check (cookie only). To align with PCI DSS and BSP security
+            standards for administrative actions, it has been migrated to <code>requireAdmin</code>, which performs:</p>
+        <ol>
+            <li>JWT Verification</li>
+            <li>Database account lookup</li>
+            <li>RBAC role check (ADMIN/MANAGER/LEAD)</li>
+            <li>Audit Logging of access attempts</li>
+        </ol>
+    </div>
+</body>
+
+</html>
