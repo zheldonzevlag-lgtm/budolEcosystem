@@ -31,7 +31,13 @@ export default function CategorySelector({ value, onChange, error, fallbackName 
 
     const fetchCategories = async () => {
         try {
-            const res = await fetch('/api/categories?flat=true')
+            const res = await fetch(`/api/categories?flat=true&t=${Date.now()}`, {
+                cache: 'no-store',
+                headers: {
+                    'Cache-Control': 'no-cache',
+                    'Pragma': 'no-cache'
+                }
+            })
             const data = await res.json()
             if (res.ok) setCategories(data)
         } catch { }
@@ -69,13 +75,25 @@ export default function CategorySelector({ value, onChange, error, fallbackName 
         setSelectedLevel1(cat)
         setSelectedLevel2(null)
         setSelectedLevel3(null)
-        onChange(cat.id)
+
+        // Only update form value if it's a leaf
+        const hasChildren = categories.some(c => c.parentId === cat.id)
+        if (!hasChildren) {
+            onChange(cat.id)
+            setIsOpen(false)
+        }
     }
 
     const handleLevel2Select = (cat) => {
         setSelectedLevel2(cat)
         setSelectedLevel3(null)
-        onChange(cat.id)
+
+        // Only update form value if it's a leaf
+        const hasChildren = categories.some(c => c.parentId === cat.id)
+        if (!hasChildren) {
+            onChange(cat.id)
+            setIsOpen(false)
+        }
     }
 
     const handleLevel3Select = (cat) => {

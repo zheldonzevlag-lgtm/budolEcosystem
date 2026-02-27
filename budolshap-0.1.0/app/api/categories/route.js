@@ -1,7 +1,8 @@
-'use server'
-
 import { NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
+
+export const dynamic = 'force-dynamic'
+export const revalidate = 0
 
 // GET /api/categories - Public endpoint for category tree
 export async function GET(request) {

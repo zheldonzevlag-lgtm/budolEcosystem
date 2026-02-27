@@ -428,7 +428,7 @@ function ShopContent() {
 
     const products = useSelector(state => state.product.list)
 
-    const { data, error, isLoading } = useSWR('/api/products', {
+    const { data, error, isLoading } = useSWR(`/api/products?t=${Date.now()}`, {
         revalidateOnFocus: false,
         revalidateOnReconnect: false,
         dedupingInterval: 5000,
@@ -541,7 +541,7 @@ function ShopContent() {
                                     onClick={() => router.push('/shop')}
                                     className="flex items-center gap-1.5 text-xs bg-green-50 border border-green-200 text-green-700 rounded-full px-3 py-1.5 hover:bg-green-100 transition"
                                 >
-                                {renderCategoryIcon(activeCat?.slug, activeCat?.name, activeCat?.icon, 'w-3 h-3')}
+                                    {renderCategoryIcon(activeCat?.slug, activeCat?.name, activeCat?.icon, 'w-3 h-3')}
                                     {activeCat?.name || category}
                                     <X size={12} />
                                 </button>

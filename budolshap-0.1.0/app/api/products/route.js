@@ -3,6 +3,8 @@ import { prisma } from '@/lib/prisma'
 import { triggerRealtimeEvent } from '@/lib/realtime'
 import { isValidImage, isValidVideo } from '@/lib/imageUtils'
 
+export const dynamic = 'force-dynamic'
+export const revalidate = 0
 export const maxDuration = 300;
 export const config = {
     api: {
