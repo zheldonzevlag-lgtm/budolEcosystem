@@ -3,7 +3,7 @@
 import { addToCart } from "@/lib/features/cart/cartSlice";
 import { StarIcon, TagIcon, EarthIcon, CreditCardIcon, UserIcon, ChevronUp, ChevronDown } from "lucide-react";
 import { useRouter } from "next/navigation";
-import { useState, useRef, useEffect } from "react";
+import { useState, useRef, useEffect, useLayoutEffect } from "react";
 import Image from "next/image";
 import Counter from "./Counter";
 import { useDispatch, useSelector } from "react-redux";
@@ -20,6 +20,8 @@ const ProductDetails = ({ product }) => {
     const router = useRouter()
     const imageRef = useRef(null);
     const thumbnailRef = useRef(null);
+    const lastPointerRef = useRef({ x: 0, y: 0 });
+    const wheelPendingRef = useRef(false);
     const [zoomStyle, setZoomStyle] = useState({ display: 'none' });
 
     // Safely handle images
@@ -40,19 +42,31 @@ const ProductDetails = ({ product }) => {
         .filter(Boolean)
         .map((src) => ({ type: 'video', src }))
 
-    const imageItems = images
-        .filter(Boolean)
+    const variantImages = Array.from(new Set(
+        (product?.variation_matrix || [])
+            .map(item => item?.image)
+            .filter(Boolean)
+    ));
+
+    const variantImageItems = variantImages
         .map((src) => ({ type: 'image', src }))
 
-    const galleryItems = [...videoItems, ...imageItems]
+    const baseImageItems = images
+        .filter(Boolean)
+        .filter(src => !variantImages.includes(src))
+        .map((src) => ({ type: 'image', src }))
+
+    const initialGalleryItems = [...videoItems, ...variantImageItems, ...baseImageItems]
+    const [galleryItems, setGalleryItems] = useState(initialGalleryItems)
     const fallbackImage = images[0] || '/images/placeholder-product.png'
-    const initialMedia = galleryItems[0] || { type: 'image', src: fallbackImage }
+    const initialMedia = initialGalleryItems[0] || { type: 'image', src: fallbackImage }
     const [mainImage, setMainImage] = useState(fallbackImage);
     const [mainMedia, setMainMedia] = useState(initialMedia);
     const [activeIndex, setActiveIndex] = useState(0);
     const [startIndex, setStartIndex] = useState(0);
     const [selectedIndices, setSelectedIndices] = useState({}); // { 0: optionIndex, 1: optionIndex }
     const [quantity, setQuantity] = useState(1);
+    const [hoveredMedia, setHoveredMedia] = useState(null);
 
     const incrementQuantity = () => setQuantity(prev => prev + 1);
     const decrementQuantity = () => setQuantity(prev => (prev > 1 ? prev - 1 : 1));
@@ -60,6 +74,27 @@ const ProductDetails = ({ product }) => {
     // Tier-Variation Logic (Shopee Style)
     const tiers = product.tier_variations || [];
     const matrix = product.variation_matrix || [];
+
+    const syncActiveIndexWithImage = (src) => {
+        let idx = galleryItems.findIndex(it => it.type === 'image' && it.src === src);
+        if (idx === -1) {
+            const isVariantImage = matrix.some(m => m.image === src);
+            const insertAt = isVariantImage ? videoItems.length + variantImageItems.length : galleryItems.length;
+            setGalleryItems(prev => [
+                ...prev.slice(0, insertAt),
+                { type: 'image', src },
+                ...prev.slice(insertAt)
+            ]);
+            const newIndex = insertAt;
+            idx = newIndex;
+        }
+        setActiveIndex(idx);
+        if (idx < startIndex) {
+            setStartIndex(idx);
+        } else if (idx >= startIndex + 4) {
+            setStartIndex(Math.max(idx - 3, 0));
+        }
+    };
 
     const handleVariationSelect = (tierIndex, optionIndex) => {
         const isSelected = selectedIndices[tierIndex] === optionIndex;
@@ -71,57 +106,32 @@ const ProductDetails = ({ product }) => {
             setSelectedIndices(newIndices);
 
             // Revert image to default if main variation is deselected
+            // Assuming 1st tier (index 0) is usually the "Image" tier (e.g. Color)
             if (tierIndex === 0) {
                 const fallbackImage = images[0] || '/images/placeholder-product.png'
                 setMainImage(fallbackImage);
                 setMainMedia({ type: 'image', src: fallbackImage });
-                setActiveIndex(0);
-                setStartIndex(0);
+                syncActiveIndexWithImage(fallbackImage);
             }
+            setHoveredMedia(null);
         } else {
             setSelectedIndices(prev => ({
                 ...prev,
                 [tierIndex]: optionIndex
             }));
-            
-            // Image update will be handled by useEffect to ensure consistency
-        }
-    };
+            setHoveredMedia(null);
 
-    // Sync Gallery with selected variants
-    useEffect(() => {
-        if (Object.keys(selectedIndices).length > 0) {
-            // Find the best matching SKU in matrix to get its image
-            const match = matrix.find(item => {
-                return Object.entries(selectedIndices).every(([tIdx, oIdx]) => {
-                    return item.tier_index[tIdx] === oIdx;
-                });
-            }) || matrix.find(item => {
-                // Fallback to Tier 0 match if full match not found
-                return item.tier_index[0] === selectedIndices[0];
-            });
-
-            if (match && match.image) {
-                // Only update if the image is actually different to prevent infinite loops
-                if (mainImage !== match.image) {
-                    setMainImage(match.image);
-                    setMainMedia({ type: 'image', src: match.image });
-                }
-
-                const galleryIndex = galleryItems.findIndex(item => item.src === match.image);
-                if (galleryIndex !== -1 && galleryIndex !== activeIndex) {
-                    setActiveIndex(galleryIndex);
-                    
-                    // Auto-scroll
-                    if (galleryIndex < startIndex) {
-                        setStartIndex(galleryIndex);
-                    } else if (galleryIndex >= startIndex + 4) {
-                        setStartIndex(Math.max(0, Math.min(galleryIndex, galleryItems.length - 4)));
-                    }
-                }
+            // Smart Image Update:
+            // If the user selects a variation that has specific images (usually Tier 1), update main image
+            // even if the full combination isn't selected yet.
+            const potentialMatch = matrix.find(item => item.tier_index[tierIndex] === optionIndex);
+            if (potentialMatch && potentialMatch.image) {
+                setMainImage(potentialMatch.image);
+                setMainMedia({ type: 'image', src: potentialMatch.image });
+                syncActiveIndexWithImage(potentialMatch.image);
             }
         }
-    }, [selectedIndices, matrix, galleryItems, mainImage, activeIndex, startIndex]);
+    };
 
     // Find the matching SKU model from the matrix based on selected indices
     const currentSKU = matrix.find(item => {
@@ -179,9 +189,10 @@ const ProductDetails = ({ product }) => {
         : (isSelectionComplete && currentSKU ? currentSKU.stock === 0 : totalStock === 0);
 
     // Update main image if SKU has one (Final confirmation)
-    if (currentSKU?.image && mainImage !== currentSKU.image) {
+    if (!hoveredMedia && currentSKU?.image && mainImage !== currentSKU.image) {
         setMainImage(currentSKU.image);
         setMainMedia({ type: 'image', src: currentSKU.image });
+        syncActiveIndexWithImage(currentSKU.image);
     }
 
     // Generate unique ID for cart
@@ -203,24 +214,37 @@ const ProductDetails = ({ product }) => {
         return val.toLocaleString();
     }
 
+    const applyThumbnailItem = (item, index) => {
+        if (item?.type === 'image') {
+            setMainImage(item.src);
+            const match = matrix.find(m => m.image === item.src);
+            if (match && Array.isArray(match.tier_index)) {
+                const idxMap = {};
+                match.tier_index.forEach((optIdx, tIdx) => { idxMap[tIdx] = optIdx; });
+                setSelectedIndices(idxMap);
+            } else {
+                setSelectedIndices({});
+            }
+        }
+        if (item?.type === 'video') {
+            setZoomStyle({ display: 'none' });
+            setSelectedIndices({});
+        }
+        if (item) {
+            setMainMedia(item);
+            setHoveredMedia(item);
+            if (typeof index === 'number') {
+                setActiveIndex(index);
+            }
+        }
+    };
+
     const handleScrollUp = (e) => {
         e.stopPropagation();
         if (activeIndex > 0) {
-            // Clear selected variants when navigating gallery
-            setSelectedIndices({});
-            
             const newIndex = activeIndex - 1;
-            setActiveIndex(newIndex);
             const nextItem = galleryItems[newIndex];
-            if (nextItem?.type === 'image') {
-                setMainImage(nextItem.src);
-            }
-            if (nextItem?.type === 'video') {
-                setZoomStyle({ display: 'none' });
-            }
-            if (nextItem) {
-                setMainMedia(nextItem);
-            }
+            applyThumbnailItem(nextItem, newIndex);
             if (newIndex < startIndex) {
                 setStartIndex(newIndex);
             }
@@ -230,21 +254,9 @@ const ProductDetails = ({ product }) => {
     const handleScrollDown = (e) => {
         e.stopPropagation();
         if (activeIndex < galleryItems.length - 1) {
-            // Clear selected variants when navigating gallery
-            setSelectedIndices({});
-
             const newIndex = activeIndex + 1;
-            setActiveIndex(newIndex);
             const nextItem = galleryItems[newIndex];
-            if (nextItem?.type === 'image') {
-                setMainImage(nextItem.src);
-            }
-            if (nextItem?.type === 'video') {
-                setZoomStyle({ display: 'none' });
-            }
-            if (nextItem) {
-                setMainMedia(nextItem);
-            }
+            applyThumbnailItem(nextItem, newIndex);
             if (newIndex >= startIndex + 4) {
                 setStartIndex(newIndex - 3);
             }
@@ -281,14 +293,13 @@ const ProductDetails = ({ product }) => {
                 e.preventDefault();
                 e.stopPropagation();
 
-                // Clear selected variants when mouse scrolling in thumbnail area
-                setSelectedIndices({});
-
                 if (e.deltaY > 0) {
                     setStartIndex(prev => Math.min(prev + 1, galleryItems.length - 4));
                 } else {
                     setStartIndex(prev => Math.max(prev - 1, 0));
                 }
+
+                wheelPendingRef.current = true;
             }
         };
 
@@ -298,6 +309,37 @@ const ProductDetails = ({ product }) => {
             container.removeEventListener('wheel', handleThumbnailScroll);
         };
     }, [galleryItems.length]);
+
+    useLayoutEffect(() => {
+        if (!wheelPendingRef.current) return;
+        wheelPendingRef.current = false;
+        const { x, y } = lastPointerRef.current || {};
+        if (!Number.isFinite(x) || !Number.isFinite(y)) return;
+        const el = document.elementFromPoint(x, y);
+        const thumb = el?.closest?.('[data-thumb-index]');
+        if (!thumb) return;
+        const idx = Number(thumb.dataset.thumbIndex);
+        if (Number.isNaN(idx)) return;
+        const item = galleryItems[idx];
+        if (item) applyThumbnailItem(item, idx);
+    }, [startIndex, galleryItems]);
+
+    useEffect(() => {
+        if (!mainMedia?.src) return;
+        if (mainMedia.type === 'image') {
+            syncActiveIndexWithImage(mainMedia.src);
+            return;
+        }
+        const idx = galleryItems.findIndex(it => it.type === 'video' && it.src === mainMedia.src);
+        if (idx !== -1) {
+            setActiveIndex(idx);
+            if (idx < startIndex) {
+                setStartIndex(idx);
+            } else if (idx >= startIndex + 4) {
+                setStartIndex(Math.max(idx - 3, 0));
+            }
+        }
+    }, [mainMedia, galleryItems]);
 
     // Safely calculate rating
     const ratings = Array.isArray(product?.rating) ? product.rating : [];
@@ -312,6 +354,10 @@ const ProductDetails = ({ product }) => {
                 <div 
                     className="flex sm:flex-col gap-3 overflow-x-auto sm:overflow-visible custom-scrollbar"
                     ref={thumbnailRef}
+                    onMouseLeave={() => setHoveredMedia(null)}
+                    onMouseMove={(e) => {
+                        lastPointerRef.current = { x: e.clientX, y: e.clientY };
+                    }}
                 >
                     {galleryItems.slice(startIndex, startIndex + 4).map((item, index) => {
                         const globalIndex = startIndex + index;
@@ -319,31 +365,12 @@ const ProductDetails = ({ product }) => {
                         <div 
                             key={globalIndex} 
                             onClick={() => {
-                                // Clear selected variants when a thumbnail is clicked
-                                setSelectedIndices({});
-
-                                if (item.type === 'image') {
-                                    setMainImage(item.src);
-                                }
-                                if (item.type === 'video') {
-                                    setZoomStyle({ display: 'none' });
-                                }
-                                setMainMedia(item);
-                                setActiveIndex(globalIndex);
+                                applyThumbnailItem(item, globalIndex);
                             }} 
                             onMouseEnter={() => {
-                                // Clear selected variants when a thumbnail is hovered
-                                setSelectedIndices({});
-
-                                if (item.type === 'image') {
-                                    setMainImage(item.src);
-                                }
-                                if (item.type === 'video') {
-                                    setZoomStyle({ display: 'none' });
-                                }
-                                setMainMedia(item);
-                                setActiveIndex(globalIndex);
+                                applyThumbnailItem(item, globalIndex);
                             }}
+                            data-thumb-index={globalIndex}
                             className={`bg-slate-100 flex items-center justify-center size-26 rounded-lg group cursor-pointer border-2 ${globalIndex === activeIndex ? 'border-blue-500' : 'border-transparent'}`}
                         >
                             {item.type === 'image' ? (

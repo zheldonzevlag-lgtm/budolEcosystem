@@ -28,7 +28,7 @@ export const productSchema = z.object({
   hidden_combos: z.array(z.any()).optional(),
 
   // Images
-  images: z.array(z.any()).min(1, "At least one image is required"),
+  images: z.array(z.any()).optional(),
   videos: z.array(z.any()).optional()
 }).superRefine((data, ctx) => {
   // If no variations, price must be at least 1
@@ -60,5 +60,19 @@ export const productSchema = z.object({
         }
       });
     }
+  }
+
+  // Image presence rule: require at least one image either in base images or in variation matrix
+  const baseImagesCount = Array.isArray(data.images) ? data.images.filter(Boolean).length : 0;
+  const variationImagesCount = Array.isArray(data.variation_matrix)
+    ? data.variation_matrix.filter(v => !!v?.image).length
+    : 0;
+
+  if ((baseImagesCount + variationImagesCount) === 0) {
+    ctx.addIssue({
+      code: z.ZodIssueCode.custom,
+      message: "Add at least one image (base or variant image)",
+      path: ["images"],
+    });
   }
 });

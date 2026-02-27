@@ -166,7 +166,7 @@ export default function AddProductWizard({ initialData, storeId }) {
 
     const getFieldsForStep = (step) => {
         switch (step) {
-            case 0: return ['name', 'categoryId', 'description', 'images'];
+            case 0: return ['name', 'categoryId', 'description'];
             case 1: return ['price', 'stock', 'mrp', 'hasVariations', 'variation_matrix'];
             case 2: return ['weight', 'length', 'width', 'height'];
             case 3: return ['condition', 'preOrder'];
@@ -551,8 +551,13 @@ export default function AddProductWizard({ initialData, storeId }) {
                                     <div className="flex items-center gap-2">
                                         <Image className="w-5 h-5 text-slate-600" />
                                         <span className="font-medium text-slate-700">Product Images</span>
-                                        <span className="text-red-500">*</span>
+                                        {(!watch('hasVariations') || !(watch('variation_matrix') || []).some(v => !!v?.image)) && (
+                                            <span className="text-red-500">*</span>
+                                        )}
                                     </div>
+                                    <span className="flex-1 text-center text-xs text-blue-600">
+                                        Add images that are different from the variant images if the product have variance.
+                                    </span>
                                     {imagesExpanded ? (
                                         <ChevronUp className="w-5 h-5 text-slate-400" />
                                     ) : (
@@ -574,6 +579,9 @@ export default function AddProductWizard({ initialData, storeId }) {
                                             )}
                                         />
                                         {errors.images && <p className="text-red-500 text-sm mt-1">{errors.images.message}</p>}
+                                        <p className="text-xs text-slate-400">
+                                            Supported formats: JPG, PNG, WEBP. Max size: 5MB per image. Drag to reorder.
+                                        </p>
                                     </div>
                                 )}
                             </div>

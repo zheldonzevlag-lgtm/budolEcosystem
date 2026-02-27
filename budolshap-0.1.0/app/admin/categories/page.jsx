@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, Fragment } from 'react'
 import toast from 'react-hot-toast'
 import { Plus, Edit2, Trash2, ChevronRight, ChevronDown, Search, FolderTree, X, Tag, Package, BarChart3, Eye, EyeOff, RefreshCw, Smartphone, Laptop, Camera, Headphones, Tv, Watch, Shirt, ShoppingBag, Gem, Glasses, Crown, Hat, Home, Sofa, Utensils, Blend, Lamp, Wrench, Heart, Droplets, Sparkles, UtensilsCrossed, Dumbbell, Baby, BookOpen, Car, Dog, Flower2, Plane, Briefcase, Scissors, Palette, Gamepad2, Music, Wallet, CreditCard, TrendingUp, Package2, Box, Archive, Send, ShoppingCart, Store, Users, User, Star, HeartHandshake, Gift, Tag as TagIcon, Layers, Grid, List, ChevronLeft, Check } from 'lucide-react'
 import { getCategoryLucideIcon, getCategoryColor, PROFESSIONAL_ICON_MAP, resolveIconByName } from '@/components/CategoryIcons'
@@ -233,8 +233,8 @@ export default function CategoryManagementPage() {
         const color = getCategoryColor(level)
 
         return (
-            <>
-                <tr key={category.id} className="border-b border-slate-50 hover:bg-slate-50/80 transition-colors group">
+            <Fragment key={category.id}>
+                <tr className="border-b border-slate-50 hover:bg-slate-50/80 transition-colors group">
                     {/* Name */}
                     <td className="py-3 px-4">
                         <div className="flex items-center" style={{ paddingLeft: `${level * 28}px` }}>
@@ -323,7 +323,7 @@ export default function CategoryManagementPage() {
                     </td>
                 </tr>
                 {hasChildren && isExpanded && category.children.map(child => renderCategoryRow(child, level + 1))}
-            </>
+            </Fragment>
         )
     }
 

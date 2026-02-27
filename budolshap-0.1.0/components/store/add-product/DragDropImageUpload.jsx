@@ -303,9 +303,6 @@ export default function DragDropImageUpload({ images = [], onChange, maxImages =
         </DragOverlay>
       </DndContext>
 
-      <p className="text-xs text-slate-400">
-        Supported formats: JPG, PNG, WEBP. Max size: 5MB per image. Drag to reorder.
-      </p>
     </div>
   );
 }
