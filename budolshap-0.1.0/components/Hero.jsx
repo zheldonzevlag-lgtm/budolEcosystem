@@ -51,7 +51,11 @@ const Hero = () => {
             }
 
             // Calculate min price
-            const min = Math.min(...products.map(product => product.price))
+            const validPrices = products
+                .map(product => Number(product.price))
+                .filter(price => price > 0);
+
+            const min = validPrices.length > 0 ? Math.min(...validPrices) : 0;
             setMinPrice(min)
         }
     }, [mounted, products])
