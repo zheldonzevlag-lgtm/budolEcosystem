@@ -7,18 +7,18 @@ const cors = require('cors');
 const { normalizePhilippinePhone, isValidE164Phone } = require('./utils/phoneNormalization');
 
 const prisma = new PrismaClient({
-  datasources: {
-    db: {
-      url: process.env.DATABASE_URL
+    datasources: {
+        db: {
+            url: process.env.DATABASE_URL
+        }
     }
-  }
 });
 
 // Debug connection on startup
 prisma.$connect()
     .then(async () => {
         console.log('✅ Connected to Database');
-        
+
         // Auto-seed core apps if missing
         const localIP = process.env.LOCAL_IP || '192.168.1.2';
         const coreApps = [
@@ -56,7 +56,7 @@ const JWT_SECRET = process.env.JWT_SECRET || 'GJ7Lxn0/kdV/KuZJ5xJ7Ip0RvMerrGW5n0
 // NPC Compliance: PII Masking Helper
 const maskPII = (str, type = 'AUTO') => {
     if (!str) return 'N/A';
-    
+
     // Auto-detect type if not provided
     if (type === 'AUTO') {
         if (str.includes('@')) type = 'EMAIL';
@@ -68,7 +68,7 @@ const maskPII = (str, type = 'AUTO') => {
         const [user, domain] = str.split('@');
         return `${user.charAt(0)}${'*'.repeat(Math.max(0, user.length - 1))}@${domain}`;
     }
-    
+
     if (type === 'PHONE') {
         const digits = str.replace(/\D/g, '');
         if (digits.length >= 10) {
@@ -104,7 +104,7 @@ app.get('/login', (req, res) => {
     const { apiKey } = req.query;
     // Fallback to budolPay if no apiKey is provided to prevent "Unauthorized Application" error
     const activeApiKey = apiKey || 'bp_key_2025';
-    
+
     res.send(`
         <!DOCTYPE html>
         <html lang="en">
@@ -431,10 +431,10 @@ app.get('/reset-password', (req, res) => {
 app.use(express.urlencoded({ extended: true }));
 app.post('/auth/sso/login-form', async (req, res) => {
     const { email, password, apiKey } = req.body;
-    
+
     // Ensure we have an apiKey, default to budolPay for ecosystem access
     const activeApiKey = apiKey || 'bp_key_2025';
-    
+
     try {
         const ecosystemApp = await prisma.ecosystemApp.findUnique({ where: { apiKey: activeApiKey } });
         if (!ecosystemApp) return res.status(403).send('Unauthorized Application: ' + activeApiKey);
@@ -509,7 +509,7 @@ app.post('/auth/verify-otp', async (req, res) => {
     const { email, otp } = req.body;
     try {
         const user = await prisma.user.findUnique({ where: { email } });
-        
+
         if (!user || user.otp !== otp || new Date() > user.otpExpires) {
             return res.status(401).json({ error: "Invalid or expired OTP." });
         }
@@ -520,8 +520,8 @@ app.post('/auth/verify-otp', async (req, res) => {
 
         await prisma.user.update({
             where: { id: user.id },
-            data: { 
-                otp: null, 
+            data: {
+                otp: null,
                 otpExpires: null,
                 resetToken,
                 resetTokenExpires
@@ -583,14 +583,14 @@ app.post('/apps/register', async (req, res) => {
 app.get('/auth/check-email', async (req, res) => {
     const { email } = req.query;
     if (!email) return res.status(400).json({ error: 'Email is required' });
-    
+
     try {
         const user = await prisma.user.findUnique({
             where: { email },
             select: { id: true, email: true }
         });
-        
-        res.json({ 
+
+        res.json({
             exists: !!user,
             message: user ? 'Email already registered in the ecosystem' : 'Email is available'
         });
@@ -603,19 +603,19 @@ app.get('/auth/check-email', async (req, res) => {
 app.get('/auth/check-phone', async (req, res) => {
     const { phone } = req.query;
     console.log(`\n📞 [budolID] Check Phone Request: "${phone}"`);
-    
+
     if (!phone) return res.status(400).json({ error: 'Phone number is required' });
-    
+
     try {
         // Normalize phone number before checking
         const normalizedPhone = normalizePhilippinePhone(phone);
         console.log(`🔍 [budolID] Normalized to: "${normalizedPhone}"`);
-        
+
         if (!normalizedPhone) {
             console.log(`❌ [budolID] Normalization failed for: "${phone}"`);
             return res.status(400).json({ error: 'Invalid phone number format' });
         }
-        
+
         // Search across both schemas: budolid and public
         const schemas = ['budolid', 'public'];
         let user = null;
@@ -625,10 +625,10 @@ app.get('/auth/check-phone', async (req, res) => {
             console.log(`📡 [budolID] Checking schema "${schema}" for "${normalizedPhone}"`);
             // Try normalized first
             const results = await prisma.$queryRawUnsafe(
-                `SELECT id, "phoneNumber", name, email FROM "${schema}"."User" WHERE "phoneNumber" = $1 LIMIT 1`,
+                `SELECT id, "phoneNumber", name, email, "firstName", "lastName" FROM "${schema}"."User" WHERE "phoneNumber" = $1 LIMIT 1`,
                 normalizedPhone
             );
-            
+
             if (results && results.length > 0) {
                 user = results[0];
                 foundSchema = schema;
@@ -648,7 +648,7 @@ app.get('/auth/check-phone', async (req, res) => {
             for (const variation of variations) {
                 console.log(`📡 [budolID] Checking variation "${variation}" in "${schema}"`);
                 const varResults = await prisma.$queryRawUnsafe(
-                    `SELECT id, "phoneNumber", name, email FROM "${schema}"."User" WHERE "phoneNumber" = $1 LIMIT 1`,
+                    `SELECT id, "phoneNumber", name, email, "firstName", "lastName" FROM "${schema}"."User" WHERE "phoneNumber" = $1 LIMIT 1`,
                     variation
                 );
                 if (varResults && varResults.length > 0) {
@@ -660,17 +660,20 @@ app.get('/auth/check-phone', async (req, res) => {
             }
             if (user) break;
         }
-        
+
         if (!user) {
             console.log(`⚠️ [budolID] Phone "${phone}" NOT FOUND in any schema`);
         }
 
-        res.json({ 
+        res.json({
             exists: !!user,
+            id: user ? user.id : null,
             normalizedPhone: normalizedPhone,
             foundAs: user ? user.phoneNumber : null,
             email: user ? user.email : null,
             name: user ? user.name : null,
+            firstName: user ? user.firstName : null,
+            lastName: user ? user.lastName : null,
             schema: foundSchema,
             message: user ? `Phone number registered in ${foundSchema}` : 'Phone number is available'
         });
@@ -696,10 +699,10 @@ app.post('/auth/register', async (req, res) => {
         // Check if user already exists by email
         const existingUserByEmail = await prisma.user.findUnique({ where: { email } });
         if (existingUserByEmail) {
-            return res.status(409).json({ 
+            return res.status(409).json({
                 error: 'Email already registered',
                 code: 'P2002',
-                userId: existingUserByEmail.id 
+                userId: existingUserByEmail.id
             });
         }
 
@@ -707,20 +710,20 @@ app.post('/auth/register', async (req, res) => {
         if (normalizedPhone) {
             const existingUserByPhone = await prisma.user.findFirst({ where: { phoneNumber: normalizedPhone } });
             if (existingUserByPhone) {
-                return res.status(409).json({ 
+                return res.status(409).json({
                     error: 'Phone number already registered',
                     code: 'P2002',
-                    userId: existingUserByPhone.id 
+                    userId: existingUserByPhone.id
                 });
             }
         }
 
         const hashedPassword = await bcrypt.hash(password, 10);
         const user = await prisma.user.create({
-            data: { 
-                email, 
-                password: hashedPassword, 
-                firstName, 
+            data: {
+                email,
+                password: hashedPassword,
+                firstName,
                 lastName,
                 phoneNumber: normalizedPhone
             }
@@ -738,7 +741,7 @@ app.post('/auth/register', async (req, res) => {
 app.post('/auth/register/quick', async (req, res) => {
     const { phoneNumber, firstName, deviceId } = req.body;
     console.log('[Quick Reg] Attempt for:', phoneNumber);
-    
+
     try {
         const normalizedPhone = normalizePhilippinePhone(phoneNumber);
         if (!normalizedPhone) {
@@ -755,7 +758,7 @@ app.post('/auth/register/quick', async (req, res) => {
         // We generate a random temporary password for quick registration
         const tempPassword = Math.random().toString(36).substring(7);
         const hashedPassword = await bcrypt.hash(tempPassword, 10);
-        
+
         const user = await prisma.user.create({
             data: {
                 phoneNumber: normalizedPhone,
@@ -767,8 +770,8 @@ app.post('/auth/register/quick', async (req, res) => {
         });
 
         console.log('[Quick Reg] Success for:', user.id);
-        res.status(201).json({ 
-            message: 'Quick registration successful', 
+        res.status(201).json({
+            message: 'Quick registration successful',
             userId: user.id,
             phoneNumber: normalizedPhone
         });
@@ -782,7 +785,7 @@ app.post('/auth/register/quick', async (req, res) => {
 app.post('/auth/sso/login', async (req, res) => {
     const { email, password, apiKey } = req.body;
     console.log('[SSO Login API] Attempt for:', email, 'with apiKey:', apiKey);
-    
+
     try {
         // Verify the requesting app
         const ecosystemApp = await prisma.ecosystemApp.findUnique({ where: { apiKey } });
@@ -794,27 +797,27 @@ app.post('/auth/sso/login', async (req, res) => {
         // Determine if the identifier is an email or phone number
         let user;
         let identifierType;
-        
+
         // Check if it looks like a phone number (starts with +, 0, or 9 and has digits)
         const phoneRegex = /^[\+\d]\d{9,}$/;
         const isPhoneNumber = phoneRegex.test(email) && email.includes('9');
-        
+
         if (isPhoneNumber) {
             // Normalize phone number
             const normalizedPhone = normalizePhilippinePhone(email);
             if (!normalizedPhone) {
                 return res.status(400).json({ error: 'Invalid phone number format' });
             }
-            
+
             // Find user by phone number
-            user = await prisma.user.findFirst({ 
-                where: { phoneNumber: normalizedPhone } 
+            user = await prisma.user.findFirst({
+                where: { phoneNumber: normalizedPhone }
             });
             identifierType = 'phone';
         } else {
             // Assume it's an email
-            user = await prisma.user.findUnique({ 
-                where: { email: email } 
+            user = await prisma.user.findUnique({
+                where: { email: email }
             });
             identifierType = 'email';
         }
@@ -853,8 +856,8 @@ app.post('/auth/sso/login', async (req, res) => {
         });
 
         console.log(`[SSO Login API] Success for ${identifierType}:`, email);
-        res.json({ 
-            token, 
+        res.json({
+            token,
             redirectUri: ecosystemApp.redirectUri,
             user: {
                 id: user.id,

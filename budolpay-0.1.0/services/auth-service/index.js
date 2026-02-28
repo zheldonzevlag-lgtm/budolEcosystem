@@ -31,7 +31,7 @@ console.log('[DEBUG-AUTH] isLocal determined as:', isLocal);
 // NPC Compliance: PII Masking Helper
 const maskPII = (str, type = 'AUTO') => {
     if (!str) return 'N/A';
-    
+
     // Auto-detect type if not provided
     if (type === 'AUTO') {
         if (str.includes('@')) type = 'EMAIL';
@@ -43,7 +43,7 @@ const maskPII = (str, type = 'AUTO') => {
         const [user, domain] = str.split('@');
         return `${user.charAt(0)}${'*'.repeat(Math.max(0, user.length - 1))}@${domain}`;
     }
-    
+
     if (type === 'PHONE') {
         const digits = str.replace(/\D/g, '');
         if (digits.length >= 10) {
@@ -73,8 +73,8 @@ if (!LOCAL_IP) {
     console.error('[Auth] CRITICAL: LOCAL_IP environment variable is not set. Service may not be network-aware.');
 }
 
-const GATEWAY_URL = process.env.NODE_ENV === 'development' 
-    ? `http://${LOCAL_IP || 'localhost'}:8080` 
+const GATEWAY_URL = process.env.NODE_ENV === 'development'
+    ? `http://${LOCAL_IP || 'localhost'}:8080`
     : (process.env.GATEWAY_URL || `http://${LOCAL_IP || 'localhost'}:8080`);
 
 // Helper to notify Gateway for real-time updates
@@ -86,7 +86,7 @@ const notifyAdmin = async (event, data) => {
             isAdmin: true,
             event,
             data
-        }, { timeout: 2000 }); 
+        }, { timeout: 2000 });
         console.log(`[Auth] Admin notification (${event}) response:`, response.data);
     } catch (err) {
         console.error(`[Auth] Failed to notify Admin (${event}): ${err.message}`);
@@ -98,7 +98,7 @@ const createAuditLog = async (req, userId, action, metadata = {}, entity = 'Secu
     try {
         const ipAddress = req.headers['x-forwarded-for'] || req.socket.remoteAddress;
         const userAgent = req.headers['user-agent'];
-        
+
         // Use centralized audit helper with proper metadata structure
         const auditLog = await createCentralizedAuditLog({
             action,
@@ -123,7 +123,7 @@ const createAuditLog = async (req, userId, action, metadata = {}, entity = 'Secu
         } else {
             console.error(`[Audit] Failed to create audit log for action: ${action}`);
         }
-        
+
         return auditLog;
     } catch (err) {
         console.error(`[Audit] Failed to create audit log: ${err.message}`);
@@ -160,7 +160,9 @@ app.use('/api/auth', router);
 app.use('/', router); // Fallback for direct calls
 
 const JWT_SECRET = process.env.JWT_SECRET || 'GJ7Lxn0/kdV/KuZJ5xJ7Ip0RvMerrGW5n0gf44mfHgc=';
+const BUDOL_ID_URL = process.env.BUDOL_ID_URL || `http://${LOCAL_IP || 'localhost'}:8000`;
 console.log(`[budolPay-Auth] Ecosystem JWT_SECRET Loaded`);
+console.log(`[budolPay-Auth] budolID SSO Service Link: ${BUDOL_ID_URL}`);
 
 // SSO: Get App Info
 router.get('/sso/app-info', async (req, res) => {
@@ -198,10 +200,10 @@ app.get('/verify', async (req, res) => {
 
     try {
         const decoded = jwt.verify(token, JWT_SECRET);
-        
+
         // Universal User Lookup (Support SSO & Local)
         let user = null;
-        
+
         // 1. Try lookup by ID (standard)
         if (decoded.userId || decoded.id || decoded.sub) {
             user = await prisma.user.findUnique({
@@ -209,7 +211,7 @@ app.get('/verify', async (req, res) => {
                 include: { wallet: true }
             });
         }
-        
+
         // 2. Try lookup by Email if ID failed or not present
         if (!user && decoded.email) {
             user = await prisma.user.findUnique({
@@ -405,12 +407,12 @@ const aiAntiSpamEngine = {
         // Pattern 1: Email Randomness (Spam indicator)
         const emailLocal = email ? email.split('@')[0] : '';
         console.log(`[AI Spam Debug] Analyzing: ${emailLocal}`);
-        
+
         if (emailLocal && /[0-9]{4,}/.test(emailLocal)) {
             console.log('[AI Spam Debug] Pattern 1 Match: 4+ consecutive digits (+30)');
-            riskScore += 30; 
+            riskScore += 30;
         }
-        
+
         const letterCount = (emailLocal.match(/[a-z]/g) || []).length;
         if (emailLocal && letterCount < 3) {
             console.log(`[AI Spam Debug] Pattern 1 Match: Low letter count (${letterCount}) (+20)`);
@@ -439,7 +441,7 @@ const aiAntiSpamEngine = {
         }
 
         console.log(`[AI Spam Debug] Total Risk Score: ${riskScore}`);
-  
+
         return {
             riskScore,
             isHighRisk: riskScore >= 70,
@@ -451,7 +453,7 @@ const aiAntiSpamEngine = {
 // Register (Global User - GoTyme Aligned)
 app.post('/register', async (req, res) => {
     const { email, password, phoneNumber, firstName, lastName, pin, deviceId } = req.body;
-    
+
     // AI Anti-Spam Check
     const spamAnalysis = await aiAntiSpamEngine.score({ email, firstName, lastName, phoneNumber });
     if (spamAnalysis.isHighRisk) {
@@ -460,9 +462,9 @@ app.post('/register', async (req, res) => {
             riskScore: spamAnalysis.riskScore,
             reason: spamAnalysis.analysis
         }, 'Security');
-        return res.status(403).json({ 
+        return res.status(403).json({
             error: 'Registration blocked by security policy.',
-            reason: 'High-risk account pattern detected. Please use a valid personal email.' 
+            reason: 'High-risk account pattern detected. Please use a valid personal email.'
         });
     }
 
@@ -504,7 +506,7 @@ app.post('/register', async (req, res) => {
         // Notify Admin about new user registration for real-time dashboard
         // We do NOT await these to prevent blocking the registration response
         prisma.user.count().then(totalUsers => {
-            notifyAdmin('new_user', { 
+            notifyAdmin('new_user', {
                 count: totalUsers,
                 user: {
                     id: user.id,
@@ -523,8 +525,8 @@ app.post('/register', async (req, res) => {
         (async () => {
             try {
                 // Determine delivery channel based on available info
-                const deliveryType = (user.email && !user.email.endsWith('@budolpay.local') && user.phoneNumber) 
-                    ? 'BOTH' 
+                const deliveryType = (user.email && !user.email.endsWith('@budolpay.local') && user.phoneNumber)
+                    ? 'BOTH'
                     : (user.phoneNumber ? 'SMS' : 'EMAIL');
 
                 console.log(`[Registration] Sending OTP to ${maskPII(user.phoneNumber || user.email)} via ${deliveryType}`);
@@ -534,7 +536,7 @@ app.post('/register', async (req, res) => {
                     // sendOTP now handles validation and will only send if applicable
                     await sendOTP(user.email, otpCode, deliveryType);
                 }
-                
+
                 if (user.phoneNumber) {
                     await sendAccountCreationSuccess(user.phoneNumber, user.firstName || 'User', 'SMS');
                     // sendOTP now handles validation and will only send if applicable
@@ -547,8 +549,8 @@ app.post('/register', async (req, res) => {
             }
         })();
 
-        res.status(201).json({ 
-            message: 'User registered successfully. Please verify OTP.', 
+        res.status(201).json({
+            message: 'User registered successfully. Please verify OTP.',
             userId: user.id,
             requireOtp: true
         });
@@ -565,7 +567,7 @@ app.post('/register', async (req, res) => {
  */
 app.post('/register/quick', async (req, res) => {
     const { phoneNumber, deviceId, firstName } = req.body;
-    
+
     if (!phoneNumber) return res.status(400).json({ error: 'Phone number is required' });
 
     // Normalize phone
@@ -587,9 +589,9 @@ app.post('/register/quick', async (req, res) => {
         });
 
         if (existing) {
-            return res.status(400).json({ 
+            return res.status(400).json({
                 error: 'This number is already registered. Please sign in instead.',
-                exists: true 
+                exists: true
             });
         }
 
@@ -653,6 +655,21 @@ app.get('/check-email', async (req, res) => {
         const user = await prisma.user.findUnique({
             where: { email: email.toLowerCase().trim() }
         });
+
+        if (user) {
+            return res.json({ exists: true, source: 'LOCAL' });
+        }
+
+        // Cross-check with budolID
+        try {
+            const budolIdRes = await axios.get(`${BUDOL_ID_URL}/auth/check-email?email=${encodeURIComponent(email)}`, { timeout: 3000 });
+            if (budolIdRes.data && budolIdRes.data.exists) {
+                return res.json({ exists: true, source: 'BUDOL_ID' });
+            }
+        } catch (e) {
+            console.error(`[Auth Proxy] budolID check failed: ${e.message}`);
+        }
+
         res.json({ exists: !!user });
     } catch (error) {
         res.status(500).json({ error: error.message });
@@ -671,6 +688,7 @@ app.get('/check-phone', async (req, res) => {
     }
 
     try {
+        // 1. Check Local DB
         const user = await prisma.user.findFirst({
             where: {
                 OR: [
@@ -680,7 +698,29 @@ app.get('/check-phone', async (req, res) => {
                 ]
             }
         });
-        res.json({ exists: !!user });
+
+        if (user) {
+            return res.json({ exists: true, source: 'LOCAL' });
+        }
+
+        // 2. Cross-check with budolID (Unified Identity)
+        try {
+            console.log(`[Auth Proxy] Checking phone "${phone}" with budolID...`);
+            const budolIdRes = await axios.get(`${BUDOL_ID_URL}/auth/check-phone?phone=${encodeURIComponent(phone)}`, { timeout: 3000 });
+            if (budolIdRes.data && budolIdRes.data.exists) {
+                console.log(`[Auth Proxy] Phone found in budolID ecosystem.`);
+                return res.json({
+                    exists: true,
+                    source: 'BUDOL_ID',
+                    email: budolIdRes.data.email,
+                    name: budolIdRes.data.name
+                });
+            }
+        } catch (e) {
+            console.error(`[Auth Proxy] budolID check failed: ${e.message}`);
+        }
+
+        res.json({ exists: false });
     } catch (error) {
         res.status(500).json({ error: error.message });
     }
@@ -689,18 +729,18 @@ app.get('/check-phone', async (req, res) => {
 // Mobile Login - Phase 1: Identify & Challenge (GoTyme Style)
 app.post('/login/mobile/identify', async (req, res) => {
     let { phoneNumber, deviceId } = req.body;
-    
+
     if (!phoneNumber) return res.status(400).json({ error: 'Mobile number or email is required' });
 
     // Detect if input is an email
     const isEmail = phoneNumber.includes('@');
     let normalizedPhone = '';
-    
+
     if (!isEmail) {
         // Normalize Phone Number (BSP Circular 808/1108 Aligned)
         // Strip everything except digits
         normalizedPhone = phoneNumber.replace(/\D/g, '');
-        
+
         // Convert 639... to 09... for local DB consistency if needed
         if (normalizedPhone.startsWith('63')) {
             normalizedPhone = '0' + normalizedPhone.substring(2);
@@ -725,7 +765,42 @@ app.post('/login/mobile/identify', async (req, res) => {
                 }
             });
         }
-        
+
+        if (!user) {
+            // 1. Cross-check with budolID for Mobile Identification
+            try {
+                console.log(`[Auth Sync] Identifying "${phoneNumber}" via budolID...`);
+                // Use Identify or Check-Phone to find the user
+                const budolIdRes = await axios.get(`${BUDOL_ID_URL}/auth/check-phone?phone=${encodeURIComponent(phoneNumber)}`, { timeout: 3000 });
+
+                if (budolIdRes.data && budolIdRes.data.exists) {
+                    console.log(`[Auth Sync] User found in budolID. Performing Auto-Sync for budolPay...`);
+
+                    // Create user in budolPay with minimal data to allow login
+                    user = await prisma.user.create({
+                        data: {
+                            id: budolIdRes.data.id || undefined,
+                            email: budolIdRes.data.email || `${normalizedPhone}@budolpay.local`,
+                            phoneNumber: normalizedPhone,
+                            firstName: budolIdRes.data.name ? budolIdRes.data.name.split(' ')[0] : (budolIdRes.data.firstName || 'User'),
+                            lastName: budolIdRes.data.name ? (budolIdRes.data.name.split(' ')[1] || '') : (budolIdRes.data.lastName || ''),
+                            passwordHash: 'SSO_MANAGED', // Password remains in budolID
+                            wallet: {
+                                create: {
+                                    balance: 0.0,
+                                    currency: 'PHP'
+                                }
+                            }
+                        }
+                    });
+
+                    console.log(`[Auth Sync] Auto-Sync complete. User ID: ${user.id}`);
+                }
+            } catch (syncError) {
+                console.error(`[Auth Sync] budolID Sync failed: ${syncError.message}`);
+            }
+        }
+
         if (!user) {
             // Audit: Mobile Identification Failure
             await createAuditLog(req, null, 'SECURITY_MOBILE_IDENTIFY_FAILED', {
@@ -775,23 +850,23 @@ app.post('/login/mobile/identify', async (req, res) => {
             // Always log OTP for visibility during dev/test
             console.log(`[LOCAL] Login OTP for ${maskPII(recipient)}: \x1b[33m${otpCode}\x1b[0m`);
 
-        return res.json({ 
-            status: 'OTP_REQUIRED', 
-            userId: user.id,
-            user: {
-                id: user.id,
-                phoneNumber: maskPII(user.phoneNumber),
-                firstName: maskPII(user.firstName),
-                lastName: maskPII(user.lastName)
-            },
-            message: 'OTP sent to your registered mobile number'
-        });
+            return res.json({
+                status: 'OTP_REQUIRED',
+                userId: user.id,
+                user: {
+                    id: user.id,
+                    phoneNumber: maskPII(user.phoneNumber),
+                    firstName: maskPII(user.firstName),
+                    lastName: maskPII(user.lastName)
+                },
+                message: 'OTP sent to your registered mobile number'
+            });
         }
 
         // Trusted Device -> Proceed to PIN or Biometrics
         console.log(`[Identify] Skipping OTP (Reason: Device Trusted AND PIN Set)`);
-        res.json({ 
-            status: 'AUTH_REQUIRED', 
+        res.json({
+            status: 'AUTH_REQUIRED',
             userId: user.id,
             user: {
                 id: user.id,
@@ -811,13 +886,13 @@ app.post('/login/mobile/identify', async (req, res) => {
 // Mobile Login - Phase 2: Verify PIN
 app.post('/login/mobile/verify-pin', async (req, res) => {
     const { userId, pin, deviceId } = req.body;
-    
+
     try {
         const user = await prisma.user.findUnique({ where: { id: userId } });
         if (!user) return res.status(401).json({ error: 'User not found' });
-        
+
         if (!user.pinHash) {
-            return res.status(403).json({ 
+            return res.status(403).json({
                 status: 'PIN_SETUP_REQUIRED',
                 error: 'PIN not set for this account.',
                 message: 'Your PIN needs to be set up. Redirecting to PIN setup...'
@@ -847,7 +922,7 @@ app.post('/login/mobile/verify-pin', async (req, res) => {
         }
 
         const token = jwt.sign({ userId: user.id, role: user.role, type: 'MOBILE' }, JWT_SECRET, { expiresIn: '30d' }); // Longer session for mobile
-        
+
         // Audit: Mobile PIN Login
         await createAuditLog(req, user.id, 'SECURITY_MOBILE_LOGIN_PIN', {
             method: 'PIN',
@@ -856,14 +931,14 @@ app.post('/login/mobile/verify-pin', async (req, res) => {
             timestamp: getLegacyManilaISO()
         }, 'Security', user.id);
 
-        res.json({ 
-            token, 
-            user: { 
-                id: user.id, 
-                phoneNumber: maskPII(user.phoneNumber), 
+        res.json({
+            token,
+            user: {
+                id: user.id,
+                phoneNumber: maskPII(user.phoneNumber),
                 firstName: user.firstName,
                 lastName: user.lastName
-            } 
+            }
         });
     } catch (error) {
         res.status(500).json({ error: error.message });
@@ -893,16 +968,16 @@ app.post('/login/mobile/setup-pin', async (req, res) => {
 
         // Generate full token after successful PIN setup
         const token = jwt.sign(
-            { userId: user.id, role: user.role, type: 'MOBILE', isVerified: true, hasPin: true }, 
-            JWT_SECRET, 
+            { userId: user.id, role: user.role, type: 'MOBILE', isVerified: true, hasPin: true },
+            JWT_SECRET,
             { expiresIn: '30d' }
         );
 
-        res.json({ 
+        res.json({
             message: 'PIN set successfully',
             token,
-            user: { 
-                id: user.id, 
+            user: {
+                id: user.id,
                 phoneNumber: maskPII(user.phoneNumber),
                 firstName: user.firstName,
                 lastName: user.lastName
@@ -917,7 +992,7 @@ app.post('/login/mobile/setup-pin', async (req, res) => {
 app.post('/resend-otp', async (req, res) => {
     const { userId, type } = req.body; // type can be 'EMAIL', 'SMS', or 'BOTH'
     console.log(`[Resend-OTP] Request received for userId: ${userId}, type: ${type}`);
-    
+
     try {
         const user = await prisma.user.findUnique({ where: { id: userId } });
         if (!user) {
@@ -929,7 +1004,7 @@ app.post('/resend-otp', async (req, res) => {
         const now = getNowUTC();
         if (user.otpUpdatedAt && (now - new Date(user.otpUpdatedAt)) < 60000) {
             console.warn(`[Resend-OTP] Rate limit hit for user ${userId}`);
-            return res.status(429).json({ 
+            return res.status(429).json({
                 error: 'Too many requests. Please wait 60 seconds before requesting another OTP.',
                 retryAfter: 60
             });
@@ -940,8 +1015,8 @@ app.post('/resend-otp', async (req, res) => {
 
         await prisma.user.update({
             where: { id: userId },
-            data: { 
-                otpCode, 
+            data: {
+                otpCode,
                 otpExpiresAt,
                 otpUpdatedAt: now
             }
@@ -952,11 +1027,11 @@ app.post('/resend-otp', async (req, res) => {
         if (deliveryType === 'BOTH' && (!user.email || user.email.endsWith('@budolpay.local'))) {
             deliveryType = 'SMS';
         }
-        
+
         const recipient = user.phoneNumber || user.email;
         console.log(`[Resend-OTP] Resending OTP to ${maskPII(recipient)} via ${deliveryType}`);
         console.log(`[DEBUG-OTP] Code: ${otpCode}, isLocal: ${isLocal}`);
-        
+
         // Use the provider-agnostic notification package
         try {
             await sendOTP(recipient, otpCode, deliveryType);
@@ -1004,7 +1079,7 @@ app.post('/verify-otp', async (req, res) => {
 
         if (type === 'EMAIL' || type === 'BOTH') updateData.emailVerified = true;
         if (type === 'SMS' || type === 'BOTH') updateData.phoneVerified = true;
-        
+
         // Handle Device Trust Verification
         if (deviceId && user.trustedDevices) {
             let devices = JSON.parse(user.trustedDevices);
@@ -1065,17 +1140,17 @@ app.post('/verify-otp', async (req, res) => {
             const hasPin = !!updatedUser.pinHash;
             // If no PIN is set, we return a limited token or just the status to force PIN setup
             const token = jwt.sign(
-                { userId: updatedUser.id, role: updatedUser.role, type: 'MOBILE', isVerified: true, hasPin }, 
-                JWT_SECRET, 
+                { userId: updatedUser.id, role: updatedUser.role, type: 'MOBILE', isVerified: true, hasPin },
+                JWT_SECRET,
                 { expiresIn: hasPin ? '30d' : '10m' } // Limited session if no PIN
             );
 
-            return res.json({ 
+            return res.json({
                 status: hasPin ? 'SUCCESS' : 'PIN_SETUP_REQUIRED',
-                message: hasPin ? 'Device verified and login successful' : 'Device verified. Please set up your 6-digit PIN.', 
+                message: hasPin ? 'Device verified and login successful' : 'Device verified. Please set up your 6-digit PIN.',
                 token,
-                user: { 
-                    id: updatedUser.id, 
+                user: {
+                    id: updatedUser.id,
                     phoneNumber: maskPII(updatedUser.phoneNumber),
                     firstName: updatedUser.firstName,
                     lastName: updatedUser.lastName
@@ -1106,13 +1181,13 @@ app.post('/sso/login', async (req, res) => {
 
         // 3. Create Ecosystem-wide Token
         const token = jwt.sign(
-            { 
-                userId: user.id, 
+            {
+                userId: user.id,
                 role: user.role,
                 issuer: 'budolID-SSO',
-                apps: ['budolPay', 'budolShap', 'budolExpress'] 
-            }, 
-            JWT_SECRET, 
+                apps: ['budolPay', 'budolShap', 'budolExpress']
+            },
+            JWT_SECRET,
             { expiresIn: '7d' }
         );
 
@@ -1132,10 +1207,10 @@ app.post('/sso/login', async (req, res) => {
             timestamp: getLegacyManilaISO()
         }, 'Security', user.id);
 
-        res.json({ 
-            token, 
+        res.json({
+            token,
             redirectUri: `${ecosystemApp.redirectUri}?token=${token}`,
-            user: { id: user.id, email: maskPII(user.email), role: user.role } 
+            user: { id: user.id, email: maskPII(user.email), role: user.role }
         });
     } catch (error) {
         res.status(500).json({ error: error.message });
@@ -1169,7 +1244,7 @@ app.post('/login', async (req, res) => {
             return res.status(401).json({ error: 'Invalid credentials' });
         }
         const token = jwt.sign({ userId: user.id, role: user.role }, JWT_SECRET, { expiresIn: '24h' });
-        
+
         // Audit: Standard Web Login
         await createAuditLog(req, user.id, 'WEB_LOGIN', {
             method: 'PASSWORD',
@@ -1188,7 +1263,7 @@ app.post('/login', async (req, res) => {
 // Update PIN
 app.post('/pin/update', async (req, res) => {
     const { userId, oldPin, newPin } = req.body;
-    
+
     if (newPin.length !== 6 || isNaN(newPin)) {
         return res.status(400).json({ error: 'PIN must be exactly 6 digits' });
     }
@@ -1214,8 +1289,8 @@ app.post('/pin/update', async (req, res) => {
             timestamp: getLegacyManilaISO()
         }, 'Security', user.id);
 
-        res.json({ 
-            message: 'PIN updated successfully' 
+        res.json({
+            message: 'PIN updated successfully'
         });
     } catch (error) {
         res.status(500).json({ error: error.message });
@@ -1231,10 +1306,10 @@ app.post('/biometric/register-challenge', async (req, res) => {
 
         // In a real WebAuthn implementation, we'd generate a random challenge
         const challenge = Math.random().toString(36).substring(2);
-        
+
         // Save challenge temporarily (e.g., in Redis or DB)
         // For simulation, we'll just return it
-        res.json({ 
+        res.json({
             challenge,
             user: {
                 id: user.id,
@@ -1292,7 +1367,7 @@ app.post('/biometric/login-verify', async (req, res) => {
         }
 
         const token = jwt.sign({ userId: user.id, role: user.role, type: 'BIOMETRIC' }, JWT_SECRET, { expiresIn: '30d' });
-        
+
         // Audit: Mobile Biometric Login
         await createAuditLog(req, user.id, 'SECURITY_MOBILE_LOGIN_BIOMETRIC', {
             method: 'BIOMETRIC',
@@ -1301,9 +1376,9 @@ app.post('/biometric/login-verify', async (req, res) => {
             timestamp: getLegacyManilaISO()
         }, 'Security', user.id);
 
-        res.json({ 
-            token, 
-            user: { id: user.id, phoneNumber: maskPII(user.phoneNumber), firstName: maskPII(user.firstName) } 
+        res.json({
+            token,
+            user: { id: user.id, phoneNumber: maskPII(user.phoneNumber), firstName: maskPII(user.firstName) }
         });
     } catch (error) {
         res.status(500).json({ error: error.message });
@@ -1320,7 +1395,7 @@ app.get('/health', (req, res) => res.json({ status: 'OK', service: 'auth-service
 // User Search (Used for Send Money recipient lookup)
 app.get('/user/find', async (req, res) => {
     const { email, phone } = req.query;
-    
+
     if (!email && !phone) {
         return res.status(400).json({ error: 'Email or Phone is required' });
     }
@@ -1346,17 +1421,17 @@ app.get('/user/find', async (req, res) => {
             console.log(`[User Find] User ${maskPII(identifier)} not found locally, checking budolID...`);
             const SSO_URL = process.env.SSO_SERVICE_URL || `http://${LOCAL_IP}:8000`;
             const axios = require('axios');
-            
+
             try {
                 const ssoRes = await axios.get(`${SSO_URL}/auth/user/find?${param}`);
                 const ssoUser = ssoRes.data;
 
                 if (ssoUser) {
                     console.log(`[User Find] Found user ${maskPII(identifier)} in budolID, syncing to local DB...`);
-                    
+
                     // Manual find and update/create to avoid upsert issues
                     const existingUser = await prisma.user.findUnique({ where: { id: ssoUser.id } });
-                    
+
                     if (existingUser) {
                         console.log(`[User Find] Updating existing local user ${ssoUser.id}`);
                         user = await prisma.user.update({
@@ -1419,7 +1494,7 @@ app.get('/user/find', async (req, res) => {
             firstName: maskPII(user.firstName),
             lastName: maskPII(user.lastName)
         };
-        
+
         console.log(`[User Find] Returning masked data for ${maskPII(user.email)}`);
         res.json(responseData);
     } catch (error) {
@@ -1465,7 +1540,7 @@ app.get('/favorites', authenticate, async (req, res) => {
 
 app.post('/favorites', authenticate, async (req, res) => {
     const { recipientId, alias } = req.body;
-    
+
     if (!recipientId) return res.status(400).json({ error: 'Recipient ID is required' });
 
     try {
@@ -1537,7 +1612,7 @@ if (require.main === module) {
     app.listen(PORT, () => {
         console.log(`[budolPay-Auth] Service running on http://localhost:${PORT}`);
         // Keep alive for local development terminals
-        setInterval(() => {}, 1000000);
+        setInterval(() => { }, 1000000);
     });
 }
 

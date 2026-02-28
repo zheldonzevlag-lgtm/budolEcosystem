@@ -1,0 +1,95 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <title>Issues & Fixes - Budol Ecosystem v5.3.10</title>
+    <style>
+        body {
+            font-family: -apple-system, sans-serif;
+            background: #F4F5F7;
+            color: #172B4D;
+            padding: 40px;
+        }
+
+        .container {
+            max-width: 1000px;
+            margin: 0 auto;
+            background: #fff;
+            padding: 30px;
+            border-radius: 8px;
+            border: 1px solid #DFE1E6;
+        }
+
+        h1 {
+            color: #0052CC;
+            border-bottom: 2px solid #0052CC;
+            padding-bottom: 10px;
+        }
+
+        .issue-card {
+            padding: 20px;
+            border-bottom: 1px solid #DFE1E6;
+        }
+
+        .issue-title {
+            font-weight: bold;
+            color: #BF2600;
+            font-size: 1.1rem;
+            margin-bottom: 8px;
+        }
+
+        .fix-title {
+            font-weight: bold;
+            color: #36B37E;
+            font-size: 1.1rem;
+            margin-bottom: 8px;
+            margin-top: 15px;
+        }
+
+        .code-snippet {
+            background: #EBECF0;
+            padding: 10px;
+            border-radius: 4px;
+            font-family: monospace;
+            display: block;
+            margin-top: 10px;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="container">
+        <h1>Issues & Fixes v5.3.10</h1>
+
+        <div class="issue-card">
+            <div class="issue-title">1. Mobile App: Account Not Found for Ecosystem Users</div>
+            <p><strong>Description:</strong> Existing users in <code>budolID</code> were not recognized by
+                <code>budolPay</code> mobile app during login, showing an "Account not found" error if they hadn't
+                previously registered specifically for the Pay service.</p>
+
+            <div class="fix-title">FIX: Identity Proxy & Sync Implementation</div>
+            <p><strong>Mechanism:</strong> The budolPay Auth service now queries budolID if a phone number search fails
+                locally. If found, a local profile is automatically created (Synced) using the same Identity UID.</p>
+            <code class="code-snippet">
+                // budolPay Auth Sync
+                if (budolIdUserExists) { autoSyncToPayLocal(); proceed(); }
+            </code>
+        </div>
+
+        <div class="issue-card">
+            <div class="issue-title">2. Homepage: Minimum Pricing Displayed as ₱1.00 for Free Items</div>
+            <p><strong>Description:</strong> Product cards on the homepage were incorrectly skipping ₱0.00 items in the
+                minimum price calculation calculation, resulting in ₱1.00 being shown as the "Starts from" price.</p>
+
+            <div class="fix-title">FIX: Inclusive Price Range Logic</div>
+            <p><strong>Mechanism:</strong> Corrected the pricing filter in <code>Hero.jsx</code> to allow 0.0 values
+                while excluding invalid (NaN) entries. Verified that promotional items now display from ₱0.00.</p>
+            <code class="code-snippet">
+                const validPrices = products.map(p => Number(p.price)).filter(price => !isNaN(price));
+            </code>
+        </div>
+    </div>
+</body>
+
+</html>
