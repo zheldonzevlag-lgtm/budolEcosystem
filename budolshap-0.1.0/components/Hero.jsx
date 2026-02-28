@@ -62,7 +62,7 @@ const Hero = () => {
 
     return (
         <div className='mx-6'>
-            <div className='flex max-xl:flex-col gap-8 max-w-7xl mx-auto mt-6 mb-12 overflow-hidden'>
+            <div className='flex max-xl:flex-col gap-8 max-w-7xl mx-auto mt-6 mb-section-y overflow-hidden'>
                 <motion.div
                     initial={{ opacity: 0, x: -30 }}
                     animate={{ opacity: 1, x: 0 }}

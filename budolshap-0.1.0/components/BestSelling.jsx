@@ -12,7 +12,7 @@ const BestSelling = () => {
     const loading = useSelector(state => state.product?.loading)
 
     return (
-        <div className='px-6 mb-12 max-w-6xl mx-auto'>
+        <div className='px-6 mb-section-y max-w-6xl mx-auto'>
             <Title title='Best Selling' description={`Showing ${products.length < displayQuantity ? (loading ? displayQuantity : products.length) : displayQuantity} of ${loading ? '...' : products.length} products`} href='/shop' />
             <div className='mt-12 grid grid-cols-2 sm:flex flex-wrap gap-6 xl:gap-12'>
                 {loading ? (

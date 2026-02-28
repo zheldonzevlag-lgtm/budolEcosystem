@@ -3,7 +3,7 @@ import Title from './Title'
 
 const Newsletter = () => {
     return (
-        <div className='flex flex-col items-center mx-6 mb-12'>
+        <div className='flex flex-col items-center mx-6 mb-section-y'>
             <Title title="Join Newsletter" description="Subscribe to get exclusive deals, new arrivals, and insider updates delivered straight to your inbox every week." visibleButton={false} />
             <div className='flex bg-slate-100 text-sm p-1 rounded-full w-full max-w-xl my-6 border-2 border-white ring ring-slate-200'>
                 <input className='flex-1 pl-3 md:pl-5 outline-none bg-transparent' type="text" placeholder='Enter your email address' />

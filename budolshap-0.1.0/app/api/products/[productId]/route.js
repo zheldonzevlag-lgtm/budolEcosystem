@@ -161,6 +161,13 @@ export async function PUT(request, { params }) {
             }
         }
 
+        if (body.price !== undefined && Number(body.price) <= 0) {
+            return NextResponse.json(
+                { error: 'Price must be greater than ₱0.00' },
+                { status: 400 }
+            )
+        }
+
         // Auto-lookup category name if categoryId is updated
         let categoryName = body.category;
         if (body.categoryId && !body.category) {

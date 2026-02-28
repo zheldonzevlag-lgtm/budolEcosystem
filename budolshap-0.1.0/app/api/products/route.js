@@ -224,6 +224,14 @@ export async function POST(request) {
             )
         }
 
+        // Validate price is greater than 0
+        if (Number(price) <= 0) {
+            return NextResponse.json(
+                { error: 'Price must be greater than ₱0.00. Use 0.01 for minimal pricing.' },
+                { status: 400 }
+            )
+        }
+
         // Auto-lookup category name if missing but categoryId exists
         if (!category && categoryId) {
             const catData = await prisma.category.findUnique({
