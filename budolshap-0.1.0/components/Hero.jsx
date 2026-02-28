@@ -62,7 +62,7 @@ const Hero = () => {
 
     return (
         <div className='mx-6'>
-            <div className='flex max-xl:flex-col gap-8 max-w-7xl mx-auto my-10 overflow-hidden'>
+            <div className='flex max-xl:flex-col gap-8 max-w-7xl mx-auto mt-6 mb-12 overflow-hidden'>
                 <motion.div
                     initial={{ opacity: 0, x: -30 }}
                     animate={{ opacity: 1, x: 0 }}
@@ -82,9 +82,9 @@ const Hero = () => {
                             initial={{ opacity: 0, y: 20 }}
                             animate={{ opacity: 1, y: 0 }}
                             transition={{ delay: 0.4 }}
-                            className='text-2xl sm:text-4xl xl:text-5xl leading-[1.2] my-5 font-medium bg-gradient-to-r from-slate-800 to-[#A0FF] bg-clip-text text-transparent max-w-xs  sm:max-w-md '
+                            className='text-xl sm:text-4xl xl:text-5xl leading-[1.2] my-5 font-medium bg-gradient-to-r from-slate-800 to-[#A0FF] bg-clip-text text-transparent max-w-xs  sm:max-w-md '
                         >
-                            Products you'll love. Prices you'll trust. <span className='text-green-600 text-2xl sm:text-4xl bg-gradient-to-r from-slate-800 to-[#A0FF] bg-clip-text text-transparent max-w-xs  sm:max-w-md '>Shipping you'll rely on.</span>
+                            Products you'll love. Prices you'll trust. <span className='text-green-600 text-xl sm:text-4xl bg-gradient-to-r from-slate-800 to-[#A0FF] bg-clip-text text-transparent max-w-xs  sm:max-w-md '>Shipping you'll rely on.</span>
                         </motion.h2>
                         <motion.div
                             initial={{ opacity: 0 }}

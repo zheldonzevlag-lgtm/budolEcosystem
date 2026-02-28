@@ -67,7 +67,7 @@ export default function CategoriesSection() {
     const hasMore = categories.length > MAX_VISIBLE
 
     return (
-        <section className="max-w-7xl mx-auto px-6 py-6">
+        <section className="max-w-7xl mx-auto px-6 mb-12">
             {/* ── Header ── */}
             <div className="flex items-center justify-between mb-4">
                 <div className="flex items-center gap-2">
@@ -138,7 +138,7 @@ export default function CategoriesSection() {
                                             <IconComponent className="w-6 h-6 sm:w-7 sm:h-7" />
                                         </span>
                                         <span className={`
-                                            text-[10px] sm:text-xs font-medium text-center leading-tight
+                                            text-[11px] sm:text-xs font-medium text-center leading-tight
                                             text-slate-600 group-hover:text-slate-800
                                             line-clamp-2
                                         `}>
@@ -167,7 +167,7 @@ export default function CategoriesSection() {
                                 <span className="flex items-center justify-center w-8 h-8 text-slate-500">
                                     <ShoppingCart className="w-6 h-6 sm:w-7 sm:h-7" />
                                 </span>
-                                <span className="text-[10px] sm:text-xs font-medium text-center text-slate-500 group-hover:text-slate-700 leading-tight">
+                                <span className="text-[11px] sm:text-xs font-medium text-center text-slate-500 group-hover:text-slate-700 leading-tight">
                                     All
                                 </span>
                             </Link>
@@ -221,7 +221,7 @@ function FallbackCategories() {
                             <span className={`flex items-center justify-center w-8 h-8 ${cat.color.text}`}>
                                 <IconComponent className="w-6 h-6 sm:w-7 sm:h-7" />
                             </span>
-                            <span className="text-[10px] sm:text-xs font-medium text-center text-slate-600 group-hover:text-slate-800 leading-tight line-clamp-2">
+                            <span className="text-[11px] sm:text-xs font-medium text-center text-slate-600 group-hover:text-slate-800 leading-tight line-clamp-2">
                                 {cat.name}
                             </span>
                         </Link>
@@ -242,7 +242,7 @@ function FallbackCategories() {
                     <span className="flex items-center justify-center w-8 h-8 text-slate-500">
                         <ShoppingCart className="w-6 h-6 sm:w-7 sm:h-7" />
                     </span>
-                    <span className="text-[10px] sm:text-xs font-medium text-center text-slate-500 group-hover:text-slate-700 leading-tight">All</span>
+                    <span className="text-[11px] sm:text-xs font-medium text-center text-slate-500 group-hover:text-slate-700 leading-tight">All</span>
                 </Link>
             </motion.div>
         </motion.div>
