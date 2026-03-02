@@ -28,6 +28,7 @@ export async function getOrders(filters = {}) {
         isPaid,
         paymentStatus,
         paymentMethod,
+        paymentId,
         excludePaymentMethod,
         excludeAbandonedPayments = true,
         search,
@@ -39,6 +40,7 @@ export async function getOrders(filters = {}) {
 
     if (userId) where.AND.push({ userId });
     if (storeId) where.AND.push({ storeId });
+    if (paymentId) where.AND.push({ paymentId });
 
     if (search) {
         where.AND.push({
@@ -272,6 +274,7 @@ export async function getOrderById(orderId) {
  */
 export async function createOrder(orderData) {
     const { userId, addressId, orderItems, paymentMethod, couponCode, shippingCost: providedShippingCost, shipping } = orderData;
+    const results = [];
 
     // 1. Validate input
     if (!userId || !addressId || !orderItems || !orderItems.length) {
@@ -401,7 +404,14 @@ export async function createOrder(orderData) {
             }
         });
 
-        const results = [];
+        // 6. Clear cart for these items
+        // Fix: Delete only specific variations that were purchased
+        // ONLY clear for COD immediately. For async payments, we wait for webhook or success.
+        const isAsyncPayment = ['GCASH', 'MAYA', 'PAYMAYA', 'GRAB_PAY', 'QRPH', 'CARD', 'BUDOL_PAY', 'budolPay'].includes(paymentMethod.toUpperCase());
+        const userCart = await tx.cart.findUnique({ 
+            where: { userId },
+            select: { id: true }
+        });
 
         for (const storeId in itemsByStore) {
             const storeData = itemsByStore[storeId];
@@ -443,57 +453,48 @@ export async function createOrder(orderData) {
             });
 
             results.push(order);
-        }
 
-        // 6. Clear cart for these items
-        // Fix: Delete only specific variations that were purchased
-        // ONLY clear for COD immediately. For async payments, we wait for webhook or success.
-        const isAsyncPayment = ['GCASH', 'MAYA', 'GRAB_PAY', 'QRPH', 'BUDOL_PAY', 'budolPay'].includes(paymentMethod.toUpperCase());
-        const userCart = await tx.cart.findUnique({ 
-            where: { userId },
-            select: { id: true }
-        });
+            if (userCart && !isAsyncPayment) {
+                const cartCleanupConditions = storeData.items.map(item => {
+                    const product = products.find(p => p.id === item.productId);
+                    const hasVariations = product?.variation_matrix && 
+                                          Array.isArray(product.variation_matrix) && 
+                                          product.variation_matrix.length > 0;
+                    
+                    // If product has no variations, we must target the base item (variationId: null)
+                    // If it has variations, we use the provided variationId
+                    const targetVariationId = hasVariations ? (item.variationId || null) : null;
 
-        if (userCart && !isAsyncPayment) {
-            const cartCleanupConditions = orderItems.map(item => {
-                const product = products.find(p => p.id === item.productId);
-                const hasVariations = product?.variation_matrix && 
-                                      Array.isArray(product.variation_matrix) && 
-                                      product.variation_matrix.length > 0;
-                
-                // If product has no variations, we must target the base item (variationId: null)
-                // If it has variations, we use the provided variationId
-                const targetVariationId = hasVariations ? (item.variationId || null) : null;
+                    // Robust matching: If variationId is null/empty, match both in DB to be safe
+                    if (!targetVariationId) {
+                        return {
+                            productId: item.productId,
+                            OR: [
+                                { variationId: null },
+                                { variationId: '' }
+                            ]
+                        };
+                    }
 
-                // Robust matching: If variationId is null/empty, match both in DB to be safe
-                if (!targetVariationId) {
                     return {
                         productId: item.productId,
-                        OR: [
-                            { variationId: null },
-                            { variationId: '' }
-                        ]
+                        variationId: targetVariationId
                     };
-                }
+                });
 
-                return {
-                    productId: item.productId,
-                    variationId: targetVariationId
-                };
-            });
+                console.log(`[OrderService] Cleaning up cart ${userCart.id} for user ${userId} (Non-Async payment).`);
 
-            console.log(`[OrderService] Cleaning up cart ${userCart.id} for user ${userId}. Items:`, JSON.stringify(cartCleanupConditions));
+                const deleteResult = await tx.cartItem.deleteMany({
+                    where: {
+                        cartId: userCart.id,
+                        OR: cartCleanupConditions
+                    }
+                });
 
-            const deleteResult = await tx.cartItem.deleteMany({
-                where: {
-                    cartId: userCart.id,
-                    OR: cartCleanupConditions
-                }
-            });
-
-            console.log(`[OrderService] Deleted ${deleteResult.count} items from cart ${userCart.id}`);
-        } else {
-            console.log(`[OrderService] No cart found for user ${userId}, skipping cleanup.`);
+                console.log(`[OrderService] Deleted ${deleteResult.count} items from cart ${userCart.id}`);
+            } else if (isAsyncPayment) {
+                console.log(`[OrderService] Async payment method (${paymentMethod}): Skipping cart cleanup until payment success.`);
+            }
         }
 
         return { checkoutId: checkout.id, orders: results };
@@ -721,15 +722,29 @@ export async function updateOrderStatus(orderId, updateData) {
     // This is a fallback in case createOrder() didn't clear them or if the user abandoned and returned.
     const isNowPaid = (isPaid === true) || (status === 'PAID') || (paymentStatus === 'paid') || (paymentStatus === 'succeeded');
     const wasNotPaid = !currentOrder.isPaid;
+    let cartWasCleared = false;
 
     if (isNowPaid && wasNotPaid) {
         console.log(`[OrdersService] Order ${orderId} is now PAID. Cleaning up cart items...`);
         try {
             // Fix: Delete only specific variations that were purchased
-            const cartCleanupConditions = currentOrder.orderItems.map(item => ({
-                productId: item.productId,
-                variationId: item.variationId || null
-            }));
+            const cartCleanupConditions = currentOrder.orderItems.map(item => {
+                // Robust matching: If variationId is null/empty, match both in DB to be safe
+                if (!item.variationId) {
+                    return {
+                        productId: item.productId,
+                        OR: [
+                            { variationId: null },
+                            { variationId: '' }
+                        ]
+                    };
+                }
+                
+                return {
+                    productId: item.productId,
+                    variationId: item.variationId
+                };
+            });
 
             if (cartCleanupConditions.length > 0) {
                 const deleted = await prisma.cartItem.deleteMany({
@@ -739,6 +754,7 @@ export async function updateOrderStatus(orderId, updateData) {
                     }
                 });
                 console.log(`[OrdersService] Removed ${deleted.count} items from cart for User ${currentOrder.userId}`);
+                cartWasCleared = true;
             }
         } catch (cleanupError) {
             console.error(`[OrdersService] Failed to cleanup cart for order ${orderId}:`, cleanupError);
@@ -793,6 +809,13 @@ export async function updateOrderStatus(orderId, updateData) {
             status: updatedOrder.status,
             message: `Your order #${orderId.substring(0, 8)} is now ${updatedOrder.status.replace('_', ' ')}`
         });
+
+        if (cartWasCleared) {
+            await triggerRealtimeEvent(`user-${updatedOrder.userId}`, 'cart-updated', {
+                userId: updatedOrder.userId,
+                reason: 'payment_success'
+            });
+        }
     } catch (reError) {
         console.error('[OrdersService] Failed to trigger realtime events for update:', reError);
     }

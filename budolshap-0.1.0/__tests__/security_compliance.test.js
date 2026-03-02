@@ -8,6 +8,15 @@ jest.mock('@/lib/prisma', () => ({
     auditLog: {
       create: jest.fn().mockResolvedValue({ id: 'mock-log-id' }),
     },
+    settings: {
+      findUnique: jest.fn().mockResolvedValue({
+        realtimeProvider: 'POLLING',
+        pusherKey: 'mock-pusher-key',
+        pusherCluster: 'mock-pusher-cluster',
+        socketUrl: 'http://localhost:4000',
+        swrPollingInterval: 10000,
+      }),
+    },
   },
 }));
 

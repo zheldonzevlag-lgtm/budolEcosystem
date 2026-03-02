@@ -19,6 +19,6 @@ describe('CategoryIcons Logic', () => {
 
     test('returns correct icon for fashion', () => {
         const Icon = getCategoryLucideIcon('fashion', 'Fashion');
-        expect(Icon).toBe(Lucide.ShoppingBag);
+        expect(Icon).toBe(Lucide.Shirt);
     });
 });

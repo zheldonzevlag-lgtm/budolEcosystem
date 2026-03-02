@@ -62,6 +62,26 @@ describe('MapPicker', () => {
       googleMapsApiKey: 'google-key',
       radarApiKey: 'radar-key',
     });
+
+    // Mock global.fetch for geocoding requests
+    global.fetch = jest.fn();
+    jest.spyOn(global, 'fetch').mockImplementation((url) => {
+      if (url.includes('api.geoapify.com/v1/geocode/reverse')) {
+        return Promise.resolve({
+          ok: true,
+          json: () => Promise.resolve({
+            features: [{
+              properties: {
+                formatted: 'Mocked Address, Mocked City',
+                lat: 14.5995,
+                lon: 120.9842,
+              },
+            }],
+          }),
+        });
+      }
+      return Promise.reject(new Error('unhandled fetch request'));
+    });
   });
 
   it('renders Leaflet map by default', () => {
