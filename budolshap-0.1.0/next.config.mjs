@@ -4,7 +4,7 @@ import os from 'os';
 const getLocalExternalIPs = () => {
     const interfaces = os.networkInterfaces();
     const ips = ['localhost', '127.0.0.1', '0.0.0.0'];
-    
+
     for (const name of Object.keys(interfaces)) {
         for (const iface of interfaces[name]) {
             if (iface.family === 'IPv4' && !iface.internal) {
@@ -18,6 +18,7 @@ const getLocalExternalIPs = () => {
 const nextConfig = {
     reactStrictMode: false,
     allowedDevOrigins: getLocalExternalIPs(),
+    output: 'standalone',
     images: {
         unoptimized: true
     },
