@@ -1,0 +1,938 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Description: 'ECS Fargate Cluster for budolEcosystem Backend Services - With ALB and Internal DNS'
+
+Conditions:
+  HasHostedZone: !Not
+    - !Equals
+      - !Ref HostedZoneId
+      - ''
+
+Parameters:
+  Environment:
+    Type: String
+    Default: production
+    Description: Environment name
+  VpcId:
+    Type: AWS::EC2::VPC::Id
+    Description: VPC ID for the ECS cluster
+  SubnetIds:
+    Type: List<AWS::EC2::Subnet::Id>
+    Description: Subnet IDs for ECS tasks
+  DBSubnetGroup:
+    Type: String
+    Description: Database subnet group name
+  DatabaseHost:
+    Type: String
+    Description: RDS PostgreSQL host endpoint
+  DatabaseName:
+    Type: String
+    Default: budolshap_1db
+    Description: Database name
+  DatabaseUser:
+    Type: String
+    Default: postgres
+    Description: Database username
+  RedisHost:
+    Type: String
+    Description: ElastiCache Redis host endpoint
+  EcrRepositoryPrefix:
+    Type: String
+    Default: budolEcosystem
+    Description: ECR repository prefix
+  ImageTag:
+    Type: String
+    Default: latest
+    Description: Docker image tag
+  SSLCertificateArn:
+    Type: String
+    Default: ''
+    Description: ACM SSL Certificate ARN for HTTPS listener
+  HostedZoneId:
+    Type: String
+    Default: ''
+    Description: Route 53 Private Hosted Zone ID
+
+Resources:
+  # ============================================
+  # ECS Cluster
+  # ============================================
+  ECSCluster:
+    Type: AWS::ECS::Cluster
+    Properties:
+      ClusterName: !Sub budolEcosystem-${Environment}
+      ClusterSettings:
+        - Name: containerInsights
+          Value: enabled
+      Tags:
+        - Key: Environment
+          Value: !Ref Environment
+
+  # ============================================
+  # Security Groups
+  # ============================================
+  ALBSecurityGroup:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupDescription: Security group for Application Load Balancer
+      VpcId: !Ref VpcId
+      SecurityGroupIngress:
+        - IpProtocol: tcp
+          FromPort: 80
+          ToPort: 80
+          CidrIp: 0.0.0.0/0
+        - IpProtocol: tcp
+          FromPort: 443
+          ToPort: 443
+          CidrIp: 0.0.0.0/0
+      Tags:
+        - Key: Name
+          Value: !Sub budolEcosystem-ALB-SG-${Environment}
+
+  ECSSecurityGroup:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupDescription: Security group for ECS tasks
+      VpcId: !Ref VpcId
+      SecurityGroupIngress:
+        - IpProtocol: tcp
+          FromPort: 8000
+          ToPort: 8007
+          SourceSecurityGroupId: !Ref ALBSecurityGroup
+      Tags:
+        - Key: Name
+          Value: !Sub budolEcosystem-ECS-SG-${Environment}
+
+  # ============================================
+  # Application Load Balancer - Internet Facing
+  # ============================================
+  ApplicationLoadBalancer:
+    Type: AWS::ElasticLoadBalancingV2::LoadBalancer
+    Properties:
+      Name: !Sub budolEcosystem-ALB-${Environment}
+      Scheme: internet-facing
+      Type: application
+      SecurityGroups:
+        - !Ref ALBSecurityGroup
+      Subnets: !Ref SubnetIds
+      Tags:
+        - Key: Environment
+          Value: !Ref Environment
+
+  # ============================================
+  # Application Load Balancer - Internal
+  # ============================================
+  InternalLoadBalancer:
+    Type: AWS::ElasticLoadBalancingV2::LoadBalancer
+    Properties:
+      Name: !Sub budolEcosystem-InternalALB-${Environment}
+      Scheme: internal
+      Type: application
+      SecurityGroups:
+        - !Ref ECSSecurityGroup
+      Subnets: !Ref SubnetIds
+      Tags:
+        - Key: Environment
+          Value: !Ref Environment
+
+  # ============================================
+  # Target Groups for each service
+  # ============================================
+  # budolid (Port 8000)
+  budolidTargetGroup:
+    Type: AWS::ElasticLoadBalancingV2::TargetGroup
+    Properties:
+      Name: budolID-tg
+      Port: 8000
+      Protocol: HTTP
+      VpcId: !Ref VpcId
+      HealthCheckPath: /health
+      HealthCheckIntervalSeconds: 30
+      HealthyThresholdCount: 2
+      UnhealthyThresholdCount: 3
+      TargetType: ip
+
+  # budolAccounting (Port 8005)
+  budolAccountingTargetGroup:
+    Type: AWS::ElasticLoadBalancingV2::TargetGroup
+    Properties:
+      Name: budolAccounting-tg
+      Port: 8005
+      Protocol: HTTP
+      VpcId: !Ref VpcId
+      HealthCheckPath: /health
+      HealthCheckIntervalSeconds: 30
+      HealthyThresholdCount: 2
+      UnhealthyThresholdCount: 3
+      TargetType: ip
+
+  # budolPayGateway (Port 8080)
+  budolPayGatewayTargetGroup:
+    Type: AWS::ElasticLoadBalancingV2::TargetGroup
+    Properties:
+      Name: budolPayGateway-tg
+      Port: 8080
+      Protocol: HTTP
+      VpcId: !Ref VpcId
+      HealthCheckPath: /health
+      HealthCheckIntervalSeconds: 30
+      HealthyThresholdCount: 2
+      UnhealthyThresholdCount: 3
+      TargetType: ip
+
+  # budolPayAuth (Port 8001)
+  budolPayAuthTargetGroup:
+    Type: AWS::ElasticLoadBalancingV2::TargetGroup
+    Properties:
+      Name: budolPayAuth-tg
+      Port: 8001
+      Protocol: HTTP
+      VpcId: !Ref VpcId
+      HealthCheckPath: /health
+      HealthCheckIntervalSeconds: 30
+      HealthyThresholdCount: 2
+      UnhealthyThresholdCount: 3
+      TargetType: ip
+
+  # budolPayWallet (Port 8002)
+  budolPayWalletTargetGroup:
+    Type: AWS::ElasticLoadBalancingV2::TargetGroup
+    Properties:
+      Name: budolPayWallet-tg
+      Port: 8002
+      Protocol: HTTP
+      VpcId: !Ref VpcId
+      HealthCheckPath: /health
+      HealthCheckIntervalSeconds: 30
+      HealthyThresholdCount: 2
+      UnhealthyThresholdCount: 3
+      TargetType: ip
+
+  # budolPayTransaction (Port 8003)
+  budolPayTransactionTargetGroup:
+    Type: AWS::ElasticLoadBalancingV2::TargetGroup
+    Properties:
+      Name: budolPayTransaction-tg
+      Port: 8003
+      Protocol: HTTP
+      VpcId: !Ref VpcId
+      HealthCheckPath: /health
+      HealthCheckIntervalSeconds: 30
+      HealthyThresholdCount: 2
+      UnhealthyThresholdCount: 3
+      TargetType: ip
+
+  # budolPayPayment (Port 8004)
+  budolPayPaymentTargetGroup:
+    Type: AWS::ElasticLoadBalancingV2::TargetGroup
+    Properties:
+      Name: budolPayPayment-tg
+      Port: 8004
+      Protocol: HTTP
+      VpcId: !Ref VpcId
+      HealthCheckPath: /health
+      HealthCheckIntervalSeconds: 30
+      HealthyThresholdCount: 2
+      UnhealthyThresholdCount: 3
+      TargetType: ip
+
+  # budolPayKYC (Port 8006)
+  budolPayKYCTargetGroup:
+    Type: AWS::ElasticLoadBalancingV2::TargetGroup
+    Properties:
+      Name: budolPayKYC-tg
+      Port: 8006
+      Protocol: HTTP
+      VpcId: !Ref VpcId
+      HealthCheckPath: /health
+      HealthCheckIntervalSeconds: 30
+      HealthyThresholdCount: 2
+      UnhealthyThresholdCount: 3
+      TargetType: ip
+
+  # budolPaySettlement (Port 8007)
+  budolPaySettlementTargetGroup:
+    Type: AWS::ElasticLoadBalancingV2::TargetGroup
+    Properties:
+      Name: budolPaySettlement-tg
+      Port: 8007
+      Protocol: HTTP
+      VpcId: !Ref VpcId
+      HealthCheckPath: /health
+      HealthCheckIntervalSeconds: 30
+      HealthyThresholdCount: 2
+      UnhealthyThresholdCount: 3
+      TargetType: ip
+
+  # ============================================
+  # ALB Listeners - Internet Facing ALB
+  # ============================================
+  # HTTP Listener (port 80) - Redirect to HTTPS
+  ALBHTTPListener:
+    Type: AWS::ElasticLoadBalancingV2::Listener
+    Properties:
+      LoadBalancerArn: !Ref ApplicationLoadBalancer
+      Port: 80
+      Protocol: HTTP
+      DefaultActions:
+        - Type: redirect
+          RedirectConfig:
+            Protocol: HTTPS
+            Port: 443
+            Host: '#{host}'
+            Path: '/#{path}'
+            Query: '#{query}'
+            StatusCode: HTTP_301
+
+  # HTTPS Listener (port 443)
+  ALBHTTPSListener:
+    Type: AWS::ElasticLoadBalancingV2::Listener
+    Properties:
+      LoadBalancerArn: !Ref ApplicationLoadBalancer
+      Port: 443
+      Protocol: HTTPS
+      Certificates:
+        - CertificateArn: !Ref SSLCertificateArn
+      DefaultActions:
+        - Type: fixed-response
+          FixedResponseConfig:
+            MessageBody: 'Service not found'
+            StatusCode: '404'
+
+  # Listener Rules for Internet Facing ALB
+  # budolid rule
+  budolidListenerRule:
+    Type: AWS::ElasticLoadBalancingV2::ListenerRule
+    Properties:
+      ListenerArn: !Ref ALBHTTPSListener
+      Priority: 1
+      Conditions:
+        - Field: path-pattern
+          Values:
+            - /budolid*
+            - /auth*
+      Actions:
+        - Type: forward
+          TargetGroupArn: !Ref budolidTargetGroup
+
+  # budolAccounting rule
+  budolAccountingListenerRule:
+    Type: AWS::ElasticLoadBalancingV2::ListenerRule
+    Properties:
+      ListenerArn: !Ref ALBHTTPSListener
+      Priority: 5
+      Conditions:
+        - Field: path-pattern
+          Values:
+            - /accounting*
+      Actions:
+        - Type: forward
+          TargetGroupArn: !Ref budolAccountingTargetGroup
+
+  # budolPayGateway rule (catch-all for API)
+  budolPayGatewayListenerRule:
+    Type: AWS::ElasticLoadBalancingV2::ListenerRule
+    Properties:
+      ListenerArn: !Ref ALBHTTPSListener
+      Priority: 10
+      Conditions:
+        - Field: path-pattern
+          Values:
+            - /api/*
+            - /v1/*
+      Actions:
+        - Type: forward
+          TargetGroupArn: !Ref budolPayGatewayTargetGroup
+
+  # ============================================
+  # ALB Listeners - Internal ALB
+  # ============================================
+  # Internal ALB HTTP Listener
+  InternalALBListener:
+    Type: AWS::ElasticLoadBalancingV2::Listener
+    Properties:
+      LoadBalancerArn: !Ref InternalLoadBalancer
+      Port: 80
+      Protocol: HTTP
+      DefaultActions:
+        - Type: fixed-response
+          FixedResponseConfig:
+            MessageBody: 'Internal ALB - Service not found'
+            StatusCode: '404'
+
+  # Internal ALB Listener Rules
+  # budolid internal rule
+  budolidInternalListenerRule:
+    Type: AWS::ElasticLoadBalancingV2::ListenerRule
+    Properties:
+      ListenerArn: !Ref InternalALBListener
+      Priority: 1
+      Conditions:
+        - Field: host-header
+          Values:
+            - budolid.budol.internal
+      Actions:
+        - Type: forward
+          TargetGroupArn: !Ref budolidTargetGroup
+
+  # budolAccounting internal rule
+  budolAccountingInternalListenerRule:
+    Type: AWS::ElasticLoadBalancingV2::ListenerRule
+    Properties:
+      ListenerArn: !Ref InternalALBListener
+      Priority: 5
+      Conditions:
+        - Field: host-header
+          Values:
+            - budolaccounting.budol.internal
+      Actions:
+        - Type: forward
+          TargetGroupArn: !Ref budolAccountingTargetGroup
+
+  # budolPayGateway internal rule
+  budolPayGatewayInternalListenerRule:
+    Type: AWS::ElasticLoadBalancingV2::ListenerRule
+    Properties:
+      ListenerArn: !Ref InternalALBListener
+      Priority: 10
+      Conditions:
+        - Field: host-header
+          Values:
+            - budolpay-gateway.budol.internal
+            - api.budol.internal
+      Actions:
+        - Type: forward
+          TargetGroupArn: !Ref budolPayGatewayTargetGroup
+
+  # budolPayAuth internal rule
+  budolPayAuthInternalListenerRule:
+    Type: AWS::ElasticLoadBalancingV2::ListenerRule
+    Properties:
+      ListenerArn: !Ref InternalALBListener
+      Priority: 15
+      Conditions:
+        - Field: host-header
+          Values:
+            - budolpay-auth.budol.internal
+      Actions:
+        - Type: forward
+          TargetGroupArn: !Ref budolPayAuthTargetGroup
+
+  # budolPayWallet internal rule
+  budolPayWalletInternalListenerRule:
+    Type: AWS::ElasticLoadBalancingV2::ListenerRule
+    Properties:
+      ListenerArn: !Ref InternalALBListener
+      Priority: 20
+      Conditions:
+        - Field: host-header
+          Values:
+            - budolpay-wallet.budol.internal
+      Actions:
+        - Type: forward
+          TargetGroupArn: !Ref budolPayWalletTargetGroup
+
+  # budolPayTransaction internal rule
+  budolPayTransactionInternalListenerRule:
+    Type: AWS::ElasticLoadBalancingV2::ListenerRule
+    Properties:
+      ListenerArn: !Ref InternalALBListener
+      Priority: 25
+      Conditions:
+        - Field: host-header
+          Values:
+            - budolpay-transaction.budol.internal
+      Actions:
+        - Type: forward
+          TargetGroupArn: !Ref budolPayTransactionTargetGroup
+
+  # budolPayPayment internal rule
+  budolPayPaymentInternalListenerRule:
+    Type: AWS::ElasticLoadBalancingV2::ListenerRule
+    Properties:
+      ListenerArn: !Ref InternalALBListener
+      Priority: 30
+      Conditions:
+        - Field: host-header
+          Values:
+            - budolpay-payment.budol.internal
+      Actions:
+        - Type: forward
+          TargetGroupArn: !Ref budolPayPaymentTargetGroup
+
+  # budolPayKYC internal rule
+  budolPayKYCInternalListenerRule:
+    Type: AWS::ElasticLoadBalancingV2::ListenerRule
+    Properties:
+      ListenerArn: !Ref InternalALBListener
+      Priority: 35
+      Conditions:
+        - Field: host-header
+          Values:
+            - budolpay-kyc.budol.internal
+      Actions:
+        - Type: forward
+          TargetGroupArn: !Ref budolPayKYCTargetGroup
+
+  # budolPaySettlement internal rule
+  budolPaySettlementInternalListenerRule:
+    Type: AWS::ElasticLoadBalancingV2::ListenerRule
+    Properties:
+      ListenerArn: !Ref InternalALBListener
+      Priority: 40
+      Conditions:
+        - Field: host-header
+          Values:
+            - budolpay-settlement.budol.internal
+      Actions:
+        - Type: forward
+          TargetGroupArn: !Ref budolPaySettlementTargetGroup
+
+  # ============================================
+  # Route 53 DNS Records (for Internal Hosted Zone)
+  # ============================================
+  # Note: These records require the HostedZoneId parameter to be provided
+  # They will only be created if HostedZoneId is not empty
+
+  budolidDNSRecord:
+    Type: AWS::Route53::RecordSet
+    Condition: HasHostedZone
+    Properties:
+      HostedZoneId: !Ref HostedZoneId
+      Name: budolid.budol.internal
+      Type: A
+      AliasTarget:
+        DNSName: !GetAtt InternalLoadBalancer.DNSName
+        HostedZoneId: !GetAtt InternalLoadBalancer.CanonicalHostedZoneID
+
+  budolAccountingDNSRecord:
+    Type: AWS::Route53::RecordSet
+    Condition: HasHostedZone
+    Properties:
+      HostedZoneId: !Ref HostedZoneId
+      Name: budolaccounting.budol.internal
+      Type: A
+      AliasTarget:
+        DNSName: !GetAtt InternalLoadBalancer.DNSName
+        HostedZoneId: !GetAtt InternalLoadBalancer.CanonicalHostedZoneID
+
+  budolPayGatewayDNSRecord:
+    Type: AWS::Route53::RecordSet
+    Condition: HasHostedZone
+    Properties:
+      HostedZoneId: !Ref HostedZoneId
+      Name: budolpay-gateway.budol.internal
+      Type: A
+      AliasTarget:
+        DNSName: !GetAtt InternalLoadBalancer.DNSName
+        HostedZoneId: !GetAtt InternalLoadBalancer.CanonicalHostedZoneID
+
+  budolPayAuthDNSRecord:
+    Type: AWS::Route53::RecordSet
+    Condition: HasHostedZone
+    Properties:
+      HostedZoneId: !Ref HostedZoneId
+      Name: budolpay-auth.budol.internal
+      Type: A
+      AliasTarget:
+        DNSName: !GetAtt InternalLoadBalancer.DNSName
+        HostedZoneId: !GetAtt InternalLoadBalancer.CanonicalHostedZoneID
+
+  budolPayWalletDNSRecord:
+    Type: AWS::Route53::RecordSet
+    Condition: HasHostedZone
+    Properties:
+      HostedZoneId: !Ref HostedZoneId
+      Name: budolpay-wallet.budol.internal
+      Type: A
+      AliasTarget:
+        DNSName: !GetAtt InternalLoadBalancer.DNSName
+        HostedZoneId: !GetAtt InternalLoadBalancer.CanonicalHostedZoneID
+
+  budolPayTransactionDNSRecord:
+    Type: AWS::Route53::RecordSet
+    Condition: HasHostedZone
+    Properties:
+      HostedZoneId: !Ref HostedZoneId
+      Name: budolpay-transaction.budol.internal
+      Type: A
+      AliasTarget:
+        DNSName: !GetAtt InternalLoadBalancer.DNSName
+        HostedZoneId: !GetAtt InternalLoadBalancer.CanonicalHostedZoneID
+
+  budolPayPaymentDNSRecord:
+    Type: AWS::Route53::RecordSet
+    Condition: HasHostedZone
+    Properties:
+      HostedZoneId: !Ref HostedZoneId
+      Name: budolpay-payment.budol.internal
+      Type: A
+      AliasTarget:
+        DNSName: !GetAtt InternalLoadBalancer.DNSName
+        HostedZoneId: !GetAtt InternalLoadBalancer.CanonicalHostedZoneID
+
+  budolPayKYCDNSRecord:
+    Type: AWS::Route53::RecordSet
+    Condition: HasHostedZone
+    Properties:
+      HostedZoneId: !Ref HostedZoneId
+      Name: budolpay-kyc.budol.internal
+      Type: A
+      AliasTarget:
+        DNSName: !GetAtt InternalLoadBalancer.DNSName
+        HostedZoneId: !GetAtt InternalLoadBalancer.CanonicalHostedZoneID
+
+  budolPaySettlementDNSRecord:
+    Type: AWS::Route53::RecordSet
+    Condition: HasHostedZone
+    Properties:
+      HostedZoneId: !Ref HostedZoneId
+      Name: budolpay-settlement.budol.internal
+      Type: A
+      AliasTarget:
+        DNSName: !GetAtt InternalLoadBalancer.DNSName
+        HostedZoneId: !GetAtt InternalLoadBalancer.CanonicalHostedZoneID
+
+  # ============================================
+  # Outputs
+  # ============================================
+Outputs:
+  ECSClusterName:
+    Description: Name of the ECS Cluster
+    Value: !Ref ECSCluster
+    Export:
+      Name: !Sub "${AWS::StackName}-ECSCluster"
+  
+  ExternalALBDNSName:
+    Description: External ALB DNS Name
+    Value: !GetAtt ApplicationLoadBalancer.DNSName
+    Export:
+      Name: !Sub "${AWS::StackName}-ExternalALB"
+  
+  InternalALBDNSName:
+    Description: Internal ALB DNS Name
+    Value: !GetAtt InternalLoadBalancer.DNSName
+    Export:
+      Name: !Sub "${AWS::StackName}-InternalALB"
+  
+  VPCId:
+    Description: VPC ID
+    Value: !Ref VpcId
+    Export:
+      Name: !Sub "${AWS::StackName}-VPCID"
+    Type: AWS::ECS::Service
+    DependsOn: budolidListenerRule
+    Properties:
+      ServiceName: budolID
+      Cluster: !Ref ECSCluster
+      TaskDefinition: !Sub arn:aws:ecs:${AWS::Region}:${AWS::AccountId}:task-definition/budolid
+      DesiredCount: 2
+      LaunchType: FARGATE
+      NetworkConfiguration:
+        AwsvpcConfiguration:
+          AssignPublicIp: DISABLED
+          Subnets: !Ref SubnetIds
+          SecurityGroups:
+            - !Ref ECSSecurityGroup
+      LoadBalancers:
+        - ContainerName: budolid
+          ContainerPort: 8000
+          TargetGroupArn: !Ref budolidTargetGroup
+      DeploymentConfiguration:
+        MinimumHealthyPercent: 50
+        MaximumPercent: 200
+
+  budolAccountingService:
+    Type: AWS::ECS::Service
+    DependsOn: budolAccountingListenerRule
+    Properties:
+      ServiceName: budolAccounting
+      Cluster: !Ref ECSCluster
+      TaskDefinition: !Sub arn:aws:ecs:${AWS::Region}:${AWS::AccountId}:task-definition/budolaccounting
+      DesiredCount: 2
+      LaunchType: FARGATE
+      NetworkConfiguration:
+        AwsvpcConfiguration:
+          AssignPublicIp: DISABLED
+          Subnets: !Ref SubnetIds
+          SecurityGroups:
+            - !Ref ECSSecurityGroup
+      LoadBalancers:
+        - ContainerName: budolaccounting
+          ContainerPort: 8005
+          TargetGroupArn: !Ref budolAccountingTargetGroup
+      DeploymentConfiguration:
+        MinimumHealthyPercent: 50
+        MaximumPercent: 200
+
+  budolPayGatewayService:
+    Type: AWS::ECS::Service
+    DependsOn: budolPayGatewayListenerRule
+    Properties:
+      ServiceName: budolPayGateway
+      Cluster: !Ref ECSCluster
+      TaskDefinition: !Sub arn:aws:ecs:${AWS::Region}:${AWS::AccountId}:task-definition/budolpay-gateway
+      DesiredCount: 3
+      LaunchType: FARGATE
+      NetworkConfiguration:
+        AwsvpcConfiguration:
+          AssignPublicIp: DISABLED
+          Subnets: !Ref SubnetIds
+          SecurityGroups:
+            - !Ref ECSSecurityGroup
+      LoadBalancers:
+        - ContainerName: budolpay-gateway
+          ContainerPort: 8080
+          TargetGroupArn: !Ref budolPayGatewayTargetGroup
+      DeploymentConfiguration:
+        MinimumHealthyPercent: 50
+        MaximumPercent: 200
+
+  # Additional ECS Services
+  budolPayAuthService:
+    Type: AWS::ECS::Service
+    DependsOn: budolPayAuthInternalListenerRule
+    Properties:
+      ServiceName: budolPayAuth
+      Cluster: !Ref ECSCluster
+      TaskDefinition: !Sub arn:aws:ecs:${AWS::Region}:${AWS::AccountId}:task-definition/budolpay-auth
+      DesiredCount: 2
+      LaunchType: FARGATE
+      NetworkConfiguration:
+        AwsvpcConfiguration:
+          AssignPublicIp: DISABLED
+          Subnets: !Ref SubnetIds
+          SecurityGroups:
+            - !Ref ECSSecurityGroup
+      LoadBalancers:
+        - ContainerName: budolpay-auth
+          ContainerPort: 8001
+          TargetGroupArn: !Ref budolPayAuthTargetGroup
+      DeploymentConfiguration:
+        MinimumHealthyPercent: 50
+        MaximumPercent: 200
+
+  budolPayWalletService:
+    Type: AWS::ECS::Service
+    DependsOn: budolPayWalletInternalListenerRule
+    Properties:
+      ServiceName: budolPayWallet
+      Cluster: !Ref ECSCluster
+      TaskDefinition: !Sub arn:aws:ecs:${AWS::Region}:${AWS::AccountId}:task-definition/budolpay-wallet
+      DesiredCount: 2
+      LaunchType: FARGATE
+      NetworkConfiguration:
+        AwsvpcConfiguration:
+          AssignPublicIp: DISABLED
+          Subnets: !Ref SubnetIds
+          SecurityGroups:
+            - !Ref ECSSecurityGroup
+      LoadBalancers:
+        - ContainerName: budolpay-wallet
+          ContainerPort: 8002
+          TargetGroupArn: !Ref budolPayWalletTargetGroup
+      DeploymentConfiguration:
+        MinimumHealthyPercent: 50
+        MaximumPercent: 200
+
+  budolPayTransactionService:
+    Type: AWS::ECS::Service
+    DependsOn: budolPayTransactionInternalListenerRule
+    Properties:
+      ServiceName: budolPayTransaction
+      Cluster: !Ref ECSCluster
+      TaskDefinition: !Sub arn:aws:ecs:${AWS::Region}:${AWS::AccountId}:task-definition/budolpay-transaction
+      DesiredCount: 2
+      LaunchType: FARGATE
+      NetworkConfiguration:
+        AwsvpcConfiguration:
+          AssignPublicIp: DISABLED
+          Subnets: !Ref SubnetIds
+          SecurityGroups:
+            - !Ref ECSSecurityGroup
+      LoadBalancers:
+        - ContainerName: budolpay-transaction
+          ContainerPort: 8003
+          TargetGroupArn: !Ref budolPayTransactionTargetGroup
+      DeploymentConfiguration:
+        MinimumHealthyPercent: 50
+        MaximumPercent: 200
+
+  budolPayPaymentService:
+    Type: AWS::ECS::Service
+    DependsOn: budolPayPaymentInternalListenerRule
+    Properties:
+      ServiceName: budolPayPayment
+      Cluster: !Ref ECSCluster
+      TaskDefinition: !Sub arn:aws:ecs:${AWS::Region}:${AWS::AccountId}:task-definition/budolpay-payment
+      DesiredCount: 2
+      LaunchType: FARGATE
+      NetworkConfiguration:
+        AwsvpcConfiguration:
+          AssignPublicIp: DISABLED
+          Subnets: !Ref SubnetIds
+          SecurityGroups:
+            - !Ref ECSSecurityGroup
+      LoadBalancers:
+        - ContainerName: budolpay-payment
+          ContainerPort: 8004
+          TargetGroupArn: !Ref budolPayPaymentTargetGroup
+      DeploymentConfiguration:
+        MinimumHealthyPercent: 50
+        MaximumPercent: 200
+
+  budolPayKYCService:
+    Type: AWS::ECS::Service
+    DependsOn: budolPayKYCInternalListenerRule
+    Properties:
+      ServiceName: budolPayKYC
+      Cluster: !Ref ECSCluster
+      TaskDefinition: !Sub arn:aws:ecs:${AWS::Region}:${AWS::AccountId}:task-definition/budolpay-kyc
+      DesiredCount: 2
+      LaunchType: FARGATE
+      NetworkConfiguration:
+        AwsvpcConfiguration:
+          AssignPublicIp: DISABLED
+          Subnets: !Ref SubnetIds
+          SecurityGroups:
+            - !Ref ECSSecurityGroup
+      LoadBalancers:
+        - ContainerName: budolpay-kyc
+          ContainerPort: 8006
+          TargetGroupArn: !Ref budolPayKYCTargetGroup
+      DeploymentConfiguration:
+        MinimumHealthyPercent: 50
+        MaximumPercent: 200
+
+  budolPaySettlementService:
+    Type: AWS::ECS::Service
+    DependsOn: budolPaySettlementInternalListenerRule
+    Properties:
+      ServiceName: budolPaySettlement
+      Cluster: !Ref ECSCluster
+      TaskDefinition: !Sub arn:aws:ecs:${AWS::Region}:${AWS::AccountId}:task-definition/budolpay-settlement
+      DesiredCount: 2
+      LaunchType: FARGATE
+      NetworkConfiguration:
+        AwsvpcConfiguration:
+          AssignPublicIp: DISABLED
+          Subnets: !Ref SubnetIds
+          SecurityGroups:
+            - !Ref ECSSecurityGroup
+      LoadBalancers:
+        - ContainerName: budolpay-settlement
+          ContainerPort: 8007
+          TargetGroupArn: !Ref budolPaySettlementTargetGroup
+      DeploymentConfiguration:
+        MinimumHealthyPercent: 50
+        MaximumPercent: 200
+
+  # ============================================
+  # Auto Scaling Policies
+  # ============================================
+  budolIDServiceScalingTarget:
+    Type: AWS::ApplicationAutoScaling::ScalableTarget
+    Properties:
+      MaxCapacity: 10
+      MinCapacity: 2
+      ResourceId: !Sub service/${ECSCluster}/${budolIDService.Name}
+      RoleARN: !Sub arn:aws:iam::${AWS::AccountId}:role/aws-service-role/ecs.application-autoscaling.amazonaws.com/AWSServiceRoleForApplicationAutoScaling_ECSService
+      ScalableDimension: ecs:service:DesiredCount
+      ServiceNamespace: ecs
+
+  budolIDServiceScalingPolicy:
+    Type: AWS::ApplicationAutoScaling::ScalingPolicy
+    Properties:
+      PolicyName: budolID-auto-scaling
+      PolicyType: TargetTrackingScaling
+      ScalingTargetId: !Ref budolIDServiceScalingTarget
+      TargetTrackingScalingPolicyConfiguration:
+        PredefinedMetricSpecification:
+          PredefinedMetricType: ECSServiceAverageCPUUtilization
+        TargetValue: 70
+        ScaleInCooldown: 300
+        ScaleOutCooldown: 60
+
+  budolPayGatewayScalingTarget:
+    Type: AWS::ApplicationAutoScaling::ScalableTarget
+    Properties:
+      MaxCapacity: 20
+      MinCapacity: 3
+      ResourceId: !Sub service/${ECSCluster}/${budolPayGatewayService.Name}
+      RoleARN: !Sub arn:aws:iam::${AWS::AccountId}:role/aws-service-role/ecs.application-autoscaling.amazonaws.com/AWSServiceRoleForApplicationAutoScaling_ECSService
+      ScalableDimension: ecs:service:DesiredCount
+      ServiceNamespace: ecs
+
+  budolPayGatewayScalingPolicy:
+    Type: AWS::ApplicationAutoScaling::ScalingPolicy
+    Properties:
+      PolicyName: budolPayGateway-auto-scaling
+      PolicyType: TargetTrackingScaling
+      ScalingTargetId: !Ref budolPayGatewayScalingTarget
+      TargetTrackingScalingPolicyConfiguration:
+        PredefinedMetricSpecification:
+          PredefinedMetricType: ECSServiceAverageCPUUtilization
+        TargetValue: 70
+        ScaleInCooldown: 300
+        ScaleOutCooldown: 60
+
+  # ============================================
+  # Secrets for Environment Variables
+  # ============================================
+  DatabasePasswordSecret:
+    Type: AWS::SecretsManager::Secret
+    Properties:
+      Name: !Sub budolEcosystem/DATABASE_PASSWORD
+      Description: Database password for budolEcosystem
+      SecretString: '{"password": "ChangeMe123!"}'
+
+  JWTSecret:
+    Type: AWS::SecretsManager::Secret
+    Properties:
+      Name: !Sub budolEcosystem/JWT_SECRET
+      Description: JWT secret for authentication
+      SecretString: '{"jwt_secret": "GenerateAProperJWTsecretHere!"}'
+
+  RedisPasswordSecret:
+    Type: AWS::SecretsManager::Secret
+    Properties:
+      Name: !Sub budolEcosystem/REDIS_PASSWORD
+      Description: Redis password for caching
+      SecretString: '{"password": "GenerateAProperREDISpassword!"}'
+
+Outputs:
+  ClusterName:
+    Description: Name of the ECS cluster
+    Value: !Ref ECSCluster
+    Export:
+      Name: !Sub ${AWS::StackName}-ClusterName
+
+  ALBDNSName:
+    Description: DNS name of the Internet-facing Application Load Balancer
+    Value: !GetAtt ApplicationLoadBalancer.DNSName
+    Export:
+      Name: !Sub ${AWS::StackName}-ALBDNSName
+
+  InternalALBDNSName:
+    Description: DNS name of the Internal Application Load Balancer
+    Value: !GetAtt InternalLoadBalancer.DNSName
+    Export:
+      Name: !Sub ${AWS::StackName}-InternalALBDNSName
+
+  ECSClusterArn:
+    Description: ARN of the ECS cluster
+    Value: !GetAtt ECSCluster.ClusterArn
+    Export:
+      Name: !Sub ${AWS::StackName}-ClusterArn
+
+  # Target Group ARNs for reference
+  budolidTargetGroupArn:
+    Description: ARN of the budolID Target Group
+    Value: !Ref budolidTargetGroup
+
+  budolAccountingTargetGroupArn:
+    Description: ARN of the budolAccounting Target Group
+    Value: !Ref budolAccountingTargetGroup
+
+  budolPayGatewayTargetGroupArn:
+    Description: ARN of the budolPayGateway Target Group
+    Value: !Ref budolPayGatewayTargetGroup

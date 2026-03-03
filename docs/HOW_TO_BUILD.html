@@ -1,0 +1,836 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>How to Build and Push Docker Images - BudolEcosystem</title>
+    <style>
+        :root {
+            --primary: #0052cc;
+            --primary-hover: #0047b3;
+            --success: #15803d;
+            --warning: #b45309;
+            --bg: #f8fafc;
+            --text: #1e293b;
+            --text-secondary: #64748b;
+            --border: #e2e8f0;
+            --code-bg: #1e293b;
+            --code-text: #e2e8f0;
+        }
+
+        * {
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Inter', system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: var(--bg);
+            color: var(--text);
+            margin: 0;
+            line-height: 1.6;
+        }
+
+        .sidebar {
+            width: 280px;
+            height: 100vh;
+            background: #fff;
+            border-right: 1px solid var(--border);
+            position: fixed;
+            padding: 1.5rem 1rem;
+            overflow-y: auto;
+            z-index: 100;
+        }
+
+        .sidebar-logo {
+            font-weight: 800;
+            font-size: 1.25rem;
+            color: var(--primary);
+            margin-bottom: 1.5rem;
+            padding: 0.5rem 1rem;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .sidebar-logo svg {
+            width: 24px;
+            height: 24px;
+        }
+
+        .nav-section {
+            margin-bottom: 1.5rem;
+        }
+
+        .nav-section-title {
+            font-size: 0.75rem;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            color: var(--text-secondary);
+            padding: 0 1rem;
+            margin-bottom: 0.5rem;
+        }
+
+        .nav-item {
+            display: block;
+            padding: 0.625rem 1rem;
+            color: var(--text-secondary);
+            text-decoration: none;
+            border-radius: 6px;
+            margin-bottom: 0.25rem;
+            font-size: 0.9rem;
+            font-weight: 500;
+            transition: all 0.15s ease;
+        }
+
+        .nav-item:hover {
+            background: #f1f5f9;
+            color: var(--primary);
+        }
+
+        .nav-item.active {
+            background: #e0e7ff;
+            color: var(--primary);
+        }
+
+        .nav-hr {
+            margin: 1rem 0;
+            border: 0;
+            border-top: 1px solid var(--border);
+        }
+
+        .main {
+            margin-left: 280px;
+            padding: 2.5rem 4rem;
+            max-width: 1000px;
+        }
+
+        .header {
+            margin-bottom: 2rem;
+            padding-bottom: 1.5rem;
+            border-bottom: 1px solid var(--border);
+        }
+
+        .header h1 {
+            font-size: 2rem;
+            font-weight: 700;
+            margin: 0 0 0.5rem 0;
+            color: var(--text);
+        }
+
+        .header p {
+            color: var(--text-secondary);
+            margin: 0;
+            font-size: 1.1rem;
+        }
+
+        .quick-reference {
+            background: linear-gradient(135deg, #0052cc 0%, #0047b3 100%);
+            color: #fff;
+            padding: 1.5rem;
+            border-radius: 12px;
+            margin-bottom: 2rem;
+            box-shadow: 0 4px 12px rgba(0, 82, 204, 0.25);
+        }
+
+        .quick-reference h2 {
+            font-size: 1.1rem;
+            font-weight: 600;
+            margin: 0 0 1rem 0;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .quick-reference code {
+            background: rgba(255, 255, 255, 0.15);
+            padding: 0.125rem 0.375rem;
+            border-radius: 4px;
+            font-size: 0.875rem;
+        }
+
+        .quick-ref-item {
+            display: flex;
+            align-items: flex-start;
+            gap: 0.75rem;
+            margin-bottom: 0.75rem;
+            font-size: 0.9rem;
+        }
+
+        .quick-ref-item:last-child {
+            margin-bottom: 0;
+        }
+
+        .quick-ref-label {
+            font-weight: 600;
+            min-width: 180px;
+            color: rgba(255, 255, 255, 0.9);
+        }
+
+        .quick-ref-command {
+            font-family: 'Fira Code', 'Consolas', monospace;
+            background: rgba(255, 255, 255, 0.15);
+            padding: 0.25rem 0.5rem;
+            border-radius: 4px;
+            font-size: 0.85rem;
+            color: #fff;
+        }
+
+        h2 {
+            font-size: 1.5rem;
+            font-weight: 700;
+            margin: 2.5rem 0 1rem 0;
+            color: var(--text);
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+        }
+
+        h2::before {
+            content: '';
+            width: 4px;
+            height: 24px;
+            background: var(--primary);
+            border-radius: 2px;
+        }
+
+        h3 {
+            font-size: 1.15rem;
+            font-weight: 600;
+            margin: 1.75rem 0 0.75rem 0;
+            color: var(--text);
+        }
+
+        p {
+            margin: 0 0 1rem 0;
+        }
+
+        .prerequisites-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 1rem 0 1.5rem 0;
+            background: #fff;
+            border-radius: 8px;
+            overflow: hidden;
+            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+        }
+
+        .prerequisites-table th {
+            background: #f1f5f9;
+            padding: 0.875rem 1rem;
+            text-align: left;
+            font-weight: 600;
+            font-size: 0.875rem;
+            color: var(--text);
+            border-bottom: 2px solid var(--border);
+        }
+
+        .prerequisites-table td {
+            padding: 0.875rem 1rem;
+            border-bottom: 1px solid var(--border);
+            font-size: 0.95rem;
+        }
+
+        .prerequisites-table tr:last-child td {
+            border-bottom: none;
+        }
+
+        .prerequisites-table a {
+            color: var(--primary);
+            text-decoration: none;
+        }
+
+        .prerequisites-table a:hover {
+            text-decoration: underline;
+        }
+
+        .step {
+            background: #fff;
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            padding: 1.5rem;
+            margin-bottom: 1.5rem;
+            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+        }
+
+        .step-header {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            margin-bottom: 1rem;
+        }
+
+        .step-number {
+            background: var(--primary);
+            color: #fff;
+            width: 28px;
+            height: 28px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: 600;
+            font-size: 0.875rem;
+        }
+
+        .step-title {
+            font-weight: 600;
+            font-size: 1.1rem;
+        }
+
+        .step ol {
+            margin: 0;
+            padding-left: 1.5rem;
+        }
+
+        .step li {
+            margin-bottom: 0.5rem;
+        }
+
+        .step li:last-child {
+            margin-bottom: 0;
+        }
+
+        .code-block {
+            background: var(--code-bg);
+            color: var(--code-text);
+            padding: 1rem 1.25rem;
+            border-radius: 8px;
+            margin: 1rem 0;
+            overflow-x: auto;
+            font-family: 'Fira Code', 'Consolas', 'Monaco', monospace;
+            font-size: 0.9rem;
+            line-height: 1.5;
+        }
+
+        .code-block.output {
+            background: #f1f5f9;
+            color: var(--text);
+            border: 1px solid var(--border);
+        }
+
+        .code-block .comment {
+            color: #6b7280;
+        }
+
+        .code-block .keyword {
+            color: #f472b6;
+        }
+
+        .code-block .string {
+            color: #34d399;
+        }
+
+        .code-block .command {
+            color: #60a5fa;
+        }
+
+        .code-block .flag {
+            color: #fbbf24;
+        }
+
+        .code-inline {
+            background: #f1f5f9;
+            padding: 0.125rem 0.5rem;
+            border-radius: 4px;
+            font-family: 'Fira Code', 'Consolas', monospace;
+            font-size: 0.875rem;
+            color: #dc2626;
+        }
+
+        .services-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 1rem 0 1.5rem 0;
+            background: #fff;
+            border-radius: 8px;
+            overflow: hidden;
+            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+        }
+
+        .services-table th {
+            background: #f1f5f9;
+            padding: 0.875rem 1rem;
+            text-align: left;
+            font-weight: 600;
+            font-size: 0.875rem;
+            color: var(--text);
+            border-bottom: 2px solid var(--border);
+        }
+
+        .services-table td {
+            padding: 0.875rem 1rem;
+            border-bottom: 1px solid var(--border);
+            font-size: 0.95rem;
+        }
+
+        .services-table tr:last-child td {
+            border-bottom: none;
+        }
+
+        .services-table code {
+            background: #f1f5f9;
+            padding: 0.125rem 0.375rem;
+            border-radius: 4px;
+            font-size: 0.875rem;
+            color: #dc2626;
+        }
+
+        .troubleshooting-item {
+            background: #fff;
+            border: 1px solid var(--border);
+            border-left: 4px solid var(--warning);
+            border-radius: 8px;
+            padding: 1rem 1.25rem;
+            margin-bottom: 1rem;
+        }
+
+        .troubleshooting-item h4 {
+            margin: 0 0 0.5rem 0;
+            font-weight: 600;
+            color: var(--text);
+        }
+
+        .troubleshooting-item p {
+            margin: 0;
+            color: var(--text-secondary);
+            font-size: 0.95rem;
+        }
+
+        .troubleshooting-item code {
+            background: #fef3c7;
+            padding: 0.125rem 0.375rem;
+            border-radius: 4px;
+            font-size: 0.875rem;
+            color: #92400e;
+        }
+
+        .divider {
+            height: 1px;
+            background: var(--border);
+            margin: 2rem 0;
+        }
+
+        .image-placeholder {
+            background: #f1f5f9;
+            border: 1px dashed var(--border);
+            border-radius: 8px;
+            padding: 2rem;
+            text-align: center;
+            color: var(--text-secondary);
+            margin: 1rem 0;
+        }
+
+        .image-placeholder img {
+            max-width: 100%;
+            height: auto;
+        }
+
+        .check-icon {
+            color: var(--success);
+        }
+
+        ul,
+        ol {
+            margin: 0 0 1rem 0;
+            padding-left: 1.5rem;
+        }
+
+        li {
+            margin-bottom: 0.375rem;
+        }
+
+        a {
+            color: var(--primary);
+            text-decoration: none;
+        }
+
+        a:hover {
+            text-decoration: underline;
+        }
+
+        @media (max-width: 1024px) {
+            .sidebar {
+                width: 240px;
+            }
+
+            .main {
+                margin-left: 240px;
+                padding: 2rem;
+            }
+        }
+
+        @media (max-width: 768px) {
+            .sidebar {
+                display: none;
+            }
+
+            .main {
+                margin-left: 0;
+                padding: 1.5rem;
+            }
+        }
+    </style>
+</head>
+
+<body>
+    <div class="sidebar">
+        <div class="sidebar-logo">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M12 2L2 7l10 5 10-5-10-5z" />
+                <path d="M2 17l10 5 10-5" />
+                <path d="M2 12l10 5 10-5" />
+            </svg>
+            Budol Ecosystem
+        </div>
+
+        <div class="nav-section">
+            <div class="nav-section-title">Documentation</div>
+            <a href="HOW_TO_BUILD.html" class="nav-item active">How to Build</a>
+            <a href="DOCKER_BUILD_GUIDE.html" class="nav-item">Docker Build Guide</a>
+            <a href="DEPLOYMENT_GUIDE.html" class="nav-item">Deployment Guide</a>
+            <a href="QUICK_DEPLOY.html" class="nav-item">Quick Deploy</a>
+            <a href="ECS_DEPLOYMENT.html" class="nav-item">ECS Deployment</a>
+        </div>
+
+        <hr class="nav-hr">
+
+        <div class="nav-section">
+            <div class="nav-section-title">Resources</div>
+            <a href="../knowledgebase.html" class="nav-item">← Back to Knowledge Base</a>
+        </div>
+    </div>
+
+    <div class="main">
+        <div class="header">
+            <h1>How to Build and Push Docker Images</h1>
+            <p>This guide explains how to build and push Docker images for the budolEcosystem services.</p>
+        </div>
+
+        <div class="quick-reference">
+            <h2>
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z" />
+                </svg>
+                Quick Reference
+            </h2>
+            <div class="quick-ref-item">
+                <span class="quick-ref-label">Build & push all:</span>
+                <span class="quick-ref-command">.\scripts\build-and-push.ps1 -Action all -ImageTag v1.0.0</span>
+            </div>
+            <div class="quick-ref-item">
+                <span class="quick-ref-label">Build single service:</span>
+                <span class="quick-ref-command">.\scripts\build-and-push.ps1 -Service budolid -ImageTag v1.0.0</span>
+            </div>
+            <div class="quick-ref-item">
+                <span class="quick-ref-label">Build only (no push):</span>
+                <span class="quick-ref-command">.\scripts\build-and-push.ps1 -Action build -ImageTag v1.0.0</span>
+            </div>
+            <div class="quick-ref-item">
+                <span class="quick-ref-label">Push only:</span>
+                <span class="quick-ref-command">.\scripts\build-and-push.ps1 -Action push -ImageTag v1.0.0</span>
+            </div>
+            <div class="quick-ref-item">
+                <span class="quick-ref-label">List available services:</span>
+                <span class="quick-ref-command">.\scripts\build-and-push.ps1 -Action list</span>
+            </div>
+        </div>
+
+        <h2>Prerequisites</h2>
+        <p>Before you begin, make sure you have the following installed on your computer:</p>
+
+        <table class="prerequisites-table">
+            <thead>
+                <tr>
+                    <th>Requirement</th>
+                    <th>Description</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td><strong>Docker Desktop</strong></td>
+                    <td>Container runtime - <a href="https://www.docker.com/products/docker-desktop"
+                            target="_blank">Download here</a></td>
+                </tr>
+                <tr>
+                    <td><strong>AWS CLI</strong></td>
+                    <td>Amazon Web Services command line tool - <a href="https://aws.amazon.com/cli/"
+                            target="_blank">Download here</a></td>
+                </tr>
+                <tr>
+                    <td><strong>AWS Credentials</strong></td>
+                    <td>Configured AWS access key with ECR permissions</td>
+                </tr>
+            </tbody>
+        </table>
+
+        <div class="divider"></div>
+
+        <h2>Step 1: Enable and Start Docker Desktop</h2>
+
+        <div class="step">
+            <div class="step-header">
+                <span class="step-number">1</span>
+                <span class="step-title">On Windows</span>
+            </div>
+            <ol>
+                <li><strong>Search for Docker Desktop</strong> in the Start menu</li>
+                <li><strong>Click to launch</strong> Docker Desktop</li>
+                <li>Wait for Docker to start (the whale icon in the system tray will stop animating)</li>
+            </ol>
+        </div>
+
+        <h3>Verify Docker is Running</h3>
+        <p>Open PowerShell or Command Prompt and run:</p>
+
+        <div class="code-block">
+            <span class="command">docker</span> --version
+        </div>
+
+        <p>Expected output:</p>
+
+        <div class="code-block output">
+            Docker version 24.x.x
+        </div>
+
+        <p>Then run:</p>
+
+        <div class="code-block">
+            <span class="command">docker</span> info
+        </div>
+
+        <p>If Docker is running, you'll see detailed information about your Docker installation. If not, you'll see an
+            error.</p>
+
+        <div class="divider"></div>
+
+        <h2>Step 2: Configure AWS Credentials</h2>
+
+        <p>If you haven't already configured AWS credentials, run:</p>
+
+        <div class="code-block">
+            <span class="command">aws</span> configure
+        </div>
+
+        <p>Enter your:</p>
+        <ul>
+            <li><strong>AWS Access Key ID</strong></li>
+            <li><strong>AWS Secret Access Key</strong></li>
+            <li><strong>Default region name</strong> (e.g., <code class="code-inline">ap-southeast-1</code>)</li>
+            <li><strong>Default output format</strong> (e.g., <code class="code-inline">json</code>)</li>
+        </ul>
+
+        <h3>Verify AWS Credentials</h3>
+
+        <div class="code-block">
+            <span class="command">aws</span> sts get-caller-identity
+        </div>
+
+        <p>You should see your AWS account information.</p>
+
+        <div class="divider"></div>
+
+        <h2>Step 3: Navigate to the Project</h2>
+
+        <p>Open PowerShell or Command Prompt and navigate to the project root:</p>
+
+        <div class="code-block">
+            <span class="command">cd</span> d:\IT Projects\budolEcosystem
+        </div>
+
+        <div class="divider"></div>
+
+        <h2>Step 4: Run the Build Script</h2>
+
+        <h3>Option A: Build and Push ALL Services</h3>
+        <p>To build and push all services at once:</p>
+
+        <div class="code-block">
+            <span class="command">.\scripts\build-and-push.ps1</span> <span class="flag">-Action</span> all <span
+                class="flag">-ImageTag</span> v1.0.0
+        </div>
+
+        <h3>Option B: Build and Push a Single Service</h3>
+        <p>To build and push a specific service:</p>
+
+        <div class="code-block">
+            <span class="command">.\scripts\build-and-push.ps1</span> <span class="flag">-Service</span> budolid <span
+                class="flag">-ImageTag</span> v1.0.0
+        </div>
+
+        <h3>Option C: Build Only (No Push)</h3>
+
+        <div class="code-block">
+            <span class="command">.\scripts\build-and-push.ps1</span> <span class="flag">-Action</span> build <span
+                class="flag">-ImageTag</span> v1.0.0
+        </div>
+
+        <h3>Option D: Push Only (Already Built)</h3>
+
+        <div class="code-block">
+            <span class="command">.\scripts\build-and-push.ps1</span> <span class="flag">-Action</span> push <span
+                class="flag">-ImageTag</span> v1.0.0
+        </div>
+
+        <div class="divider"></div>
+
+        <h2>What to Expect</h2>
+
+        <p>When you run the script, you'll see output similar to:</p>
+
+        <div class="code-block output">
+            <span class="comment">=======================================</span>
+            <span class="comment"> budolEcosystem Docker Build Script</span>
+            <span class="comment">=======================================</span>
+
+            [INFO] Checking prerequisites...
+            [INFO] Docker: Docker version 24.0.0
+            [INFO] AWS CLI: aws-cli/2.15.0
+            [INFO] AWS Account: 123456789012
+            [INFO] AWS Region: ap-southeast-1
+            [INFO] Image Tag: v1.0.0
+            [INFO] Logging into ECR...
+            [INFO] ECR login successful
+            [INFO] Building all service images...
+            [INFO] Building budolid (target: budol-id)...
+            [INFO] budolid built successfully
+            [INFO] Building budolaccounting (target: budol-accounting)...
+            [INFO] budolaccounting built successfully
+            ... (more services)
+            [INFO] All images built successfully
+            [INFO] Pushing all service images to ECR...
+            [INFO] Pushing budolid to ECR...
+            [INFO] budolid pushed successfully
+            ... (more services)
+            [INFO] All images pushed successfully
+            [INFO] Docker build and push completed!
+            [INFO] Image Tag: v1.0.0
+        </div>
+
+        <div class="divider"></div>
+
+        <h2>How to Verify It Worked</h2>
+
+        <h3>Option 1: Check ECR Console</h3>
+        <ol>
+            <li>Go to <a href="https://console.aws.amazon.com/ecr/" target="_blank">Amazon ECR Console</a></li>
+            <li>Select your region</li>
+            <li>You should see repositories like:
+                <ul>
+                    <li><code class="code-inline">budolEcosystem/budolid</code></li>
+                    <li><code class="code-inline">budolEcosystem/budolaccounting</code></li>
+                    <li><code class="code-inline">budolEcosystem/budolpay-gateway</code></li>
+                    <li>etc.</li>
+                </ul>
+            </li>
+        </ol>
+
+        <h3>Option 2: List Images via AWS CLI</h3>
+
+        <div class="code-block">
+            <span class="command">aws</span> ecr list-images --repository-name budolEcosystem/budolid --region
+            ap-southeast-1
+        </div>
+
+        <p>You should see image manifests with your tag (e.g., <code class="code-inline">v1.0.0</code> or <code
+                class="code-inline">latest</code>).</p>
+
+        <h3>Option 3: List Local Docker Images</h3>
+
+        <div class="code-block">
+            <span class="command">docker</span> images
+        </div>
+
+        <p>You should see images like:</p>
+
+        <div class="code-block output">
+            REPOSITORY TAG IMAGE ID CREATED
+            123456789012.dkr.ecr.ap-southeast-1.amazonaws.com/budolEcosystem/budolid latest abc123def456 2 minutes ago
+        </div>
+
+        <div class="divider"></div>
+
+        <h2>Available Services</h2>
+
+        <p>The following services can be built:</p>
+
+        <table class="services-table">
+            <thead>
+                <tr>
+                    <th>Service</th>
+                    <th>Description</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td><code>budolid</code></td>
+                    <td>SSO/Identity Service</td>
+                </tr>
+                <tr>
+                    <td><code>budolaccounting</code></td>
+                    <td>Accounting Service</td>
+                </tr>
+                <tr>
+                    <td><code>budolpay-gateway</code></td>
+                    <td>API Gateway</td>
+                </tr>
+                <tr>
+                    <td><code>budolpay-auth</code></td>
+                    <td>Authentication Service</td>
+                </tr>
+                <tr>
+                    <td><code>budolpay-wallet</code></td>
+                    <td>Wallet Service</td>
+                </tr>
+                <tr>
+                    <td><code>budolpay-transaction</code></td>
+                    <td>Transaction Service</td>
+                </tr>
+                <tr>
+                    <td><code>budolpay-payment</code></td>
+                    <td>Payment Gateway Service</td>
+                </tr>
+                <tr>
+                    <td><code>budolpay-kyc</code></td>
+                    <td>KYC/Verification Service</td>
+                </tr>
+                <tr>
+                    <td><code>budolpay-settlement</code></td>
+                    <td>Settlement Service</td>
+                </tr>
+            </tbody>
+        </table>
+
+        <div class="divider"></div>
+
+        <h2>Troubleshooting</h2>
+
+        <div class="troubleshooting-item">
+            <h4>Docker Not Running</h4>
+            <p>If you see "Docker is not running", make sure Docker Desktop is started and the Docker service is
+                running.</p>
+        </div>
+
+        <div class="troubleshooting-item">
+            <h4>AWS Credentials Error</h4>
+            <p>If you see "AWS credentials not configured", run:</p>
+            <div class="code-block" style="margin-top: 0.5rem;">
+                <span class="command">aws</span> configure
+            </div>
+        </div>
+
+        <div class="troubleshooting-item">
+            <h4>Build Fails</h4>
+            <p>Check that you're in the project root directory and all source files are present.</p>
+        </div>
+
+        <div class="troubleshooting-item">
+            <h4>ECR Login Fails</h4>
+            <p>Make sure your AWS user has permission to push to ECR.</p>
+        </div>
+
+    </div>
+</body>
+
+</html>

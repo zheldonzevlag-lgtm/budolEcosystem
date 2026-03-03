@@ -3,6 +3,23 @@
 import React, { useState, useEffect } from 'react';
 import { X, Save, Trash2, Key, ShieldAlert, ShieldCheck } from 'lucide-react';
 
+/**
+ * Normalizes Philippine phone numbers to E.164 format (+63...)
+ */
+const normalizePhone = (phone: string) => {
+    let digits = phone.replace(/\D/g, '');
+    if (digits.startsWith('0') && digits.length === 11) {
+        return '+63' + digits.substring(1);
+    }
+    if (digits.startsWith('63') && digits.length === 12) {
+        return '+' + digits;
+    }
+    if (digits.length === 10) {
+        return '+63' + digits;
+    }
+    return phone; // Return original if it doesn't match known patterns
+};
+
 interface EditUserModalProps {
     isOpen: boolean;
     onClose: () => void;
@@ -25,6 +42,7 @@ export default function EditUserModal({ isOpen, onClose, onSuccess, user }: Edit
     const [currentUser, setCurrentUser] = useState<any>(null);
     const [tempPassword, setTempPassword] = useState<string | null>(null);
     const [deliveryInfo, setDeliveryInfo] = useState<{ target: string, method: string } | null>(null);
+    const [pendingMessage, setPendingMessage] = useState<string | null>(null);
 
     useEffect(() => {
         const fetchMe = async () => {
@@ -55,6 +73,7 @@ export default function EditUserModal({ isOpen, onClose, onSuccess, user }: Edit
     const handleUpdate = async (e: React.FormEvent) => {
         e.preventDefault();
         setIsSubmitting(true);
+        setPendingMessage(null);
         try {
             const adminRes = await fetch('/api/auth/me');
             const adminData = await adminRes.json();
@@ -70,12 +89,26 @@ export default function EditUserModal({ isOpen, onClose, onSuccess, user }: Edit
                 })
             });
 
+            const data = await res.json();
+
             if (res.ok) {
-                onSuccess();
-                onClose();
+                if (data.isPending) {
+                    setPendingMessage(data.message);
+                    // Don't close immediately so user can see the status
+                    setTimeout(() => {
+                        onSuccess();
+                        onClose();
+                    }, 3000);
+                } else {
+                    onSuccess();
+                    onClose();
+                }
+            } else {
+                alert(data.error || "Update failed");
             }
         } catch (error) {
             console.error("Update failed:", error);
+            alert("A system error occurred. Please check console.");
         } finally {
             setIsSubmitting(false);
         }
@@ -83,7 +116,7 @@ export default function EditUserModal({ isOpen, onClose, onSuccess, user }: Edit
 
     const handleResetPassword = async () => {
         if (!confirm('Are you sure you want to reset this user\'s password? They will be forced to use a temporary password.')) return;
-        
+
         setIsResetting(true);
         try {
             const adminRes = await fetch('/api/auth/me');
@@ -159,19 +192,19 @@ export default function EditUserModal({ isOpen, onClose, onSuccess, user }: Edit
                     <div className="grid grid-cols-2 gap-4">
                         <div className="space-y-1">
                             <label className="text-[10px] font-bold text-slate-500 uppercase">First Name</label>
-                            <input 
+                            <input
                                 type="text"
                                 value={formData.firstName}
-                                onChange={(e) => setFormData({...formData, firstName: e.target.value})}
+                                onChange={(e) => setFormData({ ...formData, firstName: e.target.value })}
                                 className="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm focus:ring-2 focus:ring-budolshap-primary outline-none"
                             />
                         </div>
                         <div className="space-y-1">
                             <label className="text-[10px] font-bold text-slate-500 uppercase">Last Name</label>
-                            <input 
+                            <input
                                 type="text"
                                 value={formData.lastName}
-                                onChange={(e) => setFormData({...formData, lastName: e.target.value})}
+                                onChange={(e) => setFormData({ ...formData, lastName: e.target.value })}
                                 className="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm focus:ring-2 focus:ring-budolshap-primary outline-none"
                             />
                         </div>
@@ -179,30 +212,32 @@ export default function EditUserModal({ isOpen, onClose, onSuccess, user }: Edit
 
                     <div className="space-y-1">
                         <label className="text-[10px] font-bold text-slate-500 uppercase">Email Address</label>
-                        <input 
+                        <input
                             type="email"
                             value={formData.email}
-                            onChange={(e) => setFormData({...formData, email: e.target.value})}
+                            onChange={(e) => setFormData({ ...formData, email: e.target.value })}
                             className="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm focus:ring-2 focus:ring-budolshap-primary outline-none"
                         />
                     </div>
 
                     <div className="space-y-1">
                         <label className="text-[10px] font-bold text-slate-500 uppercase">Phone Number</label>
-                        <input 
+                        <input
                             type="text"
                             value={formData.phoneNumber}
-                            onChange={(e) => setFormData({...formData, phoneNumber: e.target.value})}
+                            onChange={(e) => setFormData({ ...formData, phoneNumber: e.target.value })}
+                            onBlur={(e) => setFormData({ ...formData, phoneNumber: normalizePhone(e.target.value) })}
                             className="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm focus:ring-2 focus:ring-budolshap-primary outline-none"
+                            placeholder="+639..."
                         />
                     </div>
 
                     <div className="grid grid-cols-2 gap-4">
                         <div className="space-y-1">
                             <label className="text-[10px] font-bold text-slate-500 uppercase">Role</label>
-                            <select 
+                            <select
                                 value={formData.role}
-                                onChange={(e) => setFormData({...formData, role: e.target.value})}
+                                onChange={(e) => setFormData({ ...formData, role: e.target.value })}
                                 className="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm focus:ring-2 focus:ring-budolshap-primary outline-none"
                             >
                                 <option value="ADMIN">ADMIN</option>
@@ -212,15 +247,33 @@ export default function EditUserModal({ isOpen, onClose, onSuccess, user }: Edit
                         </div>
                         <div className="space-y-1">
                             <label className="text-[10px] font-bold text-slate-500 uppercase">Department</label>
-                            <input 
+                            <input
                                 type="text"
                                 value={formData.department}
-                                onChange={(e) => setFormData({...formData, department: e.target.value})}
+                                onChange={(e) => setFormData({ ...formData, department: e.target.value })}
                                 className="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm focus:ring-2 focus:ring-budolshap-primary outline-none"
                                 placeholder="Operations, Finance, etc."
                             />
                         </div>
                     </div>
+
+                    {pendingMessage && (
+                        <div className="bg-blue-50 border border-blue-200 p-4 rounded-xl space-y-2 animate-in fade-in slide-in-from-top-2">
+                            <div className="flex items-start gap-3">
+                                <ShieldAlert className="w-5 h-5 text-blue-600 shrink-0" />
+                                <div>
+                                    <p className="text-xs font-bold text-blue-800 uppercase tracking-tight">Maker-Checker Phase 1 Complete</p>
+                                    <p className="text-[10px] text-blue-600">{pendingMessage}</p>
+                                </div>
+                            </div>
+                            <div className="flex items-center gap-2 pt-1">
+                                <div className="h-1 flex-1 bg-blue-100 rounded-full overflow-hidden">
+                                    <div className="h-full bg-blue-500 w-1/2 animate-[shimmer_2s_infinite]"></div>
+                                </div>
+                                <span className="text-[9px] font-bold text-blue-500 uppercase">Awaiting Checker...</span>
+                            </div>
+                        </div>
+                    )}
 
                     {tempPassword && (
                         <div className="bg-emerald-50 border border-emerald-200 p-4 rounded-xl space-y-3">
@@ -231,7 +284,7 @@ export default function EditUserModal({ isOpen, onClose, onSuccess, user }: Edit
                                     <p className="text-[10px] text-emerald-600">The system has securely generated and delivered a temporary credential to the user.</p>
                                 </div>
                             </div>
-                            
+
                             <div className="bg-white/50 p-3 rounded-lg border border-emerald-100 flex justify-between items-center">
                                 <div>
                                     <p className="text-[9px] font-bold text-slate-400 uppercase">Delivery Target ({deliveryInfo?.method})</p>
@@ -255,7 +308,7 @@ export default function EditUserModal({ isOpen, onClose, onSuccess, user }: Edit
                     )}
 
                     <div className="pt-4 flex flex-col gap-3">
-                        <button 
+                        <button
                             type="submit"
                             disabled={isSubmitting}
                             className="w-full bg-budolshap-primary text-white py-3 rounded-xl font-bold flex items-center justify-center gap-2 hover:opacity-90 transition disabled:opacity-50"
@@ -265,7 +318,7 @@ export default function EditUserModal({ isOpen, onClose, onSuccess, user }: Edit
                         </button>
 
                         <div className="grid grid-cols-2 gap-3">
-                            <button 
+                            <button
                                 type="button"
                                 onClick={handleResetPassword}
                                 disabled={isResetting || currentUser?.id === user.id}
@@ -275,7 +328,7 @@ export default function EditUserModal({ isOpen, onClose, onSuccess, user }: Edit
                                 <Key className="w-4 h-4" />
                                 Reset Password
                             </button>
-                            <button 
+                            <button
                                 type="button"
                                 onClick={handleDelete}
                                 disabled={isDeleting || currentUser?.id === user.id}

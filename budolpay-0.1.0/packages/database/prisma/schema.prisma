@@ -69,6 +69,8 @@ model User {
   transactions       Transaction[]          @relation("UserTransactions")
   verificationDocs   VerificationDocument[]
   wallet             Wallet?
+  makerRequests      ChangeRequest[]        @relation("MakerRequests")
+  checkerRequests    ChangeRequest[]        @relation("CheckerRequests")
 }
 
 model FavoriteRecipient {
@@ -209,6 +211,26 @@ model AuditLog {
   @@index([entity])
 }
 
+model ChangeRequest {
+  id        String              @id @default(uuid())
+  entity    String // e.g., "User"
+  entityId  String
+  details   Json // Stores { field: newValue } or multiple fields
+  makerId   String
+  checkerId String?
+  status    ChangeRequestStatus @default(PENDING)
+  reason    String?
+  createdAt DateTime            @default(now())
+  updatedAt DateTime            @updatedAt
+  maker     User                @relation("MakerRequests", fields: [makerId], references: [id])
+  checker   User?               @relation("CheckerRequests", fields: [checkerId], references: [id])
+
+  @@index([entity, entityId])
+  @@index([makerId])
+  @@index([checkerId])
+  @@index([status])
+}
+
 model SystemSetting {
   id          String   @id @default(uuid())
   key         String   @unique
@@ -242,12 +264,20 @@ enum AccountType {
   EXPENSE
 }
 
+enum ChangeRequestStatus {
+  PENDING
+  APPROVED
+  REJECTED
+  CANCELLED
+}
+
 enum UserRole {
   USER
   ADMIN
   MERCHANT
   DRIVER
   STAFF
+  DEACTIVATED
 }
 
 enum KYCStatus {

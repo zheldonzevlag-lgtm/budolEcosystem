@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import { cookies } from 'next/headers';
+import { prisma } from '@/lib/prisma';
 
 export async function GET() {
   try {
@@ -23,7 +24,17 @@ export async function GET() {
       return NextResponse.json({ error: 'Invalid token' }, { status: 401 });
     }
 
-    return NextResponse.json({ user: verifyData.user });
+    // Bridge: Find local user by email from SSO
+    const localUser = await prisma.user.findUnique({
+      where: { email: verifyData.user.email }
+    });
+
+    return NextResponse.json({
+      user: {
+        ...verifyData.user,
+        id: localUser?.id || verifyData.user.id // Prefer local ID if available
+      }
+    });
   } catch (error) {
     console.error('Me API Error:', error);
     return NextResponse.json({ error: 'Internal Server Error' }, { status: 500 });

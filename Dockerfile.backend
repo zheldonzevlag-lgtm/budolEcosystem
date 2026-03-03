@@ -1,0 +1,90 @@
+# Common Node.js base for Budol Ecosystem Services
+FROM node:20-slim AS base
+
+RUN apt-get update && apt-get install -y openssl python3 make g++ && rm -rf /var/lib/apt/lists/*
+
+WORKDIR /app
+
+# --- Stage: budolID (SSO) ---
+FROM base AS budol-id
+COPY budolID-0.1.0/package*.json ./
+RUN npm install
+COPY budolID-0.1.0/ .
+RUN npx prisma generate
+EXPOSE 8000
+CMD ["npm", "start"]
+
+# --- Stage: budolAccounting ---
+FROM base AS budol-accounting
+WORKDIR /app
+# Copy the dependency package from budolpay monorepo first to maintain relative path from package.json
+COPY budolpay-0.1.0/packages/database/package*.json ./budolpay-0.1.0/packages/database/
+RUN cd budolpay-0.1.0/packages/database && npm install && npm install jsonwebtoken
+COPY budolpay-0.1.0/packages/database/ ./budolpay-0.1.0/packages/database/
+RUN cd budolpay-0.1.0/packages/database && npx prisma generate
+
+WORKDIR /app/budolAccounting-0.1.0
+COPY budolAccounting-0.1.0/package*.json ./
+RUN npm install
+COPY budolAccounting-0.1.0/ ./
+EXPOSE 8005
+CMD ["node", "index.js"]
+
+# --- Stage: budolPay Monorepo (Shared stage for all microservices) ---
+FROM base AS budol-pay-base
+WORKDIR /app
+# Copy root package.json
+COPY budolpay-0.1.0/package*.json ./
+
+# Copy ALL workspace package.json files maintaining structure (crucial for npm workspaces)
+COPY budolpay-0.1.0/packages/audit/package*.json ./packages/audit/
+COPY budolpay-0.1.0/packages/database/package*.json ./packages/database/
+COPY budolpay-0.1.0/packages/notifications/package*.json ./packages/notifications/
+COPY budolpay-0.1.0/packages/security/package*.json ./packages/security/
+
+# Copy ALL service package.json files
+COPY budolpay-0.1.0/services/api-gateway/package*.json ./services/api-gateway/
+COPY budolpay-0.1.0/services/auth-service/package*.json ./services/auth-service/
+COPY budolpay-0.1.0/services/wallet-service/package*.json ./services/wallet-service/
+COPY budolpay-0.1.0/services/transaction-service/package*.json ./services/transaction-service/
+COPY budolpay-0.1.0/services/payment-gateway-service/package*.json ./services/payment-gateway-service/
+COPY budolpay-0.1.0/services/verification-service/package*.json ./services/verification-service/
+COPY budolpay-0.1.0/services/settlement-service/package*.json ./services/settlement-service/
+
+# Install dependencies (links internal packages)
+RUN npm install --ignore-scripts
+
+# Copy source
+COPY budolpay-0.1.0/ .
+
+# Generate Prisma client
+RUN npx prisma generate --schema=packages/database/prisma/schema.prisma
+
+# Final Service Stages (Builder Pattern for ECS)
+FROM budol-pay-base AS budol-gateway
+EXPOSE 8080
+CMD ["node", "services/api-gateway/index.js"]
+
+FROM budol-pay-base AS budol-auth
+EXPOSE 8001
+CMD ["node", "services/auth-service/index.js"]
+
+FROM budol-pay-base AS budol-wallet
+EXPOSE 8002
+CMD ["node", "services/wallet-service/index.js"]
+
+FROM budol-pay-base AS budol-tx
+EXPOSE 8003
+CMD ["node", "services/transaction-service/index.js"]
+
+FROM budol-pay-base AS budol-payment
+EXPOSE 8004
+CMD ["node", "services/payment-gateway-service/index.js"]
+
+FROM budol-pay-base AS budol-kyc
+EXPOSE 8006
+CMD ["node", "services/verification-service/index.js"]
+
+FROM budol-pay-base AS budol-settlement
+EXPOSE 8002
+CMD ["node", "services/settlement-service/index.js"]

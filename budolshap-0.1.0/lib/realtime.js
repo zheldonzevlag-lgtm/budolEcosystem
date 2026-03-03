@@ -121,33 +121,30 @@ export async function triggerRealtimeEvent(channel, event, data) {
 
         // 3. SOCKET_IO MODE
         if (provider === 'SOCKET_IO') {
-            // Internal notification via api-gateway or dedicated socket server
-            const gatewayUrl = process.env.GATEWAY_URL || 'http://localhost:8080';
-            
-            // Format payload to match Gateway expectations:
-            // Gateway expects: { userId, event, data, isAdmin }
-            // For admin channel broadcasts, we must set isAdmin: true
-            
-            const payload = {
-                event,
-                data,
-                isAdmin: channel === 'admin'
-            };
+            // Configuration for WebSocket trigger
+            // In Production (AWS), triggers should use internal VPC DNS for security and speed
+            const internalUrl = process.env.INTERNAL_WS_URL || settings.socketUrl || 'http://localhost:4000';
+            const triggerUrl = `${internalUrl}/trigger`;
 
-            // If it's a user channel (e.g., 'user-123'), extract userId
-            if (channel.startsWith('user-')) {
-                payload.userId = channel.replace('user-', '');
-                payload.isAdmin = false;
+            console.log(`[Realtime] Triggering Socket.io event [${event}] on [${channel}] via ${triggerUrl}`);
+
+            const response = await fetch(triggerUrl, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({
+                    channel,
+                    event,
+                    data
+                })
+            });
+
+            if (!response.ok) {
+                const errorText = await response.text();
+                throw new Error(`Socket.io trigger failed: ${response.status} ${errorText}`);
             }
 
-            await fetch(`${gatewayUrl}/internal/notify`, {
-                method: 'POST',
-                headers: { 
-                    'Content-Type': 'application/json',
-                    'x-internal-key': process.env.BUDOLPAY_API_KEY || 'bs_key_2025'
-                },
-                body: JSON.stringify(payload)
-            });
             return { success: true, mode: 'SOCKET_IO' };
         }
 
@@ -160,13 +157,23 @@ export async function triggerRealtimeEvent(channel, event, data) {
 
 export async function getRealtimeConfig() {
     const settings = await getSettings();
+    const localIp = process.env.LOCAL_IP;
+
+    let socketUrl = settings.socketUrl || 'http://localhost:4000';
+
+    // Make Socket.io URL network aware if it's localhost (for mobile testing)
+    if (socketUrl.includes('localhost') && localIp) {
+        socketUrl = socketUrl.replace('localhost', localIp);
+        console.log(`[Realtime] Adjusted localhost to ${localIp} for network awareness`);
+    }
+
     // Return only necessary public config
     return {
         provider: settings.realtimeProvider || 'POLLING',
         realtimeProvider: settings.realtimeProvider || 'POLLING', // For compatibility
         pusherKey: settings.pusherKey,
         pusherCluster: settings.pusherCluster,
-        socketUrl: settings.socketUrl,
+        socketUrl: socketUrl,
         swrPollingInterval: settings.swrPollingInterval || 10000
     };
 }

@@ -428,7 +428,7 @@ function ShopContent() {
 
     const products = useSelector(state => state.product.list)
 
-    const { data, error, isLoading } = useSWR(`/api/products?t=${Date.now()}`, {
+    const { data, error, isLoading } = useSWR('/api/products', {
         revalidateOnFocus: false,
         revalidateOnReconnect: false,
         dedupingInterval: 5000,

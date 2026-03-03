@@ -3,6 +3,7 @@ import Banner from "@/components/Banner";
 import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
 import MarketingAdPopup from "@/components/MarketingAdPopup";
+import { usePathname } from "next/navigation";
 import { useEffect, useState, useRef } from "react";
 import { useDispatch, useSelector } from "react-redux";
 import { setProduct } from "@/lib/features/product/productSlice";
@@ -15,6 +16,7 @@ export default function PublicLayout({ children }) {
     const { cartItems } = useSelector(state => state.cart);
     const { user } = useAuth();
     const userId = user?.id;
+    const pathname = usePathname();
 
     const [initialLoadDone, setInitialLoadDone] = useState(false);
     const prevUserIdRef = useRef(userId);
@@ -83,46 +85,25 @@ export default function PublicLayout({ children }) {
         }
     }, [dispatch, products.length]);
 
-    // Fetch cart when userId is available
+    // Fetch cart when userId is available or when navigating (fallback)
     useEffect(() => {
-        if (!userId) {
-            // No user logged in.
-            // If we just logged out, we should clear cart and LS.
-            // But how do we distinguish "App Start (Guest)" from "Logout"?
-            // App Start: userId is null. Cart might be loaded from LS (Guest Cart).
-            // Logout: userId goes from 'abc' to null.
+        if (!userId) return;
 
-            // We can't easily distinguish here without previous state.
-            // But usually, if userId is null, we just let the local cart be (Guest Mode).
-            // We should NOT clear the cart here, because that wipes Guest Cart on reload!
-
-            // PREVIOUS BUG: I was clearing cart on !userId.
-            // This meant if I reload as guest, my cart is wiped?
-            // No, because on reload, userId is null initially.
-            // So "Load from LS" sets cart. Then this effect runs. !userId -> Clear Cart.
-            // THIS WAS THE BUG FOR GUEST RELOAD TOO!
-
-            // Fix: Don't clear cart if !userId. Just return.
-            // But then how do we clear on logout?
-            // Logout action should clear it.
-            // In Navbar.jsx, logout() calls useAuth().logout().
-            // In AuthContext, logout() clears token/user.
-            // We should dispatch clearCart() in Navbar or AuthContext.
-            // But AuthContext doesn't have dispatch.
-            // Navbar has dispatch.
-
-            // So, I will REMOVE the auto-clear here.
-            // And I will rely on Navbar/Logout button to clear the cart state.
-
-            return;
-        }
-
-        const fetchCart = async () => {
-            console.log('[Layout] Fetching cart for user:', userId);
+        const fetchCart = async (isBackground = false) => {
+            if (!isBackground) console.log('[Layout] Fetching cart for user:', userId);
             try {
                 const response = await fetch(`/api/cart?userId=${userId}`);
                 if (response.ok) {
                     const serverCart = await response.json();
+                    
+                    // If it's a background fetch (polling/nav), we prefer server state over local
+                    // to resolve inconsistencies like "7 items in local but 0 in server"
+                    if (isBackground) {
+                        dispatch(setCart(serverCart));
+                        setInitialLoadDone(true);
+                        return;
+                    }
+
                     console.log('[Layout] Fetched server cart:', serverCart);
 
                     // Merge Logic
@@ -152,10 +133,16 @@ export default function PublicLayout({ children }) {
             }
         };
 
-        // Reset initialLoadDone before fetching
-        setInitialLoadDone(false);
-        fetchCart();
-    }, [dispatch, userId]);
+        // Reset initialLoadDone before fetching if userId changed
+        // But if it's just a pathname change, we do a background refresh
+        const isBackground = prevUserIdRef.current === userId;
+        
+        if (!isBackground) {
+            setInitialLoadDone(false);
+        }
+        
+        fetchCart(isBackground);
+    }, [dispatch, userId, pathname]);
 
     // Sync cart to server after initial load
     useEffect(() => {

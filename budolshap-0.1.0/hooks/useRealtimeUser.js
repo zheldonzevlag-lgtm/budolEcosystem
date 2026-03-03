@@ -28,7 +28,7 @@ export function useRealtimeUser({ userId, onEvent }) {
         const channel = pusher.subscribe(channelName);
 
         // Common user events
-        const userEvents = ['store-status-updated', 'order-updated', 'rating-created'];
+        const userEvents = ['store-status-updated', 'order-updated', 'rating-created', 'cart-updated'];
 
         // Bind each event
         userEvents.forEach(eventName => {
@@ -61,7 +61,7 @@ export function useRealtimeUser({ userId, onEvent }) {
         // Socket.io doesn't have a direct "bind_all" like Pusher, 
         // but we can listen for specific known events or use a catch-all if the server supports it.
         // For now, let's list common user events.
-        const userEvents = ['store-status-updated', 'order-updated', 'rating-created'];
+        const userEvents = ['store-status-updated', 'order-updated', 'rating-created', 'cart-updated'];
         
         userEvents.forEach(eventName => {
             socket.on(eventName, (data) => {
@@ -74,6 +74,24 @@ export function useRealtimeUser({ userId, onEvent }) {
             socket.disconnect();
         };
     }, [isSocket, userId, config, onEvent]);
+
+    // 4. Polling Fallback for POLLING mode
+    useEffect(() => {
+        if (!isPolling || !userId) return;
+
+        // For POLLING mode, we don't have a specific "events" API yet,
+        // but we can trigger a generic "cart-updated" check periodically
+        // to ensure frontend stays in sync with backend cleanup.
+        const interval = setInterval(() => {
+            console.log('🔄 [RealtimeUser] Polling heartbeat (POLLING mode)');
+            if (onEvent) {
+                // We trigger a cart-updated event periodically as a fallback
+                onEvent('cart-updated', { reason: 'polling_fallback' });
+            }
+        }, config?.swrPollingInterval || 15000);
+
+        return () => clearInterval(interval);
+    }, [isPolling, userId, config, onEvent]);
 
     return { config, isPolling };
 }

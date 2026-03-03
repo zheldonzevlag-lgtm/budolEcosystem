@@ -90,6 +90,7 @@ export async function POST(request) {
                 break
 
             case 'payment.failed':
+            case 'payment_intent.payment_failed':
                 await handlePaymentFailed(eventData)
                 break
 
@@ -201,51 +202,9 @@ async function processSuccessfulOrder(order) {
         console.error('Failed to send success email in webhook:', e)
     }
 
-    // 2. Clear Cart (Robust Implementation)
-        try {
-            // Need to fetch order items first if not present
-            const orderItems = await prisma.orderItem.findMany({
-                where: { orderId: order.id }
-            })
-
-            const userCart = await prisma.cart.findUnique({ where: { userId: order.userId } })
-            
-            if (userCart && orderItems.length > 0) {
-                console.log(`[Webhook] Clearing cart for user ${order.userId} based on order ${order.id}`);
-                
-                // Construct robust delete conditions
-                const cartCleanupConditions = orderItems.map(item => {
-                    // If variationId is null or empty, match both null and empty string in CartItem
-                    // This handles potential inconsistencies between empty string and null in DB
-                    if (!item.variationId) {
-                        return {
-                            productId: item.productId,
-                            OR: [
-                                { variationId: null },
-                                { variationId: '' }
-                            ]
-                        };
-                    }
-                    // Otherwise match exactly
-                    return {
-                        productId: item.productId,
-                        variationId: item.variationId
-                    };
-                });
-
-                // Execute single deleteMany with OR condition for efficiency and robustness
-                const deleteResult = await prisma.cartItem.deleteMany({
-                    where: {
-                        cartId: userCart.id,
-                        OR: cartCleanupConditions
-                    }
-                });
-                
-                console.log(`[Webhook] Cleared ${deleteResult.count} items from cart for user:`, order.userId)
-            }
-        } catch (e) {
-            console.error('Failed to clear cart in webhook:', e)
-        }
+    // 2. Clear Cart
+    // NOTE: This is handled by updateOrderStatus() in ordersService.js during status transition to PAID.
+    // We do not need redundant logic here.
 
     // 3. Trigger Realtime Events in parallel
     try {
@@ -458,11 +417,69 @@ async function handlePaymentIntentSucceeded(data) {
 async function handlePaymentFailed(data) {
     try {
         const paymentId = data.id
-        console.log('Payment failed:', paymentId)
-        // Note: For failed payments, we often can't do much if we can't find the order 
-        // effectively without metadata, but loopup strategies apply similar to paid.
+        const paymentIntentId = data.attributes.payment_intent_id
+        const metadata = data.attributes.metadata || {}
+        const orderId = metadata.orderId
+
+        console.log('[Webhook] Payment failed:', paymentId, 'Intent:', paymentIntentId)
+
+        let whereClause = {
+            OR: [
+                { paymentId: paymentId },
+                { paymentId: paymentIntentId }
+            ]
+        };
+
+        if (orderId) {
+            whereClause = { id: orderId };
+        }
+
+        // Find order to identify user and items
+        const order = await prisma.order.findFirst({
+            where: whereClause,
+            include: { orderItems: true }
+        });
+
+        if (order) {
+            console.log(`[Webhook] Clearing cart for failed payment. Order: ${order.id}, User: ${order.userId}`);
+            
+            // Clear items from database cart (as requested by user)
+            const userCart = await prisma.cart.findUnique({ where: { userId: order.userId } });
+            if (userCart && order.orderItems.length > 0) {
+                const cartCleanupConditions = order.orderItems.map(item => {
+                    if (!item.variationId) {
+                        return {
+                            productId: item.productId,
+                            OR: [{ variationId: null }, { variationId: '' }]
+                        };
+                    }
+                    return { productId: item.productId, variationId: item.variationId };
+                });
+
+                await prisma.cartItem.deleteMany({
+                    where: {
+                        cartId: userCart.id,
+                        OR: cartCleanupConditions
+                    }
+                });
+
+                // Notify UI to refresh cart
+                await triggerRealtimeEvent(`user-${order.userId}`, 'cart-updated', {
+                    userId: order.userId,
+                    reason: 'payment_failed'
+                });
+            }
+
+            // Update order status to failed if not already paid
+            if (!order.isPaid) {
+                await prisma.order.update({
+                    where: { id: order.id },
+                    data: { paymentStatus: 'failed' }
+                });
+            }
+        }
     } catch (e) {
-        console.error(e)
+        console.error('[Webhook] Error handling payment failure:', e)
     }
 }
 

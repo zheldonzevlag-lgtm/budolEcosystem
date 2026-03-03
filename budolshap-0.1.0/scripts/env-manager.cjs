@@ -26,6 +26,13 @@ const envPaths = [
     path.join(ecosystemRoot, 'budolID-0.1.0', '.env'),
     path.join(ecosystemRoot, 'budolshap-0.1.0', '.env'),
     path.join(ecosystemRoot, 'budolAccounting-0.1.0', '.env'),
+    path.join(ecosystemRoot, 'budolpay-0.1.0', '.env'),
+    path.join(ecosystemRoot, 'budolpay-0.1.0', 'apps', 'admin', '.env'),
+    path.join(ecosystemRoot, 'budolpay-0.1.0', 'packages', 'database', '.env'),
+    path.join(ecosystemRoot, 'budolpay-0.1.0', 'services', 'api-gateway', '.env'),
+    path.join(ecosystemRoot, 'budolpay-0.1.0', 'services', 'auth-service', '.env'),
+    path.join(ecosystemRoot, 'budolpay-0.1.0', 'services', 'wallet-service', '.env'),
+    path.join(ecosystemRoot, 'budolpay-0.1.0', 'services', 'transaction-service', '.env'),
     path.join(ecosystemRoot, '.env')
 ];
 const envVercelPath = path.join(rootDir, '.env.vercel');
@@ -76,7 +83,7 @@ if (fs.existsSync(sourceEnvPath)) {
                 if (match) {
                     const key = match[1].trim();
                     const value = match[2].trim();
-                    
+
                     // Service-aware mapping for DATABASE_URL
                     if (key === 'BUDOLID_DATABASE_URL' && envPath.includes('budolID-0.1.0')) {
                         envMap.set('DATABASE_URL', value);
@@ -89,6 +96,9 @@ if (fs.existsSync(sourceEnvPath)) {
                         envMap.set('DATABASE_URL', value);
                     } else if (key.startsWith('BUDOL') && key.endsWith('_DATABASE_URL')) {
                         // Keep service-specific URLs in the map but don't map to DATABASE_URL for other services
+                        envMap.set(key, value);
+                    } else if (key === 'INTERNAL_WS_URL' || key === 'NEXT_PUBLIC_SOCKET_URL') {
+                        // Propagate WebSocket URLs to all services
                         envMap.set(key, value);
                     } else {
                         // Map all other variables as is

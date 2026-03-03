@@ -1,0 +1,16 @@
+{
+    "InstanceIds": [
+        "i-00e50e8bb90c9397a"
+    ],
+    "DocumentName": "AWS-RunShellScript",
+    "Comment": "Enable HTTPS in Nginx",
+    "Parameters": {
+        "commands": [
+            "sudo tee /etc/nginx/sites-available/budol-ws <<'EOF'\nserver {\n    listen 80;\n    server_name budolws.duckdns.org;\n    return 301 https://$host$request_uri;\n}\n\nserver {\n    listen 443 ssl;\n    server_name budolws.duckdns.org;\n\n    ssl_certificate /etc/letsencrypt/live/budolws.duckdns.org/fullchain.pem;\n    ssl_certificate_key /etc/letsencrypt/live/budolws.duckdns.org/privkey.pem;\n\n    location / {\n        proxy_pass http://localhost:4000;\n        proxy_http_version 1.1;\n        proxy_set_header Upgrade $http_upgrade;\n        proxy_set_header Connection \"upgrade\";\n        proxy_set_header Host $host;\n        proxy_cache_bypass $http_upgrade;\n    }\n}\nEOF",
+            "sudo ln -sf /etc/nginx/sites-available/budol-ws /etc/nginx/sites-enabled/",
+            "sudo nginx -t",
+            "sudo systemctl restart nginx",
+            "sudo systemctl status nginx --no-pager | head -5"
+        ]
+    }
+}

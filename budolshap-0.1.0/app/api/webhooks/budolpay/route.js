@@ -54,6 +54,8 @@ export async function POST(request) {
         
         if (event === 'payment.success' || event === 'payment_intent.succeeded') {
             await handlePaymentSuccess(data);
+        } else if (event === 'payment.failed' || event === 'payment_intent.payment_failed') {
+            await handlePaymentFailure(data);
         } else {
             console.log('[BudolPay Webhook] Unhandled event type:', event);
         }
@@ -96,8 +98,82 @@ export async function POST(request) {
 }
 
 /**
- * Handle successful payment event
+ * Handle failed payment event
  */
+async function handlePaymentFailure(data) {
+    const paymentIntentId = data.id || data.paymentIntentId;
+    const metadata = data.metadata || {};
+    const orderId = metadata.orderId;
+    const orderIds = metadata.orderIds;
+
+    console.log(`[BudolPay Webhook] Processing failure. Intent: ${paymentIntentId}`);
+
+    let targetOrderIds = [];
+    if (orderIds && Array.isArray(orderIds) && orderIds.length > 0) {
+        targetOrderIds = orderIds;
+    } else if (orderId) {
+        targetOrderIds = [orderId];
+    }
+
+    if (targetOrderIds.length === 0 && paymentIntentId) {
+        const orders = await prisma.order.findMany({
+            where: { paymentId: paymentIntentId },
+            select: { id: true }
+        });
+        targetOrderIds = orders.map(o => o.id);
+    }
+
+    for (const id of targetOrderIds) {
+        try {
+            const order = await prisma.order.findUnique({
+                where: { id },
+                include: { orderItems: true }
+            });
+
+            if (order) {
+                console.log(`[BudolPay Webhook] Clearing cart for failed payment. Order: ${order.id}, User: ${order.userId}`);
+                
+                // Clear items from database cart
+                const userCart = await prisma.cart.findUnique({ where: { userId: order.userId } });
+                if (userCart && order.orderItems.length > 0) {
+                    const cartCleanupConditions = order.orderItems.map(item => {
+                        if (!item.variationId) {
+                            return {
+                                productId: item.productId,
+                                OR: [{ variationId: null }, { variationId: '' }]
+                            };
+                        }
+                        return { productId: item.productId, variationId: item.variationId };
+                    });
+
+                    await prisma.cartItem.deleteMany({
+                        where: {
+                            cartId: userCart.id,
+                            OR: cartCleanupConditions
+                        }
+                    });
+
+                    // Notify UI to refresh cart
+                    await triggerRealtimeEvent(`user-${order.userId}`, 'cart-updated', {
+                        userId: order.userId,
+                        reason: 'payment_failed'
+                    });
+                }
+
+                // Update payment status
+                if (!order.isPaid) {
+                    await prisma.order.update({
+                        where: { id: order.id },
+                        data: { paymentStatus: 'failed' }
+                    });
+                }
+            }
+        } catch (e) {
+            console.error(`[BudolPay Webhook] Error processing failure for order ${id}:`, e);
+        }
+    }
+}
+
 async function handlePaymentSuccess(data) {
     const paymentIntentId = data.id || data.paymentIntentId;
     const metadata = data.metadata || {};
@@ -262,13 +338,8 @@ async function runPostPaymentActions(order) {
     }
 
     // 2. Clear Cart Items
-    // NOTE: This is handled by createOrder() in ordersService.js during order creation.
-    // We do NOT want to clear items here because:
-    // a) They are likely already cleared.
-    // b) The logic below (productId IN [...]) is dangerous as it deletes ALL variations of a product,
-    //    even if only one variation was purchased.
-    // Reference: ordersService.js lines 380-391
-
+    // NOTE: This is handled by updateOrderStatus() in ordersService.js during status transition to PAID.
+    // We do not need redundant logic here.
 
     // 3. Notify Store & User via Realtime in parallel
     try {

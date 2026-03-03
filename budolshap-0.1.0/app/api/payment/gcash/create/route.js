@@ -85,8 +85,8 @@ export async function POST(request) {
         }
 
         const redirectUrl = {
-            success: `${baseUrl}/payment/success?orderId=${orderId}`,
-            failed: `${baseUrl}/payment/failed?orderId=${orderId}`
+            success: `${baseUrl}/payment/return?orderId=${orderId}&provider=gcash`,
+            failed: `${baseUrl}/payment/return?orderId=${orderId}&provider=gcash`
         }
 
         // Create GCash payment source

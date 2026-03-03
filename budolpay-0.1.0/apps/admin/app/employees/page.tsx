@@ -4,15 +4,16 @@ import React, { useState, useEffect } from "react";
 import PermissionsMatrix from "@/components/PermissionsMatrix";
 import ProvisionAccountModal from "@/components/ProvisionAccountModal";
 import EditUserModal from "@/components/EditUserModal";
+import OTPVerificationModal from "@/components/OTPVerificationModal";
 import { realtime } from "@/lib/realtime";
-import { 
-  Users, 
-  Search, 
-  Filter, 
-  Download, 
-  MoreVertical, 
-  Shield, 
-  ShieldAlert, 
+import {
+  Users,
+  Search,
+  Filter,
+  Download,
+  MoreVertical,
+  Shield,
+  ShieldAlert,
   ShieldCheck,
   Mail,
   Phone,
@@ -36,20 +37,27 @@ export default function EmployeesPage() {
   const [isProvisionModalOpen, setIsProvisionModalOpen] = useState(false);
   const [selectedEmployee, setSelectedEmployee] = useState<any>(null);
   const [isRoleModalOpen, setIsRoleModalOpen] = useState(false);
+  const [isOTPModalOpen, setIsOTPModalOpen] = useState(false);
+  const [changeRequests, setChangeRequests] = useState<any[]>([]);
   const [isLoading, setIsLoading] = useState(true);
 
   async function fetchData() {
-    setIsLoading(true);
     try {
-      const [empRes, logsRes, settingsRes] = await Promise.all([
+      const [empRes, logsRes, settingsRes, requestsRes] = await Promise.all([
         fetch('/api/employees'),
         fetch('/api/audit-logs?limit=15'),
-        fetch('/api/settings/security')
+        fetch('/api/settings/security'),
+        fetch('/api/employees', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ action: 'GET_CHANGE_REQUESTS' })
+        })
       ]);
-      
+
       if (empRes.ok) setEmployees(await empRes.json());
       if (logsRes.ok) setAuditLogs(await logsRes.json());
       if (settingsRes.ok) setSecuritySettings(await settingsRes.json());
+      if (requestsRes.ok) setChangeRequests(await requestsRes.json());
     } catch (error) {
       console.error("Failed to fetch data:", error);
     } finally {
@@ -67,11 +75,11 @@ export default function EmployeesPage() {
       try {
         console.log("[Employees] Connecting to realtime...");
         await realtime.init();
-        
+
         realtime.on("AUDIT_LOG_CREATED", (newLog) => {
           if (!isMounted) return;
           console.log("[Realtime] New audit log received in Employees:", newLog.action);
-          
+
           setAuditLogs(prevLogs => {
             // Avoid duplicates
             if (prevLogs.some(log => log.id === newLog.id)) return prevLogs;
@@ -96,7 +104,7 @@ export default function EmployeesPage() {
     try {
       const adminRes = await fetch('/api/auth/me');
       const adminData = await adminRes.json();
-      
+
       const res = await fetch('/api/employees', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -117,6 +125,63 @@ export default function EmployeesPage() {
     }
   };
 
+  const handleApproveChange = async (requestId: string) => {
+    if (!confirm("Are you sure you want to APPROVE this change? This will update the staff profile immediately.")) return;
+
+    try {
+      const adminRes = await fetch('/api/auth/me');
+      const adminData = await adminRes.json();
+
+      const res = await fetch('/api/employees', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          action: 'APPROVE_CHANGE_REQUEST',
+          requestId,
+          checkerId: adminData.user.id
+        })
+      });
+
+      const data = await res.json();
+      if (res.ok) {
+        alert("Change request approved and profile updated.");
+        fetchData();
+      } else {
+        alert(data.error || "Approval failed.");
+      }
+    } catch (error) {
+      console.error("Approval failed:", error);
+    }
+  };
+
+  const handleRejectChange = async (requestId: string) => {
+    const reason = prompt("Enter reason for rejection (mandatory for compliance):");
+    if (!reason) return;
+
+    try {
+      const adminRes = await fetch('/api/auth/me');
+      const adminData = await adminRes.json();
+
+      const res = await fetch('/api/employees', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          action: 'REJECT_CHANGE_REQUEST',
+          requestId,
+          checkerId: adminData.user.id,
+          reason
+        })
+      });
+
+      if (res.ok) {
+        alert("Change request rejected.");
+        fetchData();
+      }
+    } catch (error) {
+      console.error("Rejection failed:", error);
+    }
+  };
+
   if (isLoading) {
     return <div className="p-8 text-center text-slate-500 font-bold animate-pulse">Initializing Secure Workforce Registry...</div>;
   }
@@ -129,13 +194,13 @@ export default function EmployeesPage() {
           <p className="text-sm text-slate-500">Access control, role assignment, and comprehensive activity monitoring.</p>
         </div>
         <div className="flex gap-3">
-          <button 
+          <button
             onClick={() => setIsMatrixOpen(true)}
             className="bg-white border border-slate-200 text-slate-700 px-4 py-2 rounded-lg shadow-sm hover:bg-slate-50 transition font-bold text-sm"
           >
             Permissions Matrix
           </button>
-          <button 
+          <button
             onClick={() => setIsProvisionModalOpen(true)}
             className="bg-budolshap-primary text-white px-4 py-2 rounded-lg shadow-sm hover:opacity-90 transition font-bold text-sm"
           >
@@ -145,21 +210,107 @@ export default function EmployeesPage() {
       </div>
 
       <PermissionsMatrix isOpen={isMatrixOpen} onClose={() => setIsMatrixOpen(false)} />
-      <ProvisionAccountModal 
-        isOpen={isProvisionModalOpen} 
-        onClose={() => setIsProvisionModalOpen(false)} 
+      <ProvisionAccountModal
+        isOpen={isProvisionModalOpen}
+        onClose={() => setIsProvisionModalOpen(false)}
         onSuccess={fetchData}
       />
 
-      <EditUserModal 
-        isOpen={isRoleModalOpen} 
+      <EditUserModal
+        isOpen={isRoleModalOpen}
         onClose={() => {
           setIsRoleModalOpen(false);
           setSelectedEmployee(null);
-        }} 
+        }}
         onSuccess={fetchData}
         user={selectedEmployee}
       />
+
+      <OTPVerificationModal
+        isOpen={isOTPModalOpen}
+        onClose={() => {
+          setIsOTPModalOpen(false);
+          setSelectedEmployee(null);
+        }}
+        onVerified={() => {
+          setIsOTPModalOpen(false);
+          setIsRoleModalOpen(true);
+        }}
+        user={selectedEmployee}
+      />
+
+      {/* Maker-Checker Approval Queue */}
+      {changeRequests.length > 0 && (
+        <div className="bg-amber-50 rounded-xl shadow-sm border border-amber-200 overflow-hidden mb-8 animate-in fade-in slide-in-from-top-4 duration-500">
+          <div className="px-6 py-4 border-b border-amber-200 flex justify-between items-center bg-amber-100/50">
+            <div className="flex items-center gap-2">
+              <ShieldAlert className="w-5 h-5 text-amber-600" />
+              <h2 className="font-bold text-amber-800 uppercase tracking-tight text-sm">Approvals Required (Maker-Checker Queue)</h2>
+              <span className="bg-amber-600 text-white text-[10px] px-2 py-0.5 rounded-full font-bold">{changeRequests.length} PENDING</span>
+            </div>
+            <p className="text-[10px] text-amber-600 font-bold uppercase tracking-widest">BSP Circular 808 Compliance Enforced</p>
+          </div>
+          <div className="overflow-x-auto">
+            <table className="w-full text-left text-sm">
+              <thead className="bg-amber-50 text-amber-700 uppercase text-[9px] font-bold tracking-wider">
+                <tr>
+                  <th className="px-6 py-3">Maker (Staff)</th>
+                  <th className="px-6 py-3">Target Profile</th>
+                  <th className="px-6 py-3">Proposed Changes</th>
+                  <th className="px-6 py-3">Requested</th>
+                  <th className="px-6 py-3 text-right">Review Action</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-amber-100">
+                {changeRequests.map((req) => (
+                  <tr key={req.id} className="hover:bg-amber-100/30 transition">
+                    <td className="px-6 py-4">
+                      <div className="font-bold text-slate-800 text-xs">{req.maker.firstName} {req.maker.lastName}</div>
+                      <div className="text-[9px] text-slate-500 font-mono">{req.maker.email}</div>
+                    </td>
+                    <td className="px-6 py-4">
+                      <div className="font-bold text-slate-800 text-xs">{req.targetUser?.firstName} {req.targetUser?.lastName}</div>
+                      <div className="text-[9px] font-mono text-slate-500 underline decoration-amber-200">ID: {req.entityId.substring(0, 8)}...</div>
+                    </td>
+                    <td className="px-6 py-4">
+                      <div className="flex flex-wrap gap-2">
+                        {Object.entries(req.details).map(([key, val]) => (
+                          <div key={key} className="bg-white border border-amber-200 rounded px-2 py-1 flex items-center gap-2">
+                            <span className="text-[9px] font-bold text-slate-400 uppercase">{key}:</span>
+                            <span className="text-[10px] font-bold text-slate-700">{val as string}</span>
+                          </div>
+                        ))}
+                      </div>
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap">
+                      <div className="text-[10px] text-slate-500 font-bold">{formatManilaTime(req.createdAt)}</div>
+                      <div className="text-[9px] text-amber-500 flex items-center gap-1">
+                        <History className="w-3 h-3" /> Awaiting Checker
+                      </div>
+                    </td>
+                    <td className="px-6 py-4 text-right">
+                      <div className="flex justify-end gap-2">
+                        <button
+                          onClick={() => handleRejectChange(req.id)}
+                          className="px-3 py-1.5 bg-white border border-red-200 text-red-600 rounded-lg text-xs font-bold hover:bg-red-50 transition flex items-center gap-1"
+                        >
+                          <X className="w-3.5 h-3.5" /> Reject
+                        </button>
+                        <button
+                          onClick={() => handleApproveChange(req.id)}
+                          className="px-3 py-1.5 bg-green-600 text-white rounded-lg text-xs font-bold hover:opacity-90 transition flex items-center gap-1"
+                        >
+                          <Check className="w-3.5 h-3.5" /> Approve
+                        </button>
+                      </div>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      )}
 
       <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
         {/* Workforce Stats */}
@@ -172,8 +323,8 @@ export default function EmployeesPage() {
                 <span className="text-sm font-bold text-slate-900">{employees.filter(e => e.role === 'ADMIN').length}</span>
               </div>
               <div className="w-full bg-slate-100 h-1.5 rounded-full overflow-hidden">
-                <div 
-                  className="bg-budolshap-primary h-full" 
+                <div
+                  className="bg-budolshap-primary h-full"
                   style={{ width: `${(employees.filter(e => e.role === 'ADMIN').length / employees.length) * 100}%` }}
                 ></div>
               </div>
@@ -182,8 +333,8 @@ export default function EmployeesPage() {
                 <span className="text-sm font-bold text-slate-900">{employees.filter(e => e.role === 'STAFF').length}</span>
               </div>
               <div className="w-full bg-slate-100 h-1.5 rounded-full overflow-hidden">
-                <div 
-                  className="bg-indigo-500 h-full" 
+                <div
+                  className="bg-indigo-500 h-full"
                   style={{ width: `${(employees.filter(e => e.role === 'STAFF').length / employees.length) * 100}%` }}
                 ></div>
               </div>
@@ -194,29 +345,25 @@ export default function EmployeesPage() {
             <h3 className="font-bold text-sm mb-4 text-budolshap-primary">Access Policy (v2.1)</h3>
             <div className="space-y-3">
               <div className="flex items-start gap-3">
-                <div className={`w-5 h-5 rounded flex items-center justify-center shrink-0 ${
-                  securitySettings['SECURITY_MFA_ENFORCED'] === 'true' ? 'bg-green-500/20' : 'bg-amber-500/20'
-                }`}>
-                  <span className={`${
-                    securitySettings['SECURITY_MFA_ENFORCED'] === 'true' ? 'text-green-500' : 'text-amber-500'
-                  } text-[10px]`}>
+                <div className={`w-5 h-5 rounded flex items-center justify-center shrink-0 ${securitySettings['SECURITY_MFA_ENFORCED'] === 'true' ? 'bg-green-500/20' : 'bg-amber-500/20'
+                  }`}>
+                  <span className={`${securitySettings['SECURITY_MFA_ENFORCED'] === 'true' ? 'text-green-500' : 'text-amber-500'
+                    } text-[10px]`}>
                     {securitySettings['SECURITY_MFA_ENFORCED'] === 'true' ? '✓' : '!'}
                   </span>
                 </div>
                 <p className="text-[10px] text-slate-400">
-                  {securitySettings['SECURITY_MFA_ENFORCED'] === 'true' 
-                    ? 'Hardware Security Keys (Yubikey) enforced for Admins.' 
+                  {securitySettings['SECURITY_MFA_ENFORCED'] === 'true'
+                    ? 'Hardware Security Keys (Yubikey) enforced for Admins.'
                     : 'MFA Enforcement is currently DISABLED for Admins.'}
                 </p>
               </div>
 
               <div className="flex items-start gap-3">
-                <div className={`w-5 h-5 rounded flex items-center justify-center shrink-0 ${
-                  Number(securitySettings['SECURITY_SESSION_IDLE_TIMEOUT'] || 30) <= 30 ? 'bg-green-500/20' : 'bg-amber-500/20'
-                }`}>
-                  <span className={`${
-                    Number(securitySettings['SECURITY_SESSION_IDLE_TIMEOUT'] || 30) <= 30 ? 'text-green-500' : 'text-amber-500'
-                  } text-[10px]`}>
+                <div className={`w-5 h-5 rounded flex items-center justify-center shrink-0 ${Number(securitySettings['SECURITY_SESSION_IDLE_TIMEOUT'] || 30) <= 30 ? 'bg-green-500/20' : 'bg-amber-500/20'
+                  }`}>
+                  <span className={`${Number(securitySettings['SECURITY_SESSION_IDLE_TIMEOUT'] || 30) <= 30 ? 'text-green-500' : 'text-amber-500'
+                    } text-[10px]`}>
                     {Number(securitySettings['SECURITY_SESSION_IDLE_TIMEOUT'] || 30) <= 30 ? '✓' : '!'}
                   </span>
                 </div>
@@ -226,12 +373,10 @@ export default function EmployeesPage() {
               </div>
 
               <div className="flex items-start gap-3">
-                <div className={`w-5 h-5 rounded flex items-center justify-center shrink-0 ${
-                  Number(securitySettings['SECURITY_PASSWORD_EXPIRY_DAYS'] || 90) <= 90 ? 'bg-green-500/20' : 'bg-amber-500/20'
-                }`}>
-                  <span className={`${
-                    Number(securitySettings['SECURITY_PASSWORD_EXPIRY_DAYS'] || 90) <= 90 ? 'text-green-500' : 'text-amber-500'
-                  } text-[10px]`}>
+                <div className={`w-5 h-5 rounded flex items-center justify-center shrink-0 ${Number(securitySettings['SECURITY_PASSWORD_EXPIRY_DAYS'] || 90) <= 90 ? 'bg-green-500/20' : 'bg-amber-500/20'
+                  }`}>
+                  <span className={`${Number(securitySettings['SECURITY_PASSWORD_EXPIRY_DAYS'] || 90) <= 90 ? 'text-green-500' : 'text-amber-500'
+                    } text-[10px]`}>
                     {Number(securitySettings['SECURITY_PASSWORD_EXPIRY_DAYS'] || 90) <= 90 ? '✓' : '!'}
                   </span>
                 </div>
@@ -248,9 +393,9 @@ export default function EmployeesPage() {
           <div className="px-6 py-4 border-b border-slate-200 bg-slate-50 flex justify-between items-center">
             <h2 className="font-semibold text-slate-700">Staff Registry</h2>
             <div className="flex gap-2">
-              <input 
-                type="text" 
-                placeholder="Search staff..." 
+              <input
+                type="text"
+                placeholder="Search staff..."
                 className="text-xs border border-slate-200 rounded px-3 py-1.5 focus:outline-none focus:ring-1 focus:ring-budolshap-primary"
               />
             </div>
@@ -272,9 +417,8 @@ export default function EmployeesPage() {
                   <tr key={emp.id} className="hover:bg-slate-50 transition">
                     <td className="px-6 py-4">
                       <div className="flex items-center gap-3">
-                        <div className={`w-8 h-8 rounded-full flex items-center justify-center font-bold text-xs ${
-                          emp.role === 'ADMIN' ? 'bg-budolshap-primary/10 text-budolshap-primary' : 'bg-indigo-100 text-indigo-600'
-                        }`}>
+                        <div className={`w-8 h-8 rounded-full flex items-center justify-center font-bold text-xs ${emp.role === 'ADMIN' ? 'bg-budolshap-primary/10 text-budolshap-primary' : 'bg-indigo-100 text-indigo-600'
+                          }`}>
                           {emp.firstName?.[0]}{emp.lastName?.[0]}
                         </div>
                         <div>
@@ -297,9 +441,8 @@ export default function EmployeesPage() {
                     </td>
                     <td className="px-6 py-4">
                       <div className="flex flex-col gap-1">
-                        <span className={`w-fit px-2 py-0.5 rounded text-[10px] font-bold ${
-                          emp.role === 'ADMIN' ? 'bg-budolshap-primary text-white' : 'bg-slate-100 text-slate-600'
-                        }`}>
+                        <span className={`w-fit px-2 py-0.5 rounded text-[10px] font-bold ${emp.role === 'ADMIN' ? 'bg-budolshap-primary text-white' : 'bg-slate-100 text-slate-600'
+                          }`}>
                           {emp.role}
                         </span>
                         <span className="text-[9px] text-slate-400">Joined {formatManilaTime(emp.createdAt)}</span>
@@ -319,12 +462,12 @@ export default function EmployeesPage() {
                     </td>
                     <td className="px-6 py-4 text-right">
                       <div className="flex justify-end gap-2">
-                        <button 
+                        <button
                           onClick={() => {
                             setSelectedEmployee(emp);
-                            setIsRoleModalOpen(true);
+                            setIsOTPModalOpen(true);
                           }}
-                          className="p-1.5 text-slate-400 hover:text-budolshap-primary transition" 
+                          className="p-1.5 text-slate-400 hover:text-budolshap-primary transition"
                           title="Edit Profile"
                         >
                           <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"></path></svg>

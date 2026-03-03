@@ -5,12 +5,31 @@
  *      without requiring a server-side file API.
  * WHAT: Array of folder names sorted newest-first. Each entry maps to a
  *       folder under the /documentation/ directory containing index.html.
- * GENERATED: 2026-02-28 16:21:56 PH Time
- * TOTAL: 722 documentation folders across 53 dates
+ * GENERATED: 2026-03-02 21:34:30 PH Time
+ * TOTAL: 740 documentation folders across 55 dates
  * TODO: Re-run this script whenever new documentation folders are added.
  */
 const DOCS_MANIFEST = [
-    // 2026-02-28 (9 versions)
+    // 2026-03-02 (14 versions)
+    "budolecosystem_docs_2026-03-02_v5.1.4",
+    "budolecosystem_docs_2026-03-02_v5.1.3",
+    "budolecosystem_docs_2026-03-02_v5.1.2",
+    "budolecosystem_docs_2026-03-02_v5.1.1",
+    "budolecosystem_docs_2026-03-02_v5.1.0",
+    "budolecosystem_docs_2026-03-02_v5.0.9",
+    "budolecosystem_docs_2026-03-02_v5.0.7",
+    "budolecosystem_docs_2026-03-02_v5.0.6",
+    "budolecosystem_docs_2026-03-02_v5.0.5",
+    "budolecosystem_docs_2026-03-02_v5.0.4",
+    "budolecosystem_docs_2026-03-02_v5.0.3",
+    "budolecosystem_docs_2026-03-02_v5.0.2",
+    "budolecosystem_docs_2026-03-02_v5.0.1",
+    "budolecosystem_docs_2026-03-02_v14",
+    // 2026-03-01 (3 versions)
+    "budolecosystem_docs_2026-03-01_v13",
+    "budolecosystem_docs_2026-03-01_v12",
+    "budolecosystem_docs_2026-03-01_v11",
+    // 2026-02-28 (10 versions)
     "budolecosystem_docs_2026-02-28_v9",
     "budolecosystem_docs_2026-02-28_v8",
     "budolecosystem_docs_2026-02-28_v7",
@@ -19,6 +38,7 @@ const DOCS_MANIFEST = [
     "budolecosystem_docs_2026-02-28_v4",
     "budolecosystem_docs_2026-02-28_v3",
     "budolecosystem_docs_2026-02-28_v2",
+    "budolecosystem_docs_2026-02-28_v10",
     "budolecosystem_docs_2026-02-28_v1",
     // 2026-02-26 (1 versions)
     "budolecosystem_docs_2026-02-26_v1",

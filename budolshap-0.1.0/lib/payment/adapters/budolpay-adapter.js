@@ -62,20 +62,34 @@ export class BudolPayAdapter extends BasePaymentAdapter {
                 body: JSON.stringify(body)
             });
 
+            // Handle empty response or non-OK status before parsing JSON
+            if (!response.ok) {
+                const text = await response.text();
+                let errorData;
+                try {
+                    errorData = text ? JSON.parse(text) : { error: 'Empty response from server' };
+                } catch (e) {
+                    errorData = { error: text || `Server returned ${response.status}` };
+                }
+                console.error('[BudolPay] Gateway Error:', errorData);
+                throw new Error(errorData.error || errorData.message || `BudolPay Gateway error: ${response.status}`);
+            }
+
             // Check if response is JSON
             const contentType = response.headers.get('content-type');
             if (!contentType || !contentType.includes('application/json')) {
                 const text = await response.text();
                 console.error(`[BudolPay] Expected JSON but received ${contentType}. Raw response:`, text.slice(0, 500));
+                
+                // If it's an empty response, provide a more helpful error
+                if (!text || text.trim() === '') {
+                    throw new Error('BudolPay Gateway returned an empty response. This may be due to an internal service timeout.');
+                }
+                
                 throw new Error(`Invalid response from BudolPay Gateway: Expected JSON but received ${contentType || 'unknown'}`);
             }
 
             const data = await response.json();
-
-            if (!response.ok) {
-                console.error('[BudolPay] Gateway Error:', data);
-                throw new Error(data.error || data.message || 'Failed to connect to budolPay Gateway');
-            }
 
             console.log('[BudolPay] ✅ Gateway Response:', JSON.stringify(data, null, 2));
 

@@ -94,7 +94,8 @@ export async function triggerRealtimeEvent(channel: string, event: string, data:
     }
 
     if (provider === 'SOCKETIO') {
-      let socketUrl = settings['REALTIME_SOCKETIO_URL'] || 'http://localhost:4000';
+      // Prioritize internal VPC URL for server-side triggers
+      let socketUrl = process.env.INTERNAL_WS_URL || settings['REALTIME_SOCKETIO_URL'] || 'http://localhost:4000';
       const localIp = process.env.LOCAL_IP;
 
       if (socketUrl.includes('localhost') && localIp) {
@@ -103,7 +104,9 @@ export async function triggerRealtimeEvent(channel: string, event: string, data:
 
       const triggerUrl = `${socketUrl}/trigger`;
 
-      await fetch(triggerUrl, {
+      console.log(`[Realtime-Server] Sending trigger to ${triggerUrl}`);
+
+      const response = await fetch(triggerUrl, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json'
@@ -114,6 +117,12 @@ export async function triggerRealtimeEvent(channel: string, event: string, data:
           data
         })
       });
+
+      if (!response.ok) {
+        const errorText = await response.text();
+        throw new Error(`Socket.io trigger failed: ${response.status} ${errorText}`);
+      }
+
       return { success: true, mode: 'SOCKETIO' };
     }
 

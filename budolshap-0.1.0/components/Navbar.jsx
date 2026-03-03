@@ -7,7 +7,7 @@ import { useDispatch, useSelector } from "react-redux";
 import { useAuth } from "@/context/AuthContext";
 import { useAuthUI } from "@/context/AuthUIContext";
 import { useSearch } from "@/context/SearchContext";
-import { clearCart } from "@/lib/features/cart/cartSlice";
+import { clearCart, setCart } from "@/lib/features/cart/cartSlice";
 
 import { useRealtimeBuyerOrders } from "@/hooks/useRealtimeBuyerOrders";
 import { useRealtimeUser } from "@/hooks/useRealtimeUser";
@@ -124,6 +124,18 @@ const Navbar = () => {
 
     // Handle user-specific realtime events (like store status updates)
     const handleUserEvent = useCallback((event, data) => {
+        if (event === 'cart-updated') {
+            console.log('🛒 [Navbar] Realtime cart update received. Refreshing cart...');
+            fetch(`/api/cart?userId=${user?.id}`)
+                .then(res => res.json())
+                .then(cartData => {
+                    if (cartData && typeof cartData === 'object') {
+                        dispatch(setCart(cartData));
+                    }
+                })
+                .catch(err => console.error('[Navbar] Failed to refresh cart:', err));
+        }
+
         if (event === 'store-status-updated' && data) {
             if (typeof data.status === 'string') {
                 const normalizedStatus = data.status.toLowerCase()

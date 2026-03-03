@@ -43,6 +43,7 @@ export async function GET(request) {
             isPaid: searchParams.get('isPaid'),
             paymentStatus: searchParams.get('paymentStatus'),
             paymentMethod: searchParams.get('paymentMethod'),
+            paymentId: searchParams.get('paymentId'),
             excludePaymentMethod: searchParams.get('excludePaymentMethod'),
             excludeAbandonedPayments: searchParams.get('excludeAbandonedPayments') || 'true',
             page: searchParams.get('page') || '1',

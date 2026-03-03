@@ -9,6 +9,7 @@ import { createCheckoutSession, getCheckoutSession, updateCheckoutSession, markC
  * Phase 3: Can optionally call internal API for consistency
  */
 export async function POST(request) {
+    let activeCheckoutId = null;
     try {
         const body = await request.json();
         const { amount, method, provider = 'paymongo', billing, description, orderId, orderIds, checkoutId, storeName, createNewSession = false } = body;
@@ -18,7 +19,7 @@ export async function POST(request) {
             ? orderIds 
             : (orderId ? [orderId] : []);
 
-        let activeCheckoutId = checkoutId;
+        activeCheckoutId = checkoutId;
 
         if (!amount || !method) {
             return NextResponse.json({ error: 'Amount and payment method are required' }, { status: 400 });

@@ -1,0 +1,122 @@
+{
+    "comment": "Route 53 Internal DNS Configuration for budolEcosystem",
+    "description": "Private Hosted Zone: budol.internal",
+    "instructions": [
+        "Get Internal ALB DNS Name from CloudFormation stack output:",
+        "aws cloudformation describe-stacks --stack-name budolEcosystem-ECS --query 'Stacks[0].Outputs[?OutputKey==`InternalALBDNSName`].OutputValue' --output text",
+        "",
+        "Replace HOSTED_ZONE_ID with your Route 53 Private Hosted Zone ID",
+        "Replace INTERNAL_ALB_DNS_NAME with the actual Internal ALB DNS name"
+    ],
+    "records": [
+        {
+            "name": "budolid.budol.internal",
+            "type": "A",
+            "alias_target": {
+                "hosted_zone_id": "Z2FDTNDATAQYW2",
+                "dns_name": "INTERNAL_ALB_DNS_NAME",
+                "evaluate_target_health": true
+            }
+        },
+        {
+            "name": "budolaccounting.budol.internal",
+            "type": "A",
+            "alias_target": {
+                "hosted_zone_id": "Z2FDTNDATAQYW2",
+                "dns_name": "INTERNAL_ALB_DNS_NAME",
+                "evaluate_target_health": true
+            }
+        },
+        {
+            "name": "budolpay-gateway.budol.internal",
+            "type": "A",
+            "alias_target": {
+                "hosted_zone_id": "Z2FDTNDATAQYW2",
+                "dns_name": "INTERNAL_ALB_DNS_NAME",
+                "evaluate_target_health": true
+            }
+        },
+        {
+            "name": "budolpay-auth.budol.internal",
+            "type": "A",
+            "alias_target": {
+                "hosted_zone_id": "Z2FDTNDATAQYW2",
+                "dns_name": "INTERNAL_ALB_DNS_NAME",
+                "evaluate_target_health": true
+            }
+        },
+        {
+            "name": "budolpay-wallet.budol.internal",
+            "type": "A",
+            "alias_target": {
+                "hosted_zone_id": "Z2FDTNDATAQYW2",
+                "dns_name": "INTERNAL_ALB_DNS_NAME",
+                "evaluate_target_health": true
+            }
+        },
+        {
+            "name": "budolpay-transaction.budol.internal",
+            "type": "A",
+            "alias_target": {
+                "hosted_zone_id": "Z2FDTNDATAQYW2",
+                "dns_name": "INTERNAL_ALB_DNS_NAME",
+                "evaluate_target_health": true
+            }
+        },
+        {
+            "name": "budolpay-payment.budol.internal",
+            "type": "A",
+            "alias_target": {
+                "hosted_zone_id": "Z2FDTNDATAQYW2",
+                "dns_name": "INTERNAL_ALB_DNS_NAME",
+                "evaluate_target_health": true
+            }
+        },
+        {
+            "name": "budolpay-kyc.budol.internal",
+            "type": "A",
+            "alias_target": {
+                "hosted_zone_id": "Z2FDTNDATAQYW2",
+                "dns_name": "INTERNAL_ALB_DNS_NAME",
+                "evaluate_target_health": true
+            }
+        },
+        {
+            "name": "budolpay-settlement.budol.internal",
+            "type": "A",
+            "alias_target": {
+                "hosted_zone_id": "Z2FDTNDATAQYW2",
+                "dns_name": "INTERNAL_ALB_DNS_NAME",
+                "evaluate_target_health": true
+            }
+        }
+    ],
+    "aws_cli_commands": {
+        "get_alb_dns": "aws cloudformation describe-stacks --stack-name budolEcosystem-ECS --query 'Stacks[0].Outputs[?OutputKey==`InternalALBDNSName`].OutputValue' --output text",
+        "get_hosted_zone_id": "aws route53 list-hosted-zones --query 'HostedZones[?Name==`budol.internal.`].Id' --output text",
+        "apply_changes": "aws route53 change-resource-record-sets --hosted-zone-id HOSTED_ZONE_ID --change-batch file://route53-changes.json",
+        "list_records": "aws route53 list-resource-record-sets --hosted-zone-id HOSTED_ZONE_ID"
+    },
+    "json_batch_file_example": {
+        "comment": "Create A records for budolEcosystem services",
+        "changes": [
+            {
+                "action": "CREATE",
+                "resource_record_set": {
+                    "name": "budolid.budol.internal",
+                    "type": "A",
+                    "alias_target": {
+                        "hosted_zone_id": "Z2FDTNDATAQYW2",
+                        "dns_name": "budolEcosystem-InternalALB-xxxxx.ap-southeast-1.elb.amazonaws.com",
+                        "evaluate_target_health": true
+                    }
+                }
+            }
+        ]
+    },
+    "verification_commands": {
+        "list_all_records": "aws route53 list-resource-record-sets --hosted-zone-id HOSTED_ZONE_ID --output table",
+        "test_dns_from_ec2": "nslookup budolid.budol.internal",
+        "test_curl": "curl http://budolid.budol.internal/health"
+    }
+}

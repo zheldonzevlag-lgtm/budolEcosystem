@@ -1,0 +1,517 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Implementation Plan - ECS Fargate Migration v7.0.0</title>
+    <style>
+        :root {
+            --primary: #0052cc;
+            --secondary: #172b4d;
+            --code-bg: #f4f5f7;
+            --border: #dfe1e6;
+            --success: #15803d;
+            --warning: #b45309;
+        }
+
+        body {
+            font-family: 'Inter', sans-serif;
+            line-height: 1.6;
+            color: var(--secondary);
+            margin: 0;
+            display: flex;
+        }
+
+        .sidebar {
+            width: 260px;
+            height: 100vh;
+            background: #fff;
+            border-right: 1px solid var(--border);
+            position: fixed;
+            padding: 2rem 1rem;
+            overflow-y: auto;
+        }
+
+        .main {
+            margin-left: 280px;
+            padding: 3rem 4rem;
+            max-width: 900px;
+        }
+
+        .nav-item {
+            display: block;
+            padding: 0.75rem 1rem;
+            color: #64748b;
+            text-decoration: none;
+            border-radius: 8px;
+            margin-bottom: 0.25rem;
+            font-size: 0.9rem;
+        }
+
+        .nav-item:hover {
+            background: #f1f5f9;
+            color: var(--primary);
+        }
+
+        .nav-item.active {
+            background: #e0e7ff;
+            color: var(--primary);
+        }
+
+        code {
+            background: var(--code-bg);
+            padding: 0.2rem 0.4rem;
+            border-radius: 4px;
+            font-family: monospace;
+            font-size: 0.875rem;
+        }
+
+        pre {
+            background: #1e293b;
+            color: #e2e8f0;
+            padding: 1rem;
+            border-radius: 8px;
+            overflow-x: auto;
+            font-size: 0.85rem;
+        }
+
+        .section {
+            margin-bottom: 3rem;
+        }
+
+        h1 {
+            font-size: 2rem;
+            font-weight: 800;
+            color: #0f172a;
+            margin-bottom: 1.5rem;
+        }
+
+        h2 {
+            font-size: 1.5rem;
+            font-weight: 700;
+            color: #0f172a;
+            margin-bottom: 1rem;
+            margin-top: 2rem;
+        }
+
+        h3 {
+            font-size: 1.125rem;
+            font-weight: 600;
+            color: #334155;
+            margin-bottom: 0.75rem;
+            margin-top: 1.5rem;
+        }
+
+        ul,
+        ol {
+            padding-left: 1.5rem;
+        }
+
+        li {
+            margin-bottom: 0.5rem;
+        }
+
+        .card {
+            background: #fff;
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            padding: 1.5rem;
+            margin-bottom: 1.5rem;
+        }
+
+        .phase {
+            background: var(--primary);
+            color: white;
+            padding: 0.5rem 1rem;
+            border-radius: 8px;
+            font-weight: 700;
+            display: inline-block;
+            margin-bottom: 1rem;
+        }
+
+        .timeline {
+            border-left: 3px solid var(--primary);
+            padding-left: 2rem;
+            margin-left: 1rem;
+        }
+
+        .milestone {
+            background: #fff;
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            padding: 1.5rem;
+            margin-bottom: 1.5rem;
+            position: relative;
+        }
+
+        .milestone::before {
+            content: '';
+            position: absolute;
+            left: -2.4rem;
+            top: 1.5rem;
+            width: 16px;
+            height: 16px;
+            background: var(--primary);
+            border-radius: 50%;
+        }
+
+        .milestone.completed::before {
+            background: var(--success);
+        }
+
+        .milestone.pending::before {
+            background: var(--warning);
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-bottom: 1.5rem;
+        }
+
+        th,
+        td {
+            padding: 0.75rem;
+            text-align: left;
+            border-bottom: 1px solid var(--border);
+        }
+
+        th {
+            background: #f1f5f9;
+            font-weight: 600;
+        }
+
+        .resource-list {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 1rem;
+        }
+
+        .resource-item {
+            background: #f1f5f9;
+            padding: 0.75rem;
+            border-radius: 6px;
+            font-family: monospace;
+            font-size: 0.85rem;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="sidebar">
+        <div style="font-weight: 800; font-size: 1.25rem; color: var(--primary); margin-bottom: 2rem; padding: 0 1rem;">
+            Budol Ecosystem</div>
+        <nav>
+            <a href="index.html" class="nav-item">Overview</a>
+            <a href="system_architecture.html" class="nav-item">Architecture Deep Dive</a>
+            <a href="how_to_guide.html" class="nav-item">How-To Guide</a>
+            <a href="implementation_plan.html" class="nav-item active">Implementation Plan</a>
+            <a href="developer_manual.html" class="nav-item">Developer Manual</a>
+            <a href="user_manual.html" class="nav-item">User Manual</a>
+            <a href="task.html" class="nav-item">Task/Checklist</a>
+            <a href="system_admin_manual.html" class="nav-item">System Admin</a>
+            <hr style="margin: 1.5rem 0; border: 0; border-top: 1px solid var(--border);">
+            <a href="risk_register.html" class="nav-item">Risk Register</a>
+            <a href="Mitigation.html" class="nav-item">Mitigation Plan</a>
+            <a href="issues_fixes.html" class="nav-item">Issues & Fixes</a>
+            <a href="test_results.html" class="nav-item">Test Results</a>
+            <a href="future_recommendations.html" class="nav-item">Recommendations</a>
+            <hr style="margin: 1.5rem 0; border: 0; border-top: 1px solid var(--border);">
+            <a href="../../knowledgebase.html" class="nav-item">← Back to KB</a>
+        </nav>
+    </div>
+    <div class="main">
+        <h1>Implementation Plan: ECS Fargate Migration</h1>
+        <p style="color: #64748b; margin-bottom: 2rem;">Detailed implementation roadmap for migrating budolEcosystem to
+            AWS ECS Fargate.</p>
+
+        <!-- Project Overview -->
+        <section class="section">
+            <h2>Project Overview</h2>
+
+            <div class="card">
+                <h3>Objectives</h3>
+                <ul>
+                    <li>Migrate 9 backend microservices to AWS ECS Fargate</li>
+                    <li>Implement container-based orchestration</li>
+                    <li>Configure Application Load Balancers</li>
+                    <li>Integrate with existing RDS and Redis</li>
+                    <li>Enable auto-scaling capabilities</li>
+                </ul>
+            </div>
+
+            <div class="card">
+                <h3>Scope</h3>
+                <ul>
+                    <li><strong>In Scope:</strong> ECS cluster, task definitions, services, ALBs, SSM parameters</li>
+                    <li><strong>Out of Scope:</strong> Frontend Amplify apps, existing EC2 instances</li>
+                </ul>
+            </div>
+
+            <div class="card">
+                <h3>Timeline</h3>
+                <p>Estimated Duration: 2-3 weeks</p>
+                <ul>
+                    <li>Week 1: Infrastructure setup and ECR repositories</li>
+                    <li>Week 2: Task definitions and service creation</li>
+                    <li>Week 3: Testing, debugging, and production deployment</li>
+                </ul>
+            </div>
+        </section>
+
+        <!-- AWS Resources -->
+        <section class="section">
+            <h2>AWS Resources Required</h2>
+
+            <div class="card">
+                <h3>ECS Resources</h3>
+                <div class="resource-list">
+                    <div class="resource-item">ECS Cluster: budolEcosystem-production</div>
+                    <div class="resource-item">Task Definitions: 9 families</div>
+                    <div class="resource-item">ECS Services: 9 services</div>
+                    <div class="resource-item">IAM Roles: 3 roles</div>
+                </div>
+            </div>
+
+            <div class="card">
+                <h3>Load Balancers</h3>
+                <div class="resource-list">
+                    <div class="resource-item">External ALB: budolEcosystem-ALB</div>
+                    <div class="resource-item">Internal ALB: budolEcosystem-InternalALB</div>
+                    <div class="resource-item">Target Groups: 18 (2 per service)</div>
+                    <div class="resource-item">Listener Rules: Multiple</div>
+                </div>
+            </div>
+
+            <div class="card">
+                <h3>ECR Repositories</h3>
+                <div class="resource-list">
+                    <div class="resource-item">budolEcosystem/budolid</div>
+                    <div class="resource-item">budolEcosystem/budolaccounting</div>
+                    <div class="resource-item">budolEcosystem/budolpay-gateway</div>
+                    <div class="resource-item">budolEcosystem/budolpay-auth</div>
+                    <div class="resource-item">budolEcosystem/budolpay-wallet</div>
+                    <div class="resource-item">budolEcosystem/budolpay-transaction</div>
+                    <div class="resource-item">budolEcosystem/budolpay-payment</div>
+                    <div class="resource-item">budolEcosystem/budolpay-kyc</div>
+                    <div class="resource-item">budolEcosystem/budolpay-settlement</div>
+                </div>
+            </div>
+
+            <div class="card">
+                <h3>SSM Parameters</h3>
+                <p>50+ parameters for configuration management</p>
+            </div>
+        </section>
+
+        <!-- Implementation Phases -->
+        <section class="section">
+            <h2>Implementation Phases</h2>
+
+            <div class="timeline">
+                <div class="milestone completed">
+                    <span class="phase">Phase 1</span>
+                    <h3>Prerequisites & Infrastructure</h3>
+                    <p><strong>Duration:</strong> 2-3 days</p>
+                    <ul>
+                        <li>Verify VPC and subnet configuration</li>
+                        <li>Verify RDS PostgreSQL availability</li>
+                        <li>Verify Redis ElastiCache availability</li>
+                        <li>Configure AWS CLI credentials</li>
+                        <li>Review security groups</li>
+                    </ul>
+                    <p><strong>Deliverables:</strong> Verified infrastructure readiness</p>
+                </div>
+
+                <div class="milestone completed">
+                    <span class="phase">Phase 2</span>
+                    <h3>ECR Repository Creation</h3>
+                    <p><strong>Duration:</strong> 1 day</p>
+                    <ul>
+                        <li>Run create-ecr-repositories.sh script</li>
+                        <li>Configure lifecycle policies</li>
+                        <li>Verify repository creation</li>
+                    </ul>
+                    <p><strong>Deliverables:</strong> 9 ECR repositories created</p>
+                </div>
+
+                <div class="milestone completed">
+                    <span class="phase">Phase 3</span>
+                    <h3>ECS Cluster Setup</h3>
+                    <p><strong>Duration:</strong> 1-2 days</p>
+                    <ul>
+                        <li>Deploy CloudFormation template</li>
+                        <li>Configure ALBs</li>
+                        <li>Set up target groups</li>
+                        <li>Configure Route 53 private hosted zone</li>
+                    </ul>
+                    <p><strong>Deliverables:</strong> ECS cluster with ALBs operational</p>
+                </div>
+
+                <div class="milestone completed">
+                    <span class="phase">Phase 4</span>
+                    <h3>Task Definitions</h3>
+                    <p><strong>Duration:</strong> 2-3 days</p>
+                    <ul>
+                        <li>Create task definitions for all 9 services</li>
+                        <li>Configure container definitions</li>
+                        <li>Set up environment variables</li>
+                        <li>Configure logging</li>
+                    </ul>
+                    <p><strong>Deliverables:</strong> 9 registered task definitions</p>
+                </div>
+
+                <div class="milestone completed">
+                    <span class="phase">Phase 5</span>
+                    <h3>Docker Image Build & Push</h3>
+                    <p><strong>Duration:</strong> 1-2 days</p>
+                    <ul>
+                        <li>Build Docker images for all services</li>
+                        <li>Push images to ECR</li>
+                        <li>Verify images in ECR</li>
+                    </ul>
+                    <p><strong>Deliverables:</strong> All Docker images in ECR</p>
+                </div>
+
+                <div class="milestone completed">
+                    <span class="phase">Phase 6</span>
+                    <h3>ECS Service Creation</h3>
+                    <p><strong>Duration:</strong> 1-2 days</p>
+                    <ul>
+                        <li>Create ECS services</li>
+                        <li>Configure load balancing</li>
+                        <li>Set up health checks</li>
+                        <li>Configure service auto-scaling</li>
+                    </ul>
+                    <p><strong>Deliverables:</strong> 9 running ECS services</p>
+                </div>
+
+                <div class="milestone completed">
+                    <span class="phase">Phase 7</span>
+                    <h3>Testing & Validation</h3>
+                    <p><strong>Duration:</strong> 2-3 days</p>
+                    <ul>
+                        <li>Run health checks</li>
+                        <li>Test inter-service communication</li>
+                        <li>Test external access</li>
+                        <li>Run E2E tests</li>
+                    </ul>
+                    <p><strong>Deliverables:</strong> All tests passing</p>
+                </div>
+
+                <div class="milestone completed">
+                    <span class="phase">Phase 8</span>
+                    <h3>Production Deployment</h3>
+                    <p><strong>Duration:</strong> 1 day</p>
+                    <ul>
+                        <li>Final verification</li>
+                        <li>DNS cutover</li>
+                        <li>Monitor production traffic</li>
+                        <li>Document issues and fixes</li>
+                    </ul>
+                    <p><strong>Deliverables:</strong> Production-ready system</p>
+                </div>
+            </div>
+        </section>
+
+        <!-- Rollback Plan -->
+        <section class="section">
+            <h2>Rollback Plan</h2>
+
+            <div class="card">
+                <h3>Rollback Triggers</h3>
+                <ul>
+                    <li>Critical service failures affecting >50% of users</li>
+                    <li>Data integrity issues</li>
+                    <li>Security vulnerabilities</li>
+                    <li>Performance degradation >50%</li>
+                </ul>
+            </div>
+
+            <div class="card">
+                <h3>Rollback Steps</h3>
+                <ol>
+                    <li>Stop ECS services: <code>aws ecs update-service --desired-count 0</code></li>
+                    <li>Update DNS to point to previous infrastructure</li>
+                    <li>Verify old infrastructure is operational</li>
+                    <li>Investigate and fix issues</li>
+                    <li>Reattempt deployment</li>
+                </ol>
+            </div>
+        </section>
+
+        <!-- Success Criteria -->
+        <section class="section">
+            <h2>Success Criteria</h2>
+
+            <div class="card">
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Metric</th>
+                            <th>Target</th>
+                            <th>Status</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td>Services Deployed</td>
+                            <td>9/9</td>
+                            <td>✓ Complete</td>
+                        </tr>
+                        <tr>
+                            <td>Health Checks Passing</td>
+                            <td>100%</td>
+                            <td>✓ Complete</td>
+                        </tr>
+                        <tr>
+                            <td>Inter-service Communication</td>
+                            <td>100%</td>
+                            <td>✓ Complete</td>
+                        </tr>
+                        <tr>
+                            <td>E2E Tests</td>
+                            <td>All Passing</td>
+                            <td>✓ Complete</td>
+                        </tr>
+                        <tr>
+                            <td>Documentation</td>
+                            <td>Complete</td>
+                            <td>✓ Complete</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </section>
+
+        <!-- Next Steps -->
+        <section class="section">
+            <h2>Next Steps</h2>
+
+            <div class="card">
+                <h3>Post-Implementation Tasks</h3>
+                <ul>
+                    <li>Configure CloudWatch alarms for monitoring</li>
+                    <li>Set up billing alerts</li>
+                    <li>Implement comprehensive logging</li>
+                    <li>Configure backup automation</li>
+                    <li>Document runbooks for operations</li>
+                </ul>
+            </div>
+
+            <div class="card">
+                <h3>Future Enhancements</h3>
+                <ul>
+                    <li>Implement service mesh (AWS App Mesh)</li>
+                    <li>Add circuit breaker patterns</li>
+                    <li>Implement distributed tracing</li>
+                    <li>Add comprehensive monitoring dashboard</li>
+                    <li>Implement chaos engineering practices</li>
+                </ul>
+            </div>
+        </section>
+    </div>
+</body>
+
+</html>

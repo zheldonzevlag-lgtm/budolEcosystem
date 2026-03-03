@@ -349,8 +349,11 @@ const OrderSummary = ({ totalPrice, items, hasOutOfStock = false, onProcessing }
                 }
 
                 // 2. Update Local Cart (Remove purchased items only)
-                // ONLY clear for COD immediately. For async payments, we wait for success.
-                const isAsyncPayment = ['GCASH', 'MAYA', 'GRAB_PAY', 'QRPH', 'BUDOL_PAY', 'budolPay'].includes(paymentMethod.toUpperCase());
+                // For non-async (COD/Direct) payments, clear immediately.
+                // For async (GCash/Maya/Card), we wait for successful payment (webhook)
+                // to avoid losing the cart if the payment fails/cancels.
+                const isAsyncPayment = ['GCASH', 'MAYA', 'PAYMAYA', 'GRAB_PAY', 'QRPH', 'CARD', 'BUDOL_PAY', 'budolPay'].includes(paymentMethod.toUpperCase());
+                
                 if (!isAsyncPayment && orderItems && orderItems.length > 0) {
                     orderItems.forEach(item => {
                         dispatch(deleteItemFromCart({
@@ -358,7 +361,9 @@ const OrderSummary = ({ totalPrice, items, hasOutOfStock = false, onProcessing }
                             variationId: item.variationId
                         }));
                     });
-                    console.log('🛒 [OrderSummary] Local cart updated for COD (purchased items removed).');
+                    console.log('🛒 [OrderSummary] Local cart updated (purchased items removed for COD).');
+                } else if (isAsyncPayment) {
+                    console.log('🛒 [OrderSummary] Async payment: Keeping items in cart until success or failure.');
                 }
             }
 

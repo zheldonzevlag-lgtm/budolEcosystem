@@ -1,0 +1,331 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>How-To Guide: AWS Gateway Configuration - Budol Ecosystem</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --primary: #0052CC;
+            --secondary: #172B4D;
+            --success: #36B37E;
+            --bg: #F4F5F7;
+            --text: #172B4D;
+            --border: #DFE1E6;
+        }
+
+        body {
+            font-family: 'Inter', sans-serif;
+            line-height: 1.6;
+            color: var(--text);
+            background: var(--bg);
+            margin: 0;
+            display: flex;
+        }
+
+        .sidebar {
+            width: 260px;
+            height: 100vh;
+            background: #fff;
+            border-right: 1px solid var(--border);
+            position: fixed;
+            padding: 2rem 1rem;
+        }
+
+        .main {
+            margin-left: 280px;
+            padding: 3rem 4rem;
+            max-width: 900px;
+            background: #fff;
+            min-height: 100vh;
+            box-shadow: 0 0 20px rgba(0, 0, 0, 0.05);
+        }
+
+        .nav-item {
+            display: block;
+            padding: 0.75rem 1rem;
+            color: #64748b;
+            text-decoration: none;
+            border-radius: 8px;
+            margin-bottom: 0.25rem;
+            font-size: 0.9rem;
+            font-weight: 500;
+        }
+
+        .nav-item:hover {
+            background: #f1f5f9;
+            color: var(--primary);
+        }
+
+        .nav-item.active {
+            background: #e0e7ff;
+            color: var(--primary);
+        }
+
+        h1 {
+            color: var(--primary);
+            border-bottom: 2px solid var(--primary);
+            padding-bottom: 10px;
+            margin-top: 0;
+        }
+
+        h2 {
+            color: var(--secondary);
+            margin-top: 30px;
+            border-left: 4px solid var(--primary);
+            padding-left: 1rem;
+        }
+
+        .guide-step {
+            background: #fff;
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            padding: 2rem;
+            margin-bottom: 2rem;
+        }
+
+        .step-number {
+            display: inline-block;
+            width: 32px;
+            height: 32px;
+            background: var(--primary);
+            color: #fff;
+            border-radius: 50%;
+            text-align: center;
+            line-height: 32px;
+            font-weight: 700;
+            margin-right: 10px;
+        }
+
+        .screenshot {
+            width: 100%;
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            margin: 1.5rem 0;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.05);
+        }
+
+        .code-block {
+            background: #f1f5f9;
+            padding: 1rem;
+            border-radius: 8px;
+            font-family: 'Fira Code', monospace;
+            font-size: 0.9rem;
+            margin: 1rem 0;
+        }
+
+        .alert {
+            padding: 1rem;
+            border-radius: 8px;
+            margin-bottom: 1.5rem;
+            border-left: 4px solid;
+        }
+
+        .alert-important {
+            background: #fff7ed;
+            border-color: #f97316;
+            color: #9a3412;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="sidebar">
+        <div style="font-weight: 800; font-size: 1.25rem; color: var(--primary); margin-bottom: 2rem; padding: 0 1rem;">
+            Budol Ecosystem</div>
+        <nav>
+            <a href="index.html" class="nav-item">Overview</a>
+            <a href="walkthrough.html" class="nav-item">Infrastructure Walkthrough</a>
+            <a href="how_to_guide.html" class="nav-item active">Detailed How-To Guide</a>
+            <a href="implementation_plan.html" class="nav-item">Implementation Plan</a>
+            <a href="developer_manual.html" class="nav-item">Developer Manual</a>
+            <a href="user_manual.html" class="nav-item">User Manual</a>
+            <a href="task.html" class="nav-item">Task/Checklist</a>
+            <a href="system_admin_manual.html" class="nav-item">System Admin</a>
+            <hr style="margin: 1.5rem 0; border: 0; border-top: 1px solid var(--border);">
+            <a href="risk_register.html" class="nav-item">Risk Register</a>
+            <a href="Mitigation.html" class="nav-item">Mitigation Plan</a>
+            <a href="issues_fixes.html" class="nav-item">Issues & Fixes</a>
+            <a href="test_results.html" class="nav-item">Test Results</a>
+            <a href="future_recommendations.html" class="nav-item">Recommendations</a>
+            <hr style="margin: 1.5rem 0; border: 0; border-top: 1px solid var(--border);">
+            <a href="../../knowledgebase.html" class="nav-item">← Back to KB</a>
+        </nav>
+    </div>
+
+    <div class="main">
+        <h1>Detailed How-To: AWS Gateway Configuration</h1>
+        <p>Follow this step-by-step guide to configure primary networking gateways for the BudolEcosystem v13 AWS
+            Migration.</p>
+
+        <section class="guide-step">
+            <h2><span class="step-number">1</span> Provisioning Internet & NAT Gateways</h2>
+            <p>Establish external connectivity for your public and private subnets respectively.</p>
+            <img src="igw_nat_step.png" alt="1.2 Internet & NAT Gateway" class="screenshot">
+            <h3>Action Items:</h3>
+            <ol>
+                <li><strong>Create an Internet Gateway (IGW):</strong> Name it <code>budol-igw</code> and attach it to
+                    <code>budol-vpc</code>.
+                </li>
+                <li><strong>Create a NAT Gateway:</strong> Place it in <code>Public-A</code> subnet.
+                    <div class="alert alert-important" style="margin-top: 10px;">
+                        <strong>Note:</strong> NAT Gateway requires a Public connectivity type and an Elastic IP
+                        allocation.
+                    </div>
+                </li>
+            </ol>
+        </section>
+
+        <section class="guide-step">
+            <h2><span class="step-number">2</span> Creating the NAT Gateway in the Console</h2>
+            <p>Utilize the following configuration parameters in the AWS VPC Dashboard. Ensure the
+                <strong>Subnet</strong> field is set to a <strong>Public Subnet</strong> (e.g., <code>Public-A</code>).
+            </p>
+            <img src="nat_gateway_final_config.png" alt="NAT Gateway Final Configuration" class="screenshot">
+            <h3>Verified Configuration Matrix:</h3>
+            <table>
+                <tr>
+                    <th>Field</th>
+                    <th>Required Value</th>
+                    <th>Status</th>
+                </tr>
+                <tr>
+                    <td><strong>Name</strong></td>
+                    <td><code>budol-nat-gateway</code></td>
+                    <td>✅ Confirmed</td>
+                </tr>
+                <tr>
+                    <td><strong>NAT Gateway ID</strong></td>
+                    <td><code>nat-188d852c4670627d1</code></td>
+                    <td>✅ Provisioned</td>
+                </tr>
+                <tr>
+                    <td><strong>Subnet</strong></td>
+                    <td><code>Public-A</code></td>
+                    <td>✅ Verified Public</td>
+                </tr>
+                <tr>
+                    <td><strong>VPC ID</strong></td>
+                    <td><code>vpc-04266673dc5662967</code></td>
+                    <td>✅ Confirmed Active</td>
+                </tr>
+            </table>
+        </section>
+
+        <section class="guide-step">
+            <h2><span class="step-number">3</span> Updating Route Tables (Egress Control)</h2>
+            <p>Direct traffic flow to ensure subnets have correct egress access via the appropriate gateways.</p>
+
+            <div class="alert alert-info">
+                <strong>Navigation Path:</strong> VPC Dashboard -> Left Sidebar -> <strong>Virtual private
+                    cloud</strong> -> <strong>Route tables</strong>.
+            </div>
+
+            <p>On this page, filter by your VPC (<code>budol-vpc</code>). You will see two tables:</p>
+            <img src="route_tables_dashboard.png" alt="Route Tables Dashboard" class="screenshot">
+
+            <div class="tabs">
+                <button class="tab-btn active" onclick="showTab(event, 'console-method')">Console Method</button>
+                <button class="tab-btn" onclick="showTab(event, 'cli-method')">CLI Method (Recommended)</button>
+            </div>
+
+            <div id="console-method" class="tab-content active">
+                <h3>Part A: Public Route Table (Public-RT)</h3>
+                <ol>
+                    <li>Select <code>rtb-08e5978b7eaa70f60</code> (Public-RT).</li>
+                    <li>Go to the <strong>Routes</strong> tab and click <strong>Edit routes</strong>.</li>
+                    <li>Click <strong>Add route</strong>. <strong>Destination:</strong> <code>0.0.0.0/0</code> |
+                        <strong>Target:</strong> <code>igw-07d7bd6ff86d5f1bd</code>.
+                    </li>
+                    <li>Verify status shows <code>Active</code>.</li>
+                </ol>
+
+                <h3>Part B: Private Route Table (Private-RT)</h3>
+                <ol>
+                    <li>Select <code>rtb-0516e00be63ff8625</code> (Private-RT).</li>
+                    <li>Go to <strong>Routes</strong> -> <strong>Edit routes</strong>.</li>
+                    <li>Add a route: <strong>Destination:</strong> <code>0.0.0.0/0</code> | <strong>Target:</strong>
+                        <code>nat-188d852c4670627d1</code> (budol-nat-gw-01).
+                    </li>
+                </ol>
+            </div>
+
+            <div id="cli-method" class="tab-content">
+                <h3>Using the AWS CLI</h3>
+                <pre><code># 1. Update Public Route Table (Already Verified Active)
+aws ec2 create-route --route-table-id rtb-08e5978b7eaa70f60 --destination-cidr-block 0.0.0.0/0 --gateway-id igw-07d7bd6ff86d5f1bd
+
+# 2. Update Private Route Table
+aws ec2 create-route --route-table-id rtb-0516e00be63ff8625 --destination-cidr-block 0.0.0.0/0 --nat-gateway-id nat-188d852c4670627d1</code></pre>
+                <div class="alert alert-important" style="margin-top: 10px;">
+                    <strong>Verification Status:</strong> The Public Route Table has been confirmed active. Run the
+                    Private Route Table command to finalize multi-zone internet connectivity.
+                </div>
+            </div>
+        </section>
+
+        <script>
+            function showTab(evt, tabName) {
+                var i, tabcontent, tablinks;
+                tabcontent = document.getElementsByClassName("tab-content");
+                for (i = 0; i < tabcontent.length; i++) {
+                    tabcontent[i].style.display = "none";
+                }
+                tablinks = document.getElementsByClassName("tab-btn");
+                for (i = 0; i < tablinks.length; i++) {
+                    tablinks[i].className = tablinks[i].className.replace(" active", "");
+                }
+                document.getElementById(tabName).style.display = "block";
+                evt.currentTarget.className += " active";
+            }
+        </script>
+        <style>
+            .tabs {
+                border-bottom: 2px solid var(--border);
+                margin: 1.5rem 0;
+            }
+
+            .tab-btn {
+                background: none;
+                border: none;
+                padding: 0.75rem 1.5rem;
+                cursor: pointer;
+                color: #64748b;
+                font-weight: 600;
+            }
+
+            .tab-btn.active {
+                color: var(--primary);
+                border-bottom: 2px solid var(--primary);
+                margin-bottom: -2px;
+            }
+
+            .tab-content {
+                display: none;
+                padding: 1rem 0;
+            }
+
+            .tab-content.active {
+                display: block;
+            }
+        </style>
+
+        <section class="guide-step">
+            <h2><span class="step-number">4</span> Final Architectural Verification</h2>
+            <p>Verification of the <strong>Public Route Table</strong> egress confirms correct Internet Gateway
+                attachment.</p>
+            <img src="public_rt_routes_unit_verification.png" alt="Public Route Table Verification" class="screenshot">
+            <h3>Verified Topology Map:</h3>
+            <img src="vpc_resource_map.png" alt="VPC Resource Map" class="screenshot">
+        </section>
+
+        <div class="alert alert-important">
+            <strong>Optimization Tip:</strong> Ensure <strong>DNS Hostnames</strong> and <strong>DNS Resolution</strong>
+            are both <code>Enabled</code> in the VPC settings to support RDS and EFS endpoints.
+        </div>
+    </div>
+</body>
+
+</html>

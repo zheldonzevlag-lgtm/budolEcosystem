@@ -1,0 +1,582 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Implementation Plan - AWS Cloud Migration v6.0.0</title>
+    <style>
+        :root {
+            --primary: #0052cc;
+            --success: #15803d;
+            --warning: #b45309;
+            --bg: #f8fafc;
+            --text: #1e293b;
+            --border: #e2e8f0;
+        }
+
+        body {
+            font-family: 'Inter', system-ui, sans-serif;
+            background: var(--bg);
+            color: var(--text);
+            margin: 0;
+            display: flex;
+        }
+
+        .sidebar {
+            width: 260px;
+            height: 100vh;
+            background: #fff;
+            border-right: 1px solid var(--border);
+            position: fixed;
+            padding: 2rem 1rem;
+        }
+
+        .main {
+            margin-left: 280px;
+            padding: 3rem 4rem;
+            max-width: 900px;
+        }
+
+        .nav-item {
+            display: block;
+            padding: 0.75rem 1rem;
+            color: #64748b;
+            text-decoration: none;
+            border-radius: 8px;
+            margin-bottom: 0.25rem;
+            font-size: 0.9rem;
+            font-weight: 500;
+        }
+
+        .nav-item:hover {
+            background: #f1f5f9;
+            color: var(--primary);
+        }
+
+        .nav-item.active {
+            background: #e0e7ff;
+            color: var(--primary);
+        }
+
+        .card {
+            background: #fff;
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            padding: 2rem;
+            margin-bottom: 2rem;
+        }
+
+        .phase {
+            margin-bottom: 2rem;
+            border-left: 4px solid var(--primary);
+            padding-left: 1.5rem;
+        }
+
+        .phase h3 {
+            color: var(--primary);
+            margin-top: 0;
+        }
+
+        .alert {
+            padding: 1rem;
+            border-radius: 8px;
+            margin-bottom: 1.5rem;
+            border-left: 4px solid;
+        }
+
+        .alert-important {
+            background: #fff7ed;
+            border-color: var(--warning);
+            color: #9a3412;
+        }
+
+        .alert-warning {
+            background: #fef2f2;
+            border-color: #ef4444;
+            color: #991b1b;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="sidebar">
+        <div style="font-weight: 800; font-size: 1.25rem; color: var(--primary); margin-bottom: 2rem; padding: 0 1rem;">
+            Budol Ecosystem</div>
+        <nav>
+            <a href="index.html" class="nav-item">Overview</a>
+            <a href="system_architecture.html" class="nav-item">Architecture Deep Dive</a>
+            <a href="walkthrough.html" class="nav-item">Infrastructure Walkthrough</a>
+            <a href="how_to_guide.html" class="nav-item">Detailed How-To Guide</a>
+            <a href="implementation_plan.html" class="nav-item active">Implementation Plan</a>
+            <a href="developer_manual.html" class="nav-item">Developer Manual</a>
+            <a href="user_manual.html" class="nav-item">User Manual</a>
+            <a href="task.html" class="nav-item">Task/Checklist</a>
+            <a href="system_admin_manual.html" class="nav-item">System Admin</a>
+            <hr style="margin: 1.5rem 0; border: 0; border-top: 1px solid var(--border);">
+            <a href="risk_register.html" class="nav-item">Risk Register</a>
+            <a href="Mitigation.html" class="nav-item">Mitigation Plan</a>
+            <a href="issues_fixes.html" class="nav-item">Issues & Fixes</a>
+            <a href="test_results.html" class="nav-item">Test Results</a>
+            <a href="future_recommendations.html" class="nav-item">Recommendations</a>
+            <hr style="margin: 1.5rem 0; border: 0; border-top: 1px solid var(--border);">
+            <a href="../../knowledgebase.html" class="nav-item">← Back to KB</a>
+        </nav>
+    </div>
+    <div class="main">
+        <h1>AWS Production Infrastructure Setup Guide</h1>
+        <p>A comprehensive, step-by-step guide to provisioning and configuring the budolEcosystem on AWS Free Tier.</p>
+
+        <div class="card">
+            <h2>Project Context & Compliance</h2>
+            <div class="phase">
+                <h3>Purpose</h3>
+                <p>Migration of the BudolEcosystem to AWS Free Tier to achieve enterprise-grade reliability, security,
+                    and scalability while maintaining zero-cost hosting for the Phase 0-3 implementation.</p>
+            </div>
+            <div class="phase">
+                <h3>Rationale</h3>
+                <p>Current Vercel/Local hosting models lack the granular networking control (VPC) and database
+                    consolidation capabilities required for PCI DSS and BSP compliance. AWS provisioned infrastructure
+                    allows for a Gold Standard configuration with clear segregation of duties and data sovereignty.</p>
+            </div>
+            <div class="phase">
+                <h3>Technical Explanation</h3>
+                <p>The architecture leverages a <strong>Multi-Subnet VPC</strong> for isolation. Core services run on
+                    <strong>ECS Fargate</strong> and <strong>AWS Lambda</strong>, while databases are consolidated into
+                    a single <strong>RDS PostgreSQL</strong> instance with logical isolation. Real-time traffic is
+                    handled by a dedicated <strong>Socket.io</strong> server on EC2, bypassing expensive third-party
+                    providers like Pusher.
+                </p>
+            </div>
+        </div>
+
+        <div class="card">
+            <h2>Architectural Deep Dive Summary</h2>
+            <div class="phase">
+                <p>Based on the architectural review completed in v13:</p>
+                <ul>
+                    <li><strong>API Gateway (Port 8080):</strong> Central hub for RBAC and routing. Proxies to 7 core
+                        microservices.</li>
+                    <li><strong>SSO (budolID - Port 8000):</strong> Central identity provider with multi-app redirect
+                        logic.</li>
+                    <li><strong>Financial Core (budolPay):</strong> Split into 7 specialized services (Auth, Wallet, TX,
+                        Payment, KYC, Settlement, Gateway).</li>
+                    <li><strong>Accounting (budolAccounting):</strong> Centralized double-entry ledger.</li>
+                    <li><strong>Real-time (Socket.io - Port 4000):</strong> Transitioned from Pusher to a dedicated EC2
+                        microservice.</li>
+                </ul>
+            </div>
+        </div>
+
+        <div class="card">
+            <h2>Risk & Mitigation Register</h2>
+            <div class="phase">
+                <h3>Identified Risks</h3>
+                <ul>
+                    <li><strong>Free Tier Limits:</strong> Over-provisioning could lead to unexpected costs.</li>
+                    <li><strong>Data Latency:</strong> Consolidated database might face I/O bottlenecks.</li>
+                    <li><strong>Connectivity:</strong> NAT Gateway costs if data transfer exceeds 1GB/month.</li>
+                </ul>
+            </div>
+            <div class="phase">
+                <h3>Mitigation Strategies</h3>
+                <ul>
+                    <li><strong>Billing Alerts:</strong> Integrated CloudWatch alarms at $0.01 threshold.</li>
+                    <li><strong>Sticky Sessions:</strong> ALB configured for websocket session persistence.</li>
+                    <li><strong>Data Squeezing:</strong> S3 Intelligent-Tiering and RDS Storage Auto-scaling.</li>
+                </ul>
+            </div>
+        </div>
+
+        <div class="card">
+            <h2>Compliance & Standards</h2>
+            <div class="phase">
+                <h3>PCI DSS & BSP Alignment</h3>
+                <p>All database traffic is restricted to the private subnet with no public ingress. Secrets are managed
+                    via AWS Secrets Manager with automatic rotation. MFA is enforced for all IAM roles associated with
+                    the production environment.</p>
+            </div>
+        </div>
+
+        <div class="card">
+            <h2>Phase 1: Networking & VPC Setup</h2>
+            <div class="phase">
+                <h3>1.1 Create VPC & Subnets</h3>
+                <ol>
+                    <li>Navigate to **VPC Dashboard** -> **Create VPC**.</li>
+                    <li>Select **VPC only**, Name: <code>budol-vpc</code>, CIDR: <code>10.0.0.0/16</code>.</li>
+                    <li>Create **4 Subnets**:
+                        <ul>
+                            <li><code>Public-A</code> (10.0.1.0/24), <code>Public-B</code> (10.0.2.0/24)</li>
+                            <li><code>Private-A</code> (10.0.10.0/24), <code>Private-B</code> (10.0.11.0/24)</li>
+                        </ul>
+                    </li>
+                </ol>
+            </div>
+            <div class="phase">
+                <h3>1.2 Internet & NAT Gateway</h3>
+                <ol>
+                    <li>Create an **Internet Gateway (IGW)** and attach it to <code>budol-vpc</code>.</li>
+                    <li>Create a **NAT Gateway** in <code>Public-A</code>. Allocate an Elastic IP.</li>
+                    <li><strong>Route Tables:</strong>
+                        <ul>
+                            <li><code>Public-RT</code>: Add route <code>0.0.0.0/0</code> -> IGW. Associate with Public
+                                subnets.</li>
+                            <li><code>Private-RT</code>: Add route <code>0.0.0.0/0</code> -> NAT Gateway. Associate with
+                                Private subnets.</li>
+                        </ul>
+                    </li>
+                </ol>
+                <div class="alert alert-important" style="font-size: 0.85rem; margin-top: 1rem;">
+                    <strong>Operational Note:</strong> For SSM Session Manager to function on EC2 instances in private
+                    subnets, ensure the subnet is explicitly associated with <code>Private-RT</code> and that the route
+                    to the NAT Gateway is active. Lack of association defaults to the Main Route Table which typically
+                    lacks an egress path, causing the instance to appear "Offline".
+                </div>
+            </div>
+        </div>
+        <div class="phase">
+            <h3>1.3 Internal DNS (Route 53)</h3>
+            <ol>
+                <li>Go to **Route 53** -> **Hosted Zones** -> **Create Hosted Zone**.</li>
+                <li>Domain: <code>budol.internal</code>, Type: **Private Hosted Zone**.</li>
+                <li>Associate with <code>budol-vpc</code>.</li>
+                <li>Create A-Records (Alias) for internal load balancers or EC2 IPs (e.g.,
+                    <code>db.budol.internal</code>).
+                </li>
+            </ol>
+        </div>
+        <div class="phase">
+            <h3>1.4 External DNS (DuckDNS Production Mapping)</h3>
+            <p>Based on the verified service logs, the following 6 subdomains must be registered to provide external
+                access to the entire ecosystem features:</p>
+            <table style="width:100%; border-collapse: collapse; font-size: 0.9rem; margin: 1rem 0;">
+                <tr style="background:#f1f5f9; border-bottom: 2px solid var(--border);">
+                    <th style="padding:0.5rem; text-align:left;">Target Service</th>
+                    <th style="padding:0.5rem; text-align:left;">Production Domain</th>
+                    <th style="padding:0.5rem; text-align:left;">Description</th>
+                </tr>
+                <tr>
+                    <td style="padding:0.5rem;"><strong>budolShap</strong></td>
+                    <td style="padding:0.5rem;"><code>budolshap.duckdns.org</code></td>
+                    <td style="padding:0.5rem;">Main Consumer Hub</td>
+                </tr>
+                <tr>
+                    <td style="padding:0.5rem;"><strong>budolID</strong></td>
+                    <td style="padding:0.5rem;"><code>budolid.duckdns.org</code></td>
+                    <td style="padding:0.5rem;">SSO & Verification</td>
+                </tr>
+                <tr>
+                    <td style="padding:0.5rem;"><strong>budolPay</strong></td>
+                    <td style="padding:0.5rem;"><code>budolpay.duckdns.org</code></td>
+                    <td style="padding:0.5rem;">Unified Gateway API</td>
+                </tr>
+                <tr>
+                    <td style="padding:0.5rem;"><strong>Websocket</strong></td>
+                    <td style="padding:0.5rem;"><code>budolws.duckdns.org</code></td>
+                    <td style="padding:0.5rem;">Real-time Events</td>
+                </tr>
+                <tr>
+                    <td style="padding:0.5rem;"><strong>budolAdmin</strong></td>
+                    <td style="padding:0.5rem;"><code>budoladmin.duckdns.org</code></td>
+                    <td style="padding:0.5rem;">Internal Mgmt Panel</td>
+                </tr>
+                <tr>
+                    <td style="padding:0.5rem;"><strong>Accounting</strong></td>
+                    <td style="padding:0.5rem;"><code>budolaccounting.mooo.com</code> <span
+                            style="font-size: 0.7rem; color: #64748b;">(via FreeDNS)</span></td>
+                    <td style="padding:0.5rem;">Ledger & Loan Services</td>
+                </tr>
+            </table>
+            <div class="alert alert-important" style="font-size: 0.85rem;">
+                <strong>Note:</strong> The <code>budolPay</code> subdomain pointed to Port 8080 automatically
+                handles routing for Wallet, TX, KYC, and Settlement services via the Gateway Proxy.
+                <br><br>
+                <strong>Setup Guide:</strong> For a step-by-step portal walkthrough, see the <a
+                    href="system_admin_manual.html#duckdns-guide">DuckDNS Setup Guide</a> in the System Admin
+                Manual.
+            </div>
+        </div>
+    </div>
+
+    <div class="card">
+        <h2>Phase 2: Data Persistence (RDS & Redis)</h2>
+        <div class="phase">
+            <h3>2.1 RDS DB Subnet Group</h3>
+            <div class="alert alert-important" style="background: #f0fdf4; border-color: #16a34a; color: #166534;">
+                <strong>Status:</strong> ✅ Successfully created <code>budol-db-subnet-group</code> spanning 6
+                subnets across 3 AZs.
+            </div>
+            <table style="width:100%; border-collapse: collapse; font-size: 0.85rem; margin-bottom: 1rem;">
+                <tr style="background:#f1f5f9; border-bottom: 1px solid var(--border);">
+                    <th style="padding:0.4rem; text-align:left;">AZ</th>
+                    <th style="padding:0.4rem; text-align:left;">Subnet ID</th>
+                    <th style="padding:0.4rem; text-align:left;">CIDR</th>
+                </tr>
+                <tr>
+                    <td style="padding:0.4rem;">ap-southeast-1b</td>
+                    <td style="padding:0.4rem;"><code>subnet-0c1f30d0bfd8d7088</code></td>
+                    <td style="padding:0.4rem;">10.0.11.0/24</td>
+                </tr>
+                <tr>
+                    <td style="padding:0.4rem;">ap-southeast-1b</td>
+                    <td style="padding:0.4rem;"><code>subnet-0a54d195257b3260f</code></td>
+                    <td style="padding:0.4rem;">10.0.10.0/24</td>
+                </tr>
+                <tr>
+                    <td style="padding:0.4rem;">ap-southeast-1b</td>
+                    <td style="padding:0.4rem;"><code>subnet-0b993ea77d72865</code></td>
+                    <td style="padding:0.4rem;">10.0.2.0/24</td>
+                </tr>
+                <tr>
+                    <td style="padding:0.4rem;">ap-southeast-1b</td>
+                    <td style="padding:0.4rem;"><code>subnet-0243f257e4a558315</code></td>
+                    <td style="padding:0.4rem;">10.0.1.0/24</td>
+                </tr>
+                <tr>
+                    <td style="padding:0.4rem;">ap-southeast-1a</td>
+                    <td style="padding:0.4rem;"><code>subnet-08908183de01ccad</code></td>
+                    <td style="padding:0.4rem;">10.0.12.0/24</td>
+                </tr>
+                <tr>
+                    <td style="padding:0.4rem;">ap-southeast-1c</td>
+                    <td style="padding:0.4rem;"><code>subnet-095b0dd7fabfeff8d</code></td>
+                    <td style="padding:0.4rem;">10.0.13.0/24</td>
+                </tr>
+            </table>
+        </div>
+        <div class="card">
+            <div class="phase-header">
+                <h2>Phase 3: Real-time Deployment</h2>
+                <span class="status-badge status-success"
+                    style="background: #dcfce7; color: #166534; padding: 0.25rem 0.75rem; border-radius: 999px; font-size: 0.75rem; font-weight: 700;">COMPLETED</span>
+            </div>
+            <p>Successfully deployed a dedicated Socket.io microservice on a managed AWS EC2 instance
+                (<code>budol-ws</code>).</p>
+            <ul class="task-list">
+                <li>✅ Provisioned EC2 <code>t3.micro</code> in Private Subnet B (ap-southeast-1b)</li>
+                <li>✅ Deployed Dockerized <code>websocket-server</code> with Nginx Reverse Proxy</li>
+                <li>✅ Implemented <strong>DuckDNS</strong> automation with 5-minute cron updates</li>
+                <li>✅ Secured with <strong>Let's Encrypt SSL</strong> (DNS-01 challenge via DuckDNS plugin)</li>
+            </ul>
+        </div>
+
+        <div class="card">
+            <div class="phase-header">
+                <h2>Phase 3.1: Environment Synchronization</h2>
+                <span class="status-badge status-success"
+                    style="background: #dcfce7; color: #166534; padding: 0.25rem 0.75rem; border-radius: 999px; font-size: 0.75rem; font-weight: 700;">COMPLETED</span>
+            </div>
+            <p>Implementing a unified environment management strategy to ensure seamless switching between local and
+                cloud resources.</p>
+
+            <div class="phase">
+                <h3>Strategy: Centralized Env Manager</h3>
+                <p>Extending <code>env-manager.cjs</code> to synchronize both <strong>DATABASE_URL</strong> and
+                    <strong>WEBSOCKET_URLS</strong> across all 11+ microservices based on the target environment.
+                </p>
+                <ul>
+                    <li><strong>LOCAL:</strong> Connects to local PostgreSQL (5432) and local Node.js WebSocket (4000).
+                    </li>
+                    <li><strong>PRODUCTION:</strong> Connects to AWS RDS (db.budol.internal) and AWS EC2 WebSocket
+                        (https://budolws.duckdns.org).</li>
+                </ul>
+            </div>
+        </div>
+
+        <div class="card">
+            <div class="phase-header">
+                <h2>Phase 3.2: Multi-Domain SSL Implementation</h2>
+                <span class="status-badge status-in-progress"
+                    style="background: #fef9c3; color: #854d0e; padding: 0.25rem 0.75rem; border-radius: 999px; font-size: 0.75rem; font-weight: 700;">IN
+                    PROGRESS</span>
+            </div>
+            <p>Expanding SSL/TLS protection to all ecosystem subdomains to achieve full PCI DSS compliance.</p>
+
+            <div class="phase">
+                <h3>SSL Implementation Matrix</h3>
+                <table style="width:100%; border-collapse: collapse; font-size: 0.9rem; margin: 1rem 0;">
+                    <tr style="background:#f1f5f9; border-bottom: 2px solid var(--border);">
+                        <th style="padding:0.5rem; text-align:left;">Domain</th>
+                        <th style="padding:0.5rem; text-align:left;">Provider</th>
+                        <th style="padding:0.5rem; text-align:left;">Method</th>
+                        <th style="padding:0.5rem; text-align:left;">Status</th>
+                    </tr>
+                    <tr>
+                        <td style="padding:0.5rem;"><code>budolws.duckdns.org</code></td>
+                        <td style="padding:0.5rem;">DuckDNS</td>
+                        <td style="padding:0.5rem;">Certbot (DNS-01)</td>
+                        <td style="padding:0.5rem; color:green;">✅ Active</td>
+                    </tr>
+                    <tr>
+                        <td style="padding:0.5rem;"><code>budolshap.duckdns.org</code></td>
+                        <td style="padding:0.5rem;">DuckDNS</td>
+                        <td style="padding:0.5rem;">AWS Amplify (Auto)</td>
+                        <td style="padding:0.5rem; color:orange;">⏳ Pending Phase 5</td>
+                    </tr>
+                    <tr>
+                        <td style="padding:0.5rem;"><code>budoladmin.duckdns.org</code></td>
+                        <td style="padding:0.5rem;">DuckDNS</td>
+                        <td style="padding:0.5rem;">AWS Amplify (Auto)</td>
+                        <td style="padding:0.5rem; color:orange;">⏳ Pending Phase 5</td>
+                    </tr>
+                    <tr>
+                        <td style="padding:0.5rem;"><code>budolid.duckdns.org</code></td>
+                        <td style="padding:0.5rem;">DuckDNS</td>
+                        <td style="padding:0.5rem;">Certbot (DNS-01)</td>
+                        <td style="padding:0.5rem; color:red;">⚠ Blocked (Needs EIP)</td>
+                    </tr>
+                    <tr>
+                        <td style="padding:0.5rem;"><code>budolpay.duckdns.org</code></td>
+                        <td style="padding:0.5rem;">DuckDNS</td>
+                        <td style="padding:0.5rem;">Certbot (DNS-01)</td>
+                        <td style="padding:0.5rem; color:red;">⚠ Blocked (Needs EIP)</td>
+                    </tr>
+                    <tr>
+                        <td style="padding:0.5rem;"><code>budolaccounting.mooo.com</code></td>
+                        <td style="padding:0.5rem;">FreeDNS</td>
+                        <td style="padding:0.5rem;">Certbot (HTTP-01)</td>
+                        <td style="padding:0.5rem; color:red;">⚠ Blocked (Needs EIP)</td>
+                    </tr>
+                </table>
+            </div>
+
+            <div class="phase">
+                <h3>Technical Summary</h3>
+                <ul>
+                    <li><strong>DuckDNS Domains:</strong> Secured via <code>certbot-dns-duckdns</code> plugin on the
+                        <code>budol-ws</code> (or a dedicated Gateway) instance to handle DNS-01 challenges.
+                    </li>
+                    <li><strong>FreeDNS Domains:</strong> Secured via standard HTTP-01 challenge or manual
+                        provider-specific DNS management.</li>
+                    <li><strong>Local Development SSL:</strong> Recommended tool: <code>mkcert</code> for local CA
+                        certificates.</li>
+                </ul>
+            </div>
+        </div>
+        <div class="phase">
+            <h3>2.2 RDS PostgreSQL 15 Instance</h3>
+            <p><strong>Status:</strong> ✅ Available</p>
+            <ul>
+                <li><strong>Endpoint:</strong>
+                    <code>budol-postgres.cnusinkq689x.ap-southeast-1.rds.amazonaws.com</code>
+                </li>
+                <li><strong>Instance:</strong> <code>db.t3.micro</code>, PostgreSQL 15.x</li>
+                <li><strong>Storage:</strong> 20 GiB gp2</li>
+                <li><strong>Security:</strong> private only, SG: <code>budol-rds-sg</code></li>
+                <li><strong>Internal Alias:</strong> <code>db.budol.internal</code> (Route 53)</li>
+            </ul>
+        </div>
+        <div class="phase">
+            <h3>2.3 Redis Cache (EC2 - Ubuntu)</h3>
+            <div class="alert alert-important" style="background: #f0fdf4; border-color: #16a34a; color: #166534;">
+                <strong>Status:</strong> ✅ EC2 provisioned &amp; Redis server installed and configured.
+            </div>
+            <ul>
+                <li><strong>Instance ID:</strong> <code>i-00db01c308e73fd42</code> (budol-redis)</li>
+                <li><strong>Private IP:</strong> <code>10.0.11.31</code> (ap-southeast-1b, Private Subnet)</li>
+                <li><strong>OS:</strong> Ubuntu 24.04 LTS (ami-dbc59d6b96222)</li>
+                <li><strong>Instance Type:</strong> <code>t3.micro</code></li>
+                <li><strong>Security Group:</strong> Port 6379 open from <code>10.0.0.0/16</code> only</li>
+                <li><strong>Internal Alias:</strong> <code>redis.budol.internal</code> (Route 53 A record →
+                    10.0.11.31)</li>
+            </ul>
+            <p><strong>Redis Configuration Applied:</strong></p>
+            <ul>
+                <li><code>bind 0.0.0.0</code> — VPC-wide access (firewall: SG)</li>
+                <li><code>protected-mode no</code> — Disabled (SG is the security boundary)</li>
+                <li><code>maxmemory 256mb</code> — Prevents OOM on t3.micro</li>
+                <li><code>maxmemory-policy allkeys-lru</code> — LRU eviction for cache workloads</li>
+                <li><code>appendonly yes</code> — AOF persistence enabled (survives restarts)</li>
+                <li><code>supervised systemd</code> — systemd managed, auto-restarts on crash</li>
+            </ul>
+            <p><strong>App Integration:</strong> <code>lib/redis.js</code> added to budolshap-0.1.0 with singleton
+                client, cache helpers, and Redis-backed rate limiting.</p>
+            <p><strong>Setup Script:</strong> <code>scripts/setup_redis_ec2.sh</code> — run via AWS Systems Manager
+                Session Manager on the budol-redis EC2.</p>
+            <p><strong>Screenshots:</strong></p>
+            <div style="display: flex; gap: 1rem; flex-wrap: wrap; margin-top: 0.5rem;">
+                <img src="redis_instance_running.png" alt="Redis EC2 Running"
+                    style="max-width: 48%; border: 1px solid var(--border); border-radius: 8px;" />
+                <img src="redis_instance_details.png" alt="Redis EC2 Details"
+                    style="max-width: 48%; border: 1px solid var(--border); border-radius: 8px;" />
+            </div>
+        </div>
+    </div>
+
+    <div class="card">
+        <h2>Phase 4: Object Storage (S3 Migration)</h2>
+        <div class="phase">
+            <h3>3.1 S3 Bucket & CORS</h3>
+            <ol>
+                <li>Create bucket <code>budol-ecosystem-assets</code>. <strong>Region:</strong>
+                    <code>ap-southeast-1</code>.
+                </li>
+                <li>Under **Permissions** -> **CORS**, add:
+                    <pre
+                        style="background:#f1f5f9; padding:0.5rem; font-size:0.8rem;">[{"AllowedHeaders":["*"],"AllowedMethods":["GET","PUT","POST"],"AllowedOrigins":["*"]}]</pre>
+                </li>
+            </ol>
+        </div>
+    </div>
+
+    <div class="card">
+        <h2>Phase 5: App Provisioning (ECS/Amplify)</h2>
+        <div class="phase">
+            <h3>4.1 Backend APIs Deployment (ECS Fargate)</h3>
+            <p>Deploy the unified <code>Dockerfile.backend</code> to ECS Fargate within the <code>budol-vpc</code>
+                Private Subnets. Use an internal Application Load Balancer (ALB) for service inter-communication.</p>
+            <ol>
+                <li>Register each service in the internal Route 53 <code>budol.internal</code> zone.</li>
+                <li>Ensure <code>api-gateway</code> is configured with VPC-internal URLs for microservices.</li>
+                <li>Configure ECS Service standard logging (CloudWatch) for PCI DSS compliance.</li>
+            </ol>
+        </div>
+    </div>
+
+    <div class="card">
+        <h2>System Dependencies</h2>
+        <div class="phase">
+            <ul>
+                <li><strong>Infrastructure:</strong> AWS (VPC, RDS, S3, Lambda, ECS, Route 53)</li>
+                <li><strong>Application:</strong> Socket.io 4.x, Prisma 5.x, AWS SDK v3</li>
+                <li><strong>Protocols:</strong> HTTPS (SSL/TLS v1.2+), WSS</li>
+            </ul>
+        </div>
+    </div>
+
+    <div class="card">
+        <h2>Verification & Testing</h2>
+        <div class="phase">
+            <h3>Automated Tests</h3>
+            <ul>
+                <li><code>scripts/test_scripts/test-redis-connectivity.jest.js</code>: 8 Jest test cases for VPC cache
+                    stability.</li>
+                <li><code>scripts/test_scripts/test-websocket-connectivity.jest.js</code>: Verification of wss://
+                    handshake and triggers.</li>
+                <li><code>scripts/test_scripts/test-phase16-integration.mjs</code>: E2E checkout flow validation script.
+                </li>
+            </ul>
+        </div>
+        <div class="phase">
+            <h3>Success Criteria</h3>
+            <p>All microservices must report <code>UP</code> status in the CloudWatch dashboard, and end-to-end
+                checkout must complete in under 5 seconds.</p>
+        </div>
+    </div>
+
+    <div class="card">
+        <h2>Future Enhancements & Recommendations</h2>
+        <div class="phase">
+            <ul>
+                <li>Implement <strong>AWS WAF</strong> for Layer 7 protection against SQL injection.</li>
+                <li>Setup <strong>Auto-Scaling Groups</strong> for the Websocket EC2 fleet.</li>
+                <li>Integrate <strong>CloudFront CDN</strong> for global asset delivery speedup.</li>
+            </ul>
+        </div>
+    </div>
+    </div>
+</body>
+
+</html>

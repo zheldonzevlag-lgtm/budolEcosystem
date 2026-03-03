@@ -86,6 +86,10 @@ async function notifyGateway(channel: string, event: string, data: any) {
 
     console.log(`[AuditLog] Notifying gateway about ${event} for channel ${channel}`);
     
+    // Add timeout to prevent hanging requests
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 5000); // 5 second timeout
+
     const response = await fetch(`${GATEWAY_URL}/internal/notify`, {
       method: 'POST',
       headers: {
@@ -95,8 +99,11 @@ async function notifyGateway(channel: string, event: string, data: any) {
         isAdmin: channel === 'admin',
         event,
         data
-      })
+      }),
+      signal: controller.signal
     });
+
+    clearTimeout(timeoutId);
 
     if (!response.ok) {
       console.error(`[AuditLog] Gateway notification failed: ${response.status}`);

@@ -1,0 +1,78 @@
+{
+    "family": "budolPaySettlement",
+    "networkMode": "awsvpc",
+    "requiresCompatibilities": [
+        "FARGATE"
+    ],
+    "cpu": "256",
+    "memory": "512",
+    "executionRoleArn": "arn:aws:iam::194442925745:role/ecsTaskExecutionRole",
+    "taskRoleArn": "arn:aws:iam::194442925745:role/budolPaySettlementTaskRole",
+    "containerDefinitions": [
+        {
+            "name": "budolpay-settlement",
+            "image": "194442925745.dkr.ecr.ap-southeast-1.amazonaws.com/budolecosystem/budolpay-settlement:latest",
+            "essential": true,
+            "portMappings": [
+                {
+                    "containerPort": 8007,
+                    "protocol": "tcp"
+                }
+            ],
+            "environment": [
+                {
+                    "name": "NODE_ENV",
+                    "value": "production"
+                },
+                {
+                    "name": "PORT",
+                    "value": "8007"
+                },
+                {
+                    "name": "TZ",
+                    "value": "Asia/Manila"
+                },
+                {
+                    "name": "GATEWAY_URL",
+                    "value": "http://budolpay-gateway:8080"
+                },
+                {
+                    "name": "ACCOUNTING_SERVICE_URL",
+                    "value": "http://budolaccounting:8005"
+                },
+                {
+                    "name": "REDIS_URL",
+                    "value": "redis://redis-cluster:6379"
+                }
+            ],
+            "secrets": [
+                {
+                    "name": "DATABASE_URL",
+                    "valueFrom": "arn:aws:secretsmanager:ap-southeast-1:194442925745:secret:budolEcosystem/DATABASE_URL"
+                },
+                {
+                    "name": "REDIS_PASSWORD",
+                    "valueFrom": "arn:aws:secretsmanager:ap-southeast-1:194442925745:secret:budolEcosystem/REDIS_PASSWORD"
+                }
+            ],
+            "logConfiguration": {
+                "logDriver": "awslogs",
+                "options": {
+                    "awslogs-group": "/ecs/budolPaySettlement",
+                    "awslogs-region": "ap-southeast-1",
+                    "awslogs-stream-prefix": "ecs"
+                }
+            },
+            "healthCheck": {
+                "command": [
+                    "CMD-SHELL",
+                    "wget --spider -q http://localhost:8007/health || exit 1"
+                ],
+                "interval": 30,
+                "timeout": 10,
+                "retries": 3,
+                "startPeriod": 60
+            }
+        }
+    ]
+}

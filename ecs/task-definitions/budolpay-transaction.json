@@ -1,0 +1,74 @@
+{
+    "family": "budolPayTransaction",
+    "networkMode": "awsvpc",
+    "requiresCompatibilities": [
+        "FARGATE"
+    ],
+    "cpu": "256",
+    "memory": "512",
+    "executionRoleArn": "arn:aws:iam::${AWS_ACCOUNT_ID}:role/ecsTaskExecutionRole",
+    "taskRoleArn": "arn:aws:iam::${AWS_ACCOUNT_ID}:role/budolPayTransactionTaskRole",
+    "containerDefinitions": [
+        {
+            "name": "budolpay-transaction",
+            "image": "${AWS_ACCOUNT_ID}.dkr.ecr.${AWS_REGION}.amazonaws.com/budolecosystem/budolpay-transaction:${IMAGE_TAG}",
+            "essential": true,
+            "portMappings": [
+                {
+                    "containerPort": 8003,
+                    "protocol": "tcp"
+                }
+            ],
+            "environment": [
+                {
+                    "name": "NODE_ENV",
+                    "value": "production"
+                },
+                {
+                    "name": "PORT",
+                    "value": "8003"
+                },
+                {
+                    "name": "TZ",
+                    "value": "Asia/Manila"
+                },
+                {
+                    "name": "GATEWAY_URL",
+                    "value": "http://budolpay-gateway:8080"
+                },
+                {
+                    "name": "REDIS_URL",
+                    "value": "redis://redis-cluster:6379"
+                }
+            ],
+            "secrets": [
+                {
+                    "name": "DATABASE_URL",
+                    "valueFrom": "arn:aws:secretsmanager:${AWS_REGION}:${AWS_ACCOUNT_ID}:secret:budolEcosystem/DATABASE_URL"
+                },
+                {
+                    "name": "REDIS_PASSWORD",
+                    "valueFrom": "arn:aws:secretsmanager:${AWS_REGION}:${AWS_ACCOUNT_ID}:secret:budolEcosystem/REDIS_PASSWORD"
+                }
+            ],
+            "logConfiguration": {
+                "logDriver": "awslogs",
+                "options": {
+                    "awslogs-group": "/ecs/budolPayTransaction",
+                    "awslogs-region": "${AWS_REGION}",
+                    "awslogs-stream-prefix": "ecs"
+                }
+            },
+            "healthCheck": {
+                "command": [
+                    "CMD-SHELL",
+                    "wget --spider -q http://localhost:8003/health || exit 1"
+                ],
+                "interval": 30,
+                "timeout": 10,
+                "retries": 3,
+                "startPeriod": 60
+            }
+        }
+    ]
+}

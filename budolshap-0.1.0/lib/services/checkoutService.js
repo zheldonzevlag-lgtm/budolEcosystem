@@ -1,7 +1,7 @@
 // Checkout Service - Phase 2: Session Robustness
 // Enhanced checkout session management with expiration and cleanup
 
-import { PrismaClient } from '@prisma/client';
+import { prisma } from '@/lib/prisma';
 import { randomUUID } from 'crypto';
 
 
@@ -139,7 +139,7 @@ export async function markCheckoutAsPaid(checkoutId, paymentId, paymentProvider)
         status: 'PAID',
         paymentId,
         paymentProvider,
-        paidAt: new Date()
+        metadata: JSON.stringify({ paidAt: new Date() })
     });
 }
 
@@ -151,7 +151,7 @@ export async function markCheckoutAsPaid(checkoutId, paymentId, paymentProvider)
 export async function expireCheckoutSession(checkoutId) {
     return await updateCheckoutSession(checkoutId, {
         status: 'EXPIRED',
-        expiredAt: new Date()
+        metadata: JSON.stringify({ expiredAt: new Date() })
     });
 }
 
@@ -164,8 +164,10 @@ export async function expireCheckoutSession(checkoutId) {
 export async function markCheckoutAsFailed(checkoutId, failureReason) {
     return await updateCheckoutSession(checkoutId, {
         status: 'FAILED',
-        failureReason,
-        failedAt: new Date()
+        metadata: JSON.stringify({ 
+            failureReason,
+            failedAt: new Date()
+        })
     });
 }
 

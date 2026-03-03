@@ -18,12 +18,12 @@ function askQuestion(query) {
 async function start() {
     console.log('\x1b[1m\x1b[33m%s\x1b[0m', '🚀 budolEcosystem Central Runner');
     console.log('--------------------------------------------------');
-    
+
     console.log('Choose Target Environment:');
     console.log('1. \x1b[32mLOCAL\x1b[0m (Local databases, local network)');
     console.log('2. \x1b[31mPRODUCTION / VERCEL\x1b[0m (Cloud databases, remote environment)');
     console.log('3. \x1b[33mSKIP\x1b[0m (Keep current .env files)');
-    
+
     // Strictly mandatory selection loop
     let choice = process.env.RUN_ENV || '';
     if (!choice) {
@@ -36,7 +36,7 @@ async function start() {
     } else {
         console.log(`\nUsing environment choice: ${choice}`);
     }
-    
+
     let envType = '';
     if (choice === '1') {
         console.log('\n🔄 \x1b[32mSwitching to LOCAL environment...\x1b[0m');
@@ -192,7 +192,7 @@ async function start() {
         const envPath = path.join(app.cwd, '.env');
         if (fs.existsSync(envPath)) {
             const envContent = fs.readFileSync(envPath, 'utf8');
-            
+
             // Extract key values for validation
             const dbMatch = envContent.match(/^DATABASE_URL=["']?(.+?)["']?$/m);
             const nodeEnvMatch = envContent.match(/^NODE_ENV=["']?(.+?)["']?$/m);
@@ -204,7 +204,7 @@ async function start() {
                 // DO NOT set process.env permanently. Use a temporary object or 
                 // manually pass values to validateEnvironment if it supported it.
                 // Since validateEnvironment uses process.env, we must swap carefully.
-                
+
                 const originalEnv = { ...process.env };
 
                 process.env.DATABASE_URL = dbMatch[1];
@@ -241,14 +241,14 @@ async function start() {
         // We start with a copy of process.env but REMOVE variables that
         // should be loaded from the app's own .env file.
         const cleanEnv = { ...process.env };
-        
+
         // Remove variables that might be leaked from previous app starts or the runner itself
         // We do NOT remove NODE_ENV as it is critical for correct behavior
         const varsToRemove = ['DATABASE_URL', 'VERCEL', 'PORT', 'JWT_SECRET', 'LOCAL_IP'];
         varsToRemove.forEach(v => delete cleanEnv[v]);
 
-        const env = { 
-            ...cleanEnv, 
+        const env = {
+            ...cleanEnv,
             PORT: app.port.toString(),
             LOCAL_IP: localIP,
             API_GATEWAY_URL: `http://${localIP}:8080`,
@@ -257,11 +257,13 @@ async function start() {
             TRANSACTION_SERVICE_URL: `http://${localIP}:8003`,
             PAYMENT_GATEWAY_URL: `http://${localIP}:8004`,
             ACCOUNTING_SERVICE_URL: `http://${localIP}:8005`,
-            NEXT_PUBLIC_API_GATEWAY_URL: `http://${localIP}:8080`
+            INTERNAL_WS_URL: process.env.INTERNAL_WS_URL || `http://${localIP}:4000`, // Fallback for local dev
+            NEXT_PUBLIC_API_GATEWAY_URL: `http://${localIP}:8080`,
+            NEXT_PUBLIC_SOCKET_URL: process.env.NEXT_PUBLIC_SOCKET_URL || `http://${localIP}:4000` // Fallback for local dev
         };
-        
-        const childProcess = spawn(app.command, app.args, { 
-            cwd: app.cwd, 
+
+        const childProcess = spawn(app.command, app.args, {
+            cwd: app.cwd,
             shell: true,
             env: env
         });
@@ -287,12 +289,12 @@ async function start() {
     // mDNS Service Discovery
     console.log('\n\x1b[1m\x1b[32m%s\x1b[0m', '📡 Initializing mDNS Service Discovery...');
     const bonjour = new Bonjour();
-    
+
     apps.forEach(app => {
         // Map app names to shorter mDNS types if needed
         // Precise mDNS typing for service discovery
         let mdnsType = 'http';
-        
+
         // The mobile app specifically looks for '_budolpay._tcp.local'
         // We only want the API Gateway (port 8080) to have this type to avoid confusion
         if (app.port === 8080) {
@@ -313,8 +315,8 @@ async function start() {
                 type: mdnsType,
                 protocol: 'tcp',
                 port: app.port,
-                txt: { 
-                    version: '1.0.0', 
+                txt: {
+                    version: '1.0.0',
                     env: 'local',
                     ip: localIP
                 }
