@@ -86,3 +86,4 @@ Ensure HTML attributes like `colSpan` are passed as numbers `{6}` rather than st
 - **Admin Password**: `admin123`
 "# Build trigger"  
 "# Build trigger - updated appRoot"  
+"# Build trigger - fix buildspec"  
