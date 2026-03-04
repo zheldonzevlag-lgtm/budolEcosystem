@@ -2,7 +2,6 @@
 # Purpose: Build, push, and deploy budolshap frontend to ECS
 # Created: 2026-03-04
 # Author: Budol Orchestrator AI
-# Usage: .\deploy-budolshap-frontend.ps1 [version]
 
 param(
     [string]$Version = (Get-Date -Format "yyyyMMdd-HHmmss")
@@ -24,89 +23,118 @@ Write-Host ""
 
 # Step 1: Login to ECR
 Write-Host "📦 Logging in to Amazon ECR..." -ForegroundColor Yellow
-eval $(aws ecr get-login-password --region $AWS_REGION | docker login --username AWS --password-stdin $AWS_ACCOUNT_ID.dkr.ecr.$AWS_REGION.amazonaws.com)
+$ecrPassword = aws ecr get-login-password --region $AWS_REGION
+$ecrPassword | docker login --username AWS --password-stdin "$AWS_ACCOUNT_ID.dkr.ecr.$AWS_REGION.amazonaws.com"
+if ($LASTEXITCODE -ne 0) {
+    Write-Host "❌ ECR login failed" -ForegroundColor Red
+    exit 1
+}
 
-# Step 2: Build Docker image
+# Step 2: Build Docker image with build arguments for Next.js
 Write-Host "🔨 Building Docker image..." -ForegroundColor Yellow
 cd ..\budolshap-0.1.0
-docker build -t $ECR_REPOSITORY`:$Version -t $ECR_REPOSITORY`:latest .
+
+# Construct DATABASE_URL from components
+$DatabaseUrl = "postgresql://${DB_USER}:$DB_PASSWORD@${DB_HOST}:$DB_PORT/$DB_NAME"
+
+Write-Host "🔑 Building with DATABASE_URL for db: $DB_NAME on host: $DB_HOST" -ForegroundColor Cyan
+
+docker build `
+    --build-arg DATABASE_URL="$DatabaseUrl" `
+    --build-arg NEXT_PUBLIC_API_URL="$NEXT_PUBLIC_API_URL" `
+    --build-arg NEXT_PUBLIC_APP_URL="$NEXT_PUBLIC_APP_URL" `
+    -t "$ECR_REPOSITORY`:$Version" `
+    -t "$ECR_REPOSITORY`:latest" `
+    .
+
+if ($LASTEXITCODE -ne 0) {
+    Write-Host "❌ Docker build failed" -ForegroundColor Red
+    exit 1
+}
 
 # Step 3: Tag image for ECR
 Write-Host "🏷️ Tagging image..." -ForegroundColor Yellow
-docker tag $ECR_REPOSITORY`:latest $AWS_ACCOUNT_ID.dkr.ecr.$AWS_REGION.amazonaws.com/$ECR_REPOSITORY`:$Version
-docker tag $ECR_REPOSITORY`:latest $AWS_ACCOUNT_ID.dkr.ecr.$AWS_REGION.amazonaws.com/$ECR_REPOSITORY`:latest
+docker tag "$ECR_REPOSITORY`:latest" "$AWS_ACCOUNT_ID.dkr.ecr.$AWS_REGION.amazonaws.com/$ECR_REPOSITORY`:$Version"
+docker tag "$ECR_REPOSITORY`:latest" "$AWS_ACCOUNT_ID.dkr.ecr.$AWS_REGION.amazonaws.com/$ECR_REPOSITORY`:latest"
 
 # Step 4: Push to ECR
 Write-Host "⬆️ Pushing to ECR..." -ForegroundColor Yellow
-docker push $AWS_ACCOUNT_ID.dkr.ecr.$AWS_REGION.amazonaws.com/$ECR_REPOSITORY`:$Version
-docker push $AWS_ACCOUNT_ID.dkr.ecr.$AWS_REGION.amazonaws.com/$ECR_REPOSITORY`:latest
+docker push "$AWS_ACCOUNT_ID.dkr.ecr.$AWS_REGION.amazonaws.com/$ECR_REPOSITORY`:$Version"
+if ($LASTEXITCODE -ne 0) {
+    Write-Host "❌ Docker push failed" -ForegroundColor Red
+    exit 1
+}
+docker push "$AWS_ACCOUNT_ID.dkr.ecr.$AWS_REGION.amazonaws.com/$ECR_REPOSITORY`:latest"
 
 Write-Host "✅ Image pushed successfully!" -ForegroundColor Green
 Write-Host "   Image URI: $AWS_ACCOUNT_ID.dkr.ecr.$AWS_REGION.amazonaws.com/$ECR_REPOSITORY`:$Version"
 Write-Host ""
 
-# Step 5: Register ECS Task Definition
-Write-Host "📝 Registering ECS Task Definition..." -ForegroundColor Yellow
+# Step 5: Create Task Definition using PowerShell object and ConvertTo-Json
+Write-Host "📝 Creating ECS Task Definition..." -ForegroundColor Yellow
 
-$TaskDefJson = @"
-{
-  "family": "$TASK_FAMILY",
-  "networkMode": "awsvpc",
-  "requiresCompatibilities": ["FARGATE"],
-  "cpu": "1024",
-  "memory": "2048",
-  "executionRoleArn": "arn:aws:iam::$AWS_ACCOUNT_ID`:role/ecsTaskExecutionRole",
-  "taskRoleArn": "arn:aws:iam::$AWS_ACCOUNT_ID`:role/ecsTaskRole",
-  "containerDefinitions": [
-    {
-      "name": "budolshap-frontend",
-      "image": "$AWS_ACCOUNT_ID.dkr.ecr.$AWS_REGION.amazonaws.com/$ECR_REPOSITORY`:$Version",
-      "essential": true,
-      "portMappings": [
-        {
-          "containerPort": $CONTAINER_PORT,
-          "protocol": "tcp"
+$containerDef = @{
+    name = "budolshap-frontend"
+    image = "$AWS_ACCOUNT_ID.dkr.ecr.$AWS_REGION.amazonaws.com/$ECR_REPOSITORY`:$Version"
+    essential = $true
+    portMappings = @(
+        @{
+            containerPort = $CONTAINER_PORT
+            protocol = "tcp"
         }
-      ],
-      "environment": [
-        {"name": "NODE_ENV", "value": "production"},
-        {"name": "PORT", "value": "3000"},
-        {"name": "HOSTNAME", "value": "0.0.0.0"}
-      ],
-      "secrets": [
-        {"name": "DATABASE_URL", "valueFrom": "arn:aws:secretsmanager:$AWS_REGION`:$AWS_ACCOUNT_ID`:secret:budolshap/database-url"},
-        {"name": "NEXTAUTH_SECRET", "valueFrom": "arn:aws:secretsmanager:$AWS_REGION`:$AWS_ACCOUNT_ID`:secret:budolshap/nextauth-secret"},
-        {"name": "NEXTAUTH_URL", "valueFrom": "arn:aws:secretsmanager:$AWS_REGION`:$AWS_ACCOUNT_ID`:secret:budolshap/nextauth-url"}
-      ],
-      "logConfiguration": {
-        "logDriver": "awslogs",
-        "options": {
-          "awslogs-group": "/ecs/$TASK_FAMILY",
-          "awslogs-region": "$AWS_REGION",
-          "awslogs-stream-prefix": "ecs"
+    )
+    environment = @(
+        @{ name = "NODE_ENV"; value = "production" }
+        @{ name = "PORT"; value = "3000" }
+        @{ name = "HOSTNAME"; value = "0.0.0.0" }
+    )
+    secrets = @(
+        @{ name = "DATABASE_URL"; valueFrom = "arn:aws:secretsmanager:$AWS_REGION`:$AWS_ACCOUNT_ID`:secret:budolshap/database-url" }
+        @{ name = "NEXTAUTH_SECRET"; valueFrom = "arn:aws:secretsmanager:$AWS_REGION`:$AWS_ACCOUNT_ID`:secret:budolshap/nextauth-secret" }
+        @{ name = "NEXTAUTH_URL"; valueFrom = "arn:aws:secretsmanager:$AWS_REGION`:$AWS_ACCOUNT_ID`:secret:budolshap/nextauth-url" }
+    )
+    logConfiguration = @{
+        logDriver = "awslogs"
+        options = @{
+            "awslogs-group" = "/ecs/$TASK_FAMILY"
+            "awslogs-region" = $AWS_REGION
+            "awslogs-stream-prefix" = "ecs"
         }
-      },
-      "healthCheck": {
-        "command": ["CMD-SHELL", "node -e \"require('http').get('http://localhost:3000/api/health', (r) => {process.exit(r.statusCode === 200 ? 0 : 1)})\""],
-        "interval": 30,
-        "timeout": 5,
-        "retries": 3,
-        "startPeriod": 60
-      }
     }
-  ]
+    healthCheck = @{
+        command = @("CMD-SHELL", "node -e `"require('http').get('http://localhost:3000/api/health', (r) => {process.exit(r.statusCode === 200 ? 0 : 1)})`"")
+        interval = 30
+        timeout = 5
+        retries = 3
+        startPeriod = 60
+    }
 }
-"@
 
-$TaskDefJson | Out-File -FilePath "task-def.json" -Encoding utf8
+$taskDef = @{
+    family = $TASK_FAMILY
+    networkMode = "awsvpc"
+    requiresCompatibilities = @("FARGATE")
+    cpu = "1024"
+    memory = "2048"
+    executionRoleArn = "arn:aws:iam::$AWS_ACCOUNT_ID`:role/ecsTaskExecutionRole"
+    taskRoleArn = "arn:aws:iam::$AWS_ACCOUNT_ID`:role/ecsTaskRole"
+    containerDefinitions = @($containerDef)
+}
+
+$taskDef | ConvertTo-Json -Depth 10 | Out-File -FilePath "task-def.json" -Encoding utf8
 aws ecs register-task-definition --cli-input-json file://task-def.json --region $AWS_REGION
+if ($LASTEXITCODE -ne 0) {
+    Write-Host "❌ Task definition registration failed" -ForegroundColor Red
+    Remove-Item -Path "task-def.json" -ErrorAction SilentlyContinue
+    exit 1
+}
 Remove-Item -Path "task-def.json"
 
 # Step 6: Check if ECS service exists
 Write-Host "🔍 Checking ECS service..." -ForegroundColor Yellow
-$ServiceExists = aws ecs describe-services --cluster $ECS_CLUSTER --services $ECS_SERVICE --region $AWS_REGION --query "services[0].status" --output text 2>$null
+$ServiceCheck = aws ecs describe-services --cluster $ECS_CLUSTER --services $ECS_SERVICE --region $AWS_REGION --query "services[0].status" --output text 2>$null
 
-if ($ServiceExists -eq "ACTIVE") {
+if ($ServiceCheck -eq "ACTIVE") {
     Write-Host "✅ ECS service exists, updating..." -ForegroundColor Green
     aws ecs update-service `
         --cluster $ECS_CLUSTER `
@@ -119,11 +147,12 @@ if ($ServiceExists -eq "ACTIVE") {
     
     # Get VPC and subnets
     $VPC_ID = aws ec2 describe-vpcs --filters "Name=tag:Name,Values=budolEcosystem-VPC" --query "Vpcs[0].VpcId" --output text --region $AWS_REGION
-    $SUBNETS = aws ec2 describe-subnets --filters "Name=vpc-id,Values=$VPC_ID" "Name=tag:Type,Values=private" --query "Subnets[*].SubnetId" --output text --region $AWS_REGION
+    $SUBNETS_RAW = aws ec2 describe-subnets --filters "Name=vpc-id,Values=$VPC_ID" "Name=tag:Type,Values=private" --query "Subnets[*].SubnetId" --output text --region $AWS_REGION
+    $SUBNETS = ($SUBNETS_RAW -split "\s+") -join ","
     $SECURITY_GROUP = aws ec2 describe-security-groups --filters "Name=group-name,Values=budolshap-frontend-sg" --query "SecurityGroups[0].GroupId" --output text --region $AWS_REGION 2>$null
     
     # Create security group if not exists
-    if (-not $SECURITY_GROUP) {
+    if ([string]::IsNullOrWhiteSpace($SECURITY_GROUP) -or $SECURITY_GROUP -eq "None") {
         Write-Host "🔒 Creating security group..." -ForegroundColor Yellow
         $SECURITY_GROUP = aws ec2 create-security-group `
             --group-name budolshap-frontend-sg `
@@ -169,13 +198,8 @@ if ($ServiceExists -eq "ACTIVE") {
         --region $AWS_REGION
 }
 
-# Step 7: Configure ALB listener rule
-Write-Host "🌐 Configuring ALB listener rule..." -ForegroundColor Yellow
-$LISTENER_ARN = aws elbv2 describe-listeners --load-balancer-arn $ALB_ARN --query "Listeners[0].ListenerArn" --output text --region $AWS_REGION
-
-# Check if rule exists (this would need the target group ARN from above)
 Write-Host ""
-Write-Host "✅ Deployment initiated!" -ForegroundColor Green
+Write-Host "✅ Deployment initiated successfully!" -ForegroundColor Green
 Write-Host ""
 Write-Host "📊 Summary:" -ForegroundColor Cyan
 Write-Host "   Version: $Version"
@@ -186,5 +210,5 @@ Write-Host ""
 Write-Host "⏳ Monitor deployment progress in AWS Console:" -ForegroundColor Yellow
 Write-Host "   https://console.aws.amazon.com/ecs/home?region=$AWS_REGION#/clusters/$ECS_CLUSTER/services"
 Write-Host ""
-Write-Host "🌐 Once deployed, access your application at:"
-Write-Host "   http://budolshap.duckdns.org" -ForegroundColor Green
+Write-Host "🌐 Once deployed, access your application at:" -ForegroundColor Green
+Write-Host "   http://budolshap.duckdns.org"
