@@ -1,0 +1,82 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Issues & Fixes - Budol Ecosystem Phase 4</title>
+    <style>
+        :root { --primary: #0052CC; --secondary: #172B4D; --bg: #F4F5F7; --text: #172B4D; --error: #FF5630; --success: #36B37E; }
+        body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, 'Fira Sans', 'Droid Sans', 'Helvetica Neue', sans-serif; margin: 0; display: flex; color: var(--text); }
+        .sidebar { width: 260px; background: var(--secondary); color: #fff; height: 100vh; position: fixed; padding: 20px; box-sizing: border-box; }
+        .sidebar a { display: block; color: #EBECF0; text-decoration: none; padding: 10px 0; font-size: 0.9rem; border-bottom: 1px solid #344563; }
+        .main-content { margin-left: 260px; padding: 40px; width: 100%; box-sizing: border-box; }
+        .header { border-bottom: 2px solid var(--primary); padding-bottom: 20px; margin-bottom: 30px; }
+        h1, h2 { color: var(--primary); }
+        .issue-card { border: 1px solid #dfe1e6; border-radius: 8px; padding: 20px; margin-bottom: 20px; background: #fff; box-shadow: 0 1px 1px rgba(9,30,66,0.25); border-left: 5px solid var(--error); }
+        .fix-card { border-left: 5px solid var(--success); }
+        pre { background: #F4F5F7; padding: 15px; border-radius: 5px; overflow-x: auto; font-size: 0.85rem; }
+    </style>
+</head>
+<body>
+    <div class="sidebar">
+        <h2>Budol FixLog</h2>
+        <a href="index.html">← Back to Overview</a>
+        <a href="#issues">Technical Issues</a>
+        <a href="#fixes">Implementation Fixes</a>
+    </div>
+    <div class="main-content">
+        <div class="header">
+            <h1>Issues & Fixes: Phase 4 Implementation</h1>
+        </div>
+
+        <section id="issues">
+            <h2>Identified Technical Roadblocks</h2>
+            <div class="issue-card">
+                <h3>Issue 4.1: AWS Secrets Resolution Error</h3>
+                <p><strong>Symptom:</strong> ECS Task Events reported <code>ResourceNotFoundException: Secrets Manager can't find the specified secret</code> despite the secret existence in the account.</p>
+                <p><strong>Root Cause:</strong> The task definition used short names (e.g., <code>budol/db-url</code>) which AWS could not resolve without the specific hash suffix (e.g., <code>-NxLd8V</code>) during the runtime execution role's secret retrieval phase.</p>
+            </div>
+
+            <div class="issue-card">
+                <h3>Issue 4.2: Next.js Standalone Hostname Loop</h3>
+                <p><strong>Symptom:</strong> Budolshap logs showed <code>ENOTFOUND</code> or infinite redirect loops when starting in a Fargate container.</p>
+                <p><strong>Root Cause:</strong> The environment was not specifying a binding address, causing Next.js to try to resolve the internal AWS Task ID as its hostname, which failed to map to a valid network interface.</p>
+            </div>
+
+            <div class="issue-card">
+                <h3>Issue 4.3: Missing Database Schema</h3>
+                <p><strong>Symptom:</strong> Website loaded but showed "0 products found". Database queries confirmed connection but failed with <code>The table public.Product does not exist</code>.</p>
+                <p><strong>Root Cause:</strong> The RDS instance was provisioned but the Prisma schema had not been pushed or migrated to the production endpoint.</p>
+            </div>
+        </section>
+
+        <section id="fixes">
+            <h2>Verification & Fix Implementation</h2>
+            <div class="issue-card fix-card">
+                <h3>Fix 4.1: Full ARN Standardization</h3>
+                <p><strong>Resolution:</strong> Updated the infrastructure automation script (<code>register_tasks.py</code>) to replace all secret references with their **Full Amazon Resource Names (ARNs)**.</p>
+                <pre><code># register_tasks.py snippet
+if secret['name'] == 'DATABASE_URL':
+    secret['valueFrom'] = 'arn:aws:secretsmanager:ap-southeast-1:194442925745:secret:budol/db-url-NxLd8V'</code></pre>
+            </div>
+
+            <div class="issue-card fix-card">
+                <h3>Fix 4.2: Global Interface Binding (0.0.0.0)</h3>
+                <p><strong>Resolution:</strong> Injected the <code>HOSTNAME=0.0.0.0</code> environment variable via the ECS Task Definition to allow the service to listen on all IPv4 addresses within the container networking stack.</p>
+                <pre><code># Task Def Update
+"environment": [
+    {"name": "HOSTNAME", "value": "0.0.0.0"},
+    {"name": "REDIS_URL", "value": "redis://127.0.0.1:6379"}
+]</code></pre>
+            </div>
+
+            <div class="issue-card fix-card">
+                <h3>Fix 4.3: Manual Schema Push & Seed</h3>
+                <p><strong>Resolution:</strong> Executed a one-off ECS task to run <code>npx prisma db push</code> and <code>node scripts/seed-test-data.cjs</code> to initialize the production database tables and sample records.</p>
+                <pre><code># One-off task command override
+sh -c "npx prisma db push --skip-generate && node scripts/seed-test-data.cjs"</code></pre>
+            </div>
+        </section>
+    </div>
+</body>
+</html>

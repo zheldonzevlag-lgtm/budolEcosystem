@@ -21,6 +21,11 @@ export default class Lalamove extends ShippingProvider {
             env: this.env
         });
 
+        // Validate credentials
+        if (!this.apiKey || !this.apiSecret) {
+            console.warn('[Lalamove Service] WARNING: Missing API credentials! Lalamove shipping will not work.');
+        }
+
         // API Base URLs
         this.baseUrl = this.env === 'production'
             ? 'https://rest.lalamove.com'
@@ -35,6 +40,11 @@ export default class Lalamove extends ShippingProvider {
      * Generate HMAC SHA256 signature for API request
      */
     generateSignature(method, path, timestamp, body = '') {
+        // Check if credentials are available
+        if (!this.apiKey || !this.apiSecret) {
+            throw new Error('Lalamove API credentials are not configured. Please set LALAMOVE_CLIENT_ID and LALAMOVE_CLIENT_SECRET environment variables.');
+        }
+
         // Use String.fromCharCode to generate actual CRLF (CR=13, LF=10)
         const CRLF = String.fromCharCode(13, 10);
         const rawSignature = timestamp + CRLF + method + CRLF + path + CRLF + CRLF + body;

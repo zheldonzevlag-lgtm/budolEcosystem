@@ -12,6 +12,7 @@ model User {
   name                 String
   email                String           @unique
   password             String
+  phoneNumber          String?          @unique
   image                String
   cart                 Json             @default("{}")
   accountType          AccountType      @default(BUYER)
@@ -24,6 +25,9 @@ model User {
   emailVerifyToken     String?
   resetToken           String?
   resetTokenExpiry     DateTime?
+  role                 String           @default("USER")
+  permissions          Json?            @default("[]")
+  metadata             Json?            @default("{}")
   createdAt            DateTime         @default(now())
   updatedAt            DateTime         @updatedAt
   buyerReturnRate      Float?           @default(0.0)
@@ -39,22 +43,53 @@ model User {
   store                Store?
 }
 
+model Category {
+  id        String     @id @default(cuid())
+  name      String
+  slug      String     @unique
+  parentId  String?
+  level     Int        @default(0)
+  sortOrder Int        @default(0)
+  image     String?
+  icon      String?
+  isActive  Boolean    @default(true)
+  createdAt DateTime   @default(now())
+  updatedAt DateTime   @updatedAt
+  parent    Category?  @relation("SubCategories", fields: [parentId], references: [id])
+  children  Category[] @relation("SubCategories")
+  products  Product[]  @relation("CategoryToProduct")
+}
+
 model Product {
-  id          String      @id @default(cuid())
-  name        String
-  description String
-  mrp         Float
-  price       Float
-  images      Json        @default("[]")
-  category    String
-  inStock     Boolean     @default(true)
-  storeId     String
-  createdAt   DateTime    @default(now())
-  updatedAt   DateTime    @updatedAt
-  cartItems   CartItem[]
-  orderItems  OrderItem[]
-  store       Store       @relation(fields: [storeId], references: [id], onDelete: Cascade)
-  rating      Rating[]
+  id               String      @id @default(cuid())
+  name             String
+  description      String
+  mrp              Float
+  price            Float
+  images           Json        @default("[]")
+  videos           Json?       @default("[]")
+  category         String?
+  categoryId       String?
+  categoryData     Category?   @relation("CategoryToProduct", fields: [categoryId], references: [id])
+  inStock          Boolean     @default(true)
+  stock            Int         @default(0)
+  weight           Float       @default(0.0)
+  length           Float       @default(0.0)
+  width            Float       @default(0.0)
+  height           Float       @default(0.0)
+  condition        String      @default("New")
+  preOrder         Boolean     @default(false)
+  parent_sku       String?
+  tier_variations  Json?       @default("[]")
+  variation_matrix Json?       @default("[]")
+  hidden_combos    Json?       @default("[]")
+  storeId          String
+  createdAt        DateTime    @default(now())
+  updatedAt        DateTime    @updatedAt
+  cartItems        CartItem[]
+  orderItems   OrderItem[]
+  store        Store       @relation(fields: [storeId], references: [id], onDelete: Cascade)
+  rating       Rating[]
 }
 
 model Order {
@@ -87,17 +122,29 @@ model Order {
   orderItems          OrderItem[]
   paymentProof        PaymentProof?
   returns             Return[]
+  checkoutId          String?
+}
+
+model Checkout {
+  id        String   @id @default(cuid())
+  userId    String
+  total     Float
+  status    String   @default("PENDING")
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 }
 
 model OrderItem {
-  orderId   String
-  productId String
-  quantity  Int
-  price     Float
-  order     Order   @relation(fields: [orderId], references: [id], onDelete: Cascade)
-  product   Product @relation(fields: [productId], references: [id], onDelete: Cascade)
+  id          String  @id @default(cuid())
+  orderId     String
+  productId   String
+  variationId String?
+  quantity    Int
+  price       Float
+  order       Order   @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  product     Product @relation(fields: [productId], references: [id], onDelete: Cascade)
 
-  @@id([orderId, productId])
+  @@unique([orderId, productId, variationId])
 }
 
 model Rating {
@@ -135,6 +182,8 @@ model Address {
   buildingName String?
   floorUnit    String?
   notes        String?
+  label        String?  @default("")
+  isDefault    Boolean  @default(false)
   createdAt    DateTime @default(now())
   updatedAt    DateTime @updatedAt
   user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
@@ -197,6 +246,7 @@ model StoreAddress {
   zip             String
   country         String   @default("Philippines")
   notes           String?
+  label           String?  @default("")
   latitude        Float?
   longitude       Float?
   isDefault       Boolean  @default(false)
@@ -217,16 +267,17 @@ model Cart {
 }
 
 model CartItem {
-  id        String   @id @default(cuid())
-  cartId    String
-  productId String
-  quantity  Int
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-  cart      Cart     @relation(fields: [cartId], references: [id], onDelete: Cascade)
-  product   Product  @relation(fields: [productId], references: [id], onDelete: Cascade)
+  id          String   @id @default(cuid())
+  cartId      String
+  productId   String
+  variationId String?
+  quantity    Int
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  cart        Cart     @relation(fields: [cartId], references: [id], onDelete: Cascade)
+  product     Product  @relation(fields: [productId], references: [id], onDelete: Cascade)
 
-  @@unique([cartId, productId])
+  @@unique([cartId, productId, variationId])
 }
 
 model Wallet {
@@ -343,6 +394,7 @@ model SystemSettings {
   pusherAppId                String?
   pusherSecret               String?
   socketUrl                  String?
+  swrPollingInterval         Int      @default(10000)
   sessionTimeout             Int      @default(15)
   sessionWarning             Int      @default(1)
   loginLimit                 Int      @default(10)
@@ -370,6 +422,8 @@ model SystemSettings {
   googleMapsApiKey           String?
   mapProvider                String   @default("OSM")
   radarApiKey                String?
+  maxProductImages           Int      @default(12)
+  maxProductVideos           Int      @default(0)
 }
 
 model RateLimit {
@@ -378,10 +432,24 @@ model RateLimit {
   expireAt BigInt
 }
 
+model VerificationCode {
+  id         String   @id @default(cuid())
+  identifier String   @unique
+  code       String
+  expiresAt  DateTime
+  type       String   @default("LOGIN")
+  createdAt  DateTime @default(now())
+}
+
 model AuditLog {
   id        String   @id @default(cuid())
-  userId    String
+  userId    String?
   action    String
+  entity    String?
+  entityId  String?
+  details   String?
+  status    String?  @default("SUCCESS")
+  metadata  Json?    @default("{}")
   ipAddress String?
   latitude  String?
   longitude String?
@@ -390,7 +458,7 @@ model AuditLog {
   device    String?
   userAgent String?
   createdAt DateTime @default(now())
-  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  user      User?    @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@index([userId])
   @@index([createdAt])

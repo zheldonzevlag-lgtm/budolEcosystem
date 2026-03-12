@@ -5,7 +5,12 @@ import { prisma } from '@/lib/prisma'
 export async function GET(request) {
     try {
         const { searchParams } = new URL(request.url)
-        const userId = searchParams.get('userId')
+        let userId = searchParams.get('userId')
+
+        // Handle case where userId is string "undefined" or "null"
+        if (userId === 'undefined' || userId === 'null' || !userId) {
+            userId = null;
+        }
 
         console.log('[CART API] GET request received, userId:', userId)
 

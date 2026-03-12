@@ -1,0 +1,13 @@
+COMMAND	304bb995-2e89-4c76-b036-652bf770e3f2		0	0	AWS-RunShellScript	$DEFAULT	0	2026-03-07T04:43:53.851000+08:00	50	0			ap-southeast-1	2026-03-07T02:43:53.851000+08:00		Pending	Pending	1	3600
+ALARMCONFIGURATION	False
+CLOUDWATCHOUTPUTCONFIG		False
+INSTANCEIDS	i-0335b8c303baaaee0
+NOTIFICATIONCONFIG		
+COMMANDS	sudo yum install -y python3 python3-pip
+COMMANDS	sudo pip3 install certbot certbot-dns-duckdns
+COMMANDS	sudo mkdir -p /etc/letsencrypt
+COMMANDS	echo \u0027db0964a1-387c-419a-9272-f87e38b8a542\u0027 | sudo tee /etc/letsencrypt/duckdns.token \u003e /dev/null
+COMMANDS	sudo chmod 600 /etc/letsencrypt/duckdns.token
+COMMANDS	sudo certbot certonly --non-interactive --agree-tos -m galvezjon59@gmail.com --preferred-challenges dns --authenticator dns-duckdns --dns-duckdns-token-file /etc/letsencrypt/duckdns.token --dns-duckdns-propagation-seconds 60 -d budolpay.duckdns.org -d budolid.duckdns.org
+COMMANDS	sudo tar -czf /home/ec2-user/certs.tar.gz -C /etc/letsencrypt/live/budolpay.duckdns.org .
+COMMANDS	aws s3 cp /home/ec2-user/certs.tar.gz s3://budol-restore-staging-v14/certs.tar.gz

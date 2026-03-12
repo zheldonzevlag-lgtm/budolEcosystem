@@ -45,7 +45,14 @@ export function useRealtime({ channel, event, onData, enabled = true, pollingInt
             activeProvider = 'POLLING';
         }
 
-        setProvider(activeProvider);
+        // Only update if provider actually changed to prevent re-render loops
+        setProvider(prev => {
+            if (prev !== activeProvider) {
+                console.log(`[Realtime] Switching provider from ${prev} to ${activeProvider}`);
+                return activeProvider;
+            }
+            return prev;
+        });
     }, [config]);
 
     // 2. Pusher Integration
@@ -54,71 +61,123 @@ export function useRealtime({ channel, event, onData, enabled = true, pollingInt
 
         let pusher;
         let pusherChannel;
+        let isMounted = true;
 
         try {
             pusher = new Pusher(config.pusherKey, {
                 cluster: config.pusherCluster,
             });
 
-            pusher.connection.bind('connected', () => setIsConnected(true));
-            pusher.connection.bind('disconnected', () => setIsConnected(false));
+            pusher.connection.bind('connected', () => {
+                if (isMounted) {
+                    console.log("[Realtime] Pusher connected");
+                    setIsConnected(true);
+                }
+            });
+            pusher.connection.bind('disconnected', () => {
+                if (isMounted) {
+                    console.log("[Realtime] Pusher disconnected");
+                    setIsConnected(false);
+                }
+            });
             pusher.connection.bind('error', (err) => {
+                if (!isMounted) return;
                 console.error("[Realtime] Pusher Connection Error:", err);
-                setProvider('POLLING'); // Dynamic fallback on error
+                // Only fallback on critical errors, not transient ones
+                if (err.error && err.error.data && err.error.data.code === 4001) {
+                    setProvider('POLLING'); // Authentication error
+                }
             });
 
             pusherChannel = pusher.subscribe(channel);
             pusherChannel.bind(event, (data) => {
-                if (onData) onData(data);
+                if (onData && isMounted) onData(data);
             });
         } catch (err) {
             console.error("[Realtime] Failed to initialize Pusher:", err);
-            setTimeout(() => setProvider('POLLING'), 0);
+            if (isMounted) {
+                setTimeout(() => setProvider('POLLING'), 0);
+            }
         }
 
         return () => {
+            isMounted = false;
             if (pusherChannel) pusherChannel.unbind_all();
             if (pusher) {
                 pusher.unsubscribe(channel);
                 pusher.disconnect();
             }
         };
-    }, [enabled, provider, config, channel, event, onData]);
+    }, [enabled, provider, config?.pusherKey, config?.pusherCluster, channel, event]);
 
     // 3. Socket.io Integration
     useEffect(() => {
         if (!enabled || provider !== 'SOCKET_IO' || !config?.socketUrl) return;
 
         let socket;
+        let isMounted = true;
 
         try {
             socket = io(config.socketUrl, {
                 reconnectionAttempts: 3,
-                timeout: 5000
+                timeout: 5000,
+                // Prevent rapid reconnection loops
+                reconnectionDelay: 1000,
+                reconnectionDelayMax: 5000
             });
 
-            socket.on('connect', () => setIsConnected(true));
-            socket.on('disconnect', () => setIsConnected(false));
+            // Track connection state to prevent loops
+            let hasConnected = false;
+
+            socket.on('connect', () => {
+                if (isMounted) {
+                    console.log("[Realtime] Socket.io connected to", config.socketUrl);
+                    hasConnected = true;
+                    setIsConnected(true);
+                }
+            });
+
+            socket.on('disconnect', () => {
+                if (isMounted) {
+                    console.log("[Realtime] Socket.io disconnected");
+                    setIsConnected(false);
+                }
+            });
+
             socket.on('connect_error', (err) => {
-                console.error("[Realtime] Socket.io Connection Error:", err);
-                setProvider('POLLING'); // Dynamic fallback on error
+                if (!isMounted) return;
+                console.error("[Realtime] Socket.io Connection Error:", err.message);
+                // Only fallback to POLLING after all reconnection attempts fail
+                // Don't fallback immediately on first error to avoid reconnection loops
+            });
+
+            socket.on('reconnect_failed', () => {
+                if (!isMounted) return;
+                console.warn("[Realtime] Socket.io reconnection failed, falling back to POLLING");
+                setProvider('POLLING');
             });
 
             socket.on(event, (data) => {
-                if (onData) onData(data);
+                if (onData && isMounted) onData(data);
             });
             
             // If the server requires explicit subscription
             socket.emit('subscribe', channel);
         } catch (err) {
             console.error("[Realtime] Failed to initialize Socket.io:", err);
-            setTimeout(() => setProvider('POLLING'), 0);
+            if (isMounted) {
+                setTimeout(() => setProvider('POLLING'), 0);
+            }
         }
 
         return () => {
-            if (socket) socket.disconnect();
+            isMounted = false;
+            if (socket) {
+                console.log("[Realtime] Cleaning up Socket.io connection");
+                socket.disconnect();
+            }
         };
-    }, [enabled, provider, config, channel, event, onData]);
+    }, [enabled, provider, config?.socketUrl, channel, event]);
 
     // 4. SWR Polling Fallback (Always active if provider is POLLING)
     // We don't use useSWR here directly for data because this is a generic listener.

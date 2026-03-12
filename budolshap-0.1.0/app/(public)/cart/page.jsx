@@ -214,15 +214,21 @@ export default function Cart() {
                                     <td className="flex gap-3 my-4">
                                         <div
                                             className="relative flex gap-3 items-center justify-center bg-slate-100 size-18 rounded-md group overflow-hidden cursor-pointer"
-                                            onClick={() => setPreviewImage(item.images[0])}
+                                            onClick={() => item.images[0] && setPreviewImage(item.images[0])}
                                         >
-                                            <Image
-                                                src={item.images[0]}
-                                                className={`h-14 w-auto transition-all duration-300 ${!item.inStock ? 'opacity-50' : ''}`}
-                                                alt=""
-                                                width={45}
-                                                height={45}
-                                            />
+                                            {item.images[0] ? (
+                                                <Image
+                                                    src={item.images[0]}
+                                                    className={`h-14 w-auto transition-all duration-300 ${!item.inStock ? 'opacity-50' : ''}`}
+                                                    alt=""
+                                                    width={45}
+                                                    height={45}
+                                                />
+                                            ) : (
+                                                <div className="h-14 w-14 flex items-center justify-center bg-slate-200">
+                                                    <span className="text-xs text-slate-400">No img</span>
+                                                </div>
+                                            )}
                                             {/* Eye Icon Overlay */}
                                             <div className="absolute inset-0 bg-black/40 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity duration-300">
                                                 <Eye className="text-white h-6 w-6" />
@@ -315,15 +321,21 @@ export default function Cart() {
                                     <div className="relative flex-shrink-0">
                                         <div
                                             className="relative flex items-center justify-center bg-slate-100 size-18 rounded-md group overflow-hidden cursor-pointer"
-                                            onClick={() => setPreviewImage(item.images[0])}
+                                            onClick={() => item.images[0] && setPreviewImage(item.images[0])}
                                         >
-                                            <Image
-                                                src={item.images[0]}
-                                                className={`h-16 w-auto ${!item.inStock ? 'opacity-50' : ''}`}
-                                                alt=""
-                                                width={64}
-                                                height={64}
-                                            />
+                                            {item.images[0] ? (
+                                                <Image
+                                                    src={item.images[0]}
+                                                    className={`h-16 w-auto ${!item.inStock ? 'opacity-50' : ''}`}
+                                                    alt=""
+                                                    width={64}
+                                                    height={64}
+                                                />
+                                            ) : (
+                                                <div className="h-16 w-16 flex items-center justify-center bg-slate-200">
+                                                    <span className="text-xs text-slate-400">No img</span>
+                                                </div>
+                                            )}
                                             {/* Eye Icon Overlay */}
                                             <div className="absolute inset-0 bg-black/40 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity duration-300">
                                                 <Eye className="text-white h-5 w-5" />

@@ -142,15 +142,17 @@ export async function PUT(request) {
             const { 
                 city, barangay, detailedAddress, street, 
                 latitude, longitude, zip, state, country,
+                district, province,
                 isDefault, notes 
             } = address
 
+            // Map frontend fields (district/province) to backend field (state)
+            const resolvedState = state || district || province || ''
+
             // If setting as default, unset other default addresses
             if (address.isDefault) {
-                await prisma.address.updateMany({
-                    where: { userId: id, isDefault: true },
-                    data: { isDefault: false }
-                })
+                // Use raw SQL to bypass stale Prisma client validation for 'isDefault'
+                await prisma.$executeRaw`UPDATE "Address" SET "isDefault" = false WHERE "userId" = ${id} AND "isDefault" = true`;
             }
 
             // Check if user already has an address
@@ -160,16 +162,15 @@ export async function PUT(request) {
 
             const addressData = {
                 city: city || '',
-                barangay: barangay || null,
+                barangay: barangay || '',
                 street: detailedAddress || street || '',
-                latitude: latitude || 14.5995,
-                longitude: longitude || 120.9842,
+                latitude: latitude ? parseFloat(latitude) : 14.5995,
+                longitude: longitude ? parseFloat(longitude) : 120.9842,
                 zip: zip || '',
-                state: state || '',
+                state: resolvedState,
                 country: country || 'Philippines',
                 notes: notes || '',
                 label: address.label || '',
-                isDefault: address.isDefault !== undefined ? address.isDefault : false,
                 name: name || body.name || '',
                 email: email || body.email || '',
                 phone: phoneNumber || body.phoneNumber || ''
@@ -178,27 +179,26 @@ export async function PUT(request) {
             if (existingAddress) {
                 // If it's the only address, it must be default
                 const addressCount = await prisma.address.count({ where: { userId: id } })
-                if (addressCount === 1) {
-                    addressData.isDefault = true
-                }
                 
                 await prisma.address.update({
                     where: { id: existingAddress.id },
                     data: addressData
                 })
-            } else {
-                // First address is always default
-                const addressCount = await prisma.address.count({ where: { userId: id } })
-                if (addressCount === 0) {
-                    addressData.isDefault = true
-                }
 
-                await prisma.address.create({
+                // Update isDefault via raw SQL if necessary
+                if (address.isDefault || addressCount === 1) {
+                    await prisma.$executeRaw`UPDATE "Address" SET "isDefault" = true WHERE "id" = ${existingAddress.id}`;
+                }
+            } else {
+                const newAddress = await prisma.address.create({
                     data: {
                         ...addressData,
                         userId: id
                     }
                 })
+
+                // Always set first address as default via raw SQL
+                await prisma.$executeRaw`UPDATE "Address" SET "isDefault" = true WHERE "id" = ${newAddress.id}`;
             }
         }
 
@@ -232,7 +232,7 @@ export async function PUT(request) {
                 latitude: latitude ? parseFloat(latitude) : null,
                 longitude: longitude ? parseFloat(longitude) : null,
                 notes: notes || '',
-                isDefault: true
+                label: address.label || ''
             }
 
             try {
@@ -240,18 +240,26 @@ export async function PUT(request) {
                     where: { storeId: user.store.id }
                 })
 
+                let finalStoreAddressId;
                 if (existingStoreAddress) {
-                    await prisma.storeAddress.update({
+                    const updated = await prisma.storeAddress.update({
                         where: { id: existingStoreAddress.id },
                         data: storeAddressData
                     })
+                    finalStoreAddressId = updated.id;
                 } else {
-                    await prisma.storeAddress.create({
+                    const created = await prisma.storeAddress.create({
                         data: {
                             ...storeAddressData,
                             storeId: user.store.id
                         }
                     })
+                    finalStoreAddressId = created.id;
+                }
+
+                // Set isDefault via raw SQL to bypass stale client
+                if (finalStoreAddressId) {
+                    await prisma.$executeRaw`UPDATE "StoreAddress" SET "isDefault" = true WHERE "id" = ${finalStoreAddressId}`;
                 }
             } catch (storeAddrError) {
                 console.error('Error syncing store address:', storeAddrError)

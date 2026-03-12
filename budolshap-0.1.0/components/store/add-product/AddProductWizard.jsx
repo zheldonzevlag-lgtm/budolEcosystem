@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useForm, Controller } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { productSchema } from '@/lib/validations/productSchema';
@@ -11,15 +11,18 @@ import DragDropImageUpload from '@/components/store/add-product/DragDropImageUpl
 import DragDropVideoUpload from '@/components/store/add-product/DragDropVideoUpload';
 import CategorySelector from '@/components/store/add-product/CategorySelector';
 import VariationMatrixManager from '@/components/admin/VariationMatrixManager';
+import DraftListModal from '@/components/store/add-product/DraftListModal';
 import dynamic from 'next/dynamic';
 const CKEditorCustom = dynamic(() => import('@/components/CKEditorCustom'), { ssr: false });
 import { motion, AnimatePresence } from 'framer-motion';
 import { useRouter } from 'next/navigation';
 import { toast } from 'react-hot-toast';
-import { compressImage } from '@/lib/imageUtils';
+import { uploadImage, uploadVideo } from '@/lib/uploadUtils';
+import * as draftStore from '@/lib/draftStore';
+import { initializeUploadQueue, getQueueStatus, subscribeToQueue } from '@/lib/uploadQueue';
 
 // Icons
-import { Package, Truck, Layers, Info, Wand2, Loader2, ChevronDown, ChevronUp, Image, Video, FileText } from 'lucide-react';
+import { Package, Truck, Layers, Info, Wand2, Loader2, ChevronDown, ChevronUp, Image, Video, FileText, Save, CloudOff, CheckCircle, Wifi, WifiOff, RefreshCw, FileStack } from 'lucide-react';
 
 const STEPS = [
     { label: 'Basic Info', icon: Info },
@@ -210,228 +213,384 @@ export default function AddProductWizard({ initialData, storeId }) {
         }
     };
 
-    const uploadImage = async (input) => {
-        let fileOrString = input;
-        let id = null;
-
-        // Handle object format { id, url } from DragDropImageUpload
-        if (typeof input === 'object' && input !== null && !(input instanceof File)) {
-            fileOrString = input.url || input.src;
-            id = input.id;
+    const handleSaveDraft = async () => {
+        if (!storeId) {
+            toast.error('Store not found. Please refresh and try again.');
+            return;
         }
-
-        // If it's already a URL (from existing product), return it
-        if (typeof fileOrString === 'string' && (fileOrString.startsWith('http') || fileOrString.startsWith('/'))) {
-            return input; // Return original input to preserve structure/ID
-        }
-
-        // If it's a base64 string or File object, we need to upload
-        let base64Data = fileOrString;
-
-        // If it's a File object, compress it first
-        if (typeof fileOrString !== 'string' && fileOrString instanceof File) {
-            try {
-                base64Data = await compressImage(fileOrString);
-            } catch (error) {
-                console.error("Compression failed", error);
-                // If compression fails, try to read as data URL directly
-                base64Data = await new Promise((resolve) => {
-                    const reader = new FileReader();
-                    reader.onload = (e) => resolve(e.target.result);
-                    reader.readAsDataURL(fileOrString);
-                });
-            }
-        }
-
-        // Upload to Cloudinary via our API
+        
+        setIsSaving(true);
         try {
-            const response = await fetch('/api/upload', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ image: base64Data })
-            });
-
-            if (!response.ok) {
-                let errorMessage = 'Upload failed';
-                try {
-                    const errorData = await response.json();
-                    errorMessage = errorData.error || errorMessage;
-                } catch (e) {
-                    errorMessage = `Server error (${response.status}): ${response.statusText || 'Unable to process upload'}`;
-                }
-                throw new Error(errorMessage);
-            }
-
-            const data = await response.json();
-
-            // If we have an ID, return object structure, otherwise just URL
-            if (id) {
-                return { id, url: data.url };
-            }
-            return data.url;
-        } catch (error) {
-            console.error("Upload failed:", error);
-            // DO NOT fallback to base64 as it causes ECONNRESET due to large payload size
-            throw new Error(`Failed to upload one or more images: ${error.message}`);
-        }
-    };
-
-    const uploadVideo = async (input) => {
-        let fileOrString = input;
-        let id = null;
-
-        if (typeof input === 'object' && input !== null && !(input instanceof File)) {
-            fileOrString = input.url || input.src;
-            id = input.id;
-        }
-
-        if (typeof fileOrString === 'string' && (fileOrString.startsWith('http') || fileOrString.startsWith('/'))) {
-            return input;
-        }
-
-        let base64Data = fileOrString;
-        if (typeof fileOrString !== 'string' && fileOrString instanceof File) {
-            base64Data = await new Promise((resolve) => {
-                const reader = new FileReader();
-                reader.onload = (e) => resolve(e.target.result);
-                reader.readAsDataURL(fileOrString);
-            });
-        }
-
-        try {
-            const response = await fetch('/api/upload', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ image: base64Data, type: 'video' })
-            });
-
-            if (!response.ok) {
-                let errorMessage = 'Upload failed';
-                try {
-                    const errorData = await response.json();
-                    errorMessage = errorData.error || errorMessage;
-                } catch (e) {
-                    // Fallback for non-JSON errors (like server timeouts)
-                    errorMessage = `Server error (${response.status}): ${response.statusText || 'Unable to process upload'}`;
-                }
-                throw new Error(errorMessage);
-            }
-
-            const data = await response.json();
-            if (id) {
-                return { id, url: data.url };
-            }
-            return data.url;
-        } catch (error) {
-            console.error("Video upload failed:", error);
-            throw new Error(`Failed to upload video: ${error.message}`);
-        }
-    };
-
-    const handleSaveDraft = () => {
-        const data = getValues();
-
-        // Helper to strip base64 from media arrays to prevent QuotaExceededError (5MB limit)
-        const cleanMedia = (media) => (media || []).map(item => {
-            if (typeof item === 'string') {
-                return item.startsWith('data:') ? null : item;
-            }
-            if (item && typeof item === 'object' && item.url) {
-                return item.url && item.url.startsWith('data:') ? { ...item, url: null } : item;
-            }
-            return item;
-        }).filter(item => typeof item === 'string' ? !!item : !!item.url);
-
-        const sanitizedData = {
-            ...data,
-            images: cleanMedia(data.images),
-            videos: cleanMedia(data.videos),
-            // Also clean variation images
-            variation_matrix: (data.variation_matrix || []).map(v => ({
-                ...v,
-                image: (typeof v.image === 'string' && v.image.startsWith('data:')) ? null : v.image
-            }))
-        };
-
-        try {
-            const draftKey = `budol-product-draft-${storeId}`;
-            localStorage.setItem(draftKey, JSON.stringify(sanitizedData));
-            toast.success("Progress saved! (Note: Images/Videos are not stored in local drafts)");
-        } catch (error) {
-            console.error("Failed to save draft", error);
-            if (error.name === 'QuotaExceededError' || error.code === 22) {
-                toast.error("Draft too large to save. Try reducing description length.");
+            const data = getValues();
+            // Save as new draft (generates new ID)
+            const newDraftId = await draftStore.saveDraft(storeId, data, null);
+            if (newDraftId) {
+                setCurrentDraftId(newDraftId);
+                toast.success('Draft saved successfully!');
+                // Refresh drafts list
+                loadDraftsList();
             } else {
-                toast.error("Failed to save draft locally.");
+                toast.error('Failed to save draft');
             }
+        } catch (error) {
+            console.error('Error saving draft:', error);
+            toast.error('Failed to save draft');
+        } finally {
+            setIsSaving(false);
+        }
+    };
+    
+    // Load drafts list
+    const loadDraftsList = async () => {
+        if (!storeId) return;
+        setIsLoadingDrafts(true);
+        try {
+            const drafts = await draftStore.getAllDrafts(storeId);
+            setDraftsList(drafts);
+        } catch (error) {
+            console.error('Error loading drafts:', error);
+        } finally {
+            setIsLoadingDrafts(false);
+        }
+    };
+    
+    // Handle selecting a draft
+    const handleSelectDraft = async (draftId) => {
+        console.log('[DraftListModal] handleSelectDraft called with draftId:', draftId);
+        try {
+            const draft = await draftStore.getDraft(draftId);
+            console.log('[DraftListModal] Draft retrieved:', draft);
+            if (draft) {
+                // Restore form data from draft
+                Object.keys(draft).forEach(key => {
+                    if (key !== 'id' && key !== 'storeId') {
+                        setValue(key, draft[key]);
+                    }
+                });
+                setCurrentDraftId(draftId);
+                console.log('[DraftListModal] About to close modal');
+                setShowDraftListModal(false);
+                console.log('[DraftListModal] Modal should be closed now');
+                toast.success('Draft loaded successfully!');
+            } else {
+                console.log('[DraftListModal] Draft not found!');
+            }
+        } catch (error) {
+            console.error('[DraftListModal] Error loading draft:', error);
+            toast.error('Failed to load draft');
+        }
+    };
+    
+    // Handle deleting a draft
+    const handleDeleteDraft = async (draftId) => {
+        try {
+            await draftStore.deleteDraft(draftId);
+            // Refresh list
+            loadDraftsList();
+            // If deleted current draft, clear it
+            if (currentDraftId === draftId) {
+                setCurrentDraftId(null);
+            }
+        } catch (error) {
+            console.error('Error deleting draft:', error);
+            toast.error('Failed to delete draft');
         }
     };
 
     const [draftAvailable, setDraftAvailable] = useState(false);
+    const [autoSaveStatus, setAutoSaveStatus] = useState('idle'); // 'idle' | 'saving' | 'saved' | 'error'
+    const [lastSaved, setLastSaved] = useState(null);
+    const autoSaveTimerRef = useRef(null);
+    
+    // Multi-draft support
+    const [currentDraftId, setCurrentDraftId] = useState(null);
+    const [draftsList, setDraftsList] = useState([]);
+    const [showDraftListModal, setShowDraftListModal] = useState(false);
+    const [isLoadingDrafts, setIsLoadingDrafts] = useState(false);
+    
+    // Online/Offline status for crash protection and offline-ready
+    const [isOnline, setIsOnline] = useState(true);
+    const [uploadQueueStatus, setUploadQueueStatus] = useState({ pendingCount: 0, failedCount: 0 });
+    const [hasIncompleteUploads, setHasIncompleteUploads] = useState(false);
 
-    // Check for draft on mount
+    // Initialize upload queue and online/offline listeners
     useEffect(() => {
-        if (!initialData?.id && storeId) {
-            const draftKey = `budol-product-draft-${storeId}`;
-            const savedDraft = localStorage.getItem(draftKey);
-            if (savedDraft) {
-                setDraftAvailable(true);
-            }
+        // Set initial online status
+        setIsOnline(typeof navigator !== 'undefined' ? navigator.onLine : true);
+        
+        // Initialize upload queue
+        const cleanup = initializeUploadQueue();
+        
+        // Subscribe to queue updates
+        const unsubscribe = subscribeToQueue((status) => {
+            setUploadQueueStatus({
+                pendingCount: status.pendingCount,
+                failedCount: status.failedCount
+            });
+            setIsOnline(status.isOnline);
+        });
+        
+        // Listen for online/offline events
+        const handleOnline = () => {
+            setIsOnline(true);
+            toast.success("You're back online! Uploads will resume.", { id: 'online-status' });
+        };
+        const handleOffline = () => {
+            setIsOnline(false);
+            toast.error("You're offline. Progress is saved locally.", { id: 'online-status', duration: 4000 });
+        };
+        
+        if (typeof window !== 'undefined') {
+            window.addEventListener('online', handleOnline);
+            window.addEventListener('offline', handleOffline);
         }
-    }, [initialData, storeId]);
+        
+        return () => {
+            cleanup?.();
+            unsubscribe?.();
+            if (typeof window !== 'undefined') {
+                window.removeEventListener('online', handleOnline);
+                window.removeEventListener('offline', handleOffline);
+            }
+        };
+    }, []);
 
-    const restoreDraft = () => {
-        const draftKey = `budol-product-draft-${storeId}`;
-        const savedDraft = localStorage.getItem(draftKey);
-        if (savedDraft) {
-            try {
-                const parsed = JSON.parse(savedDraft);
-                Object.keys(parsed).forEach(key => {
-                    if (key === 'images') {
-                        setValue(key, normalizeMedia(parsed[key]));
-                    } else if (key === 'videos') {
-                        setValue(key, normalizeMedia(parsed[key]));
+    // Check for draft on mount and load drafts list
+    useEffect(() => {
+        const checkDraft = async () => {
+            // Load drafts list for "View Drafts" button
+            if (storeId) {
+                await loadDraftsList();
+            }
+        };
+        checkDraft();
+    }, [storeId]);
+
+    const restoreDraft = async () => {
+        try {
+            const savedDraft = await draftStore.getDraft(storeId);
+            console.log('[restoreDraft] Raw draft data:', {
+                hasData: !!savedDraft,
+                keys: savedDraft ? Object.keys(savedDraft) : [],
+                variationMatrixLength: savedDraft?.variation_matrix?.length,
+                hasVariationMatrix: !!savedDraft?.variation_matrix,
+                hasTierVariations: !!savedDraft?.tier_variations,
+                hasHiddenCombos: !!savedDraft?.hidden_combos
+            });
+            
+            // Log each variant's image status
+            if (savedDraft?.variation_matrix) {
+                console.log('[restoreDraft] Variation matrix in draft:');
+                savedDraft.variation_matrix.forEach((v, i) => {
+                    console.log(`  Variant ${i}:`, { 
+                        hasImage: !!v.image, 
+                        imageType: typeof v.image,
+                        imageUrl: v.image?.url,
+                        imageFile: v.image?.file ? 'has file (base64)' : 'no file'
+                    });
+                });
+            }
+            
+            if (savedDraft) {
+                Object.keys(savedDraft).forEach(key => {
+                    if (key === 'images' || key === 'videos') {
+                        setValue(key, normalizeMedia(savedDraft[key]));
+                    } else if (key === 'variation_matrix') {
+                        console.log('[restoreDraft] Setting variation_matrix:', savedDraft[key]?.length, 'variants');
+                        // Log each variant's image status
+                        savedDraft[key]?.forEach((v, i) => {
+                            console.log(`  Variant ${i}:`, { hasImage: !!v.image, imageType: typeof v.image, imageValue: v.image?.url || v.image });
+                        });
+                        setValue(key, savedDraft[key]);
+                    } else if (key === 'hidden_combos') {
+                        console.log('[restoreDraft] Setting hidden_combos:', savedDraft[key]);
+                        setValue(key, savedDraft[key]);
                     } else {
-                        setValue(key, parsed[key]);
+                        setValue(key, savedDraft[key]);
                     }
                 });
                 toast.success("Draft restored successfully!");
                 setDraftAvailable(false);
-            } catch (e) {
-                console.error("Error parsing draft", e);
-                toast.error("Failed to restore draft");
             }
+        } catch (e) {
+            console.error("Error restoring draft", e);
+            toast.error("Failed to restore draft");
         }
     };
 
+    // Auto-save draft with status tracking - optimized to avoid saving during uploads
+    // Only auto-saves when there's an existing draft (currentDraftId), to prevent creating duplicate drafts
+    useEffect(() => {
+        if (!storeId) return;
+
+        const performAutoSave = async () => {
+            const data = getValues();
+            // Check if form has any meaningful data
+            const hasData = data.name || data.categoryId || (data.images || []).length > 0 || (data.videos || []).length > 0 || (data.variation_matrix || []).length > 0;
+            
+            // Skip if currently uploading (check if any images/videos are in uploading state)
+            const isUploading = (data.images || []).some(img => img.uploading) || (data.videos || []).some(vid => vid.uploading);
+            
+            // Only auto-save if we have an existing draft to update
+            // This prevents creating duplicate drafts on every auto-save
+            if (hasData && !isUploading && currentDraftId) {
+                setAutoSaveStatus('saving');
+                try {
+                    await draftStore.saveDraft(storeId, data, currentDraftId);
+                    setAutoSaveStatus('saved');
+                    setLastSaved(new Date());
+                    console.log('[Auto-save] Draft saved to IndexedDB');
+                    
+                    // Reset status after 3 seconds
+                    setTimeout(() => setAutoSaveStatus('idle'), 3000);
+                } catch (error) {
+                    console.error('[Auto-save] Failed to save:', error);
+                    setAutoSaveStatus('error');
+                    setTimeout(() => setAutoSaveStatus('idle'), 5000);
+                }
+            }
+        };
+
+        // Debounced auto-save - wait 3 seconds after last change
+        const interval = setInterval(() => {
+            if (autoSaveTimerRef.current) {
+                clearTimeout(autoSaveTimerRef.current);
+            }
+            autoSaveTimerRef.current = setTimeout(performAutoSave, 3000);
+        }, 1000);
+
+        return () => {
+            if (autoSaveTimerRef.current) {
+                clearTimeout(autoSaveTimerRef.current);
+            }
+            clearInterval(interval);
+        };
+    }, [storeId, getValues]);
+
     const onSubmit = async (data) => {
+        // Check if online - require internet for submission
+        if (!isOnline) {
+            toast.error("You're currently offline. Please connect to the internet to submit.");
+            return;
+        }
+        
         setIsSaving(true);
-        const toastId = toast.loading("Saving product...");
+        const toastId = toast.loading("Preparing product...");
 
         try {
             if (!storeId) {
                 throw new Error("Store ID is missing. Please refresh and try again.");
             }
 
-            // 1. Upload Main Images
+            // Check for any files that need uploading
+            const pendingImages = (data.images || []).filter(img => img.file && !img.url?.startsWith('http'));
+            const pendingVideos = (data.videos || []).filter(vid => vid.file && !vid.url?.startsWith('http'));
+            const pendingVariants = (data.variation_matrix || []).filter(v => v.image?.file && !v.image?.url?.startsWith('http'));
+            
+            const totalPending = pendingImages.length + pendingVideos.length + pendingVariants.length;
+            
+            // Update toast to show upload progress
+            if (totalPending > 0) {
+                toast.loading(`Uploading ${totalPending} media file(s) to Cloudinary...`, { id: toastId });
+            }
+
+            // 1. Upload pending images - only upload files that haven't been uploaded yet
             const processedImages = await Promise.all(
-                (data.images || []).map(img => uploadImage(img.url || img))
+                (data.images || []).map(async (img) => {
+                    // If already has Cloudinary URL, use it
+                    if (img.url && (img.url.startsWith('http') || img.url.startsWith('/'))) {
+                        return img.url;
+                    }
+                    // If has a file object, upload it now
+                    if (img.file) {
+                        try {
+                            const cloudinaryUrl = await uploadImage(img.file);
+                            return cloudinaryUrl;
+                        } catch (error) {
+                            console.error('Failed to upload image:', error);
+                            throw new Error(`Failed to upload image: ${img.fileName || 'unknown'}`);
+                        }
+                    }
+                    // If it's a string but not a URL, try to use it
+                    if (typeof img === 'string') {
+                        return img;
+                    }
+                    return '';
+                })
             );
 
+            // 2. Upload pending videos
             const processedVideos = await Promise.all(
-                (data.videos || []).map(video => uploadVideo(video.url || video))
+                (data.videos || []).map(async (video) => {
+                    if (video.url && (video.url.startsWith('http') || video.url.startsWith('/'))) {
+                        return video.url;
+                    }
+                    if (video.file) {
+                        try {
+                            const cloudinaryUrl = await uploadVideo(video.file);
+                            return cloudinaryUrl;
+                        } catch (error) {
+                            console.error('Failed to upload video:', error);
+                            throw new Error(`Failed to upload video: ${video.fileName || 'unknown'}`);
+                        }
+                    }
+                    if (typeof video === 'string') {
+                        return video;
+                    }
+                    return '';
+                })
             );
 
-            // 2. Upload Variation Images
+            // 3. Upload pending variation images
             let processedVariations = [];
             if (data.hasVariations && data.variation_matrix?.length > 0) {
                 processedVariations = await Promise.all(
                     data.variation_matrix.map(async (variant) => {
-                        let imageUrl = variant.image;
-                        if (variant.image) {
-                            imageUrl = await uploadImage(variant.image);
+                        const image = variant.image;
+                        // Handle both string URLs (from database) and object format (from user upload)
+                        // Database stores: "https://res.cloudinary.com/abc.jpg"
+                        // User upload stores: { url: "blob:...", file: File }
+                        let imageUrl = typeof image === 'string' ? image : image?.url;
+                        
+                        // If already has Cloudinary URL, use it (prevents re-upload and preserves existing images)
+                        if (imageUrl && (imageUrl.startsWith('http') || imageUrl.startsWith('/'))) {
+                            return { ...variant, image: imageUrl };
                         }
-                        return { ...variant, image: imageUrl };
+                        
+                        // If has a file object (direct from user selection), upload it now
+                        if (image?.file && image.file instanceof File) {
+                            try {
+                                imageUrl = await uploadImage(image.file);
+                                return { ...variant, image: imageUrl };
+                            } catch (error) {
+                                console.error('Failed to upload variant image:', error);
+                                throw new Error(`Failed to upload variant image`);
+                            }
+                        }
+                        
+                        // If has a blob URL (local preview), we can't upload it directly
+                        // It needs to be converted to a File first
+                        if (imageUrl && imageUrl.startsWith('blob:')) {
+                            console.warn('Variant image has blob URL that cannot be uploaded directly:', imageUrl);
+                            // Try to get from file data if available
+                            if (image?.fileData) {
+                                try {
+                                    // Convert base64 to blob then to File
+                                    const response = await fetch(image.fileData);
+                                    const blob = await response.blob();
+                                    const file = new File([blob], image.fileName || 'variant-image.jpg', { type: image.fileType || 'image/jpeg' });
+                                    imageUrl = await uploadImage(file);
+                                    return { ...variant, image: imageUrl };
+                                } catch (err) {
+                                    console.error('Failed to convert and upload variant image:', err);
+                                }
+                            }
+                            // If we can't upload, keep the blob URL (won't work on server)
+                            return { ...variant, image: imageUrl };
+                        }
+                        
+                        // Preserve existing image URL if it exists, otherwise set to null
+                        return { ...variant, image: imageUrl || null };
                     })
                 );
             }
@@ -453,6 +612,13 @@ export default function AddProductWizard({ initialData, storeId }) {
                 height: parseFloat(data.height || 0),
             };
 
+            // Fix for "Price must be greater than 0" when hasVariations is true
+            // If the product has variations, the base price is the minimum price of all variations
+            if (data.hasVariations && processedVariations.length > 0) {
+                const minPrice = Math.min(...processedVariations.map(v => parseFloat(v.price || 0)));
+                payload.price = minPrice > 0 ? minPrice : payload.price;
+            }
+
             // 4. Send to API
             const isEdit = !!initialData?.id;
             const url = isEdit ? `/api/products/${initialData.id}` : '/api/products';
@@ -471,9 +637,8 @@ export default function AddProductWizard({ initialData, storeId }) {
 
             toast.success(isEdit ? "Product updated successfully!" : "Product created successfully!", { id: toastId });
 
-            if (!isEdit) {
-                localStorage.removeItem(`budol-product-draft-${storeId}`);
-            }
+            // Clean up draft after successful save (both new and existing products)
+            await draftStore.deleteDraft(storeId);
 
             // Redirect to products list
             router.push('/store/manage-product');
@@ -517,6 +682,104 @@ export default function AddProductWizard({ initialData, storeId }) {
                         className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium rounded-lg transition-colors shadow-sm"
                     >
                         Restore Draft
+                    </button>
+                </div>
+            )}
+
+            {/* Auto-save Status Indicator */}
+            {autoSaveStatus !== 'idle' && (
+                <div className={`mb-4 px-4 py-2 rounded-lg flex items-center gap-2 text-sm font-medium animate-in fade-in ${
+                    autoSaveStatus === 'saving' ? 'bg-yellow-50 text-yellow-800 border border-yellow-200' :
+                    autoSaveStatus === 'saved' ? 'bg-green-50 text-green-800 border border-green-200' :
+                    autoSaveStatus === 'error' ? 'bg-red-50 text-red-800 border border-red-200' : 'hidden'
+                }`}>
+                    {autoSaveStatus === 'saving' && (
+                        <>
+                            <Loader2 className="w-4 h-4 animate-spin" />
+                            <span>Saving locally...</span>
+                        </>
+                    )}
+                    {autoSaveStatus === 'saved' && (
+                        <>
+                            <CheckCircle className="w-4 h-4" />
+                            <span>Saved locally {lastSaved && `at ${lastSaved.toLocaleTimeString()}`}</span>
+                        </>
+                    )}
+                    {autoSaveStatus === 'error' && (
+                        <>
+                            <CloudOff className="w-4 h-4" />
+                            <span>Failed to save. Your work may be lost on refresh.</span>
+                        </>
+                    )}
+                </div>
+            )}
+
+            {/* View Drafts Button */}
+            {storeId && (
+                <div className="mb-4 flex items-center justify-between">
+                    <button
+                        type="button"
+                        onClick={() => setShowDraftListModal(true)}
+                        className="flex items-center gap-2 px-4 py-2 bg-white border border-gray-300 hover:bg-gray-50 text-gray-700 rounded-lg text-sm font-medium transition-colors"
+                    >
+                        <FileStack className="w-4 h-4" />
+                        <span>View Drafts {draftsList.length > 0 ? `(${draftsList.length})` : ''}</span>
+                    </button>
+                </div>
+            )}
+
+            {/* Draft List Modal */}
+            <DraftListModal
+                isOpen={showDraftListModal}
+                onClose={() => setShowDraftListModal(false)}
+                drafts={draftsList}
+                onSelectDraft={handleSelectDraft}
+                onDeleteDraft={handleDeleteDraft}
+                isLoading={isLoadingDrafts}
+            />
+
+            {/* Online/Offline Status Indicator */}
+            {(
+                <div className={`mb-4 px-4 py-2 rounded-lg flex items-center gap-2 text-sm font-medium animate-in fade-in ${
+                    isOnline ? 'bg-green-50 text-green-800 border border-green-200' : 'bg-orange-50 text-orange-800 border border-orange-200'
+                }`}>
+                    {isOnline ? (
+                        <>
+                            <Wifi className="w-4 h-4" />
+                            <span>Online - {uploadQueueStatus.pendingCount > 0 ? `${uploadQueueStatus.pendingCount} uploads pending` : 'All uploads complete'}</span>
+                            {uploadQueueStatus.failedCount > 0 && (
+                                <span className="ml-2 px-2 py-0.5 bg-red-100 text-red-700 rounded-full text-xs">
+                                    {uploadQueueStatus.failedCount} failed
+                                </span>
+                            )}
+                        </>
+                    ) : (
+                        <>
+                            <WifiOff className="w-4 h-4" />
+                            <span>Offline - Progress saved locally. Uploads will resume when online.</span>
+                        </>
+                    )}
+                </div>
+            )}
+
+            {/* Incomplete Uploads Recovery Banner */}
+            {hasIncompleteUploads && (
+                <div className="mb-4 p-4 bg-amber-50 border border-amber-200 rounded-lg flex items-center justify-between animate-in fade-in">
+                    <div className="flex items-center gap-3">
+                        <div className="p-2 bg-amber-100 rounded-full text-amber-600">
+                            <RefreshCw size={20} />
+                        </div>
+                        <div>
+                            <h3 className="font-medium text-amber-900">Incomplete Uploads Found</h3>
+                            <p className="text-sm text-amber-700">Some media failed to upload previously. Please retry or remove them.</p>
+                        </div>
+                    </div>
+                    <button
+                        type="button"
+                        onClick={() => setHasIncompleteUploads(false)}
+                        className="px-3 py-1.5 text-sm text-amber-700 hover:bg-amber-100 rounded-lg transition-colors"
+                    >
+                        Dismiss
                     </button>
                 </div>
             )}
@@ -733,23 +996,31 @@ export default function AddProductWizard({ initialData, storeId }) {
                                     <Controller
                                         name="variation_matrix"
                                         control={control}
-                                        render={({ field: { value, onChange } }) => (
-                                            <VariationMatrixManager
-                                                errors={errors.variation_matrix}
-                                                initialData={{
-                                                    tier_variations: watch('tier_variations'),
-                                                    variation_matrix: value,
-                                                    parent_sku: watch('parent_sku'),
-                                                    hidden_combos: watch('hidden_combos')
-                                                }}
-                                                onUpdate={(data) => {
-                                                    setValue('tier_variations', data.tier_variations);
-                                                    setValue('variation_matrix', data.variation_matrix);
-                                                    setValue('parent_sku', data.parent_sku);
-                                                    setValue('hidden_combos', data.hidden_combos);
-                                                }}
-                                            />
-                                        )}
+                                        render={({ field: { value, onChange } }) => {
+                                            // Debug: Log variation_matrix changes
+                                            console.log('[AddProductWizard] variation_matrix changed:', {
+                                                type: typeof value,
+                                                length: value?.length,
+                                                sample: value?.slice(0, 2)
+                                            });
+                                            return (
+                                                <VariationMatrixManager
+                                                    errors={errors.variation_matrix}
+                                                    initialData={{
+                                                        tier_variations: watch('tier_variations'),
+                                                        variation_matrix: value,
+                                                        parent_sku: watch('parent_sku'),
+                                                        hidden_combos: watch('hidden_combos')
+                                                    }}
+                                                    onUpdate={(data) => {
+                                                        setValue('tier_variations', data.tier_variations);
+                                                        setValue('variation_matrix', data.variation_matrix);
+                                                        setValue('parent_sku', data.parent_sku);
+                                                        setValue('hidden_combos', data.hidden_combos);
+                                                    }}
+                                                />
+                                            );
+                                        }}
                                     />
                                     {errors.variation_matrix && (
                                         <p className="text-red-500 text-xs mt-3 animate-pulse font-medium bg-red-50 p-2 rounded border border-red-100">

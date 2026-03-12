@@ -168,6 +168,32 @@ export async function PUT(request, { params }) {
             )
         }
 
+        // Fetch System Settings for limits
+        const settings = await prisma.systemSettings.findUnique({
+            where: { id: 'default' },
+            select: { maxProductImages: true, maxProductVideos: true }
+        });
+
+        const maxImages = settings?.maxProductImages ?? 12;
+        const maxVideos = settings?.maxProductVideos ?? 0;
+
+        const imagesArray = body.images ? (Array.isArray(body.images) ? body.images : [body.images]).filter(isValidImage) : undefined;
+        const videosArray = body.videos !== undefined ? (Array.isArray(body.videos) ? body.videos : (body.videos ? [body.videos] : [])).filter(isValidVideo) : undefined;
+
+        if (imagesArray && imagesArray.length > maxImages) {
+            return NextResponse.json(
+                { error: `Maximum of ${maxImages} images allowed.` },
+                { status: 400 }
+            );
+        }
+
+        if (videosArray && videosArray.length > maxVideos) {
+            return NextResponse.json(
+                { error: `Maximum of ${maxVideos} videos allowed.` },
+                { status: 400 }
+            );
+        }
+
         // Auto-lookup category name if categoryId is updated
         let categoryName = body.category;
         if (body.categoryId && !body.category) {
@@ -184,8 +210,8 @@ export async function PUT(request, { params }) {
             ...(body.mrp !== undefined && { mrp: Number(body.mrp) }),
             ...(body.price !== undefined && { price: Number(body.price) }),
             ...(body.stock !== undefined && { stock: Number(body.stock) }),
-            ...(body.images && { images: (Array.isArray(body.images) ? body.images : (body.images ? [body.images] : [])).filter(isValidImage) }),
-            ...(body.videos !== undefined && { videos: (Array.isArray(body.videos) ? body.videos : (body.videos ? [body.videos] : [])).filter(isValidVideo) }),
+            ...(imagesArray && { images: imagesArray }),
+            ...(videosArray !== undefined && { videos: videosArray }),
             ...(categoryName && { category: categoryName }),
             ...(body.categoryId && { categoryId: body.categoryId }),
             ...(body.inStock !== undefined && { inStock: body.inStock }),

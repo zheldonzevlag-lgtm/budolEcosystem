@@ -97,9 +97,10 @@ export async function POST(request) {
         // });
         // return NextResponse.json(orders, { status: 201 });
     } catch (error) {
-        console.error('Error creating order:', error);
+        console.error('[API/Orders] Error creating order:', error);
+        const errorMessage = error?.message || 'Failed to create order';
         return NextResponse.json(
-            { error: error.message || 'Failed to create order' },
+            { error: errorMessage },
             { status: 500 }
         );
     }

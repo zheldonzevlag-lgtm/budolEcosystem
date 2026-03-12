@@ -286,7 +286,14 @@ const OrderSummary = ({ totalPrice, items, hasOutOfStock = false, onProcessing }
             });
 
             console.log('📦 [OrderSummary] /api/orders status:', response.status);
-            const data = await response.json();
+            let data;
+            try {
+                data = await response.json();
+            } catch (e) {
+                // Handle empty or non-JSON responses
+                console.error('❌ [OrderSummary] Failed to parse response:', e);
+                data = {};
+            }
 
             if (!response.ok) {
                 console.error('❌ [OrderSummary] Order creation failed:', data);
@@ -295,7 +302,9 @@ const OrderSummary = ({ totalPrice, items, hasOutOfStock = false, onProcessing }
                     router.push('/login?redirect=/cart');
                     return;
                 }
-                throw new Error(data.error || "Failed to create order");
+                // Handle empty response or missing error field
+                const errorMessage = data?.error || (data && Object.keys(data).length > 0 ? JSON.stringify(data) : 'Failed to create order - please try again');
+                throw new Error(errorMessage);
             }
 
             // Get the first order ID

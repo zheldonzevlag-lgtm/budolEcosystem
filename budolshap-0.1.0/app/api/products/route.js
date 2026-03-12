@@ -267,14 +267,40 @@ export async function POST(request) {
             )
         }
 
+        // Fetch System Settings for limits
+        const settings = await prisma.systemSettings.findUnique({
+            where: { id: 'default' },
+            select: { maxProductImages: true, maxProductVideos: true }
+        });
+
+        const maxImages = settings?.maxProductImages ?? 12;
+        const maxVideos = settings?.maxProductVideos ?? 0;
+
+        const imagesArray = (Array.isArray(images) ? images : (images ? [images] : [])).filter(isValidImage);
+        const videosArray = (Array.isArray(videos) ? videos : (videos ? [videos] : [])).filter(isValidVideo);
+
+        if (imagesArray.length > maxImages) {
+            return NextResponse.json(
+                { error: `Maximum of ${maxImages} images allowed.` },
+                { status: 400 }
+            );
+        }
+
+        if (videosArray.length > maxVideos) {
+            return NextResponse.json(
+                { error: `Maximum of ${maxVideos} videos allowed.` },
+                { status: 400 }
+            );
+        }
+
         const productData = {
             name,
             description,
             mrp: Number(mrp),
             price: Number(price),
             stock: stock ? Number(stock) : 0,
-            images: (Array.isArray(images) ? images : (images ? [images] : [])).filter(isValidImage),
-            videos: (Array.isArray(videos) ? videos : (videos ? [videos] : [])).filter(isValidVideo),
+            images: imagesArray,
+            videos: videosArray,
             category,
             categoryId,
             storeId,

@@ -1,5 +1,5 @@
 import useSWR from 'swr';
-import { useEffect } from 'react';
+import { useEffect, useRef } from 'react';
 import Pusher from 'pusher-js';
 import { io } from 'socket.io-client';
 
@@ -34,10 +34,18 @@ export function useRealtimeOrderDetail({ orderId, userId, initialData = null }) 
         revalidateOnFocus: true
     });
 
+    // Use ref to stable reference mutate - initialize with null, update in effect
+    const mutateRef = useRef(null);
+    // Keep mutate ref updated
+    useEffect(() => {
+        mutateRef.current = mutate;
+    }, [mutate]);
+
     // 3. Pusher Subscription
     useEffect(() => {
         if (!isPusher || !userId || !config?.pusherKey || !orderId) return;
 
+        let isMounted = true;
         const pusher = new Pusher(config.pusherKey, {
             cluster: config.pusherCluster,
         });
@@ -46,42 +54,64 @@ export function useRealtimeOrderDetail({ orderId, userId, initialData = null }) 
         const channel = pusher.subscribe(channelName);
 
         channel.bind('order-updated', (eventData) => {
+            if (!isMounted) return;
             console.log('⚡ [OrderDetail] Order Updated (Pusher):', eventData);
-            if (eventData.orderId === orderId) {
-                mutate();
+            if (eventData.orderId === orderId && mutateRef.current) {
+                mutateRef.current();
             }
         });
 
         return () => {
+            isMounted = false;
             if (channel.unbind_all) {
                 channel.unbind_all();
             }
             channel.unsubscribe();
             pusher.disconnect();
         };
-    }, [isPusher, userId, orderId, config, mutate]);
+    }, [isPusher, userId, orderId, config?.pusherKey, config?.pusherCluster]);
 
     // 4. Socket.io Subscription
     useEffect(() => {
         if (!isSocket || !userId || !config?.socketUrl || !orderId) return;
 
-        const socket = io(config.socketUrl);
+        let isMounted = true;
+        const socket = io(config.socketUrl, {
+            reconnectionAttempts: 3,
+            timeout: 5000,
+            reconnectionDelay: 1000,
+            reconnectionDelayMax: 5000
+        });
 
         socket.on('connect', () => {
+            if (!isMounted) return;
+            console.log("[OrderDetail] Socket.io connected");
             socket.emit('subscribe', `user-${userId}`);
         });
 
+        socket.on('disconnect', () => {
+            if (!isMounted) return;
+            console.log("[OrderDetail] Socket.io disconnected");
+        });
+
+        socket.on('connect_error', (err) => {
+            if (!isMounted) return;
+            console.error("[OrderDetail] Socket.io Connection Error:", err.message);
+        });
+
         socket.on('order-updated', (eventData) => {
+            if (!isMounted) return;
             console.log('⚡ [OrderDetail] Order Updated (Socket):', eventData);
-            if (eventData.orderId === orderId) {
-                mutate();
+            if (eventData.orderId === orderId && mutateRef.current) {
+                mutateRef.current();
             }
         });
 
         return () => {
+            isMounted = false;
             socket.disconnect();
         };
-    }, [isSocket, userId, orderId, config, mutate]);
+    }, [isSocket, userId, orderId, config?.socketUrl]);
 
     return { order: data, isLoading, error, mutate };
 }

@@ -42,21 +42,45 @@ export async function POST(request) {
     }
 
     try {
-        const body = await request.json();
-        const { image, removeBackground, type } = body;
+        // Support both JSON and FormData requests
+        let image, removeBackground, type;
+        const contentType = request.headers.get('content-type') || '';
+        
+        if (contentType.includes('multipart/form-data')) {
+            // Handle FormData (for file uploads with background removal)
+            const formData = await request.formData();
+            image = formData.get('file');
+            removeBackground = formData.get('removeBackground') === 'true';
+            type = formData.get('type') || 'product';
+            
+            // Convert File to base64 for Cloudinary
+            if (image instanceof File) {
+                const arrayBuffer = await image.arrayBuffer();
+                const buffer = Buffer.from(arrayBuffer);
+                image = `data:${image.type};base64,${buffer.toString('base64')}`;
+            }
+        } else {
+            // Handle JSON (for URL-based uploads)
+            const body = await request.json();
+            image = body.image;
+            removeBackground = body.removeBackground;
+            type = body.type;
+        }
+        
         const uploadType = type === 'video' ? 'video' : 'image';
 
-        // Detect if the image is an SVG
-        const isSVG = image && (image.startsWith('data:image/svg') || image.includes('data:image/svg+xml'));
-        console.log('[Upload] Image payload received. length:', image?.length, 'isSVG:', isSVG);
-
+        // Validate that we have an image
         if (!image) {
             console.log('[Upload] No image provided in request body');
             return NextResponse.json(
                 { error: 'No image provided' },
                 { status: 400 }
-            )
+            );
         }
+
+        // Detect if the image is an SVG
+        const isSVG = image && (image.startsWith('data:image/svg') || image.includes('data:image/svg+xml'));
+        console.log('[Upload] Image payload received. length:', image?.length, 'isSVG:', isSVG);
 
         // Validate size (max 10MB for images, 50MB for videos)
         const base64Size = image.length * 0.75 // Convert base64 length to bytes
@@ -80,7 +104,7 @@ export async function POST(request) {
             folder = `assets/media_library/folder/budolshap/assets/profile_images/${displayName}/${displayName}-${date}-${time}`;
         } else if (uploadType === 'video') {
             folder = `assets/media_library/folder/budolshap/assets/product_videos/${displayName}/${displayName}-${date}-${time}`;
-        } else if (body.folder === 'stores' || type === 'store') {
+        } else if (type === 'store') {
             folder = `assets/media_library/folder/budolshap/assets/stores/${displayName}/${displayName}-${date}-${time}`;
         } else {
             folder = `assets/media_library/folder/budolshap/assets/products/${displayName}/${displayName}-${date}-${time}`;

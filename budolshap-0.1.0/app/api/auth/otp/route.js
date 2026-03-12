@@ -77,20 +77,16 @@ export async function POST(request) {
                 }
             }
 
-            const OTP_TTL_MINUTES = parseInt(process.env.OTP_TTL_MINUTES || '15', 10)
+            const OTP_TTL_MINUTES = parseInt(process.env.OTP_TTL_MINUTES || '30', 10)
             const expires = new Date(Date.now() + OTP_TTL_MINUTES * 60 * 1000)
 
-            // Reuse existing non-expired OTP to avoid invalidating a code the user already received
-            const existing = await prisma.verificationCode.findUnique({
-                where: { identifier: searchIdentifier }
-            })
+            // Debug: log current time and calculated expiry
+            console.log(`[OTP] Current Time: ${new Date().toISOString()}`);
+            console.log(`[OTP] Expiry Time: ${expires.toISOString()} (TTL: ${OTP_TTL_MINUTES}m)`);
 
             let otp = generateOTP()
-            if (existing && existing.expiresAt > new Date()) {
-                otp = existing.code
-            }
 
-            // Upsert OTP record with reused code and refreshed expiry
+            // Upsert OTP record with a NEW code and refreshed expiry
             await prisma.verificationCode.upsert({
                 where: { identifier: searchIdentifier },
                 update: { code: otp, expiresAt: expires, type: 'LOGIN' },
@@ -104,24 +100,24 @@ export async function POST(request) {
             if (isPhone) {
                 // Primary: SMS
                 console.log(`[OTP] Sending SMS to ${searchIdentifier}`);
-                await sendOTPSMS(searchIdentifier, otp)
+                await sendOTPSMS(searchIdentifier, otp, OTP_TTL_MINUTES)
                 
                 // Secondary: Email (Always send to email as backup if we have it locally or from BudolID)
                 const emailToSend = user?.email || budolUser?.email;
                 if (emailToSend && emailToSend.includes('@')) {
                     console.log(`[OTP] Sending Email to ${emailToSend}`);
-                    await sendOTPEmail(emailToSend, otp, user?.name || budolUser?.name || user?.phoneNumber || budolUser?.phoneNumber || 'User')
+                    await sendOTPEmail(emailToSend, otp, user?.name || budolUser?.name || user?.phoneNumber || budolUser?.phoneNumber || 'User', OTP_TTL_MINUTES)
                 }
             } else {
                 // Primary: Email
                 console.log(`[OTP] Sending Email to ${searchIdentifier}`);
-                await sendOTPEmail(searchIdentifier, otp, user?.name || budolUser?.name || 'User')
+                await sendOTPEmail(searchIdentifier, otp, user?.name || budolUser?.name || 'User', OTP_TTL_MINUTES)
 
                 // Secondary: SMS (if phone number is available)
                 const phoneToSend = user?.phoneNumber || budolUser?.phoneNumber;
                 if (phoneToSend) {
                      console.log(`[OTP] Sending SMS to ${phoneToSend}`);
-                     await sendOTPSMS(phoneToSend, otp)
+                     await sendOTPSMS(phoneToSend, otp, OTP_TTL_MINUTES)
                 }
             }
 

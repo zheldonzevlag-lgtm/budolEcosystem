@@ -18,11 +18,11 @@ import {
   rectSortingStrategy,
 } from '@dnd-kit/sortable'
 import { CSS } from '@dnd-kit/utilities'
-import { X, Upload, Loader2, Play, Pause } from 'lucide-react'
+import { X, Upload, Loader2, Play, Pause, AlertCircle } from 'lucide-react'
 import { toast } from 'react-hot-toast'
+import { uploadVideo } from '@/lib/uploadUtils'
 
-function SortableVideo({ id, src, onRemove }) {
-  const [loading] = useState(false)
+function SortableVideo({ id, src, uploading, error, onRemove }) {
   const [isPlaying, setIsPlaying] = useState(false)
   const videoRef = useRef(null)
   const {
@@ -37,7 +37,7 @@ function SortableVideo({ id, src, onRemove }) {
   const handleTogglePlay = async (event) => {
     event.stopPropagation()
     const video = videoRef.current
-    if (!video) return
+    if (!video || uploading) return
     if (video.paused) {
       video.muted = false
       const playPromise = video.play()
@@ -66,18 +66,13 @@ function SortableVideo({ id, src, onRemove }) {
       style={style}
       className="relative aspect-[23/25] rounded-lg overflow-hidden border border-slate-200 group bg-black cursor-grab active:cursor-grabbing"
     >
-      {/*
-        Z-index layering: drag listener at z-10 must be below play button at z-20.
-        The play button uses onPointerDown stopPropagation to prevent drag initiation
-        when clicking the button, allowing both interactions to work together.
-      */}
       <div {...attributes} {...listeners} className="absolute inset-0 z-10" />
 
       {src && (
         <video
           ref={videoRef}
           src={src}
-          className={`w-full h-full object-cover ${loading ? 'opacity-50' : ''}`}
+          className={`w-full h-full object-cover ${(uploading) ? 'opacity-50 blur-[2px]' : ''}`}
           muted={!isPlaying}
           playsInline
           onPlay={() => setIsPlaying(true)}
@@ -86,22 +81,36 @@ function SortableVideo({ id, src, onRemove }) {
         />
       )}
 
-      <div className="absolute bottom-2 right-2 z-20 text-white pointer-events-none">
-        <button
-          type="button"
-          onClick={handleTogglePlay}
-          onPointerDown={(event) => event.stopPropagation()}
-          className="pointer-events-auto"
-        >
-          <span className="flex h-10 w-10 items-center justify-center rounded-full bg-black/50 backdrop-blur-sm border border-white/30 hover:bg-black/70 transition-colors">
-            {isPlaying ? <Pause size={18} /> : <Play size={18} className="ml-0.5" />}
-          </span>
-        </button>
-      </div>
+      {!uploading && !error && (
+        <div className="absolute bottom-2 right-2 z-20 text-white pointer-events-none">
+          <button
+            type="button"
+            onClick={handleTogglePlay}
+            onPointerDown={(event) => event.stopPropagation()}
+            className="pointer-events-auto"
+          >
+            <span className="flex h-10 w-10 items-center justify-center rounded-full bg-black/50 backdrop-blur-sm border border-white/30 hover:bg-black/70 transition-colors">
+              {isPlaying ? <Pause size={18} /> : <Play size={18} className="ml-0.5" />}
+            </span>
+          </button>
+        </div>
+      )}
 
-      {loading && (
-        <div className="absolute inset-0 z-30 flex items-center justify-center bg-black/30">
-          <Loader2 className="w-8 h-8 text-white animate-spin" />
+      {uploading && (
+        <div className="absolute inset-0 z-30 flex flex-col items-center justify-center bg-black/30">
+          <Loader2 className="w-8 h-8 text-white animate-spin mb-2" />
+          <span className="text-[10px] font-bold text-white bg-blue-600/80 px-2 py-0.5 rounded-full uppercase tracking-wider">
+            Uploading...
+          </span>
+        </div>
+      )}
+
+      {error && (
+        <div className="absolute inset-0 z-30 flex flex-col items-center justify-center bg-red-50/80 p-2">
+          <AlertCircle className="w-6 h-6 text-red-500 mb-1" />
+          <span className="text-[10px] font-bold text-red-600 text-center leading-tight">
+            Video Upload Failed
+          </span>
         </div>
       )}
 
@@ -160,15 +169,6 @@ export default function DragDropVideoUpload({ videos = [], onChange, maxVideos =
     }
   }
 
-  const readVideoAsDataUrl = (file) => {
-    return new Promise((resolve, reject) => {
-      const reader = new FileReader()
-      reader.onload = () => resolve(reader.result)
-      reader.onerror = reject
-      reader.readAsDataURL(file)
-    })
-  }
-
   const handleFileSelect = async (e) => {
     const files = Array.from(e.target.files || [])
     if (!files.length) return
@@ -178,37 +178,36 @@ export default function DragDropVideoUpload({ videos = [], onChange, maxVideos =
       return
     }
 
-    const toastId = toast.loading('Processing videos...')
-    const processedFiles = []
+    // Generate temporary preview objects - just store locally, don't upload yet!
+    // Upload will happen only when product is published
+    const newItems = files.map(file => {
+      if (!file.type.startsWith('video/')) {
+        toast.error(`${file.name} is not a valid video file.`)
+        return null
+      }
+      if (file.size > maxSizeBytes) {
+        toast.error(`${file.name} exceeds ${maxSizeMb}MB limit.`)
+        return null
+      }
+      return {
+        id: `vid-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
+        url: URL.createObjectURL(file), // Local preview
+        file, // Keep file for upload on publish
+        uploading: false, // Not uploading yet
+        pendingUpload: true, // Mark as pending
+        fileName: file.name,
+        fileSize: file.size,
+        fileType: file.type
+      }
+    }).filter(Boolean);
 
-    try {
-      for (const file of files) {
-        if (!file.type.startsWith('video/')) {
-          toast.error('Only video files are allowed.', { id: toastId })
-          continue
-        }
-        if (file.size > maxSizeBytes) {
-          toast.error(`Video exceeds ${maxSizeMb}MB limit.`, { id: toastId })
-          continue
-        }
-        const base64 = await readVideoAsDataUrl(file)
-        processedFiles.push({
-          id: `vid-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
-          url: base64
-        })
-      }
-      if (processedFiles.length) {
-        onChange([...videos, ...processedFiles])
-        toast.success('Videos added', { id: toastId })
-      } else {
-        toast.dismiss(toastId)
-      }
-    } catch (error) {
-      console.error('Video processing failed:', error)
-      toast.error('Failed to process videos', { id: toastId })
-    } finally {
-      e.target.value = ''
-    }
+    if (!newItems.length) return;
+
+    // Update parent state with items
+    onChange([...videos, ...newItems]);
+    e.target.value = ''; // Reset input
+    
+    toast.success(`${newItems.length} video(s) added. They will be uploaded when you publish.`);
   }
 
   const handleRemove = (id) => {
@@ -247,6 +246,8 @@ export default function DragDropVideoUpload({ videos = [], onChange, maxVideos =
                 key={video.id}
                 id={video.id}
                 src={video.url || video.src}
+                uploading={video.uploading}
+                error={video.error}
                 onRemove={handleRemove}
               />
             ))}

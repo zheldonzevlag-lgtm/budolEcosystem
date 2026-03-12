@@ -1,6 +1,6 @@
 'use client'
 import { assets } from '@/assets/assets'
-import { ArrowRightIcon, ChevronRightIcon } from 'lucide-react'
+import { ArrowRightIcon, ChevronRightIcon, Tag as TagIcon, TrendingUp, Package2 } from 'lucide-react'
 import Image from 'next/image'
 import React, { useState, useEffect } from 'react'
 import CategoriesSection from './CategoriesSection'
@@ -115,9 +115,15 @@ const Hero = () => {
                         initial={{ opacity: 0, scale: 0.9, x: 20 }}
                         animate={{ opacity: 1, scale: 1, x: 0 }}
                         transition={{ delay: 0.5, duration: 0.8 }}
-                        className='sm:absolute bottom-0 right-0 md:right-10 w-full sm:max-w-sm'
+                        className='sm:absolute bottom-0 right-0 md:right-10 w-full sm:max-w-sm flex items-center justify-center'
                     >
-                        <Image src={assets.electronics_gadget} alt="" />
+                        {mounted && products.length > 0 ? (
+                            <Image src={assets.electronics_gadget} alt="" />
+                        ) : (
+                            <div className="w-full h-64 bg-green-300/30 rounded-3xl flex items-center justify-center">
+                                <Package2 className="text-green-600/50" size={120} />
+                            </div>
+                        )}
                     </motion.div>
                 </motion.div>
                 <div className='flex flex-col md:flex-row xl:flex-col gap-5 w-full xl:max-w-sm text-sm text-slate-600'>
@@ -129,13 +135,21 @@ const Hero = () => {
                     >
                         <Link href={mounted && bestSellingProduct ? `/product/${bestSellingProduct.id}` : '/shop'} className='flex h-full items-center justify-between w-full bg-orange-200 rounded-3xl p-6 px-8 group cursor-pointer shadow-sm hover:shadow-md transition-shadow'>
                             <div>
-                                <p className='text-xl sm:text-2xl font-medium bg-gradient-to-r from-slate-800 to-[#FFAD51] bg-clip-text text-transparent max-w-40'>Best    products</p>
+                                <p className='text-xl sm:text-2xl font-medium bg-gradient-to-r from-slate-800 to-[#FFAD51] bg-clip-text text-transparent max-w-40'>Featured products</p>
                                 <p className='flex items-center gap-1 mt-4'>View more <ArrowRightIcon className='group-hover:ml-2 transition-all' size={18} /> </p>
                             </div>
                             {isLoading && !bestSellingProduct ? (
                                 <div className='w-35 h-35 bg-orange-100/50 animate-pulse rounded-full'></div>
                             ) : (
-                                <Image className='w-35 group-hover:scale-110 transition-transform duration-500' width={140} height={140} src={mounted && bestSellingProduct && ((Array.isArray(bestSellingProduct.images) && bestSellingProduct.images[0]) || (typeof bestSellingProduct.images === 'string' && bestSellingProduct.images)) ? (Array.isArray(bestSellingProduct.images) ? bestSellingProduct.images[0] : bestSellingProduct.images) : assets.hero_product_img1} alt="" />
+                                <div className="w-35 h-35 flex items-center justify-center">
+                                    {mounted && bestSellingProduct && ((Array.isArray(bestSellingProduct.images) && bestSellingProduct.images[0]) || (typeof bestSellingProduct.images === 'string' && bestSellingProduct.images)) ? (
+                                        <Image className='w-full h-full object-contain group-hover:scale-110 transition-transform duration-500' width={140} height={140} src={Array.isArray(bestSellingProduct.images) ? bestSellingProduct.images[0] : bestSellingProduct.images} alt="" />
+                                    ) : (
+                                        <div className="w-full h-full bg-orange-100/50 rounded-full flex items-center justify-center">
+                                            <TagIcon className="text-orange-400" size={40} />
+                                        </div>
+                                    )}
+                                </div>
                             )}
                         </Link>
                     </motion.div>
@@ -153,7 +167,15 @@ const Hero = () => {
                             {isLoading && !maxDiscountProduct ? (
                                 <div className='w-35 h-35 bg-blue-100/50 animate-pulse rounded-full'></div>
                             ) : (
-                                <Image className='w-35 group-hover:scale-110 transition-transform duration-500' width={140} height={140} src={mounted && maxDiscountProduct && ((Array.isArray(maxDiscountProduct.images) && maxDiscountProduct.images[0]) || (typeof maxDiscountProduct.images === 'string' && maxDiscountProduct.images)) ? (Array.isArray(maxDiscountProduct.images) ? maxDiscountProduct.images[0] : maxDiscountProduct.images) : assets.hero_product_img2} alt="" />
+                                <div className="w-35 h-35 flex items-center justify-center">
+                                    {mounted && maxDiscountProduct && ((Array.isArray(maxDiscountProduct.images) && maxDiscountProduct.images[0]) || (typeof maxDiscountProduct.images === 'string' && maxDiscountProduct.images)) ? (
+                                        <Image className='w-full h-full object-contain group-hover:scale-110 transition-transform duration-500' width={140} height={140} src={Array.isArray(maxDiscountProduct.images) ? maxDiscountProduct.images[0] : maxDiscountProduct.images} alt="" />
+                                    ) : (
+                                        <div className="w-full h-full bg-blue-100/50 rounded-full flex items-center justify-center">
+                                            <TrendingUp className="text-blue-400" size={40} />
+                                        </div>
+                                    )}
+                                </div>
                             )}
                         </Link>
                     </motion.div>

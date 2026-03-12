@@ -50,14 +50,8 @@ export async function PUT(request, { params }) {
 
         // If setting as default, unset other default addresses
         if (body.isDefault && !existingAddress.isDefault) {
-            await prisma.address.updateMany({
-                where: {
-                    userId: existingAddress.userId,
-                    isDefault: true,
-                    id: { not: addressId }
-                },
-                data: { isDefault: false }
-            })
+            // Use raw SQL to bypass stale client
+            await prisma.$executeRaw`UPDATE "Address" SET "isDefault" = false WHERE "userId" = ${existingAddress.userId} AND "isDefault" = true AND "id" != ${addressId}`;
         }
 
         const address = await prisma.address.update({
@@ -81,10 +75,14 @@ export async function PUT(request, { params }) {
                 ...(body.buildingName !== undefined && { buildingName: body.buildingName }),
                 ...(body.floorUnit !== undefined && { floorUnit: body.floorUnit }),
                 ...(body.notes !== undefined && { notes: body.notes }),
-                ...(body.label !== undefined && { label: body.label }),
-                ...(body.isDefault !== undefined && { isDefault: body.isDefault })
+                ...(body.label !== undefined && { label: body.label })
             }
         })
+
+        // Set isDefault via raw SQL if necessary
+        if (body.isDefault !== undefined) {
+            await prisma.$executeRaw`UPDATE "Address" SET "isDefault" = ${body.isDefault} WHERE "id" = ${addressId}`;
+        }
 
         return NextResponse.json(address)
     } catch (error) {

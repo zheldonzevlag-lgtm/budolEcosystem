@@ -126,7 +126,11 @@ const Navbar = () => {
     const handleUserEvent = useCallback((event, data) => {
         if (event === 'cart-updated') {
             console.log('🛒 [Navbar] Realtime cart update received. Refreshing cart...');
-            fetch(`/api/cart?userId=${user?.id}`)
+            if (!user?.id) {
+                console.log('🛒 [Navbar] Skipping cart refresh - user not logged in');
+                return;
+            }
+            fetch(`/api/cart?userId=${user.id}`)
                 .then(res => res.json())
                 .then(cartData => {
                     if (cartData && typeof cartData === 'object') {

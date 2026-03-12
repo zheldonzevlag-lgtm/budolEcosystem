@@ -68,8 +68,7 @@ export async function GET(req) {
     const userData = await prisma.user.findUnique({
       where: { id: userId },
       select: {
-        kycStatus: true,
-        kycDetails: true,
+        metadata: true,
         accountType: true,
         role: true,
         isAdmin: true
@@ -80,27 +79,31 @@ export async function GET(req) {
       return NextResponse.json({ error: 'User not found' }, { status: 404 })
     }
 
+    // Get KYC info from metadata
+    const metadata = userData.metadata || {};
+    let kycStatus = metadata.kycStatus || 'NOT_STARTED';
+    let kycDetails = metadata.kycDetails || null;
+
     // Role-Based Data Masking for KYC Results
     // Only Admin can see full OCR details (fullName, idNumber, ocrLines)
-    const isAdmin = userData.isAdmin || userData.accountType === 'ADMIN' || userData.role === 'ADMIN'
+    const isAdmin = userData.isAdmin || userData.accountType === 'ADMIN' || userData.role === 'ADMIN';
     
-    let kycDetails = userData.kycDetails
     if (!isAdmin && kycDetails) {
       // Create a shallow copy to mask sensitive fields
-      const maskedDetails = { ...kycDetails }
+      const maskedDetails = { ...kycDetails };
       
       // Mask OCR extracted data if it exists
-      if (maskedDetails.fullName) maskedDetails.fullName = '*** PROTECTED ***'
-      if (maskedDetails.idNumber) maskedDetails.idNumber = '*** PROTECTED ***'
-      if (maskedDetails.ocrLines) maskedDetails.ocrLines = []
+      if (maskedDetails.fullName) maskedDetails.fullName = '*** PROTECTED ***';
+      if (maskedDetails.idNumber) maskedDetails.idNumber = '*** PROTECTED ***';
+      if (maskedDetails.ocrLines) maskedDetails.ocrLines = [];
       
-      kycDetails = maskedDetails
+      kycDetails = maskedDetails;
     }
 
     return NextResponse.json({
-      kycStatus: userData.kycStatus,
+      kycStatus: kycStatus,
       kycDetails: kycDetails
-    })
+    });
 
   } catch (error) {
     console.error('KYC Status Error:', error)

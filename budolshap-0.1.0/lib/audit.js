@@ -97,7 +97,7 @@ export async function createAuditLog(userId, action, request, options = {}) {
 
         const auditLog = await prisma.auditLog.create({
             data: {
-                userId,
+                user: userId ? { connect: { id: userId } } : undefined,
                 action,
                 entity,
                 entityId,

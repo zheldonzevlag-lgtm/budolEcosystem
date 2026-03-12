@@ -200,12 +200,11 @@ export default function MapSettings() {
                     
                     <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
                         {/* Geoapify Key */}
-                        <div className={`p-4 rounded-lg border-2 transition-all ${settings.enabledMapProviders.includes('GEOAPIFY') ? 'border-slate-100 bg-white' : 'border-slate-50 bg-slate-50 opacity-50'}`}>
+                        <div className="p-4 rounded-lg border-2 transition-all border-slate-100 bg-white">
                             <label className="block text-sm font-bold text-slate-700 mb-2">Geoapify API Key</label>
                             <input
-                                type="password"
+                                type="text"
                                 value={settings.geoapifyApiKey}
-                                disabled={!settings.enabledMapProviders.includes('GEOAPIFY')}
                                 onChange={e => setSettings(prev => ({ ...prev, geoapifyApiKey: e.target.value }))}
                                 className="w-full px-3 py-2 border rounded-md focus:ring-2 focus:ring-orange-500 outline-none"
                                 placeholder="Enter Geoapify Key"
@@ -214,12 +213,11 @@ export default function MapSettings() {
                         </div>
 
                         {/* Google Key */}
-                        <div className={`p-4 rounded-lg border-2 transition-all ${settings.enabledMapProviders.includes('GOOGLE') ? 'border-slate-100 bg-white' : 'border-slate-50 bg-slate-50 opacity-50'}`}>
+                        <div className="p-4 rounded-lg border-2 transition-all border-slate-100 bg-white">
                             <label className="block text-sm font-bold text-slate-700 mb-2">Google Maps API Key</label>
                             <input
-                                type="password"
+                                type="text"
                                 value={settings.googleMapsApiKey}
-                                disabled={!settings.enabledMapProviders.includes('GOOGLE')}
                                 onChange={e => setSettings(prev => ({ ...prev, googleMapsApiKey: e.target.value }))}
                                 className="w-full px-3 py-2 border rounded-md focus:ring-2 focus:ring-orange-500 outline-none"
                                 placeholder="Enter Google Maps Key"
@@ -228,12 +226,11 @@ export default function MapSettings() {
                         </div>
 
                         {/* Radar Key */}
-                        <div className={`p-4 rounded-lg border-2 transition-all ${settings.enabledMapProviders.includes('RADAR') ? 'border-slate-100 bg-white' : 'border-slate-50 bg-slate-50 opacity-50'}`}>
+                        <div className="p-4 rounded-lg border-2 transition-all border-slate-100 bg-white">
                             <label className="block text-sm font-bold text-slate-700 mb-2">Radar API Key</label>
                             <input
-                                type="password"
+                                type="text"
                                 value={settings.radarApiKey}
-                                disabled={!settings.enabledMapProviders.includes('RADAR')}
                                 onChange={e => setSettings(prev => ({ ...prev, radarApiKey: e.target.value }))}
                                 className="w-full px-3 py-2 border rounded-md focus:ring-2 focus:ring-orange-500 outline-none"
                                 placeholder="Enter Radar Key"

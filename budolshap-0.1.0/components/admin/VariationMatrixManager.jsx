@@ -1,9 +1,10 @@
 'use client'
 
 import { useState, useEffect, useRef } from 'react';
-import { Plus, Trash2, Image as ImageIcon, Check, X, Eye, Loader2, Wand2 } from 'lucide-react';
+import { Plus, Trash2, Image as ImageIcon, Check, X, Eye, Loader2, Wand2, AlertCircle } from 'lucide-react';
 import Image from 'next/image';
 import { toast } from 'react-hot-toast';
+import { uploadImage } from '@/lib/uploadUtils';
 
 const VariationMatrixManager = ({ initialData, onUpdate, errors = [] }) => {
     // State for Tiers (e.g., Color, Size)
@@ -23,29 +24,41 @@ const VariationMatrixManager = ({ initialData, onUpdate, errors = [] }) => {
     const fileInputRef = useRef(null);
     const activeIndexRef = useRef(null);
     const isSelfUpdate = useRef(false);
+    
+    // Track initialization to prevent image loss on first render
+    const isInitialized = useRef(false);
+    const isInitialMount = useRef(true);
+    const isEditingMatrix = useRef(false); // Track when user is actively editing
 
     const handleImageAction = (index) => {
         activeIndexRef.current = index;
         fileInputRef.current?.click();
     };
 
-    const handleFileChange = (e) => {
+    const handleFileChange = async (e) => {
         const file = e.target.files?.[0];
         if (file && activeIndexRef.current !== null) {
-            updateMatrixItem(activeIndexRef.current, 'image', file);
+            const index = activeIndexRef.current;
+            const tempId = `temp-${Date.now()}`;
+            const localPreviewUrl = URL.createObjectURL(file);
+
+            // Store file locally for upload on publish (not immediate upload)
+            updateMatrixItem(index, 'image', { 
+                url: localPreviewUrl, 
+                uploading: false,
+                pendingUpload: true,
+                file: file, // Store file for later upload
+                fileName: file.name,
+                fileType: file.type,
+                id: tempId
+            });
+
+            // Note: Upload happens on publish, not here
+            toast.success('Variant image added. It will be uploaded when you publish.');
         }
         if (fileInputRef.current) {
             fileInputRef.current.value = '';
         }
-    };
-
-    const fileToBase64 = (file) => {
-        return new Promise((resolve, reject) => {
-            const reader = new FileReader();
-            reader.readAsDataURL(file);
-            reader.onload = () => resolve(reader.result);
-            reader.onerror = error => reject(error);
-        });
     };
 
     const handleRemoveBackground = async () => {
@@ -57,10 +70,27 @@ const VariationMatrixManager = ({ initialData, onUpdate, errors = [] }) => {
 
             let imagePayload = previewImage.raw;
 
-            // If it's a File object, convert to base64
-            if (typeof imagePayload !== 'string') {
-                imagePayload = await fileToBase64(imagePayload);
+            // Handle object format
+            if (imagePayload && typeof imagePayload === 'object' && imagePayload.url) {
+                imagePayload = imagePayload.url;
             }
+
+            // Validate we have a valid image
+            if (!imagePayload || (typeof imagePayload === 'string' && imagePayload.length < 10)) {
+                throw new Error('No valid image found. Please upload an image first.');
+            }
+
+            // Check if it's a blob URL (local preview) - need to convert to base64 first
+            if (imagePayload.startsWith('blob:')) {
+                throw new Error('Please save/publish the product first before removing background, or upload the image to Cloudinary first.');
+            }
+
+            // Check if it's not a valid URL
+            if (!imagePayload.startsWith('http')) {
+                throw new Error('Invalid image URL. Please ensure the image is uploaded to Cloudinary first.');
+            }
+
+            console.log('[Remove BG] Sending request with image:', typeof imagePayload, imagePayload?.substring(0, 100));
 
             const response = await fetch('/api/upload', {
                 method: 'POST',
@@ -74,9 +104,10 @@ const VariationMatrixManager = ({ initialData, onUpdate, errors = [] }) => {
             });
 
             const data = await response.json();
+            console.log('[Remove BG] Response:', response.status, data);
 
             if (!response.ok) {
-                throw new Error(data.error || 'Failed to remove background');
+                throw new Error(data.error || `Upload failed with status ${response.status}`);
             }
 
             // Update the matrix item with the new URL
@@ -131,34 +162,100 @@ const VariationMatrixManager = ({ initialData, onUpdate, errors = [] }) => {
     };
 
     // 3. Generate Matrix Grid based on Tiers
+    // IMPORTANT: Only regenerate matrix when user changes tiers/options
+    // Don't regenerate on initial load - that would lose existing variant images!
     useEffect(() => {
+        // Skip if we're currently editing the matrix (prevent losing edits)
+        if (isEditingMatrix.current) {
+            console.log('[VariationMatrixManager] ⚠️ SKIPPING generateMatrix - isEditingMatrix is true');
+            return;
+        }
+        
+        // Skip if we have initial data with variations that haven't been processed yet
+        // This prevents losing images when loading a saved draft
+        if (isInitialMount.current && initialData?.variation_matrix?.length > 0) {
+            isInitialMount.current = false;
+            console.log('[VariationMatrixManager] ⚠️ SKIPPING generateMatrix - Initial mount with existing matrix');
+            // Just update parent - don't regenerate which would create new entries
+            onUpdate({ tier_variations: tiers, variation_matrix: matrix, parent_sku: parentSku, hidden_combos: hiddenCombos });
+            return;
+        }
+        isInitialMount.current = false;
+        
+        // Only generate if we actually have tiers with options
+        const hasValidTiers = tiers.some(t => t.name && t.options.some(opt => opt.trim() !== ''));
+        if (!hasValidTiers) {
+            console.log('[VariationMatrixManager] ⚠️ SKIPPING generateMatrix - No valid tiers');
+            return;
+        }
+        
+        console.log('[VariationMatrixManager] 🔧 CALLING generateMatrix() - tiers/parentSku/hiddenCombos changed');
+        console.log('[VariationMatrixManager] Current matrix before generateMatrix:', matrix.length, 'variants');
+        matrix.forEach((m, i) => {
+            console.log(`  Variant ${i}:`, { hasImage: !!m.image, sku: m.sku });
+        });
         generateMatrix();
     }, [tiers, parentSku, hiddenCombos]);
 
     // Sync state with initialData (crucial for edit mode when data is fetched asynchronously)
+    // IMPORTANT: Only sync from initialData when it's NEWER than our current matrix
+    // This prevents overwriting user edits with old draft data
     useEffect(() => {
-        if (initialData) {
-            // Use JSON stringify for deep comparison to avoid infinite loops and unnecessary updates
-            if (initialData.tier_variations && JSON.stringify(initialData.tier_variations) !== JSON.stringify(tiers)) {
-                setTiers(initialData.tier_variations);
-            }
-            if (initialData.variation_matrix && JSON.stringify(initialData.variation_matrix) !== JSON.stringify(matrix)) {
-                setMatrix(initialData.variation_matrix);
-            }
-            if (initialData.parent_sku !== undefined && initialData.parent_sku !== parentSku) {
-                setParentSku(initialData.parent_sku);
-            }
-            if (initialData.hidden_combos && JSON.stringify(initialData.hidden_combos) !== JSON.stringify(hiddenCombos)) {
-                setHiddenCombos(initialData.hidden_combos);
-            }
+        if (!initialData) return;
+        
+        // Skip if we're currently updating from user action (prevent circular updates)
+        if (isSelfUpdate.current || isEditingMatrix.current) {
+            console.log('[VariationMatrixManager] Skipping initialData sync - isSelfUpdate or isEditingMatrix is true');
+            isSelfUpdate.current = false;
+            return;
+        }
+        
+        console.log('[VariationMatrixManager] Syncing with initialData:', {
+            hasTierVariations: !!initialData.tier_variations,
+            hasVariationMatrix: !!initialData.variation_matrix,
+            matrixLength: initialData.variation_matrix?.length,
+            currentMatrixLength: matrix.length
+        });
+        
+        // Mark as initialized when we receive initial data with variations
+        if (initialData.variation_matrix?.length > 0) {
+            isInitialized.current = true;
+            console.log('[VariationMatrixManager] Marked as initialized with', initialData.variation_matrix.length, 'variants');
+        }
+        
+        // Use JSON stringify for deep comparison to avoid infinite loops and unnecessary updates
+        if (initialData.tier_variations && JSON.stringify(initialData.tier_variations) !== JSON.stringify(tiers)) {
+            console.log('[VariationMatrixManager] Updating tiers');
+            setTiers(initialData.tier_variations);
+        }
+        if (initialData.variation_matrix && JSON.stringify(initialData.variation_matrix) !== JSON.stringify(matrix)) {
+            console.log('[VariationMatrixManager] Updating matrix from', matrix.length, 'to', initialData.variation_matrix.length, 'variants');
+            // Log the images in each variant
+            initialData.variation_matrix.forEach((v, i) => {
+                console.log(`  Variant ${i}:`, { 
+                    hasImage: !!v.image, 
+                    imageType: typeof v.image,
+                    imageValue: v.image?.url || v.image
+                });
+            });
+            setMatrix(initialData.variation_matrix);
+        }
+        if (initialData.parent_sku !== undefined && initialData.parent_sku !== parentSku) {
+            setParentSku(initialData.parent_sku);
+        }
+        if (initialData.hidden_combos && JSON.stringify(initialData.hidden_combos) !== JSON.stringify(hiddenCombos)) {
+            setHiddenCombos(initialData.hidden_combos);
         }
     }, [initialData]);
 
-    const generateMatrix = () => {
+    const generateMatrix = (preserveExistingImages = false) => {
         // Only generate if we have names and options
         const validTiers = tiers.filter(t => t.name && t.options.some(opt => opt.trim() !== ''));
         if (validTiers.length === 0) return;
 
+        console.log('[VariationMatrixManager] generateMatrix() running...');
+        console.log('[VariationMatrixManager] Current matrix state:', matrix.length, 'variants');
+        
         let combinations = [[]];
         validTiers.forEach((tier, tIdx) => {
             const newCombinations = [];
@@ -173,17 +270,22 @@ const VariationMatrixManager = ({ initialData, onUpdate, errors = [] }) => {
         const newMatrix = combinations
             .filter(combo => !hiddenCombos.some(hc => JSON.stringify(hc) === JSON.stringify(combo)))
             .map(combo => {
-                // Try to find existing data for this combo
+                // Try to find existing data for this combo - CRITICAL: preserve existing images!
                 const existing = matrix.find(m =>
                     JSON.stringify(m.tier_index) === JSON.stringify(combo)
                 );
 
-                if (existing) return existing;
+                if (existing) {
+                    console.log(`[VariationMatrixManager] Preserving existing variant:`, { tier_index: combo, hasImage: !!existing.image });
+                    // Preserve existing variant INCLUDING its image!
+                    return existing;
+                }
 
                 // Generate SKU name
                 const skuParts = combo.map((oIdx, tIdx) => validTiers[tIdx].options[oIdx]);
                 const generatedSku = `${parentSku}-${skuParts.join('-')}`.toUpperCase();
 
+                console.log(`[VariationMatrixManager] Creating NEW variant:`, { tier_index: combo, sku: generatedSku });
                 return {
                     sku: generatedSku,
                     tier_index: combo,
@@ -194,6 +296,11 @@ const VariationMatrixManager = ({ initialData, onUpdate, errors = [] }) => {
                 };
             });
 
+        console.log('[VariationMatrixManager] New matrix generated:', newMatrix.length, 'variants');
+        newMatrix.forEach((m, i) => {
+            console.log(`  New Variant ${i}:`, { hasImage: !!m.image, sku: m.sku });
+        });
+        
         setMatrix(newMatrix);
         isSelfUpdate.current = true;
         onUpdate({ tier_variations: tiers, variation_matrix: newMatrix, parent_sku: parentSku, hidden_combos: hiddenCombos });
@@ -212,11 +319,31 @@ const VariationMatrixManager = ({ initialData, onUpdate, errors = [] }) => {
     };
 
     const updateMatrixItem = (index, field, value) => {
+        console.log('[VariationMatrixManager] updateMatrixItem called:', { index, field, value: typeof value === 'object' ? 'object' : value });
+        console.log('[VariationMatrixManager] Current matrix before update:', matrix.length, 'variants');
+        matrix.forEach((m, i) => {
+            console.log(`  Variant ${i}:`, { hasImage: !!m.image, imageValue: m.image?.url || m.image });
+        });
+        
+        // Mark that we're editing the matrix - this prevents sync useEffect from overwriting
+        isEditingMatrix.current = true;
+        isSelfUpdate.current = true;
+        
         const newMatrix = [...matrix];
         newMatrix[index][field] = value;
         setMatrix(newMatrix);
-        isSelfUpdate.current = true;
+        
+        console.log('[VariationMatrixManager] Matrix after update:');
+        newMatrix.forEach((m, i) => {
+            console.log(`  Variant ${i}:`, { hasImage: !!m.image, imageValue: m.image?.url || m.image });
+        });
+        
         onUpdate({ tier_variations: tiers, variation_matrix: newMatrix, parent_sku: parentSku, hidden_combos: hiddenCombos });
+        
+        // Clear editing flag after a short delay to allow React to process the update
+        setTimeout(() => {
+            isEditingMatrix.current = false;
+        }, 100);
     };
 
     return (
@@ -391,47 +518,60 @@ const VariationMatrixManager = ({ initialData, onUpdate, errors = [] }) => {
                                                     src={
                                                         typeof item.image === 'string' 
                                                             ? item.image 
-                                                            : (item.image instanceof Blob || item.image instanceof File) 
-                                                                ? URL.createObjectURL(item.image) 
-                                                                : (item.image && typeof item.image === 'object' && item.image.url)
-                                                                    ? item.image.url
-                                                                    : ''
+                                                            : (item.image && typeof item.image === 'object' && item.image.url)
+                                                                ? item.image.url
+                                                                : ''
                                                     }
                                                     alt="Variant"
                                                     width={40}
                                                     height={40}
-                                                    className="w-full h-full object-cover rounded border border-slate-200"
+                                                    className={`w-full h-full object-cover rounded border border-slate-200 ${item.image?.uploading ? 'opacity-50 blur-[1px]' : ''}`}
                                                 />
-                                                <button
-                                                    type="button"
-                                                    onClick={() => updateMatrixItem(idx, 'image', null)}
-                                                    className="absolute -top-1 -right-1 bg-red-500 text-white rounded-full p-0.5 opacity-0 group-hover:opacity-100 transition shadow-sm z-20"
-                                                >
-                                                    <X size={10} />
-                                                </button>
+                                                
+                                                {item.image?.uploading && (
+                                                    <div className="absolute inset-0 flex items-center justify-center z-20">
+                                                        <Loader2 size={16} className="text-indigo-600 animate-spin" />
+                                                    </div>
+                                                )}
+
+                                                {item.image?.error && (
+                                                    <div className="absolute inset-0 flex items-center justify-center z-20 bg-red-50/80">
+                                                        <AlertCircle size={16} className="text-red-500" />
+                                                    </div>
+                                                )}
+
+                                                {!item.image?.uploading && (
+                                                    <button
+                                                        type="button"
+                                                        onClick={() => updateMatrixItem(idx, 'image', null)}
+                                                        className="absolute -top-1 -right-1 bg-red-500 text-white rounded-full p-0.5 opacity-0 group-hover:opacity-100 transition shadow-sm z-30"
+                                                    >
+                                                        <X size={10} />
+                                                    </button>
+                                                )}
                                                 
                                                 {/* Hover Eye Overlay */}
-                                                <div 
-                                                    className="absolute inset-0 bg-black/40 flex items-center justify-center opacity-0 group-hover:opacity-100 transition rounded cursor-pointer z-10"
-                                                    onClick={() => {
-                                                        let previewUrl = '';
-                                                        if (typeof item.image === 'string') {
-                                                            previewUrl = item.image;
-                                                        } else if (item.image instanceof Blob || item.image instanceof File) {
-                                                            previewUrl = URL.createObjectURL(item.image);
-                                                        } else if (item.image && typeof item.image === 'object' && item.image.url) {
-                                                            previewUrl = item.image.url;
-                                                        }
+                                                {!item.image?.uploading && !item.image?.error && (
+                                                    <div 
+                                                        className="absolute inset-0 bg-black/40 flex items-center justify-center opacity-0 group-hover:opacity-100 transition rounded cursor-pointer z-10"
+                                                        onClick={() => {
+                                                            let previewUrl = '';
+                                                            if (typeof item.image === 'string') {
+                                                                previewUrl = item.image;
+                                                            } else if (item.image && typeof item.image === 'object' && item.image.url) {
+                                                                previewUrl = item.image.url;
+                                                            }
 
-                                                        setPreviewImage({
-                                                            url: previewUrl,
-                                                            index: idx,
-                                                            raw: item.image
-                                                        });
-                                                    }}
-                                                >
-                                                    <Eye size={16} className="text-white" />
-                                                </div>
+                                                            setPreviewImage({
+                                                                url: previewUrl,
+                                                                index: idx,
+                                                                raw: item.image
+                                                            });
+                                                        }}
+                                                    >
+                                                        <Eye size={16} className="text-white" />
+                                                    </div>
+                                                )}
                                             </div>
                                         ) : (
                                             <button

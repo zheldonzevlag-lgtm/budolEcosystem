@@ -345,13 +345,22 @@ const LalamoveWidget = ({ deliveryAddress, items, onQuoteReceived, isSelected, s
                         data: data
                     });
 
+                    // Check if data is valid for error extraction
+                    const isEmptyResponse = !data || (typeof data !== 'object') || 
+                        (typeof data === 'object' && data !== null && Object.keys(data).length === 0);
+                    
                     if (response.status === 408 || response.status === 504) {
                         throw new Error("Request timed out. Please try again.");
                     } else if (response.status === 503) {
                         throw new Error("Lalamove service temporarily unavailable.");
+                    } else if (isEmptyResponse) {
+                        // Handle empty response - Lalamove might not have quotes for this location
+                        console.warn('[Lalamove] Empty response - no delivery quotes available for this location');
+                        throw new Error("No delivery quotes available for this location. Please check your address or try a different shipping method.");
                     } else {
-                        // Extract error message from various possible formats
-                        const errorMessage = data?.error || data?.message || (typeof data === 'string' ? data : null) || 'Failed to get delivery quote';
+                        // Extract error message from various possible formats - use hardcoded fallback
+                        const errorMessage = 'Lalamove delivery quote failed - please try again or use a different shipping method';
+                        console.error('[Lalamove] Error extracting message from response, using fallback');
                         throw new Error(errorMessage);
                     }
                 }

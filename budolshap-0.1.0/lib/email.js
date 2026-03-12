@@ -351,7 +351,7 @@ export async function sendPasswordResetEmail(email, token, name) {
 }
 
 // Send OTP email
-export async function sendOTPEmail(email, otp, name) {
+export async function sendOTPEmail(email, otp, name, ttlMinutes = 15) {
     try {
         const settings = await getSystemSettings()
         const transporter = await createTransporter()
@@ -364,6 +364,7 @@ export async function sendOTPEmail(email, otp, name) {
             console.log(`To: ${maskPII(email)}`)
             console.log(`Name: ${maskPII(name)}`)
             console.log(`OTP Code: \x1b[33m${otp}\x1b[0m`)
+            console.log(`Validity: ${ttlMinutes} minutes`)
             console.log('========================================\n')
             return true
         }
@@ -390,7 +391,7 @@ export async function sendOTPEmail(email, otp, name) {
                     </div>
                     <p style="font-size:14px;" >Please enter this code on the login page to continue accessing the App.</p>
                     <p style="font-size: 14px; margin-top: 20px; margin-bottom:30px;">
-                        This code will expire in 10 minutes. If you didn't request this, please ignore this email.
+                        This code will expire in ${ttlMinutes} minutes. If you didn't request this, please ignore this email.
                     </p>
                      <p style="font-size: 14px; margin-top: 10px; margin-bottom:30px;">
                         If you have any questions or need further assistance, please feel free to contact us.

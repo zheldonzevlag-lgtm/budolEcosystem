@@ -81,10 +81,8 @@ export async function POST(request) {
 
         // If this is set as default, unset other default addresses for this user
         if (isDefault) {
-            await prisma.address.updateMany({
-                where: { userId, isDefault: true },
-                data: { isDefault: false }
-            })
+            // Use raw SQL to bypass stale client
+            await prisma.$executeRaw`UPDATE "Address" SET "isDefault" = false WHERE "userId" = ${userId} AND "isDefault" = true`;
         }
 
         const address = await prisma.address.create({
@@ -106,11 +104,15 @@ export async function POST(request) {
                 floorUnit,
                 notes,
                 label,
-                isDefault: isDefault || false,
                 latitude: latitude ? parseFloat(latitude) : null,
                 longitude: longitude ? parseFloat(longitude) : null
             }
         })
+
+        // Set isDefault via raw SQL
+        if (isDefault) {
+            await prisma.$executeRaw`UPDATE "Address" SET "isDefault" = true WHERE "id" = ${address.id}`;
+        }
 
         return NextResponse.json(address, { status: 201 })
     } catch (error) {

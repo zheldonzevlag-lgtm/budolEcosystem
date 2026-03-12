@@ -13,11 +13,13 @@ import { maskPII } from './compliance'
  * 
  * @param {string} phoneNumber - The recipient's phone number
  * @param {string} otp - The 6-digit verification code
+ * @param {number} [ttlMinutes=15] - How long the code is valid for
  */
-export async function sendOTPSMS(phoneNumber, otp) {
+export async function sendOTPSMS(phoneNumber, otp, ttlMinutes = 15) {
     try {
         const settings = await getSystemSettings()
         const provider = settings.smsProvider || 'CONSOLE'
+        const message = `Your budolShap verification code is ${otp}. Valid for ${ttlMinutes} minutes.`
 
         if (provider === 'ZERIX') {
             if (!settings.zerixApiKey) throw new Error('Zerix API Key not configured')
@@ -27,7 +29,7 @@ export async function sendOTPSMS(phoneNumber, otp) {
             const phone = phoneNumber.startsWith('0') ? '63' + phoneNumber.substring(1) : phoneNumber.replace('+', '');
             
             // Implementation for Zerix API (v1/send)
-            const response = await fetch(`https://api.zerixtext.com/api/v1/send?apiKey=${settings.zerixApiKey}&number=${phone}&message=${encodeURIComponent(`Your Budol verification code is ${otp}. Valid for 10 minutes.`)}`, {
+            const response = await fetch(`https://api.zerixtext.com/api/v1/send?apiKey=${settings.zerixApiKey}&number=${phone}&message=${encodeURIComponent(message)}`, {
                 method: 'GET'
             });
 
@@ -50,7 +52,7 @@ export async function sendOTPSMS(phoneNumber, otp) {
                 headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
                 body: new URLSearchParams({
                     '1': phoneNumber,
-                    '2': `Your budol verification code is ${otp}. Valid for 10 minutes.`,
+                    '2': message,
                     '3': settings.itextmoApiKey,
                     'passwd': settings.itextmoClientCode
                 })
@@ -79,7 +81,7 @@ export async function sendOTPSMS(phoneNumber, otp) {
                     unicodeEnabled: false,
                     sender: 'budol',
                     recipient: phoneNumber.replace('+', ''),
-                    content: `Your budol verification code is ${otp}. Valid for 10 minutes.`
+                    content: message
                 })
             });
 
@@ -117,10 +119,13 @@ export async function sendOTPSMS(phoneNumber, otp) {
             return true
         }
 
-        // Default to CONSOLE
-        console.log(`📱 [SMS Provider: CONSOLE]`)
+        // Default: Console Logging (Development)
+        console.log('\n' + '='.repeat(40))
+        console.log('📱 [SMS Provider: CONSOLE]')
+        console.log('='.repeat(40))
         console.log(`To: ${maskPII(phoneNumber)}`)
-        console.log(`Message: Your budolShap verification code is \x1b[33m${otp}\x1b[0m. Valid for 10 minutes.`)
+        console.log(`Message: ${message}`)
+        console.log('='.repeat(40) + '\n')
         return true
 
     } catch (error) {

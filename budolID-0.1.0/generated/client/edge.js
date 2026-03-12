@@ -160,7 +160,7 @@ const config = {
       "value": "prisma-client-js"
     },
     "output": {
-      "value": "D:\\IT Projects\\budolEcosystem\\budolID-0.1.0\\generated\\client",
+      "value": "D:\\IT Projects\\clone\\budolEcosystem\\budolID-0.1.0\\generated\\client",
       "fromEnvVar": null
     },
     "config": {
@@ -174,7 +174,7 @@ const config = {
       }
     ],
     "previewFeatures": [],
-    "sourceFilePath": "D:\\IT Projects\\budolEcosystem\\budolID-0.1.0\\prisma\\schema.prisma",
+    "sourceFilePath": "D:\\IT Projects\\clone\\budolEcosystem\\budolID-0.1.0\\prisma\\schema.prisma",
     "isCustomOutput": true
   },
   "relativeEnvPaths": {

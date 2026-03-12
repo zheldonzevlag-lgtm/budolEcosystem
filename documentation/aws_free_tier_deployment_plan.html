@@ -1,0 +1,1065 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AWS Free Tier Deployment Plan - budolEcosystem</title>
+    <style>
+        :root {
+            --primary-color: #FF9900;
+            --secondary-color: #172B4D;
+            --accent-color: #00875A;
+            --warning-color: #FF991F;
+            --danger-color: #DE350B;
+            --bg-light: #F4F5F7;
+            --border-color: #DFE1E6;
+        }
+        
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, sans-serif;
+            line-height: 1.6;
+            color: var(--secondary-color);
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+            background: #fff;
+        }
+        
+        .header {
+            background: linear-gradient(135deg, #FF9900, #FFB84D);
+            color: white;
+            padding: 30px;
+            border-radius: 8px;
+            margin-bottom: 30px;
+        }
+        
+        .header h1 {
+            margin: 0 0 10px 0;
+            font-size: 2em;
+        }
+        
+        .header p {
+            margin: 0;
+            opacity: 0.9;
+        }
+        
+        .toc {
+            background: var(--bg-light);
+            padding: 20px;
+            border-radius: 8px;
+            margin-bottom: 30px;
+        }
+        
+        .toc h2 {
+            margin-top: 0;
+            color: var(--primary-color);
+        }
+        
+        .toc ul {
+            list-style: none;
+            padding: 0;
+        }
+        
+        .toc li {
+            padding: 8px 0;
+        }
+        
+        .toc a {
+            color: var(--primary-color);
+            text-decoration: none;
+        }
+        
+        .section {
+            margin-bottom: 40px;
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            overflow: hidden;
+        }
+        
+        .section-header {
+            background: var(--bg-light);
+            padding: 15px 20px;
+            border-bottom: 1px solid var(--border-color);
+            font-weight: 600;
+            font-size: 1.2em;
+        }
+        
+        .section-content {
+            padding: 20px;
+        }
+        
+        .phase {
+            background: #FFF3E0;
+            border-left: 4px solid var(--primary-color);
+            padding: 15px;
+            margin: 15px 0;
+            border-radius: 0 4px 4px 0;
+        }
+        
+        .phase-number {
+            display: inline-block;
+            background: var(--primary-color);
+            color: white;
+            width: 30px;
+            height: 30px;
+            border-radius: 50%;
+            text-align: center;
+            line-height: 30px;
+            margin-right: 10px;
+            font-weight: bold;
+        }
+        
+        .phase-title {
+            font-weight: 600;
+            font-size: 1.1em;
+            color: var(--primary-color);
+        }
+        
+        .phase-timeframe {
+            background: var(--accent-color);
+            color: white;
+            padding: 4px 12px;
+            border-radius: 12px;
+            font-size: 0.85em;
+            margin-left: 10px;
+        }
+        
+        .step {
+            background: #fafafa;
+            border: 1px solid var(--border-color);
+            padding: 12px 15px;
+            margin: 10px 0;
+            border-radius: 6px;
+        }
+        
+        .step-number {
+            display: inline-block;
+            background: var(--secondary-color);
+            color: white;
+            width: 24px;
+            height: 24px;
+            border-radius: 50%;
+            text-align: center;
+            line-height: 24px;
+            margin-right: 10px;
+            font-size: 0.85em;
+        }
+        
+        .warning {
+            background: #FFF4E6;
+            border-left: 4px solid var(--warning-color);
+            padding: 15px;
+            margin: 15px 0;
+            border-radius: 0 4px 4px 0;
+        }
+        
+        .warning-title {
+            font-weight: 600;
+            color: var(--warning-color);
+            margin-bottom: 8px;
+        }
+        
+        .info {
+            background: #FFF3E0;
+            border-left: 4px solid var(--primary-color);
+            padding: 15px;
+            margin: 15px 0;
+            border-radius: 0 4px 4px 0;
+        }
+        
+        .info-title {
+            font-weight: 600;
+            color: var(--primary-color);
+            margin-bottom: 8px;
+        }
+        
+        .success {
+            background: #E8F5E9;
+            border-left: 4px solid var(--accent-color);
+            padding: 15px;
+            margin: 15px 0;
+            border-radius: 0 4px 4px 0;
+        }
+        
+        .success-title {
+            font-weight: 600;
+            color: var(--accent-color);
+            margin-bottom: 8px;
+        }
+        
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 15px 0;
+        }
+        
+        th, td {
+            padding: 12px;
+            text-align: left;
+            border-bottom: 1px solid var(--border-color);
+        }
+        
+        th {
+            background: var(--bg-light);
+            font-weight: 600;
+        }
+        
+        code {
+            background: #f4f5f7;
+            padding: 2px 6px;
+            border-radius: 3px;
+            font-family: 'Monaco', 'Menlo', monospace;
+            font-size: 0.9em;
+        }
+        
+        pre {
+            background: #1a1a2e;
+            color: #eee;
+            padding: 15px;
+            border-radius: 6px;
+            overflow-x: auto;
+        }
+        
+        pre code {
+            background: none;
+            padding: 0;
+            color: #eee;
+        }
+        
+        .check {
+            color: var(--accent-color);
+            font-weight: bold;
+        }
+        
+        .cross {
+            color: var(--danger-color);
+            font-weight: bold;
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <h1>🚀 AWS Free Tier Deployment Plan</h1>
+        <p>Deploying budolEcosystem using AWS Free Tier with optimal resource allocation</p>
+        <p><strong>Version:</strong> 1.0 | <strong>Last Updated:</strong> March 8, 2026</p>
+    </div>
+    
+    <div class="toc">
+        <h2>📋 Table of Contents</h2>
+        <ul>
+            <li><a href="#overview">1. Executive Summary</a></li>
+            <li><a href="#limits">2. AWS Free Tier Limits</a></li>
+            <li><a href="#architecture">3. Proposed AWS Architecture</a></li>
+            <li><a href="#services">4. AWS Services Allocation</a></li>
+            <li><a href="#duckdns">5. DuckDNS Subdomains</a></li>
+            <li><a href="#phase1">5. Phase 1: AWS Account Setup</a></li>
+            <li><a href="#phase2">6. Phase 2: Core Infrastructure</a></li>
+            <li><a href="#phase3">7. Phase 3: Microservices Deployment</a></li>
+            <li><a href="#phase4">8. Phase 4: Frontend & Integration</a></li>
+            <li><a href="#phase5">9. Phase 5: Testing & Launch</a></li>
+            <li><a href="#monitoring">10. Cost Monitoring</a></li>
+        </ul>
+    </div>
+    
+    <div class="section" id="overview">
+        <div class="section-header">1. Executive Summary</div>
+        <div class="section-content">
+            <div class="info">
+                <div class="info-title">📌 Overview</div>
+                This document outlines a comprehensive plan to deploy the budolEcosystem on AWS Free Tier. The plan leverages <strong>EC2 t3.micro</strong> for container orchestration and <strong>RDS PostgreSQL</strong> for database, while using managed services to minimize costs.
+            </div>
+            
+            <h3>Key Benefits</h3>
+            <ul>
+                <li><strong>12 months free</strong> - EC2 t3.micro + RDS db.t3.micro</li>
+                <li><strong>Always free</strong> - Lambda, S3, CloudFront, API Gateway</li>
+                <li><strong>Full control</strong> - Run all microservices on EC2</li>
+                <li><strong>Production-ready</strong> - Scalable architecture</li>
+            </ul>
+            
+            <h3>Deployment Strategy: Single EC2 + Docker</h3>
+            <p>Instead of using ECS (which requires paid tier for Fargate), we'll use a <strong>single t3.micro EC2 instance</strong> running Docker Compose to host all microservices. This is the fastest and most cost-effective approach.</p>
+        </div>
+    </div>
+    
+    <div class="section" id="limits">
+        <div class="section-header">2. AWS Free Tier Limits</div>
+        <div class="section-content">
+            <table>
+                <thead>
+                    <tr>
+                        <th>Service</th>
+                        <th>Free Tier Limit</th>
+                        <th>Usage in Plan</th>
+                        <th>Status</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td>EC2 (t3.micro)</td>
+                        <td>750 hours/month</td>
+                        <td>~720 hours (single instance)</td>
+                        <td><span class="check">✅ Within limits</span></td>
+                    </tr>
+                    <tr>
+                        <td>RDS (db.t3.micro)</td>
+                        <td>750 hours/month</td>
+                        <td>~720 hours</td>
+                        <td><span class="check">✅ Within limits</span></td>
+                    </tr>
+                    <tr>
+                        <td>S3</td>
+                        <td>5GB standard storage</td>
+                        <td>~2GB (images, backups)</td>
+                        <td><span class="check">✅ Within limits</span></td>
+                    </tr>
+                    <tr>
+                        <td>Lambda</td>
+                        <td>1M requests/month</td>
+                        <td>For background jobs</td>
+                        <td><span class="check">✅ Always free</span></td>
+                    </tr>
+                    <tr>
+                        <td>CloudFront</td>
+                        <td>1TB transfer out</td>
+                        <td>CDN for static assets</td>
+                        <td><span class="check">✅ Always free</span></td>
+                    </tr>
+                    <tr>
+                        <td>API Gateway</td>
+                        <td>1M calls/month</td>
+                        <td>REST API endpoints</td>
+                        <td><span class="check">✅ Always free</span></td>
+                    </tr>
+                    <tr>
+                        <td>Route 53</td>
+                        <td>1 hosted zone</td>
+                        <td>DNS management</td>
+                        <td><span class="check">✅ Always free</span></td>
+                    </tr>
+                    <tr>
+                        <td>ACM</td>
+                        <td>Unlimited SSL</td>
+                        <td>SSL certificates</td>
+                        <td><span class="check">✅ Free</span></td>
+                    </tr>
+                </tbody>
+            </table>
+            
+            <div class="warning">
+                <div class="warning-title">⚠️ Important: Free Tier Expiration</div>
+                <p>EC2 and RDS free tier expires after 12 months. After that, the estimated cost is <strong>$25-35/month</strong> for continued operation.</p>
+            </div>
+        </div>
+    </div>
+    
+    <div class="section" id="architecture">
+        <div class="section-header">3. Proposed AWS Architecture</div>
+        <div class="section-content">
+            <h3>Architecture Diagram</h3>
+            <pre><code>┌─────────────────────────────────────────────────────────────┐
+│                        AWS Cloud                                │
+│                                                              │
+│  ┌──────────────┐    ┌──────────────┐    ┌──────────────┐   │
+│  │   CloudFront  │    │     S3       │    │     ACM      │   │
+│  │   (CDN)       │    │   (Images)   │    │   (SSL)      │   │
+│  └──────┬───────┘    └──────┬───────┘    └──────────────┘   │
+│         │                    │                               │
+│         └────────┬───────────┘                               │
+│                  ▼                                           │
+│         ┌──────────────┐                                     │
+│         │  Route 53    │                                     │
+│         │   (DNS)       │                                     │
+│         └──────┬───────┘                                     │
+│                │                                              │
+│                ▼                                              │
+│    ┌────────────────────────┐                                │
+│    │    Application Load    │                                │
+│    │      Balancer (ALB)   │                                │
+│    └───────────┬────────────┘                                │
+│                │                                              │
+│                ▼                                              │
+│    ┌────────────────────────┐                                │
+│    │   EC2 t3.micro         │                                │
+│    │   (Docker Compose)     │                                │
+│    │                        │                                │
+│    │  ┌──────┐ ┌─────────┐ │                                │
+│    │  │ budol │ │ budolPay│ │                                │
+│    │  │  ID   │ │ Gateway │ │                                │
+│    │  └──────┘ └─────────┘ │                                │
+│    │  ┌──────┐ ┌─────────┐ │                                │
+│    │  │ budol │ │ budolPay│ │                                │
+│    │  │Shap   │ │  Auth   │ │                                │
+│    │  └──────┘ └─────────┘ │                                │
+│    │  ┌──────┐ ┌─────────┐ │                                │
+│    │  │ budol │ │ budolPay│ │                                │
+│    │  │Accounting│ │ Wallet │ │                                │
+│    │  └──────┘ └─────────┘ │                                │
+│    └───────────┬────────────┘                                │
+│                │                                              │
+│                ▼                                              │
+│    ┌────────────────────────┐                                │
+│    │   RDS PostgreSQL      │                                │
+│    │    db.t3.micro       │                                │
+│    └────────────────────────┘                                │
+└─────────────────────────────────────────────────────────────┘</code></pre>
+            
+            <h3>Infrastructure Components</h3>
+            <table>
+                <thead>
+                    <tr>
+                        <th>Component</th>
+                        <th>AWS Service</th>
+                        <th>Purpose</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td>DNS</td>
+                        <td>Route 53</td>
+                        <td>Domain management</td>
+                    </tr>
+                    <tr>
+                        <td>SSL</td>
+                        <td>ACM</td>
+                        <td>Free SSL certificates</td>
+                    </tr>
+                    <tr>
+                        <td>CDN</td>
+                        <td>CloudFront</td>
+                        <td>Static asset delivery</td>
+                    </tr>
+                    <tr>
+                        <td>Storage</td>
+                        <td>S3</td>
+                        <td>Image uploads, backups</td>
+                    </tr>
+                    <tr>
+                        <td>Compute</td>
+                        <td>EC2 t3.micro</td>
+                        <td>Docker containers</td>
+                    </tr>
+                    <tr>
+                        <td>Database</td>
+                        <td>RDS PostgreSQL</td>
+                        <td>PostgreSQL database</td>
+                    </tr>
+                </tbody>
+            </table>
+            
+            <h3 id="duckdns">DuckDNS Subdomains</h3>
+            <p>Using duckdns.org for DNS management with the following subdomains:</p>
+            <table>
+                <thead>
+                    <tr>
+                        <th>Subdomain</th>
+                        <th>Service</th>
+                        <th>Token</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td>budolshap.duckdns.org</td>
+                        <td>E-commerce storefront</td>
+                        <td>db0964a1-387c-419a-9272-f87e38b8a542</td>
+                    </tr>
+                    <tr>
+                        <td>budolpay.duckdns.org</td>
+                        <td>Android app backend</td>
+                        <td>db0964a1-387c-419a-9272-f87e38b8a542</td>
+                    </tr>
+                    <tr>
+                        <td>budolid.duckdns.org</td>
+                        <td>Identity/SSO service</td>
+                        <td>db0964a1-387c-419a-9272-f87e38b8a542</td>
+                    </tr>
+                    <tr>
+                        <td>budolws.duckdns.org</td>
+                        <td>WebSocket server</td>
+                        <td>db0964a1-387c-419a-9272-f87e38b8a542</td>
+                    </tr>
+                    <tr>
+                        <td>budolaccounting.duckdns.org</td>
+                        <td>Accounting module</td>
+                        <td>d0ce0193-6d88-4ea3-b750-ed25d1add7de</td>
+                    </tr>
+                    <tr>
+                        <td>budoladmin.duckdns.org</td>
+                        <td>Admin dashboard (budolPay)</td>
+                        <td>db0964a1-387c-419a-9272-f87e38b8a542</td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+    
+    <div class="section" id="services">
+        <div class="section-header">4. AWS Services Allocation</div>
+        <div class="section-content">
+            <h3>Recommended Instance Configuration</h3>
+            
+            <table>
+                <thead>
+                    <tr>
+                        <th>Resource</th>
+                        <th>Type</th>
+                        <th>Specification</th>
+                        <th>Monthly Cost</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td>EC2 Instance</td>
+                        <td>t3.micro</td>
+                        <td>2 vCPU, 1GB RAM, 30GB SSD</td>
+                        <td>Free (12 months)</td>
+                    </tr>
+                    <tr>
+                        <td>RDS Database</td>
+                        <td>db.t3.micro</td>
+                        <td>2 vCPU, 1GB RAM, 20GB SSD</td>
+                        <td>Free (12 months)</td>
+                    </tr>
+                    <tr>
+                        <td>S3 Storage</td>
+                        <td>Standard</td>
+                        <td>5GB (free tier)</td>
+                        <td>Free</td>
+                    </tr>
+                    <tr>
+                        <td>CloudFront</td>
+                        <td>Global CDN</td>
+                        <td>1TB transfer</td>
+                        <td>Free</td>
+                    </tr>
+                    <tr>
+                        <td>API Gateway</td>
+                        <td>REST API</td>
+                        <td>1M calls</td>
+                        <td>Free</td>
+                    </tr>
+                    <tr>
+                        <td>Lambda</td>
+                        <td>Serverless</td>
+                        <td>1M requests</td>
+                        <td>Free</td>
+                    </tr>
+                    <tr>
+                        <td>Route 53</td>
+                        <td>DNS</td>
+                        <td>1 hosted zone</td>
+                        <td>Free</td>
+                    </tr>
+                    <tr>
+                        <td>ACM</td>
+                        <td>SSL</td>
+                        <td>Unlimited certs</td>
+                        <td>Free</td>
+                    </tr>
+                </tbody>
+            </table>
+            
+            <div class="success">
+                <div class="success-title">✅ Total Monthly Cost: $0 (12 months)</div>
+                <p>After 12 months: ~$25-35/month for EC2 + RDS continuation</p>
+            </div>
+        </div>
+    </div>
+    
+    <div class="section" id="phase1">
+        <div class="section-header">5. Phase 1: AWS Account Setup</div>
+        <div class="section-content">
+            <div class="phase">
+                <span class="phase-number">1</span>
+                <span class="phase-title">Phase 1: AWS Account Setup</span>
+                <span class="phase-timeframe">⏱️ Day 1</span>
+            </div>
+            
+            <div class="step">
+                <span class="step-number">1</span>
+                <strong>Create AWS Account</strong>
+                <ol>
+                    <li>Go to <a href="https://aws.amazon.com">aws.amazon.com</a></li>
+                    <li>Create new account with email</li>
+                    <li>Complete identity verification</li>
+                    <li>Add payment method (required for free tier)</li>
+                </ol>
+            </div>
+            
+            <div class="step">
+                <span class="step-number">2</span>
+                <strong>Enable Free Tier Alerts</strong>
+                <ol>
+                    <li>Go to AWS Billing Console</li>
+                    <li>Create budget alert at 80% usage</li>
+                    <li>Set up CloudWatch billing alarms</li>
+                </ol>
+            </div>
+            
+            <div class="step">
+                <span class="step-number">3</span>
+                <strong>Create IAM User for Deployment</strong>
+                <pre><code># Create IAM user with necessary permissions
+aws iam create-user --user-name budol-deploy
+aws iam attach-user-policy --user-name budol-deploy --policy-arn arn:aws:iam::aws:policy/AdministratorAccess</code></pre>
+            </div>
+            
+            <div class="step">
+                <span class="step-number">4</span>
+                <strong>Install AWS CLI</strong>
+                <pre><code># Install AWS CLI
+curl "https://awscli.amazonaws.com/awscli-exe-linux-x86_64.zip" -o "awscliv2.zip"
+unzip awscliv2.zip
+sudo ./aws/install
+
+# Configure
+aws configure
+# Enter Access Key ID
+# Enter Secret Access Key
+# Enter region: ap-southeast-1
+# Enter output format: json</code></pre>
+            </div>
+            
+            <div class="success">
+                <div class="success-title">✅ Phase 1 Deliverables</div>
+                <ul>
+                    <li>AWS account created</li>
+                    <li>IAM user configured</li>
+                    <li>AWS CLI installed and configured</li>
+                </ul>
+            </div>
+        </div>
+    </div>
+    
+    <div class="section" id="phase2">
+        <div class="section-header">6. Phase 2: Core Infrastructure</div>
+        <div class="section-content">
+            <div class="phase">
+                <span class="phase-number">2</span>
+                <span class="phase-title">Phase 2: Core Infrastructure</span>
+                <span class="phase-timeframe">⏱️ Days 1-2</span>
+            </div>
+            
+            <div class="step">
+                <span class="step-number">1</span>
+                <strong>Create Key Pair</strong>
+                <pre><code># Create EC2 key pair
+aws ec2 create-key-pair --key-name budol-ecosystem --query 'KeyMaterial' --output text > budol-ecosystem.pem
+chmod 400 budol-ecosystem.pem</code></pre>
+            </div>
+            
+            <div class="step">
+                <span class="step-number">2</span>
+                <strong>Create Security Group</strong>
+                <pre><code># Create security group
+aws ec2 create-security-group --group-name budol-sg --description "Security group for budolEcosystem"
+
+# Add rules
+aws ec2 authorize-security-group-ingress --group-name budol-sg --protocol tcp --port 22 --cidr 0.0.0.0/0  # SSH
+aws ec2 authorize-security-group-ingress --group-name budol-sg --protocol tcp --port 80 --cidr 0.0.0.0/0  # HTTP
+aws ec2 authorize-security-group-ingress --group-name budol-sg --protocol tcp --port 443 --cidr 0.0.0.0/0  # HTTPS
+aws ec2 authorize-security-group-ingress --group-name budol-sg --protocol tcp --port 3000 --cidr 0.0.0.0/0  # Next.js
+aws ec2 authorize-security-group-ingress --group-name budol-sg --protocol tcp --port 3001 --cidr 0.0.0.0/0  # budolShap</code></pre>
+            </div>
+            
+            <div class="step">
+                <span class="step-number">3</span>
+                <strong>Launch EC2 Instance (t3.micro)</strong>
+                <pre><code># Get latest Amazon Linux 2 AMI
+aws ec2 describe-images --owners amazon --filters "Name=name,Values=amzn2-ami-hvm-2.0.*-x86_64-gp2" --query 'Images[0].ImageId'
+
+# Launch instance
+aws ec2 run-instances \
+  --image-id ami-0c55b159cbfafe1f0 \
+  --instance-type t3.micro \
+  --key-name budol-ecosystem \
+  --security-group-ids sg-xxxxxxxx \
+  --tag-specifications 'ResourceType=instance,Tags=[{Key=Name,Value=budolEcosystem}]' \
+  --user-data file://user-data.sh</code></pre>
+            </div>
+            
+            <div class="step">
+                <span class="step-number">4</span>
+                <strong>Create RDS PostgreSQL</strong>
+                <pre><code># Create RDS subnet group
+aws rds create-db-subnet-group \
+  --db-subnet-group-name budol-subnet-group \
+  --subnet-ids subnet-xxx subnet-yyy \
+  --description "Subnet group for budolEcosystem"
+
+# Create RDS instance
+aws rds create-db-instance \
+  --db-instance-identifier budol-postgres \
+  --db-instance-class db.t3.micro \
+  --engine postgres \
+  --engine-version 15.3 \
+  --allocated-storage 20 \
+  --master-username budoladmin \
+  --master-user-password YourSecurePassword123! \
+  --db-name budolshap \
+  --vpc-security-group-ids sg-xxxxxxxx \
+  --db-subnet-group-name budol-subnet-group \
+  --backup-retention-period 7</code></pre>
+            </div>
+            
+            <div class="step">
+                <span class="step-number">5</span>
+                <strong>Create S3 Bucket</strong>
+                <pre><code># Create S3 bucket
+aws s3 mb s3://budol-ecosystem-media --region ap-southeast-1
+
+# Enable versioning
+aws s3api put-bucket-versioning \
+  --bucket budol-ecosystem-media \
+  --versioning-configuration Status=Enabled
+
+# Set bucket policy for public read (if needed for images)
+aws s3api put-bucket-policy \
+  --bucket budol-ecosystem-media \
+  --policy file://s3-policy.json</code></pre>
+            </div>
+            
+            <div class="success">
+                <div class="success-title">✅ Phase 2 Deliverables</div>
+                <ul>
+                    <li>EC2 t3.micro instance running</li>
+                    <li>RDS PostgreSQL database created</li>
+                    <li>S3 bucket for media storage</li>
+                    <li>Security groups configured</li>
+                </ul>
+            </div>
+        </div>
+    </div>
+    
+    <div class="section" id="phase3">
+        <div class="section-header">7. Phase 3: Microservices Deployment</div>
+        <div class="section-content">
+            <div class="phase">
+                <span class="phase-number">3</span>
+                <span class="phase-title">Phase 3: Microservices Deployment</span>
+                <span class="phase-timeframe">⏱️ Days 2-3</span>
+            </div>
+            
+            <div class="step">
+                <span class="step-number">1</span>
+                <strong>SSH into EC2 and Install Docker</strong>
+                <pre><code># SSH into instance
+ssh -i budol-ecosystem.pem ec2-user@your-ec2-ip
+
+# Install Docker
+sudo yum update -y
+sudo amazon-linux-extras install docker
+sudo service docker start
+sudo usermod -a -G docker ec2-user
+
+# Install Docker Compose
+sudo curl -L "https://github.com/docker/compose/releases/download/v2.23.0/docker-compose-$(uname -s)-$(uname -m)" -o /usr/local/bin/docker-compose
+sudo chmod +x /usr/local/bin/docker-compose
+
+# Log out and log back in</code></pre>
+            </div>
+            
+            <div class="step">
+                <span class="step-number">2</span>
+                <strong>Clone Repository and Configure</strong>
+                <pre><code># Clone repository
+git clone https://github.com/your-repo/budolEcosystem.git
+cd budolEcosystem
+
+# Create .env.production file
+cat > .env.production << 'EOF'
+# Database URLs (use RDS endpoint)
+BUDOLSHAP_DATABASE_URL=postgresql://budoladmin:password@budol-postgres.xxxx.ap-southeast-1.rds.amazonaws.com:5432/budolshap
+BUDOLID_DATABASE_URL=postgresql://budoladmin:password@budol-postgres.xxxx.ap-southeast-1.rds.amazonaws.com:5432/budolid
+BUDOLPAY_DATABASE_URL=postgresql://budoladmin:password@budol-postgres.xxxx.ap-southeast-1.rds.amazonaws.com:5432/budolpay
+BUDOLACCOUNTING_DATABASE_URL=postgresql://budoladmin:password@budol-postgres.xxxx.ap-southeast-1.rds.amazonaws.com:5432/budolaccounting
+
+# Redis (use ElastiCache or local)
+REDIS_URL=redis://localhost:6379
+
+# S3 Configuration
+AWS_ACCESS_KEY_ID=your-key
+AWS_SECRET_ACCESS_KEY=your-secret
+AWS_REGION=ap-southeast-1
+AWS_S3_BUCKET=budol-ecosystem-media
+
+# JWT Secrets
+JWT_SECRET=your-jwt-secret
+SSO_JWT_SECRET=your-sso-jwt-secret
+EOF</code></pre>
+            </div>
+            
+            <div class="step">
+                <span class="step-number">3</span>
+                <strong>Deploy with Docker Compose</strong>
+                <pre><code># Build and start all services
+docker-compose -f docker-compose.prod.yml up -d
+
+# Check status
+docker-compose -f docker-compose.prod.yml ps
+
+# View logs
+docker-compose -f docker-compose.prod.yml logs -f</code></pre>
+            </div>
+            
+            <div class="step">
+                <span class="step-number">4</span>
+                <strong>Set Up Application Load Balancer (Optional)</strong>
+                <pre><code># Create target group
+aws elbv2 create-target-group \
+  --name budol-target-group \
+  --protocol HTTP \
+  --port 80 \
+  --vpc-id vpc-xxxxx
+
+# Register instance
+aws elbv2 register-targets \
+  --target-group-arn arn:aws:elasticloadbalancing:ap-southeast-1:xxxxx:targetgroup/budol-target-group/xxxxx \
+  --targets Id=i-xxxxx
+
+# Create ALB
+aws elbv2 create-load-balancer \
+  --name budol-alb \
+  --scheme internet-facing \
+  --type application \
+  --subnets subnet-xxx subnet-yyy \
+  --security-group sg-xxxxx</code></pre>
+            </div>
+            
+            <div class="success">
+                <div class="success-title">✅ Phase 3 Deliverables</div>
+                <ul>
+                    <li>Docker and Docker Compose installed</li>
+                    <li>All microservices running on EC2</li>
+                    <li>Database connected to RDS</li>
+                    <li>S3 integration configured</li>
+                </ul>
+            </div>
+        </div>
+    </div>
+    
+    <div class="section" id="phase4">
+        <div class="section-header">8. Phase 4: Frontend & Integration</div>
+        <div class="section-content">
+            <div class="phase">
+                <span class="phase-number">4</span>
+                <span class="phase-title">Phase 4: Frontend & Integration</span>
+                <span class="phase-timeframe">⏱️ Days 3-4</span>
+            </div>
+            
+            <div class="step">
+                <span class="step-number">1</span>
+                <strong>Configure DNS with Route 53</strong>
+                <pre><code># Create hosted zone
+aws route53 create-hosted-zone \
+  --name budolyourdomain.com \
+  --caller-reference "budol-$(date +%s)"
+
+# Create record sets
+aws route53 change-resource-record-sets \
+  --hosted-zone-id ZXXXXXXXX \
+  --change-batch file://dns-records.json</code></pre>
+            </div>
+            
+            <div class="step">
+                <span class="step-number">2</span>
+                <strong>Request SSL Certificate (ACM)</strong>
+                <pre><code># Request certificate (must validate email or DNS)
+aws acm request-certificate \
+  --domain-name budolyourdomain.com \
+  --subject-alternative-names "*.budolyourdomain.com" \
+  --validation-method DNS \
+  --region us-east-1</code></pre>
+            </div>
+            
+            <div class="step">
+                <span class="step-number">3</span>
+                <strong>Configure CloudFront CDN</strong>
+                <pre><code># Create CloudFront distribution
+aws cloudfront create-distribution \
+  --origin-domain-name budol-ecosystem-media.s3.amazonaws.com \
+  --default-root-object index.html</code></pre>
+            </div>
+            
+            <div class="step">
+                <span class="step-number">4</span>
+                <strong>Update Environment Variables</strong>
+                <pre><code># Update .env.production with production URLs
+NEXT_PUBLIC_API_URL=https://api.budolyourdomain.com
+NEXT_PUBLIC_SOCKET_URL=wss://ws.budolyourdomain.com
+NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME=your-cloud-name
+NEXT_PUBLIC_CLOUDINARY_API_KEY=your-api-key</code></pre>
+            </div>
+            
+            <div class="success">
+                <div class="success-title">✅ Phase 4 Deliverables</div>
+                <ul>
+                    <li>Custom domain configured</li>
+                    <li>SSL certificate active</li>
+                    <li>CloudFront CDN for static assets</li>
+                    <li>Production URLs configured</li>
+                </ul>
+            </div>
+        </div>
+    </div>
+    
+    <div class="section" id="phase5">
+        <div class="section-header">9. Phase 5: Testing & Launch</div>
+        <div class="section-content">
+            <div class="phase">
+                <span class="phase-number">5</span>
+                <span class="phase-title">Phase 5: Testing & Launch</span>
+                <span class="phase-timeframe">⏱️ Days 4-5</span>
+            </div>
+            
+            <div class="step">
+                <span class="step-number">1</span>
+                <strong>Run Database Migrations</strong>
+                <pre><code># SSH into EC2
+ssh -i budol-ecosystem.pem ec2-user@your-ec2-ip
+
+# Run Prisma migrations
+cd budolshap-0.1.0
+npm run prisma:migrate deploy</code></pre>
+            </div>
+            
+            <div class="step">
+                <span class="step-number">2</span>
+                <strong>Test All Endpoints</strong>
+                <ul>
+                    <li>Health checks: <code>curl http://localhost:8000/health</code></li>
+                    <li>API endpoints: <code>curl https://api.budolyourdomain.com/health</code></li>
+                    <li>WebSocket: Connect to <code>wss://ws.budolyourdomain.com</code></li>
+                </ul>
+            </div>
+            
+            <div class="step">
+                <span class="step-number">3</span>
+                <strong>Set Up Monitoring</strong>
+                <pre><code># Create CloudWatch dashboard
+aws cloudwatch put-dashboard --dashboard-name budol-ecosystem \
+  --dashboard-body file://cloudwatch-dashboard.json
+
+# Create alarms
+aws cloudwatch put-metric-alarm \
+  --alarm-name budol-cpu-high \
+  --metric-name CPUUtilization \
+  --namespace AWS/EC2 \
+  --statistic Average \
+  --period 300 \
+  --threshold 80 \
+  --comparison-operator GreaterThanThreshold \
+  --evaluation-periods 2</code></pre>
+            </div>
+            
+            <div class="success">
+                <div class="success-title">✅ Phase 5 Deliverables</div>
+                <ul>
+                    <li>Database migrated and seeded</li>
+                    <li>All services tested</li>
+                    <li>Monitoring set up</li>
+                    <li>Production launch</li>
+                </ul>
+            </div>
+        </div>
+    </div>
+    
+    <div class="section" id="monitoring">
+        <div class="section-header">10. Cost Monitoring</div>
+        <div class="section-content">
+            <div class="warning">
+                <div class="warning-title">⚠️ Important: Track Free Tier Usage</div>
+                Monitor your AWS usage to avoid unexpected charges after the 12-month free tier expires.
+            </div>
+            
+            <h3>Recommended Monitoring Setup</h3>
+            
+            <table>
+                <thead>
+                    <tr>
+                        <th>Resource</th>
+                        <th>Metric to Monitor</th>
+                        <th>Alert Threshold</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td>EC2</td>
+                        <td>CPU Utilization, Network In/Out</td>
+                        <td>> 80% for 5 minutes</td>
+                    </tr>
+                    <tr>
+                        <td>RDS</td>
+                        <td>CPU Utilization, Storage, Connections</td>
+                        <td>> 80% for 5 minutes</td>
+                    </tr>
+                    <tr>
+                        <td>S3</td>
+                        <td>Bucket Size, Requests</td>
+                        <td>> 4GB storage</td>
+                    </tr>
+                    <tr>
+                        <td>CloudFront</td>
+                        <td>Data Transfer Out</td>
+                        <td>> 800GB/month</td>
+                    </tr>
+                </tbody>
+            </table>
+            
+            <h3>Cost Alert Script</h3>
+            <pre><code># Create AWS Budget
+aws budgets create-budget \
+  --account-id xxxxxxxxxxxx \
+  --budget file://budget.json \
+  --notifications-with-subscribers file://budget-notifications.json</code></pre>
+        </div>
+    </div>
+    
+    <div class="section">
+        <div class="section-header">Summary Timeline</div>
+        <div class="section-content">
+            <table>
+                <thead>
+                    <tr>
+                        <th>Phase</th>
+                        <th>Duration</th>
+                        <th>Key Tasks</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td>Phase 1</td>
+                        <td>Day 1</td>
+                        <td>AWS account setup, IAM user, CLI installation</td>
+                    </tr>
+                    <tr>
+                        <td>Phase 2</td>
+                        <td>Days 1-2</td>
+                        <td>EC2, RDS, S3, Security Groups</td>
+                    </tr>
+                    <tr>
+                        <td>Phase 3</td>
+                        <td>Days 2-3</td>
+                        <td>Docker installation, Microservices deployment</td>
+                    </tr>
+                    <tr>
+                        <td>Phase 4</td>
+                        <td>Days 3-4</td>
+                        <td>DNS, SSL, CloudFront CDN</td>
+                    </tr>
+                    <tr>
+                        <td>Phase 5</td>
+                        <td>Days 4-5</td>
+                        <td>Testing, Monitoring, Launch</td>
+                    </tr>
+                </tbody>
+            </table>
+            
+            <div class="success">
+                <div class="success-title">🎉 Total Estimated Time: 5 Days</div>
+                <p>After 12 months of free tier: ~$25-35/month for continued operation.</p>
+            </div>
+        </div>
+    </div>
+</body>
+</html>

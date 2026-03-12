@@ -1,5 +1,5 @@
 import useSWR from 'swr';
-import { useEffect } from 'react';
+import { useEffect, useRef } from 'react';
 import Pusher from 'pusher-js';
 import { io } from 'socket.io-client';
 
@@ -15,6 +15,9 @@ const EMPTY_OBJECT = {};
  * Realtime updates are handled via Pusher/Socket.io subscriptions on the user channel.
  */
 export function useRealtimeBuyerOrders({ userId, page = 1, limit = 10, status = '', isPaid = null, paymentStatus = '', paymentMethod = '', excludePaymentMethod = '', excludeAbandonedPayments = 'true', isCancelledTab = false, search = '' }) {
+    // Use ref to stable reference mutate
+    const mutateRef = useRef(null);
+
     // 1. Fetch System Realtime Config (for polling fallback)
     const { data: config } = useSWR('/api/system/realtime', fetcher, {
         revalidateOnFocus: true,
@@ -47,10 +50,16 @@ export function useRealtimeBuyerOrders({ userId, page = 1, limit = 10, status = 
         revalidateOnMount: true
     });
 
+    // Keep mutate ref updated
+    useEffect(() => {
+        mutateRef.current = mutate;
+    }, [mutate]);
+
     // 3. Pusher Subscription
     useEffect(() => {
         if (!isPusher || !userId || !config?.pusherKey) return;
 
+        let isMounted = true;
         const pusher = new Pusher(config.pusherKey, {
             cluster: config.pusherCluster,
         });
@@ -59,38 +68,60 @@ export function useRealtimeBuyerOrders({ userId, page = 1, limit = 10, status = 
         const channel = pusher.subscribe(channelName);
 
         channel.bind('order-updated', (eventData) => {
+            if (!isMounted) return;
             console.log('⚡ [BuyerOrders] Order Updated (Pusher):', eventData);
-            mutate();
+            if (mutateRef.current) mutateRef.current();
         });
 
         return () => {
+            isMounted = false;
             if (channel.unbind_all) {
                 channel.unbind_all();
             }
             channel.unsubscribe();
             pusher.disconnect();
         };
-    }, [isPusher, userId, config, mutate]);
+    }, [isPusher, userId, config?.pusherKey, config?.pusherCluster]);
 
     // 4. Socket.io Subscription
     useEffect(() => {
         if (!isSocket || !userId || !config?.socketUrl) return;
 
-        const socket = io(config.socketUrl);
+        let isMounted = true;
+        const socket = io(config.socketUrl, {
+            reconnectionAttempts: 3,
+            timeout: 5000,
+            reconnectionDelay: 1000,
+            reconnectionDelayMax: 5000
+        });
 
         socket.on('connect', () => {
+            if (!isMounted) return;
+            console.log("[BuyerOrders] Socket.io connected");
             socket.emit('subscribe', `user-${userId}`);
         });
 
+        socket.on('disconnect', () => {
+            if (!isMounted) return;
+            console.log("[BuyerOrders] Socket.io disconnected");
+        });
+
+        socket.on('connect_error', (err) => {
+            if (!isMounted) return;
+            console.error("[BuyerOrders] Socket.io Connection Error:", err.message);
+        });
+
         socket.on('order-updated', (eventData) => {
+            if (!isMounted) return;
             console.log('⚡ [BuyerOrders] Order Updated (Socket):', eventData);
-            mutate();
+            if (mutateRef.current) mutateRef.current();
         });
 
         return () => {
+            isMounted = false;
             socket.disconnect();
         };
-    }, [isSocket, userId, config, mutate]);
+    }, [isSocket, userId, config?.socketUrl]);
 
     return {
         orders: data?.orders || EMPTY_ARRAY,

@@ -431,7 +431,7 @@ export async function createOrder(orderData) {
                     total,
                     isPaid: false,
                     paymentStatus: 'pending',
-                    checkoutId: checkout.id, // Link to checkout
+                    checkoutId: checkout.id,
                     orderItems: {
                         create: storeData.items.map(item => ({
                             productId: item.productId,

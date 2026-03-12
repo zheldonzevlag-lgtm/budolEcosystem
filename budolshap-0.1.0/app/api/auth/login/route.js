@@ -22,6 +22,8 @@ export async function POST(request) {
         // Normalize email/phone for consistent lookup
         const normalizedPhone = normalizePhone(email);
         const searchIdentifier = normalizedPhone || email.toLowerCase();
+        
+        console.log(`[Login] Attempt for: "${email}" -> searchIdentifier: "${searchIdentifier}" (isPhone: ${!!normalizedPhone})`);
 
         if (!email || !password) {
             return NextResponse.json(
@@ -90,11 +92,6 @@ export async function POST(request) {
                                  image: budolLogin.user.profilePicture || '',
                                  accountType: 'BUYER', // Default
                                  emailVerified: budolLogin.user.emailVerified || false,
-                                 metadata: {
-                                     budolId: budolLogin.user.id,
-                                     syncedAt: new Date().toISOString(),
-                                     source: 'login_sync'
-                                 }
                              }
                          });
                          
@@ -110,15 +107,23 @@ export async function POST(request) {
         // Handle OTP Sync (User exists in BudolID, has valid OTP, but not in local DB)
         const isOtp = body.isOtp || /^[0-9]{6}$/.test(password)
         if (!user && isOtp) {
-             const otpRecord = await prisma.verificationCode.findFirst({
+            const skewLeeway = 5 * 60 * 1000
+            const now = new Date();
+            const otpRecord = await prisma.verificationCode.findFirst({
                 where: {
                     identifier: searchIdentifier,
-                    code: password,
-                    expiresAt: { gt: new Date() }
+                    code: password
                 }
             })
 
-            if (otpRecord) {
+            console.log(`[Login Sync] OTP Check for ${searchIdentifier}:`, {
+                found: !!otpRecord,
+                expiry: otpRecord?.expiresAt,
+                now: now,
+                isValid: otpRecord && otpRecord.expiresAt >= new Date(now.getTime() - skewLeeway)
+            });
+
+            if (otpRecord && otpRecord.expiresAt >= new Date(now.getTime() - skewLeeway)) {
                 console.log(`[Login Sync] Valid OTP found for non-local user ${searchIdentifier}. Attempting to fetch profile from BudolID.`);
                 try {
                      // We need to fetch the user profile from BudolID. 
@@ -134,8 +139,8 @@ export async function POST(request) {
                      
                      if (budolResponse.ok) {
                          const budolData = await budolResponse.json();
-                         if (budolData.exists && budolData.user) {
-                             const budolUser = budolData.user;
+                         if (budolData.exists) {
+                             const budolUser = budolData; // budolID returns flat object with user data
                              const name = budolUser.name || `${budolUser.firstName || ''} ${budolUser.lastName || ''}`.trim() || 'Budol User';
                              
                              // Create local user
@@ -146,14 +151,9 @@ export async function POST(request) {
                                      email: budolUser.email || `${searchIdentifier}@placeholder.budol`, // Fallback if email missing
                                      phoneNumber: searchIdentifier,
                                      password: 'OTP_MANAGED_USER', // No password known
-                                     image: budolUser.profilePicture || '',
+                                     image: budolUser.profilePicture || budolUser.image || '',
                                      accountType: 'BUYER',
                                      emailVerified: true, // OTP verified
-                                     metadata: {
-                                         budolId: budolUser.id,
-                                         syncedAt: new Date().toISOString(),
-                                         source: 'otp_sync'
-                                     }
                                  }
                              });
                              console.log(`[Login Sync] Created local user via OTP sync: ${user.id}`);
@@ -196,17 +196,25 @@ export async function POST(request) {
         let isValidPassword = false
 
         if (isOtp) {
-            // Allow small clock skew (60s) when validating expiry
-            const skewLeeway = 60 * 1000
+            // Allow larger clock skew (5 mins) when validating expiry to handle potential server/client time sync issues
+            const skewLeeway = 5 * 60 * 1000
+            const now = new Date();
             const otpRecord = await prisma.verificationCode.findFirst({
                 where: {
                     identifier: searchIdentifier,
-                    code: password,
-                    expiresAt: { gt: new Date(Date.now() - skewLeeway) }
+                    code: password
                 }
             })
 
-            if (otpRecord) {
+            console.log(`[Login] OTP Check:`, {
+                found: !!otpRecord,
+                codeMatch: otpRecord?.code === password,
+                expiry: otpRecord?.expiresAt,
+                now: now,
+                isExpired: otpRecord ? otpRecord.expiresAt < new Date(now.getTime() - skewLeeway) : 'N/A'
+            });
+
+            if (otpRecord && otpRecord.expiresAt >= new Date(now.getTime() - skewLeeway)) {
                 isValidPassword = true
                 // Consume OTP
                 await prisma.verificationCode.delete({ where: { id: otpRecord.id } })
