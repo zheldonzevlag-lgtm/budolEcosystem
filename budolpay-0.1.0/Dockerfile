@@ -14,6 +14,8 @@ COPY services/ ./services/
 
 # Install dependencies for the whole monorepo
 RUN npm install --ignore-scripts
+# Build shared packages (e.g., @budolpay/audit)
+RUN npm run build --workspaces --if-present
 # Generate Prisma Client
 RUN npx prisma generate --schema=packages/database/prisma/schema.prisma
 

@@ -1,0 +1,61 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Developer Manual - Budol Ecosystem v18</title>
+    <style>
+        body { font-family: 'Inter', sans-serif; background: #e2e8f0; color: #1e293b; padding: 2em; line-height: 1.8; }
+        .sidebar { background: #334155; color: #f8fafc; padding: 20px; border-radius: 8px; margin-bottom: 2em; }
+        .sidebar a { color: #f8fafc; text-decoration: none; margin-right: 15px; }
+        .sidebar a:hover { text-decoration: underline; }
+        .main-content { background: #ffffff; padding: 40px; border-radius: 12px; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1); }
+        .code-box { background: #0f172a; color: #e2e8f0; padding: 1.5em; border-radius: 8px; font-family: 'Fira Code', monospace; overflow-x: auto; font-size: 0.9em; }
+        h1, h2, h3 { color: #0f172a; }
+        .reference-link { display: inline-block; background: #3b82f6; color: white; padding: 5px 10px; border-radius: 4px; text-decoration: none; font-size: 0.8em; }
+        .reference-link:hover { background: #2563eb; }
+    </style>
+</head>
+<body>
+    <div class="sidebar">
+        <a href="index.html">Index</a>
+        <a href="system_admin_manual.html">System Admin</a>
+        <a href="developer_manual.html">Developer Manual</a>
+        <a href="issues%20&%20fixes.html">Incident Report</a>
+    </div>
+
+    <div class="main-content">
+        <h1>Developer Manual (v18 - Database Recovery)</h1>
+        
+        <section id="infra">
+            <h2>Infrastructure Changes</h2>
+            <p>The system now uses a freshly provisioned RDS PostgreSQL 17.4. All <code>DATABASE_URL</code> environmental variables are managed via AWS Secrets Manager. Developers must not hardcode database endpoints.</p>
+            
+            <h3>How to Restore DB (Dev/Stage)</h3>
+            <p>To restore databases locally for development, use the following bash script:</p>
+            <div class="code-box">
+                # Restore to Local PostgreSQL Container
+                cat budolshap_1db.sql | docker exec -i postgres_container psql -U user -d budolshap_1db
+            </div>
+            <p><a class="reference-link" href="../../restore_rds.sh">View Recovery Script</a></p>
+        </section>
+
+        <section id="schema">
+            <h2>Schema Verification</h2>
+            <p>For BudolShap (v17+), the schema now strictly uses <code>SystemSettings</code> (plural) for the main configuration table, whereas v16 used <code>SystemSetting</code>. Always use the latest generated Prisma Client.</p>
+            <div class="code-box">
+                // Example Query
+                const settings = await prisma.systemSettings.findFirst();
+            </div>
+            <p><a class="reference-link" href="../../budolshap-0.1.0/prisma/schema.prisma">View BudolShap Schema</a></p>
+        </section>
+
+        <section id="secrets">
+            <h2>Secret Mapping</h2>
+            <ul>
+                <li><code>budol/db-url</code> (BudolShap)</li>
+                <li><code>budol/id-db-url</code> (BudolID, BudolAuth, BudolPay Services)</li>
+            </ul>
+        </section>
+    </div>
+</body>
+</html>

@@ -1,0 +1,62 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>System Admin Manual - Budol Ecosystem v18</title>
+    <style>
+        body { font-family: 'Segoe UI', serif; background-color: #fafafa; color: #1e1e1e; padding: 30px; }
+        .alert-box { border: 2px solid #ef4444; border-radius: 8px; padding: 20px; background: #fee2e2; color: #b91c1c; margin-bottom: 2em; }
+        .admin-box { border: 1px solid #e2e8f0; border-radius: 12px; padding: 40px; background: #fff; box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.1); }
+        .steps { border-left: 4px solid #3b82f6; padding-left: 20px; margin-left: 20px; margin-bottom: 20px; }
+        h1, h2 { color: #1e1e1e; border-bottom: 1px solid #e2e8f0; padding-bottom: 10px; }
+        .code-snippet { background-color: #f1f5f9; padding: 10px; border-radius: 4px; font-family: monospace; display: block; border-left: 4px solid #64748b; margin-top: 10px; }
+    </style>
+</head>
+<body>
+    <div class="admin-box">
+        <h1>SysAdmin Manual (v18 - Recovery Ops)</h1>
+        
+        <div class="alert-box">
+            <strong>CRITICAL:</strong> Ensure all RDS snapshots are enabled before deleting any production instance in the future.
+        </div>
+
+        <section>
+            <h2>Managing the RDS Production DB</h2>
+            <div class="steps">
+                <h3>1. RDS Identifier</h3>
+                <p>Instance: <code>budol-db-production</code> (PostgreSQL 17.4)</p>
+                
+                <h3>2. Database Endpoints</h3>
+                <p>Host: <code>budol-db-production.cnu6imkq689x.ap-southeast-1.rds.amazonaws.com</code></p>
+                <p>Port: <code>5432</code></p>
+                
+                <h3>3. Connection Management</h3>
+                <p>Database credentials are stored in **AWS Secrets Manager**:</p>
+                <ul>
+                    <li><code>budol/db-url</code> (BudolShap)</li>
+                    <li><code>budol/id-db-url</code> (BudolID, BudolPay Services)</li>
+                </ul>
+            </div>
+        </section>
+
+        <section>
+            <h2>Operational Scripts</h2>
+            <h3>Forced Redeployment</h3>
+            <span class="code-snippet">
+                aws ecs update-service --cluster budol-ecosystem-cluster --service budol-shap-service --force-new-deployment --region ap-southeast-1
+            </span>
+            
+            <h3>Status Verification</h3>
+            <span class="code-snippet">
+                aws rds describe-db-instances --db-instance-identifier budol-db-production --query "DBInstances[0].DBInstanceStatus"
+            </span>
+        </section>
+
+        <section>
+            <h2>Database Backups</h2>
+            <p>Backups are stored in **S3**: <code>s3://budol-ecosystem-backups/db-backup/YYYY-MM-DD/</code></p>
+            <p>Restoration must be done via the <code>budol-mgmt-host</code> using <code>psql</code>.</p>
+        </section>
+    </div>
+</body>
+</html>
