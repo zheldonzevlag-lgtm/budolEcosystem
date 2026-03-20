@@ -7,9 +7,9 @@ const CACHE_TTL = 60000; // 1 minute
 
 export const DEFAULT_SETTINGS = {
     id: "default",
-    realtimeProvider: "POLLING",
+    realtimeProvider: "SOCKET_IO",
     pusherSecret: null,
-    socketUrl: null,
+    socketUrl: "https://budolws.duckdns.org",
     swrPollingInterval: 10000,
     sessionTimeout: 15,
     sessionWarning: 1,
