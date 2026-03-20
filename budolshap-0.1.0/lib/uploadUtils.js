@@ -77,8 +77,34 @@ export const uploadImage = async (input) => {
     });
 
     if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.error || 'Upload failed');
+        // Get response text first to avoid stream consumption issues
+        let responseText = '';
+        try {
+            responseText = await response.text();
+        } catch (textError) {
+            // If we can't get text, use a generic error
+            throw new Error(`Upload failed: Server returned ${response.status} ${response.statusText}`);
+        }
+
+        let errorMessage = `Upload failed: Server returned ${response.status} ${response.statusText}`;
+        
+        // Try to parse as JSON if the response looks like JSON
+        if (responseText.trim().startsWith('{') || responseText.trim().startsWith('[')) {
+            try {
+                const errorData = JSON.parse(responseText);
+                errorMessage = errorData.error || errorMessage;
+            } catch (parseError) {
+                // JSON parsing failed, use the raw text (truncated to prevent huge errors)
+                console.error('Upload failed with malformed JSON:', responseText.substring(0, 500));
+                errorMessage = `Upload failed: ${responseText.substring(0, 200)}`;
+            }
+        } else if (responseText) {
+            // Non-JSON response (likely HTML error page)
+            console.error('Upload failed with non-JSON response:', responseText.substring(0, 500));
+            errorMessage = `Upload failed: ${responseText.substring(0, 200)}`;
+        }
+        
+        throw new Error(errorMessage);
     }
 
     const data = await response.json();
@@ -108,8 +134,34 @@ export const uploadVideo = async (input) => {
     });
 
     if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.error || 'Video upload failed');
+        // Get response text first to avoid stream consumption issues
+        let responseText = '';
+        try {
+            responseText = await response.text();
+        } catch (textError) {
+            // If we can't get text, use a generic error
+            throw new Error(`Video upload failed: Server returned ${response.status} ${response.statusText}`);
+        }
+
+        let errorMessage = `Video upload failed: Server returned ${response.status} ${response.statusText}`;
+        
+        // Try to parse as JSON if the response looks like JSON
+        if (responseText.trim().startsWith('{') || responseText.trim().startsWith('[')) {
+            try {
+                const errorData = JSON.parse(responseText);
+                errorMessage = errorData.error || errorMessage;
+            } catch (parseError) {
+                // JSON parsing failed, use the raw text (truncated to prevent huge errors)
+                console.error('Video upload failed with malformed JSON:', responseText.substring(0, 500));
+                errorMessage = `Video upload failed: ${responseText.substring(0, 200)}`;
+            }
+        } else if (responseText) {
+            // Non-JSON response (likely HTML error page or timeout)
+            console.error('Video upload failed with non-JSON response:', responseText.substring(0, 500));
+            errorMessage = `Video upload failed: ${responseText.substring(0, 200)}`;
+        }
+        
+        throw new Error(errorMessage);
     }
 
     const data = await response.json();

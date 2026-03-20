@@ -19,8 +19,21 @@ const LoginPageContent = () => {
         }
     }, []);
 
-    const handleLoginSuccess = () => {
-        // Redirect to original page or home
+    const handleLoginSuccess = (data) => {
+        const user = data?.user
+        const kycStatus = user?.kycStatus || user?.kyc_status || 'UNVERIFIED'
+        const createdAt = user?.createdAt;
+        const isNewUser = createdAt ? (new Date() - new Date(createdAt)) / (1000 * 60 * 60) < 24 : false;
+
+        // If user is not fully verified AND is a new registered user (within 24h),
+        // send them straight to profile with a KYC prompt modal.
+        if (user && kycStatus !== 'VERIFIED' && isNewUser) {
+            router.push('/profile?showKycPrompt=true')
+            router.refresh()
+            return
+        }
+
+        // Otherwise, redirect to original page or home
         if (redirect) {
             router.push(redirect)
         } else {

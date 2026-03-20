@@ -70,8 +70,7 @@ const ProductDetails = ({ product }) => {
     const [hoveredMedia, setHoveredMedia] = useState(null);
     const [isMainVideoPlaying, setIsMainVideoPlaying] = useState(false);
 
-    const incrementQuantity = () => setQuantity(prev => prev + 1);
-    const decrementQuantity = () => setQuantity(prev => (prev > 1 ? prev - 1 : 1));
+
 
     const handleMainVideoOverlayClick = () => {
         const node = mainVideoRef.current;
@@ -192,21 +191,44 @@ const ProductDetails = ({ product }) => {
         : (matrix.length > 0 ? minMrp : product.mrp);
 
     // Stock: If selected, show specific stock. If not, show total.
-    const totalStock = matrix.reduce((acc, item) => acc + item.stock, 0); // Approx total
+    const totalStock = matrix.length > 0 
+        ? matrix.reduce((acc, item) => acc + item.stock, 0) 
+        : (product.stock || 0);
 
     // Filter to find matching stock based on current selection (partial or full)
-    const matchingStock = matrix.filter(item => {
-        return Object.entries(selectedIndices).every(([tIdx, oIdx]) => {
-            return item.tier_index[tIdx] === oIdx;
-        });
-    }).reduce((acc, item) => acc + item.stock, 0);
+    const matchingStock = matrix.length > 0 
+        ? matrix.filter(item => {
+            return Object.entries(selectedIndices).every(([tIdx, oIdx]) => {
+                return item.tier_index[tIdx] === oIdx;
+            });
+        }).reduce((acc, item) => acc + item.stock, 0)
+        : (product.stock || 0);
 
-    const displayStock = Object.keys(selectedIndices).length > 0 ? matchingStock : totalStock;
+    const displayStock = (tiers.length > 0 && Object.keys(selectedIndices).length > 0) ? matchingStock : totalStock;
 
     // Out of Stock Logic
     const isOutOfStock = tiers.length === 0
-        ? !product.inStock
+        ? (product.stock === 0 || !product.inStock)
         : (isSelectionComplete && currentSKU ? currentSKU.stock === 0 : totalStock === 0);
+
+    // Quantity Logic (Ensuring it does not exceed stock)
+    const incrementQuantity = () => {
+        if (tiers.length > 0 && !isSelectionComplete) {
+            toast.error('Please select variants first');
+            return;
+        }
+        setQuantity(prev => (prev < displayStock ? prev + 1 : prev));
+    };
+    const decrementQuantity = () => setQuantity(prev => (prev > 1 ? prev - 1 : 1));
+
+    // Effect to adjust quantity if stock changes (e.g. variation switch)
+    useEffect(() => {
+        if (quantity > displayStock && displayStock > 0) {
+            setQuantity(displayStock);
+        } else if (displayStock === 0) {
+            setQuantity(1);
+        }
+    }, [displayStock, quantity]);
 
     // Update main image if SKU has one (Final confirmation)
     if (!hoveredMedia && currentSKU?.image && mainImage !== currentSKU.image) {
@@ -220,8 +242,12 @@ const ProductDetails = ({ product }) => {
     const itemKey = variationId ? `${productId}_${variationId}` : productId;
 
     const addToCartHandler = () => {
-        if (!isSelectionComplete) {
+        if (tiers.length > 0 && !isSelectionComplete) {
             toast.error('Please select all options before adding to cart')
+            return;
+        }
+        if (quantity > displayStock) {
+            toast.error(`Only ${displayStock} items available in stock`);
             return;
         }
         dispatch(addToCart({ productId, variationId, quantity }))
@@ -391,16 +417,16 @@ const ProductDetails = ({ product }) => {
                                         applyThumbnailItem(item, index);
                                     }}
                                     data-thumb-index={index}
-                                    className={`flex-shrink-0 snap-start bg-slate-100 flex items-center justify-center size-26 rounded-lg group cursor-pointer border-2 
+                                    className={`flex-shrink-0 snap-start bg-slate-100 flex items-center justify-center size-26 rounded-lg group cursor-pointer border-2 overflow-hidden
                                 ${index === activeIndex ? 'border-blue-500' : 'border-transparent'}
                                 ${isVisibleOnDesktop ? 'flex' : 'flex sm:hidden'}`}
                                 >
                                     {/* Product media thumbnail (image or video) */}
                                     {item.type === 'image' ? (
-                                        <Image src={item.src} className="group-hover:scale-103 group-active:scale-95 transition object-contain" alt="Thumbnail" width={95} height={95} />
+                                        <Image src={item.src} className="w-full h-full p-1 group-hover:scale-103 group-active:scale-95 transition object-contain" alt="Thumbnail" width={95} height={95} />
                                     ) : (
-                                        <div className="relative w-full h-full flex items-center justify-center bg-black rounded-lg overflow-hidden">
-                                            <video src={item.src} className="w-full h-full object-cover" muted playsInline preload="metadata" />
+                                        <div className="relative w-full h-full p-1 flex items-center justify-center">
+                                            <video src={item.src} className="w-full h-full object-contain rounded-lg bg-black group-hover:scale-103 group-active:scale-95 transition" muted playsInline preload="metadata" />
                                             <div className="absolute inset-0 flex items-center justify-center">
                                                 <div className="h-8 w-8 rounded-full bg-black/60 flex items-center justify-center">
                                                     <svg className="h-4 w-4 text-white ml-0.5" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
@@ -610,7 +636,11 @@ const ProductDetails = ({ product }) => {
 
                     <div className="text-sm text-slate-500 flex items-center gap-4">
                         {tiers.length === 0 ? (
-                            product.inStock ? <span className="text-green-600 font-medium">In Stock</span> : <span className="text-red-500 font-medium">Out of Stock</span>
+                            product.inStock ? (
+                                <span>Stock: <span className="font-medium text-slate-700">{displayStock}</span> pieces available</span>
+                            ) : (
+                                <span className="text-red-500 font-medium">Out of Stock</span>
+                            )
                         ) : (
                             Object.keys(selectedIndices).length > 0 ? (
                                 <span>Stock: <span className="font-medium text-slate-700">{displayStock}</span> pieces available</span>

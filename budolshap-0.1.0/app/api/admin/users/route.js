@@ -16,8 +16,15 @@ export async function GET(request) {
         const { searchParams } = new URL(request.url)
         const search = searchParams.get('search')
         const limit = parseInt(searchParams.get('limit')) || 100
+        const includeDeleted = searchParams.get('includeDeleted') === 'true'
 
         const where = {}
+        
+        // Filter out soft-deleted users by default unless explicitly requested
+        if (!includeDeleted) {
+            where.deletedAt = null
+        }
+
         if (search) {
             where.OR = [
                 { name: { contains: search, mode: 'insensitive' } },

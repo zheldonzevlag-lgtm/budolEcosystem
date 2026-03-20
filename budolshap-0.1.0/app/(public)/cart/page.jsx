@@ -131,7 +131,10 @@ export default function Cart() {
                         if (selectedVariation.mrp) itemData.mrp = selectedVariation.mrp;
                         if (selectedVariation.image) itemData.images = [selectedVariation.image, ...baseProduct.images];
                         itemData.inStock = selectedVariation.stock > 0;
+                        itemData.stock = selectedVariation.stock; // Store individual variation stock
                     }
+                } else {
+                    itemData.stock = baseProduct.stock; // Store base product stock
                 }
 
                 arr.push(itemData);
@@ -277,7 +280,7 @@ export default function Cart() {
                                     </td>
                                     <td className="text-center">
                                         {item.inStock ? (
-                                            <Counter productId={item.productId} variationId={item.variationId} />
+                                            <Counter productId={item.productId} variationId={item.variationId} max={item.stock} />
                                         ) : (
                                             <span className="text-slate-400 text-sm">N/A</span>
                                         )}
@@ -388,7 +391,7 @@ export default function Cart() {
                                     <div className="flex items-center gap-3">
                                         <span className="text-xs text-slate-600 font-medium">Quantity:</span>
                                         {item.inStock ? (
-                                            <Counter productId={item.productId} variationId={item.variationId} />
+                                            <Counter productId={item.productId} variationId={item.variationId} max={item.stock} />
                                         ) : (
                                             <span className="text-slate-400 text-sm">N/A</span>
                                         )}

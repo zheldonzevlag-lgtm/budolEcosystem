@@ -5,7 +5,13 @@ import { createPortal } from 'react-dom';
 import BudolPayText from './BudolPayText';
 
 export default function PaymentVerificationModal({ isOpen, pollCount }) {
-    if (!isOpen) return null;
+    const [mounted, setMounted] = React.useState(false);
+
+    React.useEffect(() => {
+        setMounted(true);
+    }, []);
+
+    if (!isOpen || !mounted) return null;
 
     const modalContent = (
         <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/50 backdrop-blur-sm p-4 animate-in fade-in duration-200">

@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import { normalizeAccountType } from '@/lib/accountTypes'
 import { createAuditLog } from '@/lib/audit'
+import { hashPassword } from '@/lib/auth'
 
 export const dynamic = 'force-dynamic'
 
@@ -92,7 +93,7 @@ export async function POST(request) {
 export async function PUT(request) {
     try {
         const body = await request.json()
-        const { id, name, email, image, cart, accountType, phoneNumber, password } = body
+        const { id, name, email, image, cart, accountType, phoneNumber, password, firstName, lastName } = body
 
         if (!id) {
             return NextResponse.json(
@@ -116,13 +117,28 @@ export async function PUT(request) {
             )
         }
 
+        // Fetch existing user to merge metadata
+        const existingUser = await prisma.user.findUnique({ where: { id } });
+        
+        let newMetadata = existingUser?.metadata || {};
+        if (typeof newMetadata !== 'object') newMetadata = {};
+
+        // Update name parts in metadata if provided
+        if (firstName !== undefined) newMetadata.firstName = firstName;
+        if (lastName !== undefined) newMetadata.lastName = lastName;
+
         const dataToUpdate = {
             ...(name && { name }),
             ...(email && { email }),
             ...(image !== undefined && { image }),
             ...(cart !== undefined && { cart }),
             ...(phoneNumber !== undefined && { phoneNumber }),
-            ...(password && { password })
+            metadata: newMetadata
+        }
+
+        // Only update password if it's provided and not empty
+        if (password) {
+            dataToUpdate.password = await hashPassword(password);
         }
 
         if (accountType !== undefined) {

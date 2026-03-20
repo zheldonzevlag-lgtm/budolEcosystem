@@ -158,7 +158,7 @@ export async function POST(request) {
             if (targetOrderIds.length > 0) {
                 console.log(`🔗 [Unified Checkout] Linking Payment Intent ${result.paymentIntentId} to Orders:`, targetOrderIds);
                 
-                // Link all orders concurrently
+                // Link all orders concurrently - Await here to ensure links are saved before user reaches success page
                 await Promise.allSettled(targetOrderIds.map(async (id) => {
                     try {
                         await linkPaymentToOrder(id, result.paymentIntentId);

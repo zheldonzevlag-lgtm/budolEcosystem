@@ -23,7 +23,8 @@ export const DEFAULT_SETTINGS = {
     marketingAdsEnabled: false,
     selectedMarketingAds: [],
     adDisplayMode: "SEQUENCE",
-    quickInstallerEnabled: true,
+    quickInstallerEnabled: false,
+    marketingAdConfigs: [],
     orderCancellationHours: 48,
     orderCancellationEnabled: true,
     protectionWindowDays: 3,
@@ -110,6 +111,16 @@ export async function getSystemSettings(forceRefresh = false) {
             settings.maxProductVideos = process.env.MAX_PRODUCT_VIDEOS ? parseInt(process.env.MAX_PRODUCT_VIDEOS) : 0;
         }
 
+        // Fallback fetch for columns that may exist in DB but not yet in generated Prisma client
+        try {
+            const rows = await prisma.$queryRaw`SELECT "marketingAdConfigs" FROM "SystemSettings" WHERE "id" = 'default'`;
+            if (Array.isArray(rows) && rows.length > 0 && rows[0]?.marketingAdConfigs !== undefined) {
+                settings.marketingAdConfigs = rows[0].marketingAdConfigs || [];
+            }
+        } catch (_e) {
+            // ignore
+        }
+
         settingsCache = settings;
         lastFetch = now;
         return settings;
@@ -130,10 +141,41 @@ export async function updateSystemSettings(data) {
         let settings;
         if (existing) {
             // 2. If exists, perform update
-            settings = await prisma.systemSettings.update({
-                where: { id: "default" },
-                data: data
-            });
+            try {
+                settings = await prisma.systemSettings.update({
+                    where: { id: "default" },
+                    data: data
+                });
+            } catch (e) {
+                // Handle unknown argument errors for newly added JSON columns
+                const message = String(e?.message || "");
+                if (message.includes("Unknown argument `marketingAdConfigs`")) {
+                    const { marketingAdConfigs, ...rest } = data;
+                    // Update known fields
+                    settings = await prisma.systemSettings.update({
+                        where: { id: "default" },
+                        data: rest
+                    });
+                    // Raw update for JSON column to bypass client schema lag
+                    if (marketingAdConfigs !== undefined) {
+                        try {
+                            await prisma.$executeRaw`UPDATE "SystemSettings" SET "marketingAdConfigs" = ${JSON.stringify(marketingAdConfigs)} WHERE "id" = 'default'`;
+                        } catch (rawErr) {
+                            console.error("Raw update for marketingAdConfigs failed:", rawErr);
+                            throw rawErr;
+                        }
+                    }
+                    // Refetch to include raw-updated column
+                    try {
+                        const rows = await prisma.$queryRaw`SELECT "marketingAdConfigs" FROM "SystemSettings" WHERE "id" = 'default'`;
+                        if (Array.isArray(rows) && rows.length > 0) {
+                            settings.marketingAdConfigs = rows[0]?.marketingAdConfigs || [];
+                        }
+                    } catch (_e2) {}
+                } else {
+                    throw e;
+                }
+            }
         } else {
             // 3. If not exists, perform create with full defaults
             settings = await prisma.systemSettings.create({

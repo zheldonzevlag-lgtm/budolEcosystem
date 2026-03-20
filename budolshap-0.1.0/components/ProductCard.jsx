@@ -71,6 +71,8 @@ const ProductCard = ({ product, index = 0 }) => {
         ? Math.min(...product.variation_matrix.map(m => m.price))
         : (product.price || 0)
 
+    const [showStoreTooltip, setShowStoreTooltip] = useState(false)
+
     return (
         <motion.div
             initial={{ opacity: 0, y: 20 }}
@@ -79,8 +81,9 @@ const ProductCard = ({ product, index = 0 }) => {
             transition={{ duration: 0.5, delay: index * 0.05 }}
             className="w-full sm:w-auto"
         >
-            <Link href={`/product/${product.id}`} className='group block'>
-                <div className='bg-[#F5F5F5] h-40 w-full sm:w-60 sm:h-68 rounded-xl flex items-center justify-center overflow-hidden relative shadow-sm hover:shadow-md transition-shadow duration-300'>
+            <div className='group block'>
+                <Link href={`/product/${product.id}`}>
+                    <div className='bg-[#F5F5F5] h-40 w-full sm:w-60 sm:h-68 rounded-xl flex items-center justify-center overflow-hidden relative shadow-sm hover:shadow-md transition-shadow duration-300'>
                     {hasVideo ? (
                         <video
                             ref={videoRef}
@@ -135,28 +138,62 @@ const ProductCard = ({ product, index = 0 }) => {
                         </div>
                     )}
                 </div>
+                </Link>
                 <div className='flex flex-col text-sm text-slate-800 pt-3 px-1 w-full sm:max-w-60'>
-                    <h3 className='font-medium line-clamp-2 min-h-[2.5rem] group-hover:text-green-600 transition-colors duration-300'>{product.name}</h3>
-                    <div className="flex items-baseline gap-2 mt-1">
-                        <p className='font-bold text-lg text-slate-900'>{currency}{price.toLocaleString()}</p>
-                    </div>
-                    <div className='flex items-center gap-0.5 mt-1.5'>
-                        {Array(5).fill('').map((_, i) => (
-                            <StarIcon key={i} size={13} className='text-transparent' fill={rating >= i + 1 ? "#00C950" : "#E2E8F0"} />
-                        ))}
-                        <span className="text-[10px] text-slate-400 ml-1">({ratingList.length})</span>
-                    </div>
-                    <div className="flex items-center justify-between mt-3">
-                        <div className='flex items-center gap-1.5 overflow-hidden'>
-                            <div className="w-4 h-4 rounded-full bg-slate-100 flex-shrink-0 flex items-center justify-center">
-                                <span className="text-[8px] text-slate-500 font-bold">{product.store?.name?.charAt(0)}</span>
-                            </div>
-                            <p className='text-[11px] text-slate-500 truncate'>{product.store?.name}</p>
+                    <Link href={`/product/${product.id}`} className='group/title block'>
+                        <h3 className='font-medium line-clamp-2 min-h-[2.5rem] group-hover/title:text-green-600 transition-colors duration-300'>{product.name}</h3>
+                        <div className="flex items-baseline gap-2 mt-1">
+                            <p className='font-bold text-lg text-slate-900'>{currency}{price.toLocaleString()}</p>
                         </div>
-                        <p className='text-[11px] font-medium text-slate-400'>{product.sold || 0} sold</p>
+                        <div className='flex items-center gap-0.5 mt-1.5'>
+                            {Array(5).fill('').map((_, i) => (
+                                <StarIcon key={i} size={13} className='text-transparent' fill={rating >= i + 1 ? "#00C950" : "#E2E8F0"} />
+                            ))}
+                            <span className="text-[10px] text-slate-400 ml-1">({ratingList.length})</span>
+                        </div>
+                    </Link>
+                    <div className="flex items-center justify-between mt-3 gap-2">
+                        <Link 
+                            href={`/shop/${product.store?.username || ''}`}
+                            className='flex items-center gap-1.5 flex-1 relative min-w-0 group/store hover:opacity-80 transition-opacity'
+                            onMouseEnter={() => setShowStoreTooltip(true)}
+                            onMouseLeave={() => setShowStoreTooltip(false)}
+                        >
+                            <AnimatePresence>
+                                {showStoreTooltip && product.store?.name && (
+                                    <motion.div
+                                        initial={{ opacity: 0, y: 5, scale: 0.95 }}
+                                        animate={{ opacity: 1, y: 0, scale: 1 }}
+                                        exit={{ opacity: 0, y: 5, scale: 0.95 }}
+                                        className="absolute bottom-full mb-2 left-0 z-50 pointer-events-none"
+                                    >
+                                        <div className="bg-slate-900 text-white text-[10px] py-1 px-2 rounded shadow-lg whitespace-nowrap font-medium">
+                                            {product.store.name}
+                                            <div className="absolute top-full left-4 border-4 border-transparent border-t-slate-900" />
+                                        </div>
+                                    </motion.div>
+                                )}
+                            </AnimatePresence>
+                            <div className="w-5 h-5 rounded-full bg-slate-100 flex-shrink-0 flex items-center justify-center overflow-hidden border border-slate-200 group-hover/store:border-green-400 transition-colors">
+                                {product.store?.logo ? (
+                                    <Image
+                                        src={product.store.logo.startsWith('http') || product.store.logo.startsWith('/') || product.store.logo.startsWith('data:') ? product.store.logo : `/${product.store.logo}`}
+                                        alt={product.store.name || 'Store'}
+                                        width={20}
+                                        height={20}
+                                        className="w-full h-full object-cover"
+                                        unoptimized
+                                    />
+                                ) : (
+                                    <span className="text-[10px] text-slate-500 font-bold">{product.store?.name?.charAt(0) || 'B'}</span>
+                                )}
+                            </div>
+                            <p className='text-[11px] text-slate-500 truncate group-hover/store:text-green-600 transition-colors'>{product.store?.name}</p>
+                        </Link>
+                        <p className='text-[11px] font-medium text-slate-400 flex-shrink-0 whitespace-nowrap'>{product.sold || 0} sold</p>
                     </div>
                 </div>
-            </Link>
+            </div>
         </motion.div>
     )
 }

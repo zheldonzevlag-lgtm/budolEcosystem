@@ -1,5 +1,5 @@
 'use client'
-import { Suspense, useEffect, useRef, useState } from "react"
+import { Suspense, useEffect, useRef, useState, useMemo } from "react"
 import ProductCard from "@/components/ProductCard"
 import Loading from "@/components/Loading"
 import { MoveLeftIcon, ChevronRight, ChevronDown, SlidersHorizontal, X, Search, Filter, Star } from "lucide-react"
@@ -428,7 +428,8 @@ function ShopContent() {
 
     const products = useSelector(state => state.product.list)
 
-    const { data, error, isLoading } = useSWR('/api/products', {
+    const productsApiPath = category ? `/api/products?category=${encodeURIComponent(category)}&limit=100` : '/api/products?limit=100'
+    const { data, error, isLoading } = useSWR(productsApiPath, {
         revalidateOnFocus: false,
         revalidateOnReconnect: false,
         dedupingInterval: 5000,
@@ -439,9 +440,32 @@ function ShopContent() {
 
     const activeSearch = searchQuery.trim()
 
+    const descendantSlugs = useMemo(() => {
+        if (!category) return null
+        const byParent = new Map()
+        categories.forEach(c => {
+            const arr = byParent.get(c.parentId) || []
+            arr.push(c)
+            byParent.set(c.parentId, arr)
+        })
+        const root = categories.find(c => c.slug === category)
+        if (!root) return new Set([category])
+        const result = new Set([root.slug])
+        const stack = [root.id]
+        while (stack.length) {
+            const pid = stack.pop()
+            const children = byParent.get(pid) || []
+            children.forEach(child => {
+                result.add(child.slug)
+                stack.push(child.id)
+            })
+        }
+        return result
+    }, [categories, category])
+
     const filteredProducts = products.filter(product => {
         const matchesSearch = activeSearch ? product.name.toLowerCase().includes(activeSearch.toLowerCase()) : true
-        const matchesCategory = category ? (product.category === category || product.categorySlug === category) : true
+        const matchesCategory = descendantSlugs ? descendantSlugs.has(product.categorySlug) : true
 
         // Price filtering
         const price = product.price || 0

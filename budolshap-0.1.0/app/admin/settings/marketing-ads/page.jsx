@@ -13,8 +13,19 @@ export default function MarketingAdsSettings() {
         marketingAdsEnabled: false,
         selectedMarketingAds: [],
         adDisplayMode: 'SEQUENCE',
-        quickInstallerEnabled: true
+        quickInstallerEnabled: false,
+        marketingAdConfigs: []
     })
+    const [newGroup, setNewGroup] = useState({ title: '', subtitle: '', position: 'bottom_right', items: [], brandBar: [] })
+    const positions = [
+        { value: 'top_left', label: 'Top Left' },
+        { value: 'top_center', label: 'Top Center' },
+        { value: 'top_right', label: 'Top Right' },
+        { value: 'bottom_left', label: 'Bottom Left' },
+        { value: 'bottom_center', label: 'Bottom Center' },
+        { value: 'bottom_right', label: 'Bottom Right' },
+        { value: 'center', label: 'Fully Center' }
+    ]
 
     useEffect(() => {
         fetchInitialData()
@@ -47,7 +58,8 @@ export default function MarketingAdsSettings() {
                     marketingAdsEnabled: settingsData.marketingAdsEnabled || false,
                     selectedMarketingAds: settingsData.selectedMarketingAds || [],
                     adDisplayMode: settingsData.adDisplayMode || 'SEQUENCE',
-                    quickInstallerEnabled: settingsData.quickInstallerEnabled !== undefined ? settingsData.quickInstallerEnabled : true
+                    quickInstallerEnabled: settingsData.quickInstallerEnabled !== undefined ? settingsData.quickInstallerEnabled : true,
+                    marketingAdConfigs: settingsData.marketingAdConfigs || []
                 })
             }
 
@@ -79,11 +91,17 @@ export default function MarketingAdsSettings() {
             if (response.ok) {
                 toast.success('Settings saved successfully')
             } else {
-                toast.error('Failed to save settings')
+                let errMsg = 'Failed to save settings'
+                try {
+                    const data = await response.json()
+                    if (data?.error) errMsg = data.error
+                } catch (_e) {}
+                toast.error(errMsg)
             }
         } catch (error) {
             console.error('Failed to save settings:', error)
-            toast.error('Network error')
+            const msg = error?.message || 'Network error'
+            toast.error(msg)
         } finally {
             setSaving(false)
         }
@@ -204,6 +222,229 @@ export default function MarketingAdsSettings() {
                                     <p className="col-span-full text-center py-4 text-xs text-slate-400">No files found in public/marketing-ads/</p>
                                 )}
                             </div>
+                        </div>
+
+                        <div className="pt-2 border-t border-slate-200">
+                            <label className="block text-sm font-medium text-slate-700 mb-2">Ad Configuration Group</label>
+                            <div className="space-y-4">
+                                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                                    <div className="md:col-span-2">
+                                        <p className="text-xs font-semibold text-slate-600 mb-1">Text</p>
+                                        <input
+                                            type="text"
+                                            value={newGroup.title}
+                                            onChange={(e) => setNewGroup({ ...newGroup, title: e.target.value })}
+                                            className="w-full p-2 border border-slate-200 rounded-lg mb-2"
+                                            placeholder="Title"
+                                        />
+                                        <input
+                                            type="text"
+                                            value={newGroup.subtitle}
+                                            onChange={(e) => setNewGroup({ ...newGroup, subtitle: e.target.value })}
+                                            className="w-full p-2 border border-slate-200 rounded-lg"
+                                            placeholder="Subtitle"
+                                        />
+                                    </div>
+                                    <div>
+                                        <p className="text-xs font-semibold text-slate-600 mb-1">Position</p>
+                                        <select
+                                            value={newGroup.position}
+                                            onChange={(e) => setNewGroup({ ...newGroup, position: e.target.value })}
+                                            className="w-full p-2 border border-slate-200 rounded-lg"
+                                        >
+                                            {positions.map(p => (
+                                                <option key={p.value} value={p.value}>{p.label}</option>
+                                            ))}
+                                        </select>
+                                    </div>
+                                </div>
+
+                                <div>
+                                    <p className="text-xs font-semibold text-slate-600 mb-2">Images</p>
+                                    <div className="flex items-center gap-2 mb-3">
+                                        <input
+                                            type="file"
+                                            accept="image/*"
+                                            onChange={async (e) => {
+                                                const file = e.target.files?.[0]
+                                                if (!file) return
+                                                const fd = new FormData()
+                                                fd.append('file', file)
+                                                fd.append('type', 'marketing')
+                                                const res = await fetch('/api/upload', { method: 'POST', body: fd })
+                                                const data = await res.json()
+                                                if (data.url) setNewGroup({ ...newGroup, items: [...newGroup.items, { imageUrl: data.url }] })
+                                            }}
+                                            className="p-2 border border-slate-200 rounded-lg"
+                                        />
+                                        <input
+                                            type="text"
+                                            placeholder="or paste image URL"
+                                            className="flex-1 p-2 border border-slate-200 rounded-lg"
+                                            onKeyDown={(e) => {
+                                                if (e.key === 'Enter') {
+                                                    const url = e.currentTarget.value.trim()
+                                                    if (url) {
+                                                        setNewGroup({ ...newGroup, items: [...newGroup.items, { imageUrl: url }] })
+                                                        e.currentTarget.value = ''
+                                                    }
+                                                }
+                                            }}
+                                        />
+                                    </div>
+                                    <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+                                        {newGroup.items.map((it, idx) => (
+                                            <div key={idx} className="border border-slate-200 rounded-lg p-2 relative">
+                                                <img src={it.imageUrl} alt="preview" className="w-full h-32 object-contain rounded bg-white" />
+                                                <button
+                                                    className="absolute top-1 right-1 text-xs bg-red-500 text-white px-2 py-1 rounded"
+                                                    onClick={() => {
+                                                        const items = [...newGroup.items]
+                                                        items.splice(idx, 1)
+                                                        setNewGroup({ ...newGroup, items })
+                                                    }}
+                                                >
+                                                    Remove
+                                                </button>
+                                            </div>
+                                        ))}
+                                        {newGroup.items.length === 0 && (
+                                            <div className="col-span-full text-center text-xs text-slate-400 border border-dashed border-slate-300 rounded-lg p-6">
+                                                No images yet. Upload or paste URL to add.
+                                            </div>
+                                        )}
+                                    </div>
+                                </div>
+
+                                <div className="pt-2 border-t border-slate-200">
+                                    <p className="text-xs font-semibold text-slate-600 mb-2">Branding Bar (icons and labels below subtitle)</p>
+                                    <div className="flex items-center gap-2 mb-3">
+                                        <select
+                                            className="p-2 border border-slate-200 rounded-lg"
+                                            id="brandIconSelect"
+                                        >
+                                            <option value="credit_card">Credit Card</option>
+                                            <option value="truck">Truck</option>
+                                            <option value="headset">Headset</option>
+                                            <option value="loan">Loan</option>
+                                        </select>
+                                        <input
+                                            type="text"
+                                            placeholder="Label (e.g., budolPay)"
+                                            className="flex-1 p-2 border border-slate-200 rounded-lg"
+                                            id="brandLabelInput"
+                                        />
+                                        <input
+                                            type="color"
+                                            defaultValue="#f97316"
+                                            title="Text Color"
+                                            className="p-2 border border-slate-200 rounded-lg h-10 w-14"
+                                            id="brandColorInput"
+                                        />
+                                        <button
+                                            className="bg-indigo-600 hover:bg-indigo-700 text-white px-3 py-2 rounded-lg"
+                                            onClick={() => {
+                                                const iconEl = document.getElementById('brandIconSelect')
+                                                const labelEl = document.getElementById('brandLabelInput')
+                                                const colorEl = document.getElementById('brandColorInput')
+                                                const icon = iconEl && 'value' in iconEl ? iconEl.value : 'credit_card'
+                                                const label = labelEl && 'value' in labelEl ? labelEl.value.trim() : ''
+                                                const color = colorEl && 'value' in colorEl ? colorEl.value : '#000000'
+                                                if (!label) return
+                                                setNewGroup({ ...newGroup, brandBar: [...newGroup.brandBar, { icon, label, color }] })
+                                                if (labelEl && 'value' in labelEl) { labelEl.value = '' }
+                                            }}
+                                        >
+                                            Add
+                                        </button>
+                                    </div>
+                                    <div className="flex flex-wrap gap-2">
+                                        {newGroup.brandBar.map((b, i) => (
+                                            <div key={i} className="flex items-center gap-2 border border-slate-200 rounded-lg px-2 py-1">
+                                                <span className="text-xs font-bold" style={{ color: b.color }}>{b.label}</span>
+                                                <span className="text-[10px] text-slate-400">{b.icon}</span>
+                                                <button
+                                                    className="text-xs bg-red-500 text-white px-2 py-1 rounded"
+                                                    onClick={() => {
+                                                        const bb = [...newGroup.brandBar]
+                                                        bb.splice(i, 1)
+                                                        setNewGroup({ ...newGroup, brandBar: bb })
+                                                    }}
+                                                >
+                                                    Remove
+                                                </button>
+                                            </div>
+                                        ))}
+                                        {newGroup.brandBar.length === 0 && (
+                                            <div className="text-xs text-slate-400">No branding items yet</div>
+                                        )}
+                                    </div>
+                                </div>
+
+                                <div className="flex justify-end">
+                                    <button
+                                        className="mt-1 bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2 rounded-lg"
+                                        onClick={() => {
+                                            if (newGroup.items.length === 0) return
+                                            const list = Array.isArray(settings.marketingAdConfigs) ? settings.marketingAdConfigs : []
+                                            setSettings({ ...settings, marketingAdConfigs: [...list, newGroup] })
+                                            setNewGroup({ title: '', subtitle: '', position: 'bottom_right', items: [], brandBar: [] })
+                                        }}
+                                    >
+                                        Add Group
+                                    </button>
+                                </div>
+                            </div>
+
+                            {Array.isArray(settings.marketingAdConfigs) && settings.marketingAdConfigs.length > 0 && (
+                                <div className="mt-4 grid grid-cols-1 md:grid-cols-3 gap-4">
+                                    {settings.marketingAdConfigs.map((conf, idx) => (
+                                        <div key={idx} className="border border-slate-200 rounded-lg p-3">
+                                            <div className="grid grid-cols-2 gap-2">
+                                                {(conf.items || []).map((it, i) => (
+                                                    <img key={i} src={it.imageUrl} alt="ad" className="w-full h-32 object-contain rounded bg-white" />
+                                                ))}
+                                            </div>
+                                            <p className="text-sm font-bold mt-2">{conf.title || '—'}</p>
+                                            <p className="text-xs text-slate-500">{conf.subtitle || '—'}</p>
+                                            <p className="text-xs text-slate-400 mt-1">Position: {conf.position}</p>
+                                            {Array.isArray(conf.brandBar) && conf.brandBar.length > 0 && (
+                                                <div className="mt-2 flex flex-wrap gap-2">
+                                                    {conf.brandBar.map((b, i) => (
+                                                        <span key={i} className="text-[10px] bg-slate-100 text-slate-600 px-2 py-1 rounded">
+                                                            {b.label} ({b.icon})
+                                                        </span>
+                                                    ))}
+                                                </div>
+                                            )}
+                                            <div className="mt-2 flex gap-2">
+                                                <button
+                                                    className={`text-xs px-2 py-1 rounded ${conf.active ? 'bg-green-600 text-white' : 'bg-slate-200 text-slate-700'}`}
+                                                    onClick={() => {
+                                                        const list = (settings.marketingAdConfigs || []).map((g, i) => ({
+                                                            ...g,
+                                                            active: i === idx
+                                                        }))
+                                                        setSettings({ ...settings, marketingAdConfigs: list })
+                                                    }}
+                                                >
+                                                    {conf.active ? 'Active' : 'Set Active'}
+                                                </button>
+                                                <button
+                                                    className="text-xs bg-red-500 text-white px-2 py-1 rounded"
+                                                    onClick={() => {
+                                                        const list = [...settings.marketingAdConfigs]
+                                                        list.splice(idx, 1)
+                                                        setSettings({ ...settings, marketingAdConfigs: list })
+                                                    }}
+                                                >
+                                                    Remove
+                                                </button>
+                                            </div>
+                                        </div>
+                                    ))}
+                                </div>
+                            )}
                         </div>
 
                         <button

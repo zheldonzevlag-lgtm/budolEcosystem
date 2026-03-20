@@ -8,22 +8,30 @@ import { createAuditLog } from '@/lib/audit'
 import { normalizePhone } from '@/lib/utils/phone-utils'
 import { sendOTPSMS } from '@/lib/sms'
 import { sendOTPEmail } from '@/lib/email'
+import { maskPII } from '@/lib/compliance'
+import { randomInt } from 'crypto'
 
-// Generate a 6-digit random code
 function generateOTP() {
-    return Math.floor(100000 + Math.random() * 900000).toString()
+    return randomInt(100000, 1000000).toString()
 }
 
 export async function POST(request) {
     try {
         const body = await request.json()
         let { email, password } = body
-
-        // Normalize email/phone for consistent lookup
-        const normalizedPhone = normalizePhone(email);
-        const searchIdentifier = normalizedPhone || email.toLowerCase();
+        const rawIdentifier = (email || '').trim()
+        const normalizedEmail = rawIdentifier.toLowerCase()
+        const normalizedPhone = normalizePhone(rawIdentifier)
+        const phoneCandidates = normalizedPhone
+            ? Array.from(new Set([
+                normalizedPhone,
+                normalizedPhone.replace(/^\+/, ''),
+                `0${normalizedPhone.slice(-10)}`
+            ]))
+            : []
+        const searchIdentifier = normalizedPhone || normalizedEmail;
         
-        console.log(`[Login] Attempt for: "${email}" -> searchIdentifier: "${searchIdentifier}" (isPhone: ${!!normalizedPhone})`);
+        console.log(`[Login] Attempt for: "${maskPII(rawIdentifier)}" -> searchIdentifier: "${maskPII(searchIdentifier)}" (isPhone: ${!!normalizedPhone})`);
 
         if (!email || !password) {
             return NextResponse.json(
@@ -33,7 +41,8 @@ export async function POST(request) {
         }
 
         // Rate Limiting
-        const ip = request.headers.get('x-forwarded-for') || 'unknown-ip'
+        const rawForwardedFor = request.headers.get('x-forwarded-for') || ''
+        const ip = rawForwardedFor.split(',')[0]?.trim() || 'unknown-ip'
         const limitKey = `login:${ip}:${email}` // Limit by IP + Email specific
 
         // Fetch dynamic settings
@@ -58,18 +67,37 @@ export async function POST(request) {
         let user = await prisma.user.findFirst({
             where: {
                 OR: [
-                    { email: searchIdentifier },
-                    { phoneNumber: searchIdentifier }
+                    { email: normalizedEmail },
+                    { email: rawIdentifier },
+                    { phoneNumber: rawIdentifier },
+                    ...(phoneCandidates.length > 0
+                        ? [{ phoneNumber: { in: phoneCandidates } }]
+                        : [])
                 ]
             }
         })
+
+        // Check if user is soft-deleted
+        if (user && user.deletedAt) {
+            console.log(`[Login] Blocked deleted user attempt: ${user.email}`);
+            await createAuditLog(user.id, 'LOGIN_FAILED', request, {
+                status: 'FAILURE',
+                details: 'Login attempt for deleted account',
+                entity: 'User',
+                entityId: user.id
+            });
+            return NextResponse.json(
+                { error: 'Account has been deleted. Please contact support.' },
+                { status: 403 }
+            )
+        }
 
         if (!user) {
             // Attempt to sync from budolID if not found locally
             try {
                 // If it's an OTP login, we can't use loginWithBudolId (needs password)
                 // We'll handle OTP sync further down if we find a valid OTP code
-                const isOtp = body.isOtp || /^[0-9]{6}$/.test(password);
+                const isOtp = !!body.isOtp;
                 
                 if (!isOtp) {
                     console.log(`[Login Sync] User not found locally. Attempting sync from budolID for ${searchIdentifier}`);
@@ -105,25 +133,16 @@ export async function POST(request) {
         }
 
         // Handle OTP Sync (User exists in BudolID, has valid OTP, but not in local DB)
-        const isOtp = body.isOtp || /^[0-9]{6}$/.test(password)
+        const isOtp = !!body.isOtp
         if (!user && isOtp) {
             const skewLeeway = 5 * 60 * 1000
-            const now = new Date();
-            const otpRecord = await prisma.verificationCode.findFirst({
-                where: {
-                    identifier: searchIdentifier,
-                    code: password
-                }
+            const now = new Date()
+            const otpRecord = await prisma.verificationCode.findUnique({
+                where: { identifier: searchIdentifier }
             })
+            const otpMatches = otpRecord ? await verifyPassword(password, otpRecord.code) : false
 
-            console.log(`[Login Sync] OTP Check for ${searchIdentifier}:`, {
-                found: !!otpRecord,
-                expiry: otpRecord?.expiresAt,
-                now: now,
-                isValid: otpRecord && otpRecord.expiresAt >= new Date(now.getTime() - skewLeeway)
-            });
-
-            if (otpRecord && otpRecord.expiresAt >= new Date(now.getTime() - skewLeeway)) {
+            if (otpRecord && otpMatches && otpRecord.expiresAt >= new Date(now.getTime() - skewLeeway)) {
                 console.log(`[Login Sync] Valid OTP found for non-local user ${searchIdentifier}. Attempting to fetch profile from BudolID.`);
                 try {
                      // We need to fetch the user profile from BudolID. 
@@ -198,26 +217,23 @@ export async function POST(request) {
         if (isOtp) {
             // Allow larger clock skew (5 mins) when validating expiry to handle potential server/client time sync issues
             const skewLeeway = 5 * 60 * 1000
-            const now = new Date();
-            const otpRecord = await prisma.verificationCode.findFirst({
-                where: {
-                    identifier: searchIdentifier,
-                    code: password
-                }
+            const now = new Date()
+
+            // OTPs are issued exclusively via /api/auth/otp and stored in VerificationCode
+            // under the normalized identifier used there (normalizePhone for phones).
+            const otpRecord = await prisma.verificationCode.findUnique({
+                where: { identifier: searchIdentifier }
             })
+            const otpMatches = otpRecord ? await verifyPassword(password, otpRecord.code) : false
 
-            console.log(`[Login] OTP Check:`, {
-                found: !!otpRecord,
-                codeMatch: otpRecord?.code === password,
-                expiry: otpRecord?.expiresAt,
-                now: now,
-                isExpired: otpRecord ? otpRecord.expiresAt < new Date(now.getTime() - skewLeeway) : 'N/A'
-            });
-
-            if (otpRecord && otpRecord.expiresAt >= new Date(now.getTime() - skewLeeway)) {
+            if (
+                otpRecord &&
+                otpMatches &&
+                otpRecord.expiresAt >= new Date(now.getTime() - skewLeeway)
+            ) {
                 isValidPassword = true
                 // Consume OTP
-                await prisma.verificationCode.delete({ where: { id: otpRecord.id } })
+                await prisma.verificationCode.delete({ where: { identifier: searchIdentifier } })
             }
         } else {
             // Verify password
@@ -278,41 +294,105 @@ export async function POST(request) {
             )
         }
 
-        // Enforce OTP for password-based logins
         if (!isOtp) {
-            const OTP_TTL_MINUTES = parseInt(process.env.OTP_TTL_MINUTES || '15', 10)
-            const expires = new Date(Date.now() + OTP_TTL_MINUTES * 60 * 1000)
-
-            // Reuse existing non-expired OTP to avoid invalidating a code the user already received
+            const configuredTtl = parseInt(process.env.OTP_TTL_MINUTES || '5', 10)
+            const OTP_TTL_MINUTES = Math.min(10, Math.max(3, configuredTtl))
+            const now = new Date()
+            const expires = new Date(now.getTime() + OTP_TTL_MINUTES * 60 * 1000)
             const existing = await prisma.verificationCode.findUnique({
                 where: { identifier: searchIdentifier }
             })
-            let otp = generateOTP()
-            if (existing && existing.expiresAt > new Date()) {
-                otp = existing.code
+            const cooldownMillis = 60 * 1000
+
+            if (existing && now.getTime() - existing.createdAt.getTime() < cooldownMillis) {
+                return NextResponse.json(
+                    { error: 'Please wait before requesting another verification code.' },
+                    { status: 429, headers: { 'Cache-Control': 'no-store' } }
+                )
+            }
+            const otpLimitByIp = await rateLimit(`login-otp:ip:${ip}`, 6, 60 * 10)
+            const otpLimitByIdentifier = await rateLimit(`login-otp:identifier:${searchIdentifier}`, 3, 60 * 10)
+
+            if (!otpLimitByIp.success || !otpLimitByIdentifier.success) {
+                await createAuditLog(user.id, 'SECURITY_OTP_RATE_LIMITED', request, {
+                    entity: 'Auth',
+                    status: 'WARNING',
+                    details: 'OTP challenge generation blocked by rate limit',
+                    metadata: {
+                        identifier: maskPII(searchIdentifier),
+                        ip
+                    }
+                })
+                return NextResponse.json(
+                    { error: 'Too many verification requests. Please try again later.' },
+                    { status: 429, headers: { 'Cache-Control': 'no-store' } }
+                )
+            }
+
+            const otp = generateOTP()
+            const otpHash = await hashPassword(otp)
+
+            if (process.env.NODE_ENV !== 'production') {
+                console.log('\n' + '='.repeat(40))
+                console.log(`[OTP] Current Time: ${new Date().toISOString()}`)
+                console.log(`[OTP] Expiry Time: ${expires.toISOString()} (TTL: ${OTP_TTL_MINUTES}m)`)
+                console.log(`[OTP] Sending dual-channel OTP for identifier: ${maskPII(searchIdentifier)}`)
+                console.log('='.repeat(40) + '\n')
             }
 
             await prisma.verificationCode.upsert({
                 where: { identifier: searchIdentifier },
-                update: { code: otp, expiresAt: expires, type: 'LOGIN' },
-                create: { identifier: searchIdentifier, code: otp, expiresAt: expires, type: 'LOGIN' }
+                update: { code: otpHash, expiresAt: expires, type: 'LOGIN', createdAt: now },
+                create: { identifier: searchIdentifier, code: otpHash, expiresAt: expires, type: 'LOGIN', createdAt: now }
             })
 
-            // Send OTP
-            const isPhone = !!normalizePhone(searchIdentifier);
-            if (isPhone) {
-                await sendOTPSMS(searchIdentifier, otp)
-                if (user.email) await sendOTPEmail(user.email, otp, user.name || 'User')
+            const isPhoneIdentifier = !!normalizePhone(searchIdentifier)
+            let smsSent = false
+            let emailSent = false
+            if (isPhoneIdentifier) {
+                smsSent = await sendOTPSMS(searchIdentifier, otp)
+                if (user.email) {
+                    emailSent = await sendOTPEmail(user.email, otp, user.name || 'User')
+                }
+                if (!smsSent && !emailSent) {
+                    await createAuditLog(user.id, 'SECURITY_OTP_DELIVERY_FAILED', request, {
+                        entity: 'Auth',
+                        status: 'FAILURE',
+                        details: 'OTP challenge delivery failed for phone login',
+                        metadata: { identifier: maskPII(searchIdentifier) }
+                    })
+                    return NextResponse.json(
+                        { error: 'Unable to deliver verification code. Please try again.' },
+                        { status: 503, headers: { 'Cache-Control': 'no-store' } }
+                    )
+                }
             } else {
-                await sendOTPEmail(searchIdentifier, otp, user.name || 'User')
-                if (user.phoneNumber) await sendOTPSMS(user.phoneNumber, otp)
+                emailSent = await sendOTPEmail(searchIdentifier, otp, user.name || 'User')
+                if (user.phoneNumber) {
+                    smsSent = await sendOTPSMS(user.phoneNumber, otp)
+                }
+                if (!emailSent) {
+                    await createAuditLog(user.id, 'SECURITY_OTP_DELIVERY_FAILED', request, {
+                        entity: 'Auth',
+                        status: 'FAILURE',
+                        details: 'OTP challenge email delivery failed for email login',
+                        metadata: {
+                            identifier: maskPII(searchIdentifier),
+                            smsFallback: smsSent
+                        }
+                    })
+                    return NextResponse.json(
+                        { error: 'OTP email delivery failed. Please verify email settings or try again.' },
+                        { status: 503, headers: { 'Cache-Control': 'no-store' } }
+                    )
+                }
             }
 
             return NextResponse.json({
                 status: 'OTP_REQUIRED',
                 message: 'Verification code sent. Please enter it to continue.',
                 identifier: searchIdentifier
-            })
+            }, { headers: { 'Cache-Control': 'no-store' } })
         }
 
         // Check if email/phone is verified
@@ -357,7 +437,8 @@ export async function POST(request) {
             accountType: user.accountType,
             isAdmin: user.isAdmin,
             isMember: user.isMember,
-            isCoopMember: user.isCoopMember
+            isCoopMember: user.isCoopMember,
+            createdAt: user.createdAt
         }
 
         // Create response with cookie
@@ -369,7 +450,7 @@ export async function POST(request) {
         })
 
         // Set both cookies for backward compatibility
-        console.log(`[Login API] Setting auth cookies for ${email}`);
+        console.log(`[Login API] Setting auth cookies for ${maskPII(rawIdentifier)}`);
         
         response.cookies.set('budolshap_token', token, {
             ...COOKIE_OPTIONS,

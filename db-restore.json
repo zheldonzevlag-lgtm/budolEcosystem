@@ -1,0 +1,26 @@
+{
+  "family": "db-restore",
+  "executionRoleArn": "arn:aws:iam::194442925745:role/BudolECSExecutionRole",
+  "networkMode": "awsvpc",
+  "containerDefinitions": [
+    {
+      "name": "restore",
+      "image": "postgres:15-alpine",
+      "essential": true,
+      "command": [
+        "sh", "-c", "wget -O /tmp/budol_restore.sql 'https://budol-ecosystem-backups.s3.ap-southeast-1.amazonaws.com/budol_restore.sql?X-Amz-Algorithm=AWS4-HMAC-SHA256&X-Amz-Credential=AKIAS2RNTS2Y3JWVUMNV%2F20260320%2Fap-southeast-1%2Fs3%2Faws4_request&X-Amz-Date=20260320T015711Z&X-Amz-Expires=3600&X-Amz-SignedHeaders=host&X-Amz-Signature=f8410a3b1828c6beb4586b18d6e99058f07c325a794dfbe5adb5011defdc68a0' && wget -O /tmp/budolaccounting.sql 'https://budol-ecosystem-backups.s3.ap-southeast-1.amazonaws.com/budolaccounting.sql?X-Amz-Algorithm=AWS4-HMAC-SHA256&X-Amz-Credential=AKIAS2RNTS2Y3JWVUMNV%2F20260320%2Fap-southeast-1%2Fs3%2Faws4_request&X-Amz-Date=20260320T015712Z&X-Amz-Expires=3600&X-Amz-SignedHeaders=host&X-Amz-Signature=7fd004352e9641b18c7626c67a947bc325a8f3e68d987bf6d7c91637fa404a88' && wget -O /tmp/budolid.sql 'https://budol-ecosystem-backups.s3.ap-southeast-1.amazonaws.com/budolid.sql?X-Amz-Algorithm=AWS4-HMAC-SHA256&X-Amz-Credential=AKIAS2RNTS2Y3JWVUMNV%2F20260320%2Fap-southeast-1%2Fs3%2Faws4_request&X-Amz-Date=20260320T015713Z&X-Amz-Expires=3600&X-Amz-SignedHeaders=host&X-Amz-Signature=a95f7e8c21d7c96933d4782466d5e54bf491568b84e7862d78ff87aed48fa032' && wget -O /tmp/budolpay.sql 'https://budol-ecosystem-backups.s3.ap-southeast-1.amazonaws.com/budolpay.sql?X-Amz-Algorithm=AWS4-HMAC-SHA256&X-Amz-Credential=AKIAS2RNTS2Y3JWVUMNV%2F20260320%2Fap-southeast-1%2Fs3%2Faws4_request&X-Amz-Date=20260320T015714Z&X-Amz-Expires=3600&X-Amz-SignedHeaders=host&X-Amz-Signature=55bd8d0d7ba6cf92d18b632ff7f44a94d4e734a16cd4a2ee6f9a4d933f387304' && export PGPASSWORD='r00tPassword2026!' && psql -h budol-db-production.cnu6imkq689x.ap-southeast-1.rds.amazonaws.com -U budolpostgres -d postgres -c 'CREATE DATABASE budolshap_1db;' ; psql -h budol-db-production.cnu6imkq689x.ap-southeast-1.rds.amazonaws.com -U budolpostgres -d postgres -c 'CREATE DATABASE budolaccounting;' ; psql -h budol-db-production.cnu6imkq689x.ap-southeast-1.rds.amazonaws.com -U budolpostgres -d postgres -c 'CREATE DATABASE budolid;' ; psql -h budol-db-production.cnu6imkq689x.ap-southeast-1.rds.amazonaws.com -U budolpostgres -d postgres -c 'CREATE DATABASE budolpay;' ; psql -h budol-db-production.cnu6imkq689x.ap-southeast-1.rds.amazonaws.com -U budolpostgres -d budolshap_1db -f /tmp/budol_restore.sql && psql -h budol-db-production.cnu6imkq689x.ap-southeast-1.rds.amazonaws.com -U budolpostgres -d budolaccounting -f /tmp/budolaccounting.sql && psql -h budol-db-production.cnu6imkq689x.ap-southeast-1.rds.amazonaws.com -U budolpostgres -d budolid -f /tmp/budolid.sql && psql -h budol-db-production.cnu6imkq689x.ap-southeast-1.rds.amazonaws.com -U budolpostgres -d budolpay -f /tmp/budolpay.sql"
+      ],
+      "logConfiguration": {
+        "logDriver": "awslogs",
+        "options": {
+          "awslogs-group": "/ecs/db-restore",
+          "awslogs-region": "ap-southeast-1",
+          "awslogs-stream-prefix": "ecs"
+        }
+      }
+    }
+  ],
+  "requiresCompatibilities": ["FARGATE"],
+  "cpu": "256",
+  "memory": "512"
+}

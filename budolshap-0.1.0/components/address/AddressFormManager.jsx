@@ -67,10 +67,47 @@ const AddressFormManager = ({
         return '+63' + formatPhoneNumber(phone);
     };
 
+    // Helper to check if string looks like a phone number
+    const isPhoneNumberLike = (str) => {
+        if (!str) return false;
+        // Simple heuristic: if it contains mostly digits or starts with +, it's likely a phone number
+        // More robust: contains only digits, spaces, dashes, plus sign, parentheses
+        return /^[\d\+\-\s\(\)]+$/.test(str) && str.replace(/\D/g, '').length >= 7;
+    };
+
+    // Helper to split name into first and last name properly
+    // Strategy: Last word is Last Name, everything else is First Name
+    // This supports multi-word first names like "Peter The Great" or "Mary Jane" better
+    // Also handles common suffixes like Jr., Sr., III, etc.
+    const splitName = (fullName) => {
+        if (!fullName) return { firstName: '', lastName: '' };
+        
+        const parts = fullName.trim().split(/\s+/);
+        if (parts.length === 1) {
+            return { firstName: parts[0], lastName: '' };
+        }
+        
+        // Check for suffixes
+        const suffixes = ['JR', 'JR.', 'SR', 'SR.', 'II', 'III', 'IV', 'V'];
+        const lastPart = parts[parts.length - 1].toUpperCase();
+        
+        let lastName = parts.pop();
+        
+        // If the last part is a suffix and we have at least one more part (the actual last name)
+        if (suffixes.includes(lastPart) && parts.length > 0) {
+            const actualLastName = parts.pop();
+            lastName = `${actualLastName} ${lastName}`;
+        }
+        
+        const firstName = parts.join(' ');
+        
+        return { firstName, lastName };
+    };
+
     const [formData, setFormData] = useState({
         name: initialData.name || '',
-        firstName: mode !== 'store' ? (initialData.name ? initialData.name.split(' ')[0] : '') : '',
-        lastName: mode !== 'store' ? (initialData.name ? initialData.name.split(' ').slice(1).join(' ') : '') : '',
+        firstName: mode !== 'store' ? (initialData.firstName || ((initialData.name && !isPhoneNumberLike(initialData.name)) ? splitName(initialData.name).firstName : '')) : '',
+        lastName: mode !== 'store' ? (initialData.lastName || ((initialData.name && !isPhoneNumberLike(initialData.name)) ? splitName(initialData.name).lastName : '')) : '',
         phone: formatInitialPhone(initialData.phone),
         email: initialData.email || '',
         password: '',
@@ -127,8 +164,8 @@ const AddressFormManager = ({
         setFormData(prev => ({
             ...prev,
             name: initialData.name || '',
-            firstName: mode !== 'store' ? (initialData.name ? initialData.name.split(' ')[0] : '') : '',
-            lastName: mode !== 'store' ? (initialData.name ? initialData.name.split(' ').slice(1).join(' ') : '') : '',
+            firstName: mode !== 'store' ? (initialData.firstName || ((initialData.name && !isPhoneNumberLike(initialData.name)) ? splitName(initialData.name).firstName : '')) : '',
+            lastName: mode !== 'store' ? (initialData.lastName || ((initialData.name && !isPhoneNumberLike(initialData.name)) ? splitName(initialData.name).lastName : '')) : '',
             phone: formatInitialPhone(initialData.phone),
             email: initialData.email || '',
             district: initialData.district || '',
@@ -364,7 +401,13 @@ const AddressFormManager = ({
 
             const finalName = mode === 'store' ? formData.name : `${formData.firstName.trim()} ${formData.lastName.trim()}`;
 
-            onSave({ ...formData, name: finalName, phone: cleanedPhone });
+            onSave({ 
+                ...formData, 
+                name: finalName, 
+                phone: cleanedPhone,
+                firstName: formData.firstName.trim(),
+                lastName: formData.lastName.trim()
+            });
         }
     };
 
@@ -420,7 +463,7 @@ const AddressFormManager = ({
                                                     type={showFirstName ? "text" : "password"}
                                                     value={formData.firstName}
                                                     onChange={e => handleChange('firstName', e.target.value)}
-                                                    placeholder="Natasha"
+                                                    placeholder="Your First Name here"
                                                     className={`w-full px-3 md:px-4 py-2.5 md:py-3 rounded-xl bg-slate-50 border-2 ${errors.firstName ? 'border-red-200 focus:border-red-500' : 'border-slate-50 focus:border-green-500'} outline-none transition-all text-sm pr-10`}
                                                 />
                                                 <button
@@ -442,7 +485,7 @@ const AddressFormManager = ({
                                                     type={showLastName ? "text" : "password"}
                                                     value={formData.lastName}
                                                     onChange={e => handleChange('lastName', e.target.value)}
-                                                    placeholder="Romanoff"
+                                                    placeholder="Your Last Name here"
                                                     className={`w-full px-3 md:px-4 py-2.5 md:py-3 rounded-xl bg-slate-50 border-2 ${errors.lastName ? 'border-red-200 focus:border-red-500' : 'border-slate-50 focus:border-green-500'} outline-none transition-all text-sm pr-10`}
                                                 />
                                                 <button
@@ -499,7 +542,7 @@ const AddressFormManager = ({
                                             type="email"
                                             value={formData.email}
                                             onChange={e => handleChange('email', e.target.value)}
-                                            placeholder="natasha@starkindustries.com"
+                                            placeholder="Your Email address here"
                                             className={`w-full px-3 md:px-4 py-2.5 md:py-3 rounded-xl bg-slate-50 border-2 ${errors.email ? 'border-red-200 focus:border-red-500' : 'border-slate-50 focus:border-green-500'} outline-none transition-all text-sm`}
                                         />
                                         {errors.email && <p className="text-[10px] text-red-500 mt-1 ml-1 flex items-center gap-1"><AlertCircle className="h-3 w-3" /> {errors.email}</p>}
@@ -517,7 +560,7 @@ const AddressFormManager = ({
                                                 type={showPassword ? "text" : "password"}
                                                 value={formData.password}
                                                 onChange={e => handleChange('password', e.target.value)}
-                                                placeholder={initialData.hasPassword ? "••••••••" : "Set a new password"}
+                                                placeholder={initialData.hasPassword ? "••••••••" : "Your password here"}
                                                 className={`w-full px-3 md:px-4 py-2.5 md:py-3 pr-10 md:pr-12 rounded-xl bg-slate-50 border-2 ${errors.password ? 'border-red-200 focus:border-red-500' : 'border-slate-50 focus:border-green-500'} outline-none transition-all text-sm`}
                                             />
                                             <button

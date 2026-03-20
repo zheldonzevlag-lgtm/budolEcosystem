@@ -21,6 +21,7 @@ function ReturnContent() {
     const [intentId, setIntentId] = useState(null);
     const [orderId, setOrderId] = useState(null);
     const [order, setOrder] = useState(null);
+    const [orders, setOrders] = useState([]); // Support multi-store orders
     const [errorMessage, setErrorMessage] = useState('');
     const [pollCount, setPollCount] = useState(0);
     const [retrying, setRetrying] = useState(false);
@@ -134,9 +135,9 @@ function ReturnContent() {
             }
 
             if (data.status === 'succeeded') {
-                let latestOrder = null;
+                let latestOrders = [];
 
-                // Payment succeeded, now update the order in our database
+                // Payment succeeded, now update the order(s) in our database
                 try {
                     const updateResp = await fetch('/api/orders/update-status', {
                         method: 'POST',
@@ -145,18 +146,27 @@ function ReturnContent() {
                     });
 
                     if (updateResp.ok) {
-                        const orderData = await updateResp.json();
-                        latestOrder = orderData.order;
-                        setOrder(orderData.order);
-                        setOrderId(orderData.order?.id);
+                        const responseData = await updateResp.json();
+                        // handle both single 'order' and multiple 'orders' response
+                        latestOrders = responseData.orders || (responseData.order ? [responseData.order] : []);
+                        
+                        if (latestOrders.length > 0) {
+                            setOrders(latestOrders);
+                            setOrder(latestOrders[0]);
+                            setOrderId(latestOrders[0].id);
+                        }
                     }
                 } catch (updateError) {
                     console.error('Error updating order:', updateError);
                     // Still show success even if update fails
                 }
 
-                // Update Cart Logic (Remove purchased items only)
-                handleCartCleanup(latestOrder || order);
+                // Update Cart Logic (Remove purchased items for ALL orders)
+                if (latestOrders.length > 0) {
+                    latestOrders.forEach(o => handleCartCleanup(o));
+                } else {
+                    handleCartCleanup(order);
+                }
 
                 setStatus('succeeded');
             } else if (data.status === 'failed' || data.status === 'cancelled') {
@@ -225,8 +235,18 @@ function ReturnContent() {
                     {order && (
                         <div className="bg-slate-50 rounded-lg p-4 mb-6 text-left">
                             <div className="flex justify-between mb-2">
-                                <span className="text-slate-600">Order ID:</span>
-                                <span className="font-medium text-slate-800 text-right break-all ml-4"><BudolPayText text={order.id} /></span>
+                                <span className="text-slate-600">{orders.length > 1 ? 'Order IDs:' : 'Order ID:'}</span>
+                                <span className="font-medium text-slate-800 text-right break-all ml-4">
+                                    {orders.length > 1 ? (
+                                        <div className="flex flex-col gap-1">
+                                            {orders.map(o => (
+                                                <div key={o.id}><BudolPayText text={o.id} /></div>
+                                            ))}
+                                        </div>
+                                    ) : (
+                                        <BudolPayText text={order.id} />
+                                    )}
+                                </span>
                             </div>
                             <div className="flex justify-between mb-2">
                                 <span className="font-medium text-slate-600">Reference ID:</span>
@@ -245,35 +265,36 @@ function ReturnContent() {
                             <div className="flex justify-between mb-2">
                                 <span className="text-slate-600">Subtotal:</span>
                                 <span className="font-medium text-slate-800">
-                                    ₱{(order.total - (order.shippingCost || 0)).toLocaleString('en-PH', { minimumFractionDigits: 2 })}
+                                    ₱{(orders.length > 1 
+                                        ? orders.reduce((acc, o) => acc + (o.total - (o.shippingCost || 0)), 0)
+                                        : (order.total - (order.shippingCost || 0))
+                                    ).toLocaleString('en-PH', { minimumFractionDigits: 2 })}
                                 </span>
                             </div>
                             <div className="flex justify-between mb-1">
                                 <span className="text-slate-600">Shipping Fee:</span>
                                 <span className="font-medium text-slate-800">
-                                    ₱{(order.shipping?.cost || order.shippingCost || 0).toLocaleString('en-PH', { minimumFractionDigits: 2 })}
+                                    ₱{(orders.length > 1
+                                        ? orders.reduce((acc, o) => acc + (o.shipping?.cost || o.shippingCost || 0), 0)
+                                        : (order.shipping?.cost || order.shippingCost || 0)
+                                    ).toLocaleString('en-PH', { minimumFractionDigits: 2 })}
                                 </span>
                             </div>
-                            {order.shipping?.shippingDiscount > 0 && (
+                            {orders.some(o => o.shipping?.shippingDiscount > 0) && (
                                 <div className="flex justify-between mb-1 text-xs">
-                                    <span className="text-green-600 ml-4">↳ Seller Subsidy:</span>
+                                    <span className="text-green-600 ml-4">↳ Total Subsidy:</span>
                                     <span className="font-medium text-green-600">
-                                        -₱{order.shipping.shippingDiscount.toLocaleString('en-PH', { minimumFractionDigits: 2 })}
-                                    </span>
-                                </div>
-                            )}
-                            {order.shipping?.voucherAmount > 0 && (
-                                <div className="flex justify-between mb-2 text-xs">
-                                    <span className="text-blue-600 ml-4">↳ Shipping Voucher:</span>
-                                    <span className="font-medium text-blue-600">
-                                        -₱{order.shipping.voucherAmount.toLocaleString('en-PH', { minimumFractionDigits: 2 })}
+                                        -₱{orders.reduce((acc, o) => acc + (o.shipping?.shippingDiscount || 0), 0).toLocaleString('en-PH', { minimumFractionDigits: 2 })}
                                     </span>
                                 </div>
                             )}
                             <div className="flex justify-between mb-2 pt-2 border-t border-slate-200">
                                 <span className="text-slate-900 font-semibold">Total Paid:</span>
                                 <span className="font-bold text-slate-900">
-                                    ₱{order.total?.toLocaleString('en-PH', { minimumFractionDigits: 2 })}
+                                    ₱{(orders.length > 1
+                                        ? orders.reduce((acc, o) => acc + (o.total || 0), 0)
+                                        : (order.total || 0)
+                                    ).toLocaleString('en-PH', { minimumFractionDigits: 2 })}
                                 </span>
                             </div>
                             <div className="flex justify-between">

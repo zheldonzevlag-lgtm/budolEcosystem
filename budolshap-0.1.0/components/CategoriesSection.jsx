@@ -46,7 +46,7 @@ const itemVariants = {
 export default function CategoriesSection() {
     const [categories, setCategories] = useState([])
     const [loading, setLoading] = useState(true)
-    const [showAll, setShowAll] = useState(false)
+    const [showAll, setShowAll] = useState(true)
 
     useEffect(() => {
         fetch('/api/categories?flat=true')

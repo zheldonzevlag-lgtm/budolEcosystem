@@ -2,7 +2,7 @@
 import { addToCart, removeFromCart, updateCartQuantity } from "@/lib/features/cart/cartSlice";
 import { useDispatch, useSelector } from "react-redux";
 
-const Counter = ({ productId, variationId }) => {
+const Counter = ({ productId, variationId, max = 999 }) => {
 
     const { cartItems } = useSelector(state => state.cart);
     const itemKey = variationId ? `${productId}_${variationId}` : productId;
@@ -10,7 +10,10 @@ const Counter = ({ productId, variationId }) => {
     const dispatch = useDispatch();
 
     const addToCartHandler = () => {
-        dispatch(addToCart({ productId, variationId }))
+        const currentQty = cartItems[itemKey] || 0;
+        if (currentQty < max) {
+            dispatch(addToCart({ productId, variationId }))
+        }
     }
 
     const removeFromCartHandler = () => {
@@ -18,8 +21,10 @@ const Counter = ({ productId, variationId }) => {
     }
 
     const onChangeHandler = (e) => {
-        const val = e.target.value;
-        if (val === '' || parseInt(val) < 1) return;
+        let val = parseInt(e.target.value);
+        if (isNaN(val)) return;
+        if (val < 1) val = 1;
+        if (val > max) val = max;
         dispatch(updateCartQuantity({ productId, variationId, quantity: val }))
     }
 

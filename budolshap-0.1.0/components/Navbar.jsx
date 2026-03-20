@@ -32,8 +32,8 @@ const Navbar = () => {
     const [isMobileSearchOpen, setIsMobileSearchOpen] = useState(false)
     const [storeLogo, setStoreLogo] = useState(null)
     const [storeStatus, setStoreStatus] = useState(null)
-    const cartCount = useSelector(state => state.cart.total)
     const cartItems = useSelector(state => state.cart.cartItems)
+    const cartCount = Object.keys(cartItems || {}).length
     const menuRef = useRef(null)
     const mobileMenuRef = useRef(null)
     const mobileSearchInputRef = useRef(null)

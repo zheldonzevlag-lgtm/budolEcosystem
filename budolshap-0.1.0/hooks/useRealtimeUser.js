@@ -8,7 +8,11 @@ const fetcher = url => fetch(url).then(r => r.json());
 export function useRealtimeUser({ userId, onEvent }) {
     // Use ref to stable reference the callback
     const onEventRef = useRef(onEvent);
-    onEventRef.current = onEvent;
+    
+    // Update ref in an effect instead of during render
+    useEffect(() => {
+        onEventRef.current = onEvent;
+    }, [onEvent]);
     
     // Use callback for stable event dispatching
     const dispatchEvent = useCallback((eventName, data) => {

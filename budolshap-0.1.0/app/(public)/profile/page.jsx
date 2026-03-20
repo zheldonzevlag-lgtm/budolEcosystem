@@ -16,16 +16,41 @@ import {
   Headset
 } from 'lucide-react'
 import Link from 'next/link'
-import { useRouter } from 'next/navigation'
+import { useRouter, useSearchParams } from 'next/navigation'
 import AddressModal from '@/components/AddressModal'
 import { toast } from 'react-hot-toast'
 
 const ProfilePage = () => {
   const { user, handleLogout, login } = useAuth()
   const router = useRouter()
+  const searchParams = useSearchParams()
   const [showEditModal, setShowEditModal] = React.useState(false)
   const [isUploading, setIsUploading] = React.useState(false)
   const fileInputRef = React.useRef(null)
+  const [showKycPromptModal, setShowKycPromptModal] = React.useState(false)
+
+  const kycStatus = user?.kycStatus || 'UNVERIFIED'
+
+  React.useEffect(() => {
+    if (!user) return
+    const param = searchParams?.get('showKycPrompt')
+    if (param === 'true' && kycStatus !== 'VERIFIED') {
+      // Check if user is "new registered user" (e.g. created in the last 24 hours)
+      const userCreated = new Date(user.createdAt)
+      const now = new Date()
+      const diffInHours = (now - userCreated) / (1000 * 60 * 60)
+      
+      // Only show for users created in the last 24 hours
+      if (diffInHours < 24) {
+        setShowKycPromptModal(true)
+      }
+      
+      // Clean up the URL to prevent reopening on re-renders
+      const newUrl = new URL(window.location.href)
+      newUrl.searchParams.delete('showKycPrompt')
+      window.history.replaceState({}, '', newUrl)
+    }
+  }, [searchParams, kycStatus, user])
 
   const compressImage = (file) => {
     return new Promise((resolve) => {
@@ -136,7 +161,7 @@ const ProfilePage = () => {
     )
   }
 
-  const kycStatus = user.kycStatus || 'UNVERIFIED'
+
 
   return (
     <div className="min-h-screen bg-slate-50 py-12 px-4 sm:px-6 lg:px-8">
@@ -387,6 +412,42 @@ const ProfilePage = () => {
           setShowAddressModal={setShowEditModal}
           mode="profile"
         />
+      )}
+      {showKycPromptModal && (
+        <div className="fixed inset-0 z-[9998] flex items-center justify-center bg-black/40 backdrop-blur-sm px-4">
+          <div className="max-w-md w-full bg-white rounded-2xl shadow-2xl p-6 md:p-8 relative">
+            <button
+              onClick={() => setShowKycPromptModal(false)}
+              className="absolute top-3 right-3 text-slate-400 hover:text-slate-600"
+            >
+              <span className="sr-only">Close</span>
+              ×
+            </button>
+            <div className="mb-4 flex items-center gap-3">
+              <div className="p-2 rounded-xl bg-amber-500/10 text-amber-600">
+                <ShieldAlert size={20} />
+              </div>
+              <div>
+                <h2 className="text-lg font-bold text-slate-900">Complete Your Identity Verification</h2>
+              </div>
+            </div>
+            <p className="text-sm text-slate-600 mb-6">
+              You must complete your profile identity verification to unlock full wallet features, higher transaction limits,
+              and enhanced security. Tap/Click the <span className="font-semibold">"Go to my profile"</span> button
+              to update your information.
+            </p>
+            <button
+              onClick={() => {
+                setShowKycPromptModal(false)
+                setShowEditModal(true)
+              }}
+              className="w-full flex items-center justify-center gap-2 bg-indigo-600 hover:bg-indigo-500 text-white py-3 rounded-xl font-semibold transition-all"
+            >
+              Go to my profile
+              <ChevronRight size={18} />
+            </button>
+          </div>
+        </div>
       )}
     </div >
   )

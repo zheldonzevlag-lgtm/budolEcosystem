@@ -7,6 +7,11 @@ import Link from "next/link"
 import { Camera, RefreshCw, CheckCircle2, X, Eye, EyeOff } from "lucide-react"
 import { normalizePhone } from "@/lib/utils/phone-utils"
 
+const isValidEmail = (email) => {
+    if (!email) return false
+    return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)
+}
+
 const AuthForm = ({ mode = 'login', onSuccess, onToggleMode, isModal = false, submitLabel }) => {
     const router = useRouter()
     const { login } = useAuth()
@@ -22,8 +27,11 @@ const AuthForm = ({ mode = 'login', onSuccess, onToggleMode, isModal = false, su
     const [emailExists, setEmailExists] = useState(false)
     const [checkingPhone, setCheckingPhone] = useState(false)
     const [phoneExists, setPhoneExists] = useState(false)
+    const [checkingPassword, setCheckingPassword] = useState(false)
+    const [passwordMatches, setPasswordMatches] = useState(false)
     const [highlightSSO, setHighlightSSO] = useState(false)
     const [showPassword, setShowPassword] = useState(false)
+    const [showConfirmPassword, setShowConfirmPassword] = useState(false)
     const [isMounted, setIsMounted] = useState(false)
     const [registrationType, setRegistrationType] = useState('standard') // 'standard' or 'phone_only'
     const [loginMethod, setLoginMethod] = useState('email') // 'email' or 'phone'
@@ -81,36 +89,62 @@ const AuthForm = ({ mode = 'login', onSuccess, onToggleMode, isModal = false, su
         }
         setEmailExists(false);
         setPhoneExists(false);
+        setCheckingPassword(false);
+        setPasswordMatches(false);
     }, [loginMethod, mode, isLogin, registrationType]);
 
-    // Debounced email check
+    // Debounced email check (login + register)
     useEffect(() => {
-        if (isLogin || !formData.email || formData.email.length < 5 || !formData.email.includes('@')) {
+        if (!formData.email || !isValidEmail(formData.email)) {
             setEmailExists(false);
+            setCheckingEmail(false);
             return;
         }
 
+        if (isLogin && loginMethod !== 'email') {
+            setCheckingEmail(false);
+            return;
+        }
+
+        if (!isLogin && registrationType !== 'standard') {
+            setCheckingEmail(false);
+            return;
+        }
+
+        setCheckingEmail(true);
         const timer = setTimeout(async () => {
-            setCheckingEmail(true);
             try {
                 const res = await fetch(`/api/auth/check-email?email=${encodeURIComponent(formData.email)}`);
                 const data = await res.json();
-                if (data.exists) {
-                    setEmailExists(true);
-                    toast.error("This email is already registered in the ecosystem. Please log in instead.", { id: 'email-exists' });
-                    setHighlightSSO(true);
+                if (res.ok && data) {
+                    if (isLogin) {
+                        setEmailExists(!!data.exists);
+                    } else if (data.exists) {
+                        setEmailExists(true);
+                        toast.error("This email is already registered in the ecosystem. Please log in instead.", { id: 'email-exists' });
+                        setHighlightSSO(true);
+                    } else {
+                        setEmailExists(false);
+                    }
                 } else {
-                    setEmailExists(false);
+                    if (isLogin) {
+                        setEmailExists(true);
+                    } else {
+                        setEmailExists(false);
+                    }
                 }
             } catch (error) {
                 console.error("Email check failed:", error);
+                if (isLogin) {
+                    setEmailExists(true);
+                }
             } finally {
                 setCheckingEmail(false);
             }
-        }, 800);
+        }, 500);
 
         return () => clearTimeout(timer);
-    }, [formData.email, isLogin]);
+    }, [formData.email, isLogin, loginMethod, registrationType]);
 
 
 
@@ -174,6 +208,43 @@ const AuthForm = ({ mode = 'login', onSuccess, onToggleMode, isModal = false, su
 
         return () => clearTimeout(timer);
     }, [formData.phoneNumber, isLogin]);
+
+    useEffect(() => {
+        if (!isLogin || loginMethod !== 'email' || awaitingOtp) {
+            setCheckingPassword(false);
+            setPasswordMatches(false);
+            return;
+        }
+
+        if (!isValidEmail(formData.email) || !emailExists || !formData.password || formData.password.length < 6) {
+            setCheckingPassword(false);
+            setPasswordMatches(false);
+            return;
+        }
+
+        setCheckingPassword(true);
+        const timer = setTimeout(async () => {
+            try {
+                const res = await fetch('/api/auth/check-password', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        email: formData.email,
+                        password: formData.password
+                    })
+                });
+                const data = await res.json();
+                setPasswordMatches(!!(res.ok && data?.valid));
+            } catch (error) {
+                console.error("Password check failed:", error);
+                setPasswordMatches(false);
+            } finally {
+                setCheckingPassword(false);
+            }
+        }, 500);
+
+        return () => clearTimeout(timer);
+    }, [formData.email, formData.password, isLogin, loginMethod, emailExists, awaitingOtp]);
 
     // Clean up camera stream on unmount
     useEffect(() => {
@@ -549,12 +620,13 @@ const AuthForm = ({ mode = 'login', onSuccess, onToggleMode, isModal = false, su
 
                 if (response.ok) {
                     if (registrationType === 'phone_only') {
-                        toast.success('Account created! A verification code (OTP) has been sent to your phone and email.')
+                        toast.success('Account created! Please request a verification code to sign in.')
                         
-                        // Set state to show OTP input in login mode immediately
+                        // After quick registration, move user to login (mobile tab)
+                        // but require them to explicitly request a fresh OTP for login.
                         justRegisteredRef.current = true;
                         setLoginMethod('phone');
-                        setIsOtpSent(true);
+                        setIsOtpSent(false);
                         
                         if (onToggleMode) {
                             onToggleMode() // Switch to login
@@ -691,12 +763,18 @@ const AuthForm = ({ mode = 'login', onSuccess, onToggleMode, isModal = false, su
                 <div className="relative overflow-hidden min-h-[85px] transition-all duration-300">
                     <div className={`transition-all duration-300 transform ${loginMethod === 'email' ? 'translate-x-0 opacity-100 relative' : '-translate-x-full opacity-0 absolute pointer-events-none w-full'}`}>
                          <div className="space-y-1">
-                            <label className={isModal ? "text-xs font-medium text-slate-600 uppercase" : "block text-sm font-medium text-slate-700"}>Email Address</label>
+                            <div className="flex justify-between items-center">
+                                <label className={isModal ? "text-xs font-medium text-slate-600 uppercase" : "block text-sm font-medium text-slate-700"}>Email Address</label>
+                                {checkingEmail && loginMethod === 'email' && isValidEmail(formData.email) && <RefreshCw size={12} className="animate-spin text-indigo-500" />}
+                                {!checkingEmail && loginMethod === 'email' && formData.email && !isValidEmail(formData.email) && <span className="text-[10px] text-rose-500 font-bold animate-pulse">INVALID FORMAT</span>}
+                                {!checkingEmail && loginMethod === 'email' && isValidEmail(formData.email) && !emailExists && <span className="text-[10px] text-rose-500 font-bold animate-pulse">NOT FOUND</span>}
+                                {!checkingEmail && loginMethod === 'email' && isValidEmail(formData.email) && emailExists && <CheckCircle2 size={14} className="text-emerald-500" />}
+                            </div>
                             <input
                                 name="email"
                                 onChange={handleChange}
                                 value={formData.email}
-                                className={`w-full outline-none border border-slate-200 rounded-lg focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 transition-all ${isModal ? "p-2.5 px-4" : "p-3 px-4"}`}
+                                className={`w-full outline-none border rounded-lg focus:ring-1 transition-all ${isModal ? "p-2.5 px-4" : "p-3 px-4"} ${loginMethod === 'email' && formData.email && (!isValidEmail(formData.email) || (isValidEmail(formData.email) && !checkingEmail && !emailExists)) ? "border-rose-300 bg-rose-50 focus:border-rose-500 focus:ring-rose-500" : "border-slate-200 focus:border-indigo-500 focus:ring-indigo-500"}`}
                                 type="email"
                                 placeholder="example@email.com"
                                 required={isLogin && loginMethod === 'email'}
@@ -745,13 +823,13 @@ const AuthForm = ({ mode = 'login', onSuccess, onToggleMode, isModal = false, su
                         </label>
                         {!isLogin && checkingEmail && <RefreshCw size={12} className="animate-spin text-indigo-500" />}
                         {!isLogin && !checkingEmail && emailExists && <span className="text-[10px] text-rose-500 font-bold animate-pulse">ALREADY REGISTERED</span>}
-                        {!isLogin && !checkingEmail && formData.email.includes('@') && formData.email.length > 5 && !emailExists && <CheckCircle2 size={14} className="text-emerald-500" />}
+                        {!isLogin && !checkingEmail && isValidEmail(formData.email) && !emailExists && <CheckCircle2 size={14} className="text-emerald-500" />}
                     </div>
                 <input
                     name="email"
                     onChange={handleChange}
                     value={formData.email}
-                    className={`w-full outline-none border rounded-lg focus:ring-1 transition-all ${isModal ? "p-2.5 px-4" : "p-3 px-4"} ${!isLogin && emailExists ? "border-rose-300 bg-rose-50 focus:border-rose-500 focus:ring-rose-500" : "border-slate-200 focus:border-indigo-500 focus:ring-indigo-500"}`}
+                    className={`w-full outline-none border rounded-lg focus:ring-1 transition-all ${isModal ? "p-2.5 px-4" : "p-3 px-4"} ${!isLogin && (emailExists || (!!formData.email && !isValidEmail(formData.email))) ? "border-rose-300 bg-rose-50 focus:border-rose-500 focus:ring-rose-500" : "border-slate-200 focus:border-indigo-500 focus:ring-indigo-500"}`}
                     type="email"
                     placeholder="your.email@example.com"
                     required
@@ -763,13 +841,27 @@ const AuthForm = ({ mode = 'login', onSuccess, onToggleMode, isModal = false, su
                 <div className="relative overflow-hidden min-h-[85px] transition-all duration-300">
                     <div className={`transition-all duration-300 transform ${(loginMethod === 'email' || !isLogin) && !awaitingOtp ? 'translate-x-0 opacity-100 relative' : '-translate-x-full opacity-0 absolute pointer-events-none w-full'}`}>
                         <div className="space-y-1">
-                            <label className={isModal ? "text-xs font-medium text-slate-600 uppercase" : "block text-sm font-medium text-slate-700"}>Password</label>
+                            <div className="flex justify-between items-center">
+                                <label className={isModal ? "text-xs font-medium text-slate-600 uppercase" : "block text-sm font-medium text-slate-700"}>Password</label>
+                                {isLogin && loginMethod === 'email' && !awaitingOtp && formData.password.length > 0 && formData.password.length < 6 && (
+                                    <span className="text-[10px] text-rose-500 font-bold animate-pulse">TOO SHORT</span>
+                                )}
+                                {isLogin && loginMethod === 'email' && !awaitingOtp && formData.password.length >= 6 && checkingPassword && (
+                                    <RefreshCw size={12} className="animate-spin text-indigo-500" />
+                                )}
+                                {isLogin && loginMethod === 'email' && !awaitingOtp && formData.password.length >= 6 && !checkingPassword && passwordMatches && (
+                                    <CheckCircle2 size={14} className="text-emerald-500" />
+                                )}
+                                {isLogin && loginMethod === 'email' && !awaitingOtp && formData.password.length >= 6 && !checkingPassword && !passwordMatches && (
+                                    <span className="text-[10px] text-rose-500 font-bold animate-pulse">WRONG PASSWORD</span>
+                                )}
+                            </div>
                             <div className="relative">
                                 <input
                                     name="password"
                                     onChange={handleChange}
                                     value={formData.password}
-                                    className={`w-full outline-none border border-slate-200 rounded-lg focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 transition-all ${isModal ? "p-2.5 px-4 pr-10" : "p-3 px-4 pr-12"}`}
+                                    className={`w-full outline-none border rounded-lg focus:ring-1 transition-all ${isModal ? "p-2.5 px-4 pr-10" : "p-3 px-4 pr-12"} ${isLogin && loginMethod === 'email' && !awaitingOtp && ((formData.password.length > 0 && formData.password.length < 6) || (formData.password.length >= 6 && !checkingPassword && !passwordMatches)) ? "border-rose-300 bg-rose-50 focus:border-rose-500 focus:ring-rose-500" : "border-slate-200 focus:border-indigo-500 focus:ring-indigo-500"}`}
                                     type={showPassword ? "text" : "password"}
                                     placeholder="••••••••"
                                     required={loginMethod === 'email' || !isLogin}
@@ -855,18 +947,40 @@ const AuthForm = ({ mode = 'login', onSuccess, onToggleMode, isModal = false, su
 
             {!isLogin && registrationType === 'standard' && (
                 <div className="space-y-1">
-                    <label className={isModal ? "text-xs font-medium text-slate-600 uppercase" : "block text-sm font-medium text-slate-700"}>Confirm Password</label>
-                    <input
-                        name="confirmPassword"
-                        onChange={handleChange}
-                        value={formData.confirmPassword}
-                        className={`w-full outline-none border border-slate-200 rounded-lg focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 transition-all ${isModal ? "p-2.5 px-4" : "p-3 px-4"}`}
-                        type="password"
-                        placeholder="••••••••"
-                        required={!isLogin}
-                        minLength={6}
-                        autoComplete="new-password"
-                    />
+                    <div className="flex justify-between items-center">
+                        <label className={isModal ? "text-xs font-medium text-slate-600 uppercase" : "block text-sm font-medium text-slate-700"}>Confirm Password</label>
+                        {!!formData.confirmPassword && (
+                            formData.confirmPassword === formData.password ? (
+                                <CheckCircle2 size={14} className="text-emerald-500" />
+                            ) : (
+                                <div className="flex items-center gap-1 animate-pulse">
+                                    <span className="text-[10px] text-rose-500 font-bold uppercase">No Match</span>
+                                    <CheckCircle2 size={14} className="text-rose-500" />
+                                </div>
+                            )
+                        )}
+                    </div>
+                    <div className="relative">
+                        <input
+                            name="confirmPassword"
+                            onChange={handleChange}
+                            value={formData.confirmPassword}
+                            className={`w-full outline-none border border-slate-200 rounded-lg focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 transition-all ${isModal ? "p-2.5 px-4 pr-10" : "p-3 px-4 pr-12"}`}
+                            type={showConfirmPassword ? "text" : "password"}
+                            placeholder="••••••••"
+                            required={!isLogin}
+                            minLength={6}
+                            autoComplete="new-password"
+                        />
+                        <button
+                            type="button"
+                            onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+                            className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 transition-colors"
+                            tabIndex={-1}
+                        >
+                            {showConfirmPassword ? <EyeOff size={18} /> : <Eye size={18} />}
+                        </button>
+                    </div>
                 </div>
             )}
 
@@ -1005,7 +1119,7 @@ const AuthForm = ({ mode = 'login', onSuccess, onToggleMode, isModal = false, su
 
             <button
                 type="submit"
-                disabled={isLoading || (!isLogin && (checkingPhone || phoneExists || formData.phoneNumber.length !== 10 || (registrationType === 'standard' && (checkingEmail || emailExists || !formData.email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.email) || formData.password.length < 6 || formData.password !== formData.confirmPassword))))}
+                disabled={isLoading || (isLogin && loginMethod === 'email' && (!isValidEmail(formData.email) || checkingEmail || !emailExists || (!awaitingOtp && (formData.password.length < 6 || checkingPassword || !passwordMatches)))) || (!isLogin && (checkingPhone || phoneExists || formData.phoneNumber.length !== 10 || (registrationType === 'standard' && (checkingEmail || emailExists || !isValidEmail(formData.email) || formData.password.length < 6 || formData.password !== formData.confirmPassword))))}
                 className={`bg-slate-900 text-white font-semibold rounded-lg hover:bg-slate-800 active:scale-[0.98] transition-all flex justify-center items-center disabled:opacity-70 disabled:cursor-not-allowed ${isModal ? "py-3 text-sm mt-2" : "py-3 text-sm"}`}
             >
                 {isLoading ? (

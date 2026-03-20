@@ -124,14 +124,13 @@ export async function sendOTPSMS(phoneNumber, otp, ttlMinutes = 15) {
         console.log('📱 [SMS Provider: CONSOLE]')
         console.log('='.repeat(40))
         console.log(`To: ${maskPII(phoneNumber)}`)
-        console.log(`Message: ${message}`)
+        console.log(`OTP SMS prepared. Valid for ${ttlMinutes} minutes.`)
         console.log('='.repeat(40) + '\n')
         return true
 
     } catch (error) {
         console.error('SMS OTP Delivery Error:', error.message)
-        // Fallback to console in development even if provider fails
-        console.log(`📱 [FALLBACK] OTP to ${maskPII(phoneNumber)}: \x1b[33m${otp}\x1b[0m`)
+        console.log(`📱 [FALLBACK] OTP delivery failed for ${maskPII(phoneNumber)}`)
         return false
     }
 }

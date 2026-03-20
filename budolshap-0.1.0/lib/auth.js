@@ -4,26 +4,23 @@ import { cookies } from 'next/headers'
 
 // Hash password
 export async function hashPassword(password) {
-    const salt = await bcrypt.genSalt(10)
+    // Standardizing on 12 rounds for BSP/PCI DSS compliance
+    const salt = await bcrypt.genSalt(12)
     return await bcrypt.hash(password, salt)
 }
 
 // Verify password
 export async function verifyPassword(password, hashedPassword) {
-    // 1. Try bcrypt comparison
+    // 1. Try bcrypt comparison (Primary method)
     try {
         const isMatch = await bcrypt.compare(password, hashedPassword)
         if (isMatch) return true
     } catch (e) {
-        // Ignore bcrypt errors (e.g. invalid hash format) and proceed to plain text check
+        // Ignore bcrypt errors (e.g. invalid hash format)
     }
 
-    // 2. Fallback: Plain text comparison (Legacy support)
-    // Only if hashedPassword is not a valid bcrypt hash (which usually starts with $2)
-    // or if bcrypt failed.
-    if (password === hashedPassword) {
-        return true
-    }
+    // Security Enhancement: Removed plain text fallback (Legacy support)
+    // for PH Cybersecurity & PCI DSS compliance. All passwords must be hashed.
 
     return false
 }
@@ -32,9 +29,8 @@ export * from './token.js'
 
 // Standardized Cookie Options
 export const COOKIE_OPTIONS = {
-    httpOnly: false, // Changed to false to allow client-side access for debugging/sync
-    // Disable secure in development and LAN IP to allow non-HTTPS cookies
-    secure: false,
+    httpOnly: true,
+    secure: process.env.NODE_ENV === 'production',
     sameSite: 'lax',
     maxAge: 60 * 60 * 24 * 7, // 7 days
     path: '/'

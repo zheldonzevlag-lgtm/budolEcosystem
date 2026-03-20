@@ -31,8 +31,14 @@ export async function GET(request) {
         if (category) {
             conditions.push({
                 OR: [
+                    // Match by flat category string on product
                     { category: category },
-                    { categoryData: { slug: category } }
+                    // Match by product's assigned category slug (single relation)
+                    { categoryData: { is: { slug: category } } },
+                    // Match direct child categories of the selected parent
+                    { categoryData: { is: { parent: { is: { slug: category } } } } },
+                    // Match grandchild categories (level 3) under the selected parent
+                    { categoryData: { is: { parent: { is: { parent: { is: { slug: category } } } } } } }
                 ]
             });
         }

@@ -126,13 +126,9 @@ export function useRealtime({ channel, event, onData, enabled = true, pollingInt
                 reconnectionDelayMax: 5000
             });
 
-            // Track connection state to prevent loops
-            let hasConnected = false;
-
             socket.on('connect', () => {
                 if (isMounted) {
                     console.log("[Realtime] Socket.io connected to", config.socketUrl);
-                    hasConnected = true;
                     setIsConnected(true);
                 }
             });

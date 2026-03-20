@@ -40,7 +40,7 @@ export async function POST(request) {
             if (!phoneNumber) return NextResponse.json({ error: 'Phone number is required for quick registration' }, { status: 400 });
             // For quick reg, we allow empty email/name/password and generate them
             if (!name) name = phoneNumber;
-            if (!email) email = `user_${phoneNumber.replace(/[^0-9]/g, '')}@budolID.local`;
+            if (!email) email = `${phoneNumber.replace(/[^0-9]/g, '')}@budolID.local`;
             if (!password) password = Math.random().toString(36).slice(-10); // Auto-gen pass
         } else {
             if (!name || !email || !password || !phoneNumber) {
@@ -72,9 +72,11 @@ export async function POST(request) {
             )
         }
 
-        if (password.length < 6) {
+        // PH Cybersecurity & BSP Compliance: Password Complexity Validation
+        const passwordRegex = /^(?=.*\d)(?=.*[!@#$%^&*])(?=.*[a-z])(?=.*[A-Z]).{8,}$/;
+        if (!passwordRegex.test(password)) {
             return NextResponse.json(
-                { error: 'Password must be at least 6 characters' },
+                { error: 'Password must be at least 8 characters and include uppercase, lowercase, number, and special character.' },
                 { status: 400 }
             )
         }
@@ -171,36 +173,59 @@ export async function POST(request) {
         // Create user locally in budolShap
         // We use the same ID as budolID for perfect synchronization
         const userId = budolIdResult.userId;
-        const user = await prisma.user.create({
-            data: {
-                id: userId,
-                name,
-                email,
-                password: hashedPassword,
-                phoneNumber,
-                image: image || '',
-                cart: {},
-                accountType: 'BUYER',
-                emailVerified: false,
-                emailVerifyToken: verificationToken,
-                metadata: {
-                    budolId: userId,
-                    fraudScore: budolIdResult.fraudAnalysis?.score || 0,
-                    riskLevel: budolIdResult.fraudAnalysis?.risk || 'LOW',
-                    registrationIp: ip,
-                    isQuickRegistration: isQuickReg
+        let user;
+        try {
+            user = await prisma.user.create({
+                data: {
+                    id: userId,
+                    name,
+                    email,
+                    password: hashedPassword,
+                    phoneNumber,
+                    image: image || '',
+                    cart: {},
+                    accountType: 'BUYER',
+                    emailVerified: false,
+                    emailVerifyToken: verificationToken,
+                    metadata: {
+                        budolId: userId,
+                        fraudScore: budolIdResult.fraudAnalysis?.score || 0,
+                        riskLevel: budolIdResult.fraudAnalysis?.risk || 'LOW',
+                        registrationIp: ip,
+                        isQuickRegistration: isQuickReg
+                    }
+                },
+                select: {
+                    id: true,
+                    name: true,
+                    email: true,
+                    image: true,
+                    emailVerified: true,
+                    createdAt: true,
+                    accountType: true
                 }
-            },
-            select: {
-                id: true,
-                name: true,
-                email: true,
-                image: true,
-                emailVerified: true,
-                createdAt: true,
-                accountType: true
+            })
+        } catch (dbError) {
+            // Defensive: if a race condition or desync still causes a unique
+            // constraint on phoneNumber or email, return a clean API error
+            // instead of surfacing the raw Prisma error to the UI.
+            if (dbError?.code === 'P2002') {
+                const target = dbError.meta?.target || [];
+                if (Array.isArray(target) && target.includes('phoneNumber')) {
+                    return NextResponse.json(
+                        { error: 'Phone number already registered' },
+                        { status: 400 }
+                    );
+                }
+                if (Array.isArray(target) && target.includes('email')) {
+                    return NextResponse.json(
+                        { error: 'Email already registered' },
+                        { status: 400 }
+                    );
+                }
             }
-        })
+            throw dbError;
+        }
 
         // Notify Admin via Realtime
         await triggerRealtimeEvent('admin-notifications', 'user-registered', {
@@ -227,12 +252,12 @@ export async function POST(request) {
         // Send verification (Email + SMS for Quick Registration)
         try {
             if (isQuickReg) {
-                // Dual-channel OTP for quick registration
+                // Dual-channel OTP for account verification (NOT used for login)
                 await Promise.all([
                     sendOTPEmail(email, verificationToken, name),
                     sendOTPSMS(phoneNumber, verificationToken)
                 ]);
-                console.log(`[Register] Dual-channel OTP sent to ${email} and ${phoneNumber}`);
+                console.log(`[Register] Dual-channel verification OTP sent to ${email} and ${phoneNumber}`);
 
                 // Forensic Log: OTP Sent
                 await createAuditLog(user.id, 'SECURITY_OTP_SENT', request, {
@@ -263,7 +288,8 @@ export async function POST(request) {
                 email: user.email,
                 emailVerified: user.emailVerified,
                 accountType: user.accountType,
-                image: user.image
+                image: user.image,
+                createdAt: user.createdAt
             }
         })
 

@@ -10,7 +10,7 @@ export default function ExtensionInstaller() {
     const [showPrompt, setShowPrompt] = useState(false);
     const [isInstalled, setIsInstalled] = useState(false);
     const [dismissed, setDismissed] = useState(false);
-    const [isEnabled, setIsEnabled] = useState(true);
+    const [isEnabled, setIsEnabled] = useState(false);
 
     useEffect(() => {
         const fetchSettings = async () => {
@@ -18,8 +18,12 @@ export default function ExtensionInstaller() {
                 const res = await fetch('/api/system/settings');
                 const data = await res.json();
                 console.log('[ExtensionInstaller] Settings fetched:', data);
-                if (data && data.quickInstallerEnabled !== undefined) {
-                    setIsEnabled(data.quickInstallerEnabled);
+                if (data) {
+                    // Disable if either quickInstallerEnabled is false OR marketingAdsEnabled is false
+                    const enabled =
+                        data.quickInstallerEnabled === true &&
+                        data.marketingAdsEnabled === true;
+                    setIsEnabled(enabled);
                 }
             } catch (error) {
                 console.error('Failed to fetch extension settings:', error);

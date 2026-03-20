@@ -215,8 +215,8 @@ const getHtmlTemplate = (title, content, heading, options = {}) => {
                     ${content}
                 </div>
                 <div class="footer">
+                    <p>This email was sent to you because you signed up for ${formatBrandedText('budolShap')}.</p>                
                     <p>&copy; ${currentYear} ${formatBrandedText('budolShap')}. All rights reserved.</p>
-                    <p>This email was sent to you because you signed up for ${formatBrandedText('budolShap')}.</p>
                     <span style="display:none; font-size:0; line-height:0; max-height:0; mso-hide:all; overflow:hidden;">${Date.now()}</span>
                 </div>
             </div>
@@ -363,10 +363,11 @@ export async function sendOTPEmail(email, otp, name, ttlMinutes = 15) {
             console.log('========================================')
             console.log(`To: ${maskPII(email)}`)
             console.log(`Name: ${maskPII(name)}`)
+            // Always display OTP in console for debugging (local/dev)
             console.log(`OTP Code: \x1b[33m${otp}\x1b[0m`)
             console.log(`Validity: ${ttlMinutes} minutes`)
             console.log('========================================\n')
-            return true
+            return true // Changed from false to true to allow fallback login
         }
 
         // Email is configured - send the actual email
@@ -385,17 +386,16 @@ export async function sendOTPEmail(email, otp, name, ttlMinutes = 15) {
                     <p>Hi ${name},</p>
                     <p>Your verification code is:</p>
                     <div style="text-align: center; margin: 30px 0;">
-                        <div style="display: inline-block; padding: 12px 22px; background-color: #f1f5f9; border-radius: 12px; border: 1px solid #e2e8f0;">
-                            <span style="font-size: 32px; font-weight: 700; letter-spacing: 8px; color: #16a34a;">${otp}</span>
+                        <div style="display: inline-block; padding: 12px 22px; background-color: #ebf1f7ff; border-radius: 12px; border: 1px solid #e2e8f0;">
+                            <span style="font-size: 32px; font-weight: 700; letter-spacing: 8px; color: #eab308;">${otp}</span>
                         </div>
                     </div>
                     <p style="font-size:14px;" >Please enter this code on the login page to continue accessing the App.</p>
-                    <p style="font-size: 14px; margin-top: 20px; margin-bottom:30px;">
+                    <p style="font-size: 14px; margin-top: 20px; margin-bottom:25px;">
                         This code will expire in ${ttlMinutes} minutes. If you didn't request this, please ignore this email.
                     </p>
-                     <p style="font-size: 14px; margin-top: 10px; margin-bottom:30px;">
+                     <p style="font-size: 14px; margin-top: 10px; margin-bottom:25px;">
                         If you have any questions or need further assistance, please feel free to contact us.
-                        Thank you for using budolShap.
                     </p> 
                     <p style="font-size: 14px; margin-top: 20px; margin-bottom:30px;">
                         Thank you for using budol<span style="color: #16a34a;">Shap</span>. <br>
@@ -416,8 +416,8 @@ export async function sendOTPEmail(email, otp, name, ttlMinutes = 15) {
         return true
     } catch (error) {
         console.error('Error sending OTP email:', error)
-        console.log(`\n⚠️ OTP email sending failed for ${maskPII(email)}. Code: \x1b[33m${otp}\x1b[0m`)
-        return true
+        console.log(`\n⚠️ OTP email sending failed for ${maskPII(email)}`)
+        return false
     }
 }
 

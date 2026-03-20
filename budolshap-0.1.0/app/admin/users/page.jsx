@@ -31,13 +31,19 @@ export default function AdminUsers() {
     const [showAddressModal, setShowAddressModal] = useState(false)
     const [editingUser, setEditingUser] = useState(null)
     const [isSubmitting, setIsSubmitting] = useState(false)
+    const [showDeleted, setShowDeleted] = useState(false)
 
     const fetchUsers = async () => {
         try {
             const token = typeof window !== 'undefined' ? localStorage.getItem('token') : null
-            const url = searchQuery
+            let url = searchQuery
                 ? `/api/admin/users?search=${encodeURIComponent(searchQuery)}`
                 : '/api/admin/users'
+            
+            if (showDeleted) {
+                const separator = url.includes('?') ? '&' : '?'
+                url += `${separator}includeDeleted=true`
+            }
 
             const response = await fetch(url, {
                 credentials: 'include',
@@ -252,9 +258,13 @@ export default function AdminUsers() {
 
     useEffect(() => {
         fetchUsers()
-    }, [searchQuery])
+    }, [searchQuery, showDeleted])
 
     const getAccountBadge = (user) => {
+        if (user.deletedAt) {
+            return { label: 'Deleted', className: 'bg-red-200 text-red-800' }
+        }
+
         const accountMeta = getAccountTypeMeta(user.accountType)
 
         if (accountMeta?.value === 'ADMIN') {
@@ -290,6 +300,16 @@ export default function AdminUsers() {
                 <h1 className="text-2xl">Manage <span className="text-slate-800 font-medium">Users</span></h1>
 
                 <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3">
+                    <label className="flex items-center gap-2 text-sm text-slate-600 cursor-pointer select-none">
+                        <input
+                            type="checkbox"
+                            checked={showDeleted}
+                            onChange={(e) => setShowDeleted(e.target.checked)}
+                            className="rounded border-slate-300 text-indigo-600 focus:ring-indigo-500"
+                        />
+                        Show Deleted
+                    </label>
+
                     <div className="flex items-center gap-2 bg-slate-100 px-4 py-2 rounded-lg">
                         <Search size={18} className="text-slate-500" />
                         <input

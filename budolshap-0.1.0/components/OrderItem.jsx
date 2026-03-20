@@ -1,6 +1,7 @@
 'use client'
 import Image from "next/image";
-import { DotIcon, Star, MessageSquare, Truck } from "lucide-react";
+import Link from "next/link";
+import { DotIcon, Star, MessageSquare, Truck, Eye, X } from "lucide-react";
 import BudolPayText from './payment/BudolPayText';
 import { useSelector } from "react-redux";
 import { useRouter } from "next/navigation";
@@ -12,6 +13,7 @@ const OrderItem = ({ order, onRepay }) => {
 
     const currency = process.env.NEXT_PUBLIC_CURRENCY_SYMBOL || '$';
     const [ratingModal, setRatingModal] = useState(null);
+    const [previewImage, setPreviewImage] = useState(null);
     const [showComingSoon, setShowComingSoon] = useState(false);
     const router = useRouter();
 
@@ -81,15 +83,27 @@ const OrderItem = ({ order, onRepay }) => {
 
                             return (
                                 <div key={index} className="flex items-center gap-4">
-                                    <div className="w-20 aspect-square bg-slate-100 flex items-center justify-center rounded-md">
+                                    <div 
+                                        className="relative w-20 aspect-square bg-slate-100 flex items-center justify-center rounded-md group overflow-hidden cursor-pointer"
+                                        onClick={(e) => {
+                                            e.stopPropagation();
+                                            if (displayImage) setPreviewImage(displayImage);
+                                        }}
+                                    >
                                         {displayImage ? (
-                                            <Image
-                                                className="h-14 w-auto"
-                                                src={displayImage}
-                                                alt="product_img"
-                                                width={50}
-                                                height={50}
-                                            />
+                                            <>
+                                                <Image
+                                                    className="h-14 w-auto transition-all duration-300"
+                                                    src={displayImage}
+                                                    alt="product_img"
+                                                    width={50}
+                                                    height={50}
+                                                />
+                                                {/* Eye Icon Overlay */}
+                                                <div className="absolute inset-0 bg-black/40 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity duration-300">
+                                                    <Eye className="text-white h-6 w-6" />
+                                                </div>
+                                            </>
                                         ) : (
                                             <div className="text-slate-400 text-xs text-center">No Image</div>
                                         )}
@@ -174,7 +188,26 @@ const OrderItem = ({ order, onRepay }) => {
                 </td>
 
                 <td className="text-left max-md:hidden px-4 py-2">
-                    <p className="font-medium text-slate-700">{order.store?.name || 'Unknown Store'}</p>
+                    <Link 
+                        href={`/shop/${order.store?.username || ''}`} 
+                        className="flex items-center gap-2 hover:text-green-600 transition-colors group/store"
+                    >
+                        <div className="w-7 h-7 rounded-full bg-slate-100 flex-shrink-0 flex items-center justify-center overflow-hidden border border-slate-200 group-hover/store:border-green-400 transition-colors">
+                            {order.store?.logo ? (
+                                <Image
+                                    src={order.store.logo.startsWith('http') || order.store.logo.startsWith('/') || order.store.logo.startsWith('data:') ? order.store.logo : `/${order.store.logo}`}
+                                    alt={order.store.name || 'Store'}
+                                    width={28}
+                                    height={28}
+                                    className="w-full h-full object-cover"
+                                    unoptimized
+                                />
+                            ) : (
+                                <span className="text-[12px] text-slate-500 font-bold">{order.store?.name?.charAt(0) || 'B'}</span>
+                            )}
+                        </div>
+                        <p className="font-medium text-slate-700">{order.store?.name || 'Unknown Store'}</p>
+                    </Link>
                     <div className="text-slate-500 text-sm mt-1">
                         <p className="text-[10px] font-bold text-slate-400 uppercase mb-1">Shipping To:</p>
                         <p className="font-medium text-slate-600">{order.user?.name || order.address?.name}</p>
@@ -185,7 +218,7 @@ const OrderItem = ({ order, onRepay }) => {
                 </td>
 
                 <td className="text-left space-y-2 text-sm max-md:hidden px-4 py-2">
-                    <div className={`flex items-center justify-center gap-1 rounded-full px-2 py-1 text-xs font-medium w-fit ${order.shipping?.failureReason || ['CANCELLED', 'REFUNDED'].includes(order.status) || order.paymentStatus === 'cancelled'
+                    <div className={`flex items-center justify-start gap-1 rounded-full px-2 py-1 text-xs font-medium w-fit ${order.shipping?.failureReason || ['CANCELLED', 'REFUNDED'].includes(order.status) || order.paymentStatus === 'cancelled'
                         ? 'bg-red-100 text-red-800'
                         : isReturning
                             ? 'bg-amber-100 text-amber-800'
@@ -243,7 +276,7 @@ const OrderItem = ({ order, onRepay }) => {
 
                 <td className="text-left space-y-2 text-sm max-md:hidden px-4 py-2">
                     <div
-                        className={`flex items-center justify-center gap-1 rounded-full p-1 ${order.isPaid
+                        className={`flex items-center justify-start gap-1 rounded-full p-1 w-fit px-3 ${order.isPaid
                             ? 'text-green-500 bg-green-100'
                             : ['cancelled', 'failed', 'expired'].includes(order.paymentStatus)
                                 ? 'text-slate-500 bg-slate-100'
@@ -269,13 +302,20 @@ const OrderItem = ({ order, onRepay }) => {
                                                 : 'Unpaid'
                         }
                     </div>
-                    <div className="text-xs text-slate-500 mt-1 text-center font-medium">
+                    <div className="text-xs text-slate-500 mt-1 text-left font-medium">
                         via {order.paymentMethod === 'BUDOL_PAY' ? (
                             <BudolPayText text="budolPay" className="text-sm" />
                         ) : order.paymentMethod === 'BUDOL_CARE' ? (
                             <BudolPayText text="budolCare" className="text-sm" />
                         ) : (
-                            <span className="font-bold text-green-600">{order.paymentMethod}</span>
+                            <span className="font-bold text-green-600 uppercase">
+                                {order.paymentMethod?.replace('_', ' ')}
+                            </span>
+                        )}
+                        {order.isPaid && order.paymentId && (
+                            <div className="text-slate-400 font-mono tracking-tighter truncate mt-0.5 text-left">
+                                <BudolPayText text={order.paymentId} />
+                            </div>
                         )}
                     </div>
 
@@ -341,8 +381,99 @@ const OrderItem = ({ order, onRepay }) => {
                     ) : (
                         <span className="text-slate-400 whitespace-nowrap">Standard Delivery</span>
                     )}
+
+                    {/* Modals Container (Inside td to maintain valid HTML while ensuring visibility) */}
+                    <div className="relative">
+                        {/* Image Preview Modal */}
+                        {previewImage && (
+                            <div
+                                className="fixed inset-0 z-[100] flex items-center justify-center bg-black/40 backdrop-blur-sm p-4 animate-in fade-in duration-300"
+                                onClick={(e) => {
+                                    e.stopPropagation();
+                                    setPreviewImage(null);
+                                }}
+                            >
+                                <div
+                                    className="relative max-w-2xl w-full bg-white rounded-2xl overflow-hidden shadow-2xl animate-in zoom-in-95 duration-300"
+                                    onClick={(e) => e.stopPropagation()}
+                                >
+                                    <div className="absolute top-6 left-6 z-10 select-none transition-all hover:scale-105 group/logo">
+                                        <div className="bg-white/80 backdrop-blur-md p-2 rounded-xl shadow-[0_8px_30px_rgb(0,0,0,0.12)] border border-white/20">
+                                            <Image
+                                                src="/assets/budolShap/budolShap_logo_white.png"
+                                                alt="budolShap Logo"
+                                                width={400}
+                                                height={120}
+                                                quality={100}
+                                                priority
+                                                className="h-16 w-auto object-contain opacity-100 brightness-110 contrast-110"
+                                            />
+                                        </div>
+                                    </div>
+                                    <button
+                                        className="absolute top-4 right-4 z-10 p-2 bg-black/10 hover:bg-black/20 rounded-full transition-colors"
+                                        onClick={(e) => {
+                                            e.stopPropagation();
+                                            setPreviewImage(null);
+                                        }}
+                                    >
+                                        <X className="h-6 w-6 text-slate-700" />
+                                    </button>
+                                    <div className="p-8 flex items-center justify-center bg-slate-50 min-h-[300px]">
+                                        <div className="relative w-full h-[50vh]">
+                                            <Image
+                                                src={previewImage}
+                                                alt="Preview"
+                                                fill
+                                                className="object-contain"
+                                                sizes="(max-width: 1024px) 100vw, 80vw"
+                                                priority
+                                            />
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        )}
+
+                        {/* Rating Modal */}
+                        {ratingModal && <RatingModal ratingModal={ratingModal} setRatingModal={setRatingModal} />}
+
+                        {/* Coming Soon Popup */}
+                        {showComingSoon && (
+                            <div
+                                className="fixed inset-0 z-[9999] flex items-center justify-center p-4 bg-slate-900/40 backdrop-blur-sm"
+                                onClick={(e) => {
+                                    e.stopPropagation();
+                                    setShowComingSoon(false);
+                                }}
+                            >
+                                <div
+                                    className="bg-white rounded-2xl p-8 shadow-2xl scale-in-center max-w-[280px] w-full text-center"
+                                    onClick={(e) => e.stopPropagation()}
+                                >
+                                    <div className="w-16 h-16 bg-blue-50 rounded-full flex items-center justify-center mx-auto mb-4">
+                                        <MessageSquare size={32} className="text-blue-600 animate-bounce" />
+                                    </div>
+                                    <h3 className="text-xl font-bold text-slate-800 mb-2">Coming Soon!</h3>
+                                    <p className="text-slate-500 text-sm leading-relaxed mb-6">
+                                        I'm currently strategizing <BudolPayText text="budolCare" /> chat experience for you.
+                                    </p>
+                                    <button
+                                        onClick={(e) => {
+                                            e.stopPropagation();
+                                            setShowComingSoon(false);
+                                        }}
+                                        className="w-full bg-slate-900 text-white py-3 rounded-xl font-bold active:scale-95 transition-transform"
+                                    >
+                                        Got it!
+                                    </button>
+                                </div>
+                            </div>
+                        )}
+                    </div>
                 </td>
             </tr>
+
             {/* Mobile Card View (BudolShap PH Inspired - Green Theme) */}
             <tr className={`md:hidden ${order.paymentStatus === 'cancelled' ? 'opacity-50' : ''}`}>
                 <td colSpan={7} className="px-0 py-2">
@@ -352,29 +483,34 @@ const OrderItem = ({ order, onRepay }) => {
                     >
                         {/* Store Header */}
                         <div className="px-4 py-3 border-b border-slate-50 flex items-start justify-between bg-white gap-3">
-                            <div className="flex items-start gap-2 flex-1 min-w-0">
-                                <div className="w-8 h-8 bg-green-50 rounded-lg flex items-center justify-center overflow-hidden border border-slate-50 flex-shrink-0 mt-0.5">
+                            <Link 
+                                href={`/shop/${order.store?.username || ''}`}
+                                className="flex items-start gap-2 flex-1 min-w-0 group/store"
+                                onClick={(e) => e.stopPropagation()}
+                            >
+                                <div className="w-10 h-10 bg-green-50 rounded-lg flex items-center justify-center overflow-hidden border border-slate-50 flex-shrink-0 mt-0.5 group-hover/store:border-green-400 transition-colors">
                                     {order.store?.logo ? (
                                         <Image
-                                            src={order.store.logo}
-                                            alt={order.store.name}
-                                            width={32}
-                                            height={32}
+                                            src={order.store.logo.startsWith('http') || order.store.logo.startsWith('/') || order.store.logo.startsWith('data:') ? order.store.logo : `/${order.store.logo}`}
+                                            alt={order.store.name || 'Store'}
+                                            width={40}
+                                            height={40}
                                             className="w-full h-full object-contain p-0.5"
+                                            unoptimized
                                         />
                                     ) : (
-                                        <span className="text-[12px] font-bold text-green-600">BS</span>
+                                        <span className="text-[14px] font-bold text-green-600">{order.store?.name?.charAt(0) || 'B'}</span>
                                     )}
                                 </div>
                                 <div className="flex flex-col min-w-0 pt-0.5">
-                                    <span className="text-sm font-semibold text-slate-800 flex items-center gap-1 leading-tight line-clamp-2">
+                                    <span className="text-sm font-semibold text-slate-800 flex items-center gap-1 leading-tight line-clamp-2 group-hover/store:text-green-600 transition-colors">
                                         {order.store?.name || 'Budol Seller'}
                                         <svg className="w-3 h-3 text-slate-400 flex-shrink-0 inline" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 5l7 7-7 7" />
                                         </svg>
                                     </span>
                                 </div>
-                            </div>
+                            </Link>
                             <div className="flex flex-col items-start gap-1 flex-shrink-0 pt-0.5">
                                 <span className={`text-[10px] font-bold uppercase whitespace-nowrap border rounded px-1.5 py-0.5 tracking-tight ${order.status === 'PENDING_VERIFICATION'
                                     ? 'bg-amber-50 text-amber-600 border-amber-100'
@@ -439,19 +575,31 @@ const OrderItem = ({ order, onRepay }) => {
 
                                 return (
                                     <div key={idx} className="flex gap-3">
-                                        <div className="w-20 h-20 bg-slate-50 rounded border border-slate-100 flex-shrink-0">
-                                            {displayImage ? (
+                                        <div 
+                                        className="w-20 h-20 bg-slate-50 rounded border border-slate-100 flex-shrink-0 relative group overflow-hidden cursor-pointer"
+                                        onClick={(e) => {
+                                            e.stopPropagation();
+                                            if (displayImage) setPreviewImage(displayImage);
+                                        }}
+                                    >
+                                        {displayImage ? (
+                                            <>
                                                 <Image
                                                     src={displayImage}
                                                     alt={item.product.name}
                                                     width={80}
                                                     height={80}
-                                                    className="w-full h-full object-contain rounded"
+                                                    className="w-full h-full object-contain rounded transition-all duration-300"
                                                 />
-                                            ) : (
-                                                <div className="w-full h-full flex items-center justify-center text-[10px] text-slate-300">No Image</div>
-                                            )}
-                                        </div>
+                                                {/* Eye Icon Overlay */}
+                                                <div className="absolute inset-0 bg-black/40 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity duration-300">
+                                                    <Eye className="text-white h-5 w-5" />
+                                                </div>
+                                            </>
+                                        ) : (
+                                            <div className="w-full h-full flex items-center justify-center text-[10px] text-slate-300">No Image</div>
+                                        )}
+                                    </div>
                                         <div className="flex-1 min-w-0">
                                             <h3 className="text-[14px] text-slate-800 leading-tight line-clamp-2 mb-1">
                                                 {item.product.name}
@@ -483,17 +631,25 @@ const OrderItem = ({ order, onRepay }) => {
 
                             <div className="flex justify-between items-center text-[12px]">
                                 <span className="text-slate-500">Payment Method</span>
-                                <div className="flex items-center gap-1 font-semibold text-slate-800">
-                                    {order.paymentMethod === 'GCASH' && <span className="text-blue-600">GCash</span>}
-                                    {order.paymentMethod === 'MAYA' && <span className="text-green-500">Maya</span>}
-                                    {order.paymentMethod === 'QRPH' && <span className="text-red-600">QRPh</span>}
-                                    {order.paymentMethod === 'COD' && <span className="text-green-600">COD</span>}
-                                    {order.paymentMethod === 'BUDOL_PAY' && (
-                                        <div className="font-bold">
-                                            <BudolPayText text="budolPay" />
-                                        </div>
+                                <div className="flex flex-col items-end">
+                                    <div className="flex items-center gap-1 font-semibold text-slate-800">
+                                        {order.paymentMethod === 'GCASH' && <span className="text-blue-600">GCash</span>}
+                                        {order.paymentMethod === 'MAYA' && <span className="text-green-500">Maya</span>}
+                                        {order.paymentMethod === 'QRPH' && <span className="text-red-600">QRPh</span>}
+                                        {order.paymentMethod === 'GRAB_PAY' && <span className="text-green-600">GrabPay</span>}
+                                        {order.paymentMethod === 'COD' && <span className="text-green-600">COD</span>}
+                                        {order.paymentMethod === 'BUDOL_PAY' && (
+                                            <div className="font-bold">
+                                                <BudolPayText text="budolPay" />
+                                            </div>
+                                        )}
+                                        {!['GCASH', 'MAYA', 'QRPH', 'GRAB_PAY', 'COD', 'BUDOL_PAY'].includes(order.paymentMethod) && <span>{order.paymentMethod}</span>}
+                                    </div>
+                                    {order.isPaid && order.paymentId && (
+                                        <span className="text-slate-400 font-mono tracking-tighter truncate max-w-[200px] mt-0.5">
+                                            <BudolPayText text={order.paymentId} />
+                                        </span>
                                     )}
-                                    {!['GCASH', 'MAYA', 'QRPH', 'COD', 'BUDOL_PAY'].includes(order.paymentMethod) && <span>{order.paymentMethod}</span>}
                                 </div>
                             </div>
 
@@ -540,91 +696,46 @@ const OrderItem = ({ order, onRepay }) => {
                                 )}
                             </div>
 
-                            {/* Need Help Row */}
-                            <div className="px-4 py-3 border-b border-slate-50 flex items-center justify-between overflow-hidden">
-                                <span className="text-[13px] text-slate-800 font-medium">Need Help?</span>
-                                <button
-                                    onClick={(e) => {
-                                        e.stopPropagation();
-                                        setShowComingSoon(true);
-                                    }}
-                                    className="flex items-center gap-1.5 bg-blue-50 text-blue-600 px-3 py-1 rounded-full border border-blue-100 hover:bg-blue-100 transition-colors shadow-sm"
-                                >
-                                    <MessageSquare size={14} className="fill-blue-600/10" />
-                                    <span className="text-[12px] font-bold whitespace-nowrap">
-                                        Chat <BudolPayText text="budolCare" />
-                                    </span>
-                                </button>
-                            </div>
-
-                            {/* Cancel Order Row (If applicable) */}
-                            {order.status === 'ORDER_PLACED' && !order.isPaid && (
-                                <div className="px-4 py-3 border-b border-slate-50 text-center">
-                                    <button
-                                        onClick={handleCancelOrder}
-                                        className="text-[13px] text-green-600 font-medium hover:text-green-700 transition-colors w-full"
-                                    >
-                                        Cancel Order
-                                    </button>
+                            {/* Status and Action Section */}
+                            <div className="px-4 py-3 bg-slate-50/50 flex flex-col gap-3">
+                                <div className="flex justify-between items-center">
+                                    <div className="flex flex-col gap-0.5">
+                                        <span className="text-[11px] text-slate-400 font-medium uppercase tracking-widest">Order Status</span>
+                                        <span className="text-xs font-bold text-slate-700">
+                                            {order.status === 'PENDING_VERIFICATION' ? 'VERIFYING PAYMENT' : order.status.replace(/_/g, ' ')}
+                                        </span>
+                                    </div>
+                                    <div className="flex flex-col items-end gap-0.5">
+                                        <span className="text-[11px] text-slate-400 font-medium uppercase tracking-widest">Payment</span>
+                                        <span className={`text-xs font-bold ${order.isPaid ? 'text-green-600' : 'text-amber-600'}`}>
+                                            {order.isPaid ? 'PAID' : 'PENDING'}
+                                        </span>
+                                    </div>
                                 </div>
-                            )}
-                        </div>
 
-                        {/* Contact Seller Button */}
-                        <div className="px-4 py-3 bg-white">
-                            <button
-                                onClick={(e) => e.stopPropagation()}
-                                className="w-full bg-green-600 text-white py-2 rounded text-[14px] font-semibold active:bg-green-700 transition-colors shadow-sm"
-                            >
-                                Contact Seller
-                            </button>
+                                {/* Mobile Action Buttons */}
+                                <div className="flex gap-2">
+                                    <button
+                                        onClick={() => router.push(`/orders/${order.id}`)}
+                                        className="flex-1 bg-white border border-slate-200 text-slate-700 py-2.5 rounded-lg text-sm font-bold shadow-sm active:scale-[0.98] transition-all"
+                                    >
+                                        Details
+                                    </button>
+                                    {!order.isPaid && !['cancelled', 'failed', 'expired'].includes(order.paymentStatus) && order.paymentMethod !== 'COD' && order.paymentMethod !== 'BUDOL_PAY' && order.status === 'ORDER_PLACED' && (
+                                        <button
+                                            onClick={(e) => { e.stopPropagation(); onRepay && onRepay(order); }}
+                                            className="flex-[2] bg-green-600 text-white py-2.5 rounded-lg text-sm font-bold shadow-md shadow-green-200 active:scale-[0.98] transition-all"
+                                        >
+                                            Pay Now
+                                        </button>
+                                    )}
+                                </div>
+                            </div>
                         </div>
                     </div>
-
-
-
-                    {/* Pay Now Button (If applicable) */}
-                    {!order.isPaid && !['cancelled', 'failed', 'expired'].includes(order.paymentStatus) && order.paymentMethod !== 'COD' && order.paymentMethod !== 'BUDOL_PAY' && order.status === 'ORDER_PLACED' && (
-                        <div className="px-4 mb-4">
-                            <button
-                                onClick={(e) => { e.stopPropagation(); onRepay && onRepay(order); }}
-                                className="w-full bg-green-500 text-white py-3 rounded-lg font-bold shadow-md"
-                            >
-                                Complete Payment
-                            </button>
-                        </div>
-                    )}
                 </td>
             </tr>
-            {/* Render RatingModal outside table structure */}
-            {ratingModal && <RatingModal ratingModal={ratingModal} setRatingModal={setRatingModal} />}
 
-            {/* Coming Soon Popup */}
-            {showComingSoon && (
-                <div
-                    className="fixed inset-0 z-[9999] flex items-center justify-center p-4 bg-slate-900/40 backdrop-blur-sm"
-                    onClick={() => setShowComingSoon(false)}
-                >
-                    <div
-                        className="bg-white rounded-2xl p-8 shadow-2xl scale-in-center max-w-[280px] w-full text-center"
-                        onClick={(e) => e.stopPropagation()}
-                    >
-                        <div className="w-16 h-16 bg-blue-50 rounded-full flex items-center justify-center mx-auto mb-4">
-                            <MessageSquare size={32} className="text-blue-600 animate-bounce" />
-                        </div>
-                        <h3 className="text-xl font-bold text-slate-800 mb-2">Coming Soon!</h3>
-                        <p className="text-slate-500 text-sm leading-relaxed mb-6">
-                            I'm currently strategizing <BudolPayText text="budolCare" /> chat experience for you.
-                        </p>
-                        <button
-                            onClick={() => setShowComingSoon(false)}
-                            className="w-full bg-slate-900 text-white py-3 rounded-xl font-bold active:scale-95 transition-transform"
-                        >
-                            Got it!
-                        </button>
-                    </div>
-                </div>
-            )}
         </>
     )
 }

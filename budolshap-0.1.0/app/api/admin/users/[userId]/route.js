@@ -268,6 +268,7 @@ export async function DELETE(request, { params }) {
 
     try {
         const { userId } = await params
+        const deletedAt = new Date()
 
         // Check if user exists
         const user = await prisma.user.findUnique({
@@ -286,11 +287,14 @@ export async function DELETE(request, { params }) {
 
         // Use a transaction to ensure all deletions succeed or fail together
         await prisma.$transaction(async (tx) => {
+            console.log(`[Admin Delete] Starting transaction for user ${userId}`);
+
             // 1. Delete OrderItems for user's orders (as buyer)
             const userOrders = await tx.order.findMany({
                 where: { userId: userId },
                 select: { id: true }
             })
+            console.log(`[Admin Delete] Found ${userOrders.length} orders for user`);
 
             if (userOrders.length > 0) {
                 await tx.orderItem.deleteMany({
@@ -298,10 +302,12 @@ export async function DELETE(request, { params }) {
                         orderId: { in: userOrders.map(o => o.id) }
                     }
                 })
+                console.log(`[Admin Delete] Deleted OrderItems for user orders`);
             }
 
             // 2. If user has a store, delete store-related records
             if (user.store) {
+                console.log(`[Admin Delete] Deleting store ${user.store.id}`);
                 // Get all orders from this store
                 const storeOrders = await tx.order.findMany({
                     where: { storeId: user.store.id },
@@ -337,12 +343,23 @@ export async function DELETE(request, { params }) {
             await tx.order.deleteMany({
                 where: { userId: userId }
             })
+            console.log(`[Admin Delete] Deleted user orders`);
 
-            // 4. Delete user (cascade will delete other related records like ratings, address, cart, chats, messages, audit logs)
-            await tx.user.delete({
-                where: { id: userId }
+            // 4. Soft Delete user (set deletedAt to current timestamp)
+            const updatedUser = await tx.user.update({
+                where: { id: userId },
+                data: { deletedAt }
             })
+            console.log(`[Admin Delete] Soft deleted user record. New deletedAt:`, updatedUser.deletedAt);
         })
+
+        try {
+            await prisma.$executeRaw`UPDATE "budolid"."User" SET "deletedAt" = ${deletedAt} WHERE id = ${userId}`
+            await prisma.$executeRaw`UPDATE "budolpay"."User" SET "deletedAt" = ${deletedAt} WHERE id = ${userId}`
+            console.log(`[Admin Delete] Soft deleted user ${userId} from budolid and budolpay schemas.`)
+        } catch (schemaDeleteError) {
+            console.warn(`[Admin Delete] Failed to soft delete from external schemas (budolid/budolpay):`, schemaDeleteError.message)
+        }
 
         return NextResponse.json({ message: 'User deleted successfully' })
     } catch (error) {

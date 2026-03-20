@@ -84,11 +84,12 @@ export default function StoreShop() {
             <div className="max-w-7xl mx-auto bg-slate-50 rounded-xl p-6 md:p-10 mt-6 flex flex-col md:flex-row items-center gap-6 shadow-xs">
                 {storeInfo.logo ? (
                     <Image
-                        src={storeInfo.logo}
-                        alt={storeInfo.name}
+                        src={storeInfo.logo.startsWith('http') || storeInfo.logo.startsWith('/') || storeInfo.logo.startsWith('data:') ? storeInfo.logo : `/${storeInfo.logo}`}
+                        alt={storeInfo.name || 'Store'}
                         className="size-32 sm:size-38 object-contain bg-white border-2 border-slate-100 rounded-md"
                         width={200}
                         height={200}
+                        unoptimized
                     />
                 ) : (
                     <div className="size-32 sm:size-38 flex items-center justify-center bg-slate-200 text-3xl font-semibold text-slate-700 rounded-md">

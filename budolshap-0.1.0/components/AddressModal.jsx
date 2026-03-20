@@ -37,10 +37,14 @@ const AddressModal = ({ setShowAddressModal, onAddressesAdded, mode = 'address' 
                 const hasPassword = !!dbUser?.password && dbUser.password !== 'NO_PASSWORD_SET'
                 const kycStatus = dbUser?.kycStatus || 'UNVERIFIED'
                 
+                // Get extended name fields from metadata if available
+                const firstName = dbUser?.metadata?.firstName || ''
+                const lastName = dbUser?.metadata?.lastName || ''
+                
                 // Get the first address if it exists
                 const userAddress = dbUser?.Address?.[0] || null
                 
-                setUserMeta({ id: localUser.id, name, email, phone, address: userAddress, hasPassword, kycStatus })
+                setUserMeta({ id: localUser.id, name, email, phone, address: userAddress, hasPassword, kycStatus, firstName, lastName })
             } catch (error) {
                 console.error("Error loading user info:", error)
                 const nameFallback = localUser.name || ''
@@ -67,6 +71,9 @@ const AddressModal = ({ setShowAddressModal, onAddressesAdded, mode = 'address' 
                 body: JSON.stringify({
                     id: userMeta.id,
                     name: formData.name.trim(),
+                    // Pass explicit split names for metadata storage
+                    firstName: formData.firstName,
+                    lastName: formData.lastName,
                     phoneNumber: formData.phone,
                     email: formData.email.trim(),
                     // Only send password if it is provided (user wants to change it)
@@ -115,7 +122,9 @@ const AddressModal = ({ setShowAddressModal, onAddressesAdded, mode = 'address' 
                 }
             }))
             
-            // window.location.reload()
+            // Trigger global auth update
+            window.dispatchEvent(new Event('login-success'))
+            
             setShowAddressModal(false)
         } catch (error) {
             console.error("Error saving profile:", error)
@@ -235,6 +244,8 @@ const AddressModal = ({ setShowAddressModal, onAddressesAdded, mode = 'address' 
                             <AddressFormManager 
                                 initialData={{ 
                                     name: userMeta.name, 
+                                    firstName: userMeta.firstName,
+                                    lastName: userMeta.lastName,
                                     email: userMeta.email, 
                                     phone: userMeta.phone,
                                     hasPassword: userMeta.hasPassword,

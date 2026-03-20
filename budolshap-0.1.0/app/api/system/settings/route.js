@@ -66,6 +66,7 @@ export async function PUT(request) {
         if (body.selectedMarketingAds !== undefined) data.selectedMarketingAds = body.selectedMarketingAds;
         if (body.adDisplayMode !== undefined) data.adDisplayMode = body.adDisplayMode;
         if (body.quickInstallerEnabled !== undefined) data.quickInstallerEnabled = !!body.quickInstallerEnabled;
+        if (body.marketingAdConfigs !== undefined) data.marketingAdConfigs = body.marketingAdConfigs;
 
         // Error Tracking fields
         if (body.errorTrackingEnabled !== undefined) data.errorTrackingEnabled = !!body.errorTrackingEnabled;
