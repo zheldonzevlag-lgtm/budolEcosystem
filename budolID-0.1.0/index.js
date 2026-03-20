@@ -102,7 +102,6 @@ app.use((req, res, next) => {
 // 0. Serve Login Page
 app.get('/login', (req, res) => {
     const { apiKey } = req.query;
-    // Fallback to budolPay if no apiKey is provided to prevent "Unauthorized Application" error
     const activeApiKey = apiKey || 'bp_key_2025';
 
     res.send(`
@@ -144,19 +143,30 @@ app.get('/login', (req, res) => {
                                 name="email"
                                 required
                                 class="w-full p-3 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500/50 text-slate-900"
-                                placeholder="name@example.com"
+                                placeholder="juan@budolpay.com"
                             />
                         </div>
 
                         <div>
                             <label class="block text-xs font-bold text-slate-500 uppercase mb-1">Password</label>
-                            <input 
-                                type="password" 
-                                name="password"
-                                required
-                                class="w-full p-3 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500/50 text-slate-900"
-                                placeholder="••••••••"
-                            />
+                            <div class="relative group">
+                                <input 
+                                    type="password" 
+                                    name="password"
+                                    id="passwordInput"
+                                    required
+                                    class="w-full p-3 pr-12 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500/50 text-slate-900"
+                                    placeholder="••••••••"
+                                />
+                                <button
+                                    type="button"
+                                    onclick="togglePassword('passwordInput', this)"
+                                    class="absolute right-3 top-1/2 -translate-y-1/2 p-1.5 text-slate-400 hover:text-blue-500 transition-colors"
+                                >
+                                    <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="eye-icon"><path d="M2 12s3-7 10-7 10 7 10 7-3 7-10 7-10-7-10-7Z"/><circle cx="12" cy="12" r="3"/></svg>
+                                    <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="eye-off-icon hidden"><path d="M9.88 9.88a3 3 0 1 0 4.24 4.24"/><path d="M10.73 5.08A10.43 10.43 0 0 1 12 5c7 0 10 7 10 7a13.16 13.16 0 0 1-1.67 2.68"/><path d="M6.61 6.61A13.52 13.52 0 0 0 2 12s3 7 10 7a9.74 9.74 0 0 0 5.39-1.61"/><line x1="2" y1="2" x2="22" y2="22"/></svg>
+                                </button>
+                            </div>
                         </div>
 
                         <button 
@@ -167,10 +177,14 @@ app.get('/login', (req, res) => {
                         </button>
                     </form>
 
-                    <div class="mt-8 pt-6 border-t border-slate-100 text-center">
-                        <a href="/forgot-password?apiKey=${activeApiKey}" class="text-sm font-semibold text-blue-500 hover:text-blue-600 transition-colors">
+                    <div class="mt-8 pt-6 border-t border-slate-100 text-center space-y-3">
+                        <a href="/forgot-password?apiKey=${activeApiKey}" class="block text-sm font-semibold text-blue-500 hover:text-blue-600 transition-colors">
                             Forgot your password?
                         </a>
+                        <p class="text-xs text-slate-400">
+                            Don't have an account? 
+                            <a href="/register?apiKey=${activeApiKey}" class="ml-1 font-bold text-blue-500 hover:underline">Create Account</a>
+                        </p>
                     </div>
                 </div>
                 <div class="bg-slate-50 px-8 py-4 text-center">
@@ -179,6 +193,529 @@ app.get('/login', (req, res) => {
                     </p>
                 </div>
             </div>
+
+            <script>
+                function togglePassword(inputId, btn) {
+                    const input = document.getElementById(inputId);
+                    const eyeIcon = btn.querySelector('.eye-icon');
+                    const eyeOffIcon = btn.querySelector('.eye-off-icon');
+                    
+                    if (input.type === 'password') {
+                        input.type = 'text';
+                        eyeIcon.classList.add('hidden');
+                        eyeOffIcon.classList.remove('hidden');
+                    } else {
+                        input.type = 'password';
+                        eyeIcon.classList.remove('hidden');
+                        eyeOffIcon.classList.add('hidden');
+                    }
+                }
+            </script>
+        </body>
+        </html>
+    `);
+});
+
+// 0.1 Serve Register Page
+app.get('/register', (req, res) => {
+    const { apiKey } = req.query;
+    const isBudolPay = apiKey === 'bp_key_2025';
+    const primaryColor = isBudolPay ? 'rose' : 'blue';
+    const brandName = isBudolPay ? 'Pay' : 'ID';
+    const activeApiKey = apiKey || 'bp_key_2025';
+
+    res.send(`
+        <!DOCTYPE html>
+        <html lang="en">
+        <head>
+            <meta charset="UTF-8">
+            <meta name="viewport" content="width=device-width, initial-scale=1.0">
+            <title>Create Account - budol${brandName}</title>
+            <script src="https://cdn.tailwindcss.com"></script>
+            <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+            <style>
+                body { font-family: 'Inter', sans-serif; }
+                .spinner {
+                    animation: spin 1s linear infinite;
+                    border: 2px solid #e2e8f0;
+                    border-top: 2px solid #ef4444; /* Start Red as requested */
+                    border-radius: 50%;
+                    width: 20px;
+                    height: 20px;
+                }
+                .spinner-valid { border-top-color: #10b981 !important; }
+                @keyframes spin {
+                    0% { transform: rotate(0deg); }
+                    100% { transform: rotate(360deg); }
+                }
+                .input-valid { border-color: #10b981 !important; }
+                .input-invalid { border-color: #ef4444 !important; }
+            </style>
+        </head>
+        <body class="min-h-screen bg-slate-900 flex items-center justify-center p-4">
+            <div class="max-w-md w-full bg-white rounded-2xl shadow-2xl overflow-hidden">
+                <div class="p-8">
+                    <div class="flex justify-center mb-6">
+                        <div class="bg-${primaryColor}-500/10 p-6 rounded-full border-4 border-${primaryColor}-500/5 shadow-inner">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" class="text-${primaryColor}-500"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+                        </div>
+                    </div>
+                    
+                    <h1 class="text-2xl font-black text-center text-slate-900 mb-2">
+                        budol<span class="text-${primaryColor}-500">${brandName}</span>
+                    </h1>
+                    <p class="text-slate-500 text-center text-sm mb-8">
+                        Create your universal ecosystem account.
+                    </p>
+
+                    <form id="registerForm" class="space-y-4">
+                        <input type="hidden" name="apiKey" value="${activeApiKey}" />
+                        
+                        <div class="grid grid-cols-2 gap-4">
+                            <div>
+                                <label class="block text-xs font-bold text-slate-500 uppercase mb-1">First Name</label>
+                                <input type="text" id="firstName" required class="w-full p-3 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-${primaryColor}-500/50 text-slate-900" placeholder="Juan">
+                            </div>
+                            <div>
+                                <label class="block text-xs font-bold text-slate-500 uppercase mb-1">Last Name</label>
+                                <input type="text" id="lastName" required class="w-full p-3 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-${primaryColor}-500/50 text-slate-900" placeholder="Dela Cruz">
+                            </div>
+                        </div>
+
+                        <div>
+                            <label class="block text-xs font-bold text-slate-500 uppercase mb-1">Email Address</label>
+                            <div class="relative">
+                                <input type="email" id="email" required class="w-full p-3 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-${primaryColor}-500/50 text-slate-900" placeholder="juan@budolpay.com">
+                                <div id="emailSpinner" class="absolute right-3 top-1/2 -translate-y-1/2 hidden">
+                                    <div class="spinner"></div>
+                                </div>
+                                <div id="emailStatus" class="absolute right-3 top-1/2 -translate-y-1/2 hidden">
+                                    <svg class="w-5 h-5 text-green-500 hidden" id="emailValidIcon" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path></svg>
+                                    <svg class="w-5 h-5 text-red-500 hidden" id="emailInvalidIcon" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
+                                </div>
+                            </div>
+                            <p id="emailError" class="text-[10px] text-red-500 mt-1 font-bold hidden"></p>
+                        </div>
+
+                        <div>
+                            <label class="block text-xs font-bold text-slate-500 uppercase mb-1">Phone Number</label>
+                            <div class="relative">
+                                <input type="tel" id="phoneNumber" required class="w-full p-3 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-${primaryColor}-500/50 text-slate-900" placeholder="09123456789">
+                                <div id="phoneSpinner" class="absolute right-3 top-1/2 -translate-y-1/2 hidden">
+                                    <div class="spinner"></div>
+                                </div>
+                                <div id="phoneStatus" class="absolute right-3 top-1/2 -translate-y-1/2 hidden">
+                                    <svg class="w-5 h-5 text-green-500 hidden" id="phoneValidIcon" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path></svg>
+                                    <svg class="w-5 h-5 text-red-500 hidden" id="phoneInvalidIcon" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
+                                </div>
+                            </div>
+                            <p id="phoneError" class="text-[10px] text-red-500 mt-1 font-bold hidden"></p>
+                        </div>
+
+                        <div>
+                            <label class="block text-xs font-bold text-slate-500 uppercase mb-1">Password</label>
+                            <div class="relative group">
+                                <input 
+                                    type="password" 
+                                    id="password" 
+                                    required 
+                                    class="w-full p-3 pr-12 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-${primaryColor}-500/50 text-slate-900" 
+                                    placeholder="••••••••"
+                                >
+                                <button type="button" onclick="togglePassword('password', this)" class="absolute right-3 top-1/2 -translate-y-1/2 p-1.5 text-slate-400 hover:text-${primaryColor}-500 transition-colors">
+                                    <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="eye-icon"><path d="M2 12s3-7 10-7 10 7 10 7-3 7-10 7-10-7-10-7Z"/><circle cx="12" cy="12" r="3"/></svg>
+                                    <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="eye-off-icon hidden"><path d="M9.88a3 3 0 1 0 4.24 4.24"/><path d="M10.73 5.08A10.43 10.43 0 0 1 12 5c7 0 10 7 10 7a13.16 13.16 0 0 1-1.67 2.68"/><path d="M6.61 6.61A13.52 13.52 0 0 0 2 12s3 7 10 7a9.74 9.74 0 0 0 5.39-1.61"/><line x1="2" y1="2" x2="22" y2="22"/></svg>
+                                </button>
+                            </div>
+                        </div>
+
+                        <div>
+                            <label class="block text-xs font-bold text-slate-500 uppercase mb-1">Confirm Password</label>
+                            <div class="relative group">
+                                <input 
+                                    type="password" 
+                                    id="confirmPassword" 
+                                    required 
+                                    class="w-full p-3 pr-12 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-${primaryColor}-500/50 text-slate-900" 
+                                    placeholder="••••••••"
+                                >
+                                <button type="button" onclick="togglePassword('confirmPassword', this)" class="absolute right-3 top-12/2 -translate-y-1/2 p-1.5 text-slate-400 hover:text-${primaryColor}-500 transition-colors" style="top: 50%;">
+                                    <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="eye-icon"><path d="M2 12s3-7 10-7 10 7 10 7-3 7-10 7-10-7-10-7Z"/><circle cx="12" cy="12" r="3"/></svg>
+                                    <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="eye-off-icon hidden"><path d="M9.88a3 3 0 1 0 4.24 4.24"/><path d="M10.73 5.08A10.43 10.43 0 0 1 12 5c7 0 10 7 10 7a13.16 13.16 0 0 1-1.67 2.68"/><path d="M6.61 6.61A13.52 13.52 0 0 0 2 12s3 7 10 7a9.74 9.74 0 0 0 5.39-1.61"/><line x1="2" y1="2" x2="22" y2="22"/></svg>
+                                </button>
+                                <div id="confirmPasswordSpinner" class="absolute right-10 top-1/2 -translate-y-1/2 hidden" style="right: 2.5rem;">
+                                    <div class="spinner"></div>
+                                </div>
+                                <div id="confirmPasswordStatus" class="absolute right-10 top-1/2 -translate-y-1/2 hidden" style="right: 2.5rem;">
+                                    <svg class="w-5 h-5 text-green-500 hidden" id="confirmPasswordValidIcon" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path></svg>
+                                    <svg class="w-5 h-5 text-red-500 hidden" id="confirmPasswordInvalidIcon" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
+                                </div>
+                            </div>
+                            <p id="confirmPasswordError" class="text-[10px] text-red-500 mt-1 font-bold hidden"></p>
+                        </div>
+
+                        <div class="flex items-start gap-3 py-2">
+                            <input type="checkbox" id="terms" required class="mt-1 w-4 h-4 rounded border-slate-300 text-${primaryColor}-500 focus:ring-${primaryColor}-500/50">
+                            <label for="terms" class="text-[10px] text-slate-500 leading-tight">
+                                I agree to the <a href="#" class="font-bold text-${primaryColor}-500 hover:underline">Terms of Service</a> and <a href="#" class="font-bold text-${primaryColor}-500 hover:underline">Privacy Policy</a>. I understand my data is protected under the <span class="font-bold">Philippine Data Privacy Act of 2012</span>.
+                            </label>
+                        </div>
+
+                        <button type="submit" id="submitBtn" class="w-full bg-${primaryColor}-500 text-white p-4 rounded-xl font-bold hover:bg-${primaryColor}-600 transition-colors shadow-lg shadow-${primaryColor}-500/30 disabled:opacity-50">
+                            Create Account
+                        </button>
+                    </form>
+
+                    <div id="message" class="mt-4 text-center text-sm font-semibold hidden"></div>
+
+                    <div class="mt-8 pt-6 border-t border-slate-100 text-center">
+                        <p class="text-sm text-slate-500">
+                            Already have an account? 
+                            <a href="/login?apiKey=${activeApiKey}" class="ml-1 font-bold text-${primaryColor}-500 hover:underline">Sign In</a>
+                        </p>
+                    </div>
+                </div>
+                <div class="bg-slate-50 px-8 py-4 text-center">
+                    <p class="text-[10px] text-slate-400 font-bold uppercase tracking-widest">
+                        Protected by budol<span class="text-${primaryColor}-500">Shield</span>
+                    </p>
+                </div>
+            </div>
+
+            <script>
+                document.addEventListener('DOMContentLoaded', () => {
+                    console.log('BudolID Registration Script Initialized');
+                    const activeApiKey = "${activeApiKey}";
+                    const emailInput = document.getElementById('email');
+                    const phoneInput = document.getElementById('phoneNumber');
+                    const passwordInput = document.getElementById('password');
+                    const confirmPasswordInput = document.getElementById('confirmPassword');
+                    const termsCheckbox = document.getElementById('terms');
+                    const submitBtn = document.getElementById('submitBtn');
+                    
+                    let isEmailValid = false;
+                    let isPhoneValid = false;
+                    let isConfirmPasswordValid = false;
+
+                    function updateSubmitBtn() {
+                        submitBtn.disabled = !(isEmailValid && isPhoneValid && isConfirmPasswordValid && termsCheckbox.checked);
+                    }
+
+                    // Debounce helper
+                    function debounce(func, wait) {
+                        let timeout;
+                        return function executedFunction(...args) {
+                            const later = () => {
+                                clearTimeout(timeout);
+                                func(...args);
+                            };
+                            clearTimeout(timeout);
+                            timeout = setTimeout(later, wait);
+                        };
+                    }
+
+                    // Email Validation
+                    const validateEmail = debounce(async (email) => {
+                        const emailError = document.getElementById('emailError');
+                        const spinner = document.getElementById('emailSpinner');
+                        const spinnerEl = spinner.querySelector('.spinner');
+                        const status = document.getElementById('emailStatus');
+                        const validIcon = document.getElementById('emailValidIcon');
+                        const invalidIcon = document.getElementById('emailInvalidIcon');
+
+                        spinnerEl.classList.remove('spinner-valid');
+
+                        if (!email) {
+                            emailInput.classList.remove('input-valid', 'input-invalid');
+                            emailError.classList.add('hidden');
+                            status.classList.add('hidden');
+                            spinner.classList.add('hidden');
+                            isEmailValid = false;
+                            updateSubmitBtn();
+                            return;
+                        }
+
+                        // 1. Format Check (escaped for Node.js backticks)
+                        const emailRegex = /^[^\\s@]+@[^\\s@]+\\.[^\\s@]+$/;
+                        if (!emailRegex.test(email)) {
+                            spinner.classList.add('hidden');
+                            emailInput.classList.add('input-invalid');
+                            emailInput.classList.remove('input-valid');
+                            emailError.textContent = 'Invalid email format';
+                            emailError.classList.remove('hidden');
+                            status.classList.remove('hidden');
+                            validIcon.classList.add('hidden');
+                            invalidIcon.classList.remove('hidden');
+                            isEmailValid = false;
+                            updateSubmitBtn();
+                            return;
+                        }
+
+                        // 2. Availability Check
+                        spinner.classList.remove('hidden');
+                        status.classList.add('hidden');
+                        emailError.classList.add('hidden');
+
+                        try {
+                            const res = await fetch('/auth/check-email?email=' + encodeURIComponent(email));
+                            const data = await res.json();
+                            if (data.exists) {
+                                spinner.classList.add('hidden');
+                                status.classList.remove('hidden');
+                                emailInput.classList.add('input-invalid');
+                                emailInput.classList.remove('input-valid');
+                                emailError.textContent = 'Email already registered';
+                                emailError.classList.remove('hidden');
+                                validIcon.classList.add('hidden');
+                                invalidIcon.classList.remove('hidden');
+                                isEmailValid = false;
+                            } else {
+                                spinnerEl.classList.add('spinner-valid');
+                                setTimeout(() => {
+                                    spinner.classList.add('hidden');
+                                    status.classList.remove('hidden');
+                                    emailInput.classList.add('input-valid');
+                                    emailInput.classList.remove('input-invalid');
+                                    emailError.classList.add('hidden');
+                                    validIcon.classList.remove('hidden');
+                                    invalidIcon.classList.add('hidden');
+                                    isEmailValid = true;
+                                    updateSubmitBtn();
+                                }, 500);
+                            }
+                        } catch (err) {
+                            console.error('Email check error:', err);
+                            spinner.classList.add('hidden');
+                        }
+                        updateSubmitBtn();
+                    }, 500);
+
+                    // Phone Validation
+                    const validatePhone = debounce(async (phone) => {
+                        const phoneError = document.getElementById('phoneError');
+                        const spinner = document.getElementById('phoneSpinner');
+                        const spinnerEl = spinner.querySelector('.spinner');
+                        const status = document.getElementById('phoneStatus');
+                        const validIcon = document.getElementById('phoneValidIcon');
+                        const invalidIcon = document.getElementById('phoneInvalidIcon');
+
+                        spinnerEl.classList.remove('spinner-valid');
+
+                        if (!phone) {
+                            phoneInput.classList.remove('input-valid', 'input-invalid');
+                            phoneError.classList.add('hidden');
+                            status.classList.add('hidden');
+                            spinner.classList.add('hidden');
+                            isPhoneValid = false;
+                            updateSubmitBtn();
+                            return;
+                        }
+
+                        // 1. Format Check (Philippine format, escaped for Node.js backticks)
+                        const phoneRegex = /^(09|\\+639)\\d{9}$/;
+                        if (!phoneRegex.test(phone)) {
+                            spinner.classList.add('hidden');
+                            phoneInput.classList.add('input-invalid');
+                            phoneInput.classList.remove('input-valid');
+                            phoneError.textContent = 'Use 09xxxxxxxxx or +639xxxxxxxxx';
+                            phoneError.classList.remove('hidden');
+                            status.classList.remove('hidden');
+                            validIcon.classList.add('hidden');
+                            invalidIcon.classList.remove('hidden');
+                            isPhoneValid = false;
+                            updateSubmitBtn();
+                            return;
+                        }
+
+                        // 2. Availability Check
+                        spinner.classList.remove('hidden');
+                        status.classList.add('hidden');
+                        phoneError.classList.add('hidden');
+
+                        try {
+                            const res = await fetch('/auth/check-phone?phone=' + encodeURIComponent(phone));
+                            const data = await res.json();
+                            if (data.exists) {
+                                spinner.classList.add('hidden');
+                                status.classList.remove('hidden');
+                                phoneInput.classList.add('input-invalid');
+                                phoneInput.classList.remove('input-valid');
+                                phoneError.textContent = 'Phone already registered';
+                                phoneError.classList.remove('hidden');
+                                validIcon.classList.add('hidden');
+                                invalidIcon.classList.remove('hidden');
+                                isPhoneValid = false;
+                            } else {
+                                spinnerEl.classList.add('spinner-valid');
+                                setTimeout(() => {
+                                    spinner.classList.add('hidden');
+                                    status.classList.remove('hidden');
+                                    phoneInput.classList.add('input-valid');
+                                    phoneInput.classList.remove('input-invalid');
+                                    phoneError.classList.add('hidden');
+                                    validIcon.classList.remove('hidden');
+                                    invalidIcon.classList.add('hidden');
+                                    isPhoneValid = true;
+                                    updateSubmitBtn();
+                                }, 500);
+                            }
+                        } catch (err) {
+                            console.error('Phone check error:', err);
+                            spinner.classList.add('hidden');
+                        }
+                        updateSubmitBtn();
+                    }, 500);
+
+                    // Confirm Password Validation
+                    const validateConfirmPassword = debounce(async () => {
+                        const password = passwordInput.value;
+                        const confirmPassword = confirmPasswordInput.value;
+                        const confirmPasswordError = document.getElementById('confirmPasswordError');
+                        const spinner = document.getElementById('confirmPasswordSpinner');
+                        const spinnerEl = spinner.querySelector('.spinner');
+                        const status = document.getElementById('confirmPasswordStatus');
+                        const validIcon = document.getElementById('confirmPasswordValidIcon');
+                        const invalidIcon = document.getElementById('confirmPasswordInvalidIcon');
+
+                        spinnerEl.classList.remove('spinner-valid');
+
+                        if (!confirmPassword) {
+                            confirmPasswordInput.classList.remove('input-valid', 'input-invalid');
+                            confirmPasswordError.classList.add('hidden');
+                            status.classList.add('hidden');
+                            spinner.classList.add('hidden');
+                            isConfirmPasswordValid = false;
+                            updateSubmitBtn();
+                            return;
+                        }
+
+                        // Show Spinner
+                        spinner.classList.remove('hidden');
+                        status.classList.add('hidden');
+                        confirmPasswordError.classList.add('hidden');
+
+                        // Simulate a check
+                        setTimeout(() => {
+                            spinner.classList.add('hidden');
+                            status.classList.remove('hidden');
+
+                            if (password !== confirmPassword) {
+                                confirmPasswordInput.classList.add('input-invalid');
+                                confirmPasswordInput.classList.remove('input-valid');
+                                confirmPasswordError.textContent = 'Passwords do not match';
+                                confirmPasswordError.classList.remove('hidden');
+                                validIcon.classList.add('hidden');
+                                invalidIcon.classList.remove('hidden');
+                                isConfirmPasswordValid = false;
+                            } else {
+                                spinnerEl.classList.add('spinner-valid');
+                                confirmPasswordInput.classList.add('input-valid');
+                                confirmPasswordInput.classList.remove('input-invalid');
+                                confirmPasswordError.classList.add('hidden');
+                                validIcon.classList.remove('hidden');
+                                invalidIcon.classList.add('hidden');
+                                isConfirmPasswordValid = true;
+                            }
+                            updateSubmitBtn();
+                        }, 500);
+                    }, 300);
+
+                    emailInput.addEventListener('input', (e) => {
+                        const val = e.target.value.trim();
+                        document.getElementById('emailSpinner').classList.remove('hidden');
+                        document.getElementById('emailStatus').classList.add('hidden');
+                        validateEmail(val);
+                    });
+
+                    phoneInput.addEventListener('input', (e) => {
+                        let val = e.target.value.replace(/[^0-9+]/g, '').trim();
+                        if (val.startsWith('+')) {
+                            val = val.slice(0, 13);
+                        } else {
+                            val = val.slice(0, 11);
+                        }
+                        e.target.value = val;
+                        document.getElementById('phoneSpinner').classList.remove('hidden');
+                        document.getElementById('phoneStatus').classList.add('hidden');
+                        validatePhone(val);
+                    });
+
+                    passwordInput.addEventListener('input', () => {
+                        const password = passwordInput.value;
+                        const hasNumber = /\\d/.test(password);
+                        const hasSpecial = /[!@#$%^&*]/.test(password);
+                        const isLongEnough = password.length >= 8;
+
+                        if (password && (!hasNumber || !hasSpecial || !isLongEnough)) {
+                            passwordInput.classList.add('input-invalid');
+                            // You could add a password hint UI here if needed
+                        } else {
+                            passwordInput.classList.remove('input-invalid');
+                        }
+
+                        if (confirmPasswordInput.value) {
+                            validateConfirmPassword();
+                        }
+                    });
+
+                    termsCheckbox.addEventListener('change', updateSubmitBtn);
+
+                    confirmPasswordInput.addEventListener('input', () => {
+                        document.getElementById('confirmPasswordSpinner').classList.remove('hidden');
+                        document.getElementById('confirmPasswordStatus').classList.add('hidden');
+                        validateConfirmPassword();
+                    });
+
+                    document.getElementById('registerForm').addEventListener('submit', async (e) => {
+                        e.preventDefault();
+                        const messageDiv = document.getElementById('message');
+                        const formData = {
+                            firstName: document.getElementById('firstName').value,
+                            lastName: document.getElementById('lastName').value,
+                            email: document.getElementById('email').value,
+                            phoneNumber: document.getElementById('phoneNumber').value,
+                            password: document.getElementById('password').value
+                        };
+                        try {
+                            const res = await fetch('/auth/register', {
+                                method: 'POST',
+                                headers: { 'Content-Type': 'application/json' },
+                                body: JSON.stringify(formData)
+                            });
+                            const data = await res.json();
+                            if (res.ok) {
+                                messageDiv.textContent = 'Account created successfully! Redirecting...';
+                                messageDiv.className = 'mt-4 text-center text-sm font-semibold text-green-600';
+                                messageDiv.classList.remove('hidden');
+                                setTimeout(() => { window.location.href = '/login?apiKey=' + activeApiKey; }, 2000);
+                            } else {
+                                messageDiv.textContent = data.error || 'Registration failed';
+                                messageDiv.className = 'mt-4 text-center text-sm font-semibold text-red-600';
+                                messageDiv.classList.remove('hidden');
+                            }
+                        } catch (err) {
+                            messageDiv.textContent = 'An error occurred. Please try again.';
+                            messageDiv.className = 'mt-4 text-center text-sm font-semibold text-red-600';
+                            messageDiv.classList.remove('hidden');
+                        }
+                    });
+                });
+
+                function togglePassword(inputId, btn) {
+                    const input = document.getElementById(inputId);
+                    const eyeIcon = btn.querySelector('.eye-icon');
+                    const eyeOffIcon = btn.querySelector('.eye-off-icon');
+                    if (input.type === 'password') {
+                        input.type = 'text';
+                        eyeIcon.classList.add('hidden');
+                        eyeOffIcon.classList.remove('hidden');
+                    } else {
+                        input.type = 'password';
+                        eyeIcon.classList.remove('hidden');
+                        eyeOffIcon.classList.add('hidden');
+                    }
+                }
+            </script>
         </body>
         </html>
     `);
@@ -226,7 +763,7 @@ app.get('/forgot-password', (req, res) => {
                                 id="email"
                                 required
                                 class="w-full p-3 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500/50 text-slate-900"
-                                placeholder="name@example.com"
+                                placeholder="juan@budolpay.com"
                             />
                         </div>
 
@@ -339,13 +876,23 @@ app.get('/reset-password', (req, res) => {
 
                         <div>
                             <label class="block text-xs font-bold text-slate-500 uppercase mb-1">New Password</label>
-                            <input 
-                                type="password" 
-                                id="newPassword"
-                                required
-                                class="w-full p-3 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500/50 text-slate-900"
-                                placeholder="••••••••"
-                            />
+                            <div class="relative group">
+                                <input 
+                                    type="password" 
+                                    id="newPassword"
+                                    required
+                                    class="w-full p-3 pr-12 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500/50 text-slate-900"
+                                    placeholder="••••••••"
+                                />
+                                <button
+                                    type="button"
+                                    onclick="togglePassword('newPassword', this)"
+                                    class="absolute right-3 top-1/2 -translate-y-1/2 p-1.5 text-slate-400 hover:text-blue-500 transition-colors"
+                                >
+                                    <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="eye-icon"><path d="M2 12s3-7 10-7 10 7 10 7-3 7-10 7-10-7-10-7Z"/><circle cx="12" cy="12" r="3"/></svg>
+                                    <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="eye-off-icon hidden"><path d="M9.88 9.88a3 3 0 1 0 4.24 4.24"/><path d="M10.73 5.08A10.43 10.43 0 0 1 12 5c7 0 10 7 10 7a13.16 13.16 0 0 1-1.67 2.68"/><path d="M6.61 6.61A13.52 13.52 0 0 0 2 12s3 7 10 7a9.74 9.74 0 0 0 5.39-1.61"/><line x1="2" y1="2" x2="22" y2="22"/></svg>
+                                </button>
+                            </div>
                         </div>
 
                         <button 
@@ -372,6 +919,22 @@ app.get('/reset-password', (req, res) => {
             </div>
 
             <script>
+                function togglePassword(inputId, btn) {
+                    const input = document.getElementById(inputId);
+                    const eyeIcon = btn.querySelector('.eye-icon');
+                    const eyeOffIcon = btn.querySelector('.eye-off-icon');
+                    
+                    if (input.type === 'password') {
+                        input.type = 'text';
+                        eyeIcon.classList.add('hidden');
+                        eyeOffIcon.classList.remove('hidden');
+                    } else {
+                        input.type = 'password';
+                        eyeIcon.classList.remove('hidden');
+                        eyeOffIcon.classList.add('hidden');
+                    }
+                }
+
                 document.getElementById('otpForm').addEventListener('submit', async (e) => {
                     e.preventDefault();
                     const email = document.getElementById('email').value;
@@ -623,42 +1186,51 @@ app.get('/auth/check-phone', async (req, res) => {
 
         for (const schema of schemas) {
             console.log(`📡 [budolID] Checking schema "${schema}" for "${normalizedPhone}"`);
-            // Try normalized first
-            const results = await prisma.$queryRawUnsafe(
-                `SELECT id, "phoneNumber", name, email, "firstName", "lastName" FROM "${schema}"."User" WHERE "phoneNumber" = $1 LIMIT 1`,
-                normalizedPhone
-            );
 
-            if (results && results.length > 0) {
-                user = results[0];
-                foundSchema = schema;
-                console.log(`✅ [budolID] Found in "${schema}":`, user);
-                break;
-            }
-
-            // Try raw variations if normalized didn't work
-            const rawDigits = phone.replace(/[^0-9]/g, '');
-            const variations = [];
-            if (rawDigits.startsWith('63') && rawDigits.length === 12) {
-                variations.push('0' + rawDigits.substring(2));
-            } else if (rawDigits.startsWith('0')) {
-                variations.push(rawDigits);
-            }
-
-            for (const variation of variations) {
-                console.log(`📡 [budolID] Checking variation "${variation}" in "${schema}"`);
-                const varResults = await prisma.$queryRawUnsafe(
-                    `SELECT id, "phoneNumber", name, email, "firstName", "lastName" FROM "${schema}"."User" WHERE "phoneNumber" = $1 LIMIT 1`,
-                    variation
+            try {
+                // Try normalized first (only select columns that are guaranteed to exist)
+                const results = await prisma.$queryRawUnsafe(
+                    `SELECT id, "phoneNumber", email, name FROM "${schema}"."User" WHERE "phoneNumber" = $1 LIMIT 1`,
+                    normalizedPhone
                 );
-                if (varResults && varResults.length > 0) {
-                    user = varResults[0];
+
+                if (results && results.length > 0) {
+                    user = results[0];
                     foundSchema = schema;
-                    console.log(`✅ [budolID] Found variation in "${schema}":`, user);
+                    console.log(`✅ [budolID] Found in "${schema}":`, user);
                     break;
                 }
+
+                // Try raw variations if normalized didn't work
+                const rawDigits = phone.replace(/[^0-9]/g, '');
+                const variations = [];
+                if (rawDigits.startsWith('63') && rawDigits.length === 12) {
+                    variations.push('0' + rawDigits.substring(2));
+                } else if (rawDigits.startsWith('0')) {
+                    variations.push(rawDigits);
+                }
+
+                for (const variation of variations) {
+                    console.log(`📡 [budolID] Checking variation "${variation}" in "${schema}"`);
+                    const varResults = await prisma.$queryRawUnsafe(
+                        `SELECT id, "phoneNumber", email, name FROM "${schema}"."User" WHERE "phoneNumber" = $1 LIMIT 1`,
+                        variation
+                    );
+                    if (varResults && varResults.length > 0) {
+                        user = varResults[0];
+                        foundSchema = schema;
+                        console.log(`✅ [budolID] Found variation in "${schema}":`, user);
+                        break;
+                    }
+                }
+
+                if (user) break;
+            } catch (schemaError) {
+                // If a specific schema (e.g. "budolid") doesn't exist in this environment,
+                // don't fail the entire request – just log and continue checking others.
+                console.warn(`⚠️ [budolID] Skipping schema "${schema}" due to error:`, schemaError.message);
+                continue;
             }
-            if (user) break;
         }
 
         if (!user) {
@@ -687,7 +1259,13 @@ app.get('/auth/check-phone', async (req, res) => {
 app.post('/auth/register', async (req, res) => {
     const { email, password, firstName, lastName, phoneNumber } = req.body;
     try {
-        // Normalize phone number if provided
+        // 1. CyberSecurity: Password Complexity Validation (BSP/PCI DSS)
+        const passwordRegex = /^(?=.*\\d)(?=.*[!@#$%^&*])(?=.*[a-z])(?=.*[A-Z]).{8,}$/;
+        if (!passwordRegex.test(password)) {
+            return res.status(400).json({ error: 'Password must be at least 8 characters and include uppercase, lowercase, number, and special character.' });
+        }
+
+        // 2. NPC Compliance: Normalize phone number if provided
         let normalizedPhone = null;
         if (phoneNumber) {
             normalizedPhone = normalizePhilippinePhone(phoneNumber);
@@ -696,29 +1274,22 @@ app.post('/auth/register', async (req, res) => {
             }
         }
 
-        // Check if user already exists by email
+        // 3. Data Integrity: Check if user already exists
         const existingUserByEmail = await prisma.user.findUnique({ where: { email } });
         if (existingUserByEmail) {
-            return res.status(409).json({
-                error: 'Email already registered',
-                code: 'P2002',
-                userId: existingUserByEmail.id
-            });
+            return res.status(409).json({ error: 'Email already registered', code: 'P2002' });
         }
 
-        // Check if phone number already exists
         if (normalizedPhone) {
             const existingUserByPhone = await prisma.user.findFirst({ where: { phoneNumber: normalizedPhone } });
             if (existingUserByPhone) {
-                return res.status(409).json({
-                    error: 'Phone number already registered',
-                    code: 'P2002',
-                    userId: existingUserByPhone.id
-                });
+                return res.status(409).json({ error: 'Phone number already registered', code: 'P2002' });
             }
         }
 
-        const hashedPassword = await bcrypt.hash(password, 10);
+        // 4. Secure Storage: Strong Encryption (12 salt rounds for BSP compliance)
+        const hashedPassword = await bcrypt.hash(password, 12);
+        
         const user = await prisma.user.create({
             data: {
                 email,
@@ -728,12 +1299,17 @@ app.post('/auth/register', async (req, res) => {
                 phoneNumber: normalizedPhone
             }
         });
+
+        // 5. BIR/BSP Audit Logging: Record creation event without exposing full PII
+        console.log(`\n[AUDIT LOG] Account Created | Timestamp: ${new Date().toISOString()} | UserID: ${user.id} | Email: ${maskPII(email)} | Status: SUCCESS`);
+
         res.status(201).json({ message: 'User created in budolID', userId: user.id });
     } catch (error) {
+        console.error('[Registration Error]:', error.message);
         if (error.code === 'P2002') {
             return res.status(409).json({ error: 'Email or phone number already registered', code: 'P2002' });
         }
-        res.status(400).json({ error: error.message });
+        res.status(400).json({ error: 'Registration failed due to a system error' });
     }
 });
 
@@ -757,7 +1333,7 @@ app.post('/auth/register/quick', async (req, res) => {
         // Create user with minimal info
         // We generate a random temporary password for quick registration
         const tempPassword = Math.random().toString(36).substring(7);
-        const hashedPassword = await bcrypt.hash(tempPassword, 10);
+        const hashedPassword = await bcrypt.hash(tempPassword, 12); // Use 12 rounds for BSP compliance
 
         const user = await prisma.user.create({
             data: {

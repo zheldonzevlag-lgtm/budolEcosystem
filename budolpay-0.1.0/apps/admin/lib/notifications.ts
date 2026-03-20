@@ -20,7 +20,7 @@ export async function sendDualChannelNotification(
 
     console.log('\n--- SECURITY NOTIFICATION BROADCAST ---');
     console.log(`[CHANNEL-SYNC] Type: ${type}`);
-    console.log(`[CHANNEL-SYNC] Payload: ${value}`);
+    console.log(`[CHANNEL-SYNC] Payload: \x1b[33m${value}\x1b[0m`);
 
     // SMS Delivery Simulation
     if (user.phoneNumber) {

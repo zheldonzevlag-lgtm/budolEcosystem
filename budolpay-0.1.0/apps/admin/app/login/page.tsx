@@ -1,12 +1,13 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import { Shield, Loader2, AlertTriangle, ArrowRight } from 'lucide-react';
+import { Shield, Loader2, AlertTriangle, ArrowRight, Eye, EyeOff } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 
 export default function LoginPage() {
     const router = useRouter();
     const [isLoading, setIsLoading] = useState(false);
+    const [showPassword, setShowPassword] = useState(false);
     const [error, setError] = useState('');
     const [formData, setFormData] = useState({
         email: '',
@@ -81,7 +82,7 @@ export default function LoginPage() {
                                 type="email" 
                                 required
                                 className="w-full p-3 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-rose-500/50 text-slate-900"
-                                placeholder="admin@budolpay.com"
+                                placeholder="juan@budolpay.com"
                                 value={formData.email}
                                 onChange={(e) => setFormData({...formData, email: e.target.value})}
                             />
@@ -89,14 +90,27 @@ export default function LoginPage() {
 
                         <div>
                             <label className="block text-xs font-bold text-slate-500 uppercase mb-1">Password</label>
-                            <input 
-                                type="password" 
-                                required
-                                className="w-full p-3 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-rose-500/50 text-slate-900"
-                                placeholder="••••••••"
-                                value={formData.password}
-                                onChange={(e) => setFormData({...formData, password: e.target.value})}
-                            />
+                            <div className="relative group">
+                                <input 
+                                    type={showPassword ? "text" : "password"} 
+                                    required
+                                    className="w-full p-3 pr-12 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-rose-500/50 text-slate-900"
+                                    placeholder="••••••••"
+                                    value={formData.password}
+                                    onChange={(e) => setFormData({...formData, password: e.target.value})}
+                                />
+                                <button
+                                    type="button"
+                                    onClick={() => setShowPassword(!showPassword)}
+                                    className="absolute right-3 top-1/2 -translate-y-1/2 p-1.5 text-slate-400 hover:text-rose-500 transition-colors"
+                                >
+                                    {showPassword ? (
+                                        <EyeOff className="w-5 h-5" />
+                                    ) : (
+                                        <Eye className="w-5 h-5" />
+                                    )}
+                                </button>
+                            </div>
                         </div>
 
                         <button 
@@ -131,6 +145,18 @@ export default function LoginPage() {
                             >
                                 <div className="w-5 h-5 bg-indigo-600 rounded flex items-center justify-center text-[10px] text-white font-bold">B</div>
                                 <span>Login with budolID</span>
+                            </button>
+                        </div>
+                        <div className="mt-6 text-center">
+                            <button
+                                onClick={() => {
+                                    const localIP = typeof window !== 'undefined' ? (window.location.hostname !== '0.0.0.0' ? window.location.hostname : 'localhost') : 'localhost';
+                                    const ssoUrl = process.env.NEXT_PUBLIC_SSO_URL || `http://${localIP}:8000`;
+                                    window.location.href = `${ssoUrl}/register?apiKey=bp_key_2025`;
+                                }}
+                                className="text-sm font-bold text-slate-400 hover:text-rose-500 transition-colors"
+                            >
+                                Don't have an account? Create Account
                             </button>
                         </div>
                     </div>

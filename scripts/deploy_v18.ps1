@@ -36,9 +36,9 @@ docker push "$AWS_ACCOUNT_ID.dkr.ecr.$AWS_REGION.amazonaws.com/budolecosystem/bu
 $services = @("gateway", "auth", "wallet", "transaction")
 foreach ($service in $services) {
     echo "Building BudolPay $service..."
-    docker build --target $service -t "budolecosystem/budolpay-$service:$IMAGE_TAG" ./budolpay-0.1.0
-    docker tag "budolecosystem/budolpay-$service:$IMAGE_TAG" "$AWS_ACCOUNT_ID.dkr.ecr.$AWS_REGION.amazonaws.com/budolecosystem/budolpay-$service:$IMAGE_TAG"
-    docker push "$AWS_ACCOUNT_ID.dkr.ecr.$AWS_REGION.amazonaws.com/budolecosystem/budolpay-$service:$IMAGE_TAG"
+    docker build --target $service -t "budolecosystem/budolpay-${service}:$IMAGE_TAG" ./budolpay-0.1.0
+    docker tag "budolecosystem/budolpay-${service}:$IMAGE_TAG" "$AWS_ACCOUNT_ID.dkr.ecr.$AWS_REGION.amazonaws.com/budolecosystem/budolpay-${service}:$IMAGE_TAG"
+    docker push "$AWS_ACCOUNT_ID.dkr.ecr.$AWS_REGION.amazonaws.com/budolecosystem/budolpay-${service}:$IMAGE_TAG"
 }
 
 echo "All images pushed successfully!"

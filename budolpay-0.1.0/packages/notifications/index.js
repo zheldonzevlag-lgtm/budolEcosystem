@@ -199,7 +199,13 @@ const sendOTP = async (to, otp, type = 'EMAIL') => {
     const subject = 'Your budolPay Verification Code';
     const message = `Your verification code is: ${otp}. This code will expire in 10 minutes.`;
     
-    console.log(`[Notification] sendOTP triggered for ${maskPII(to)} via ${type} (OTP: \x1b[33m${otp}\x1b[0m)`);
+    if (process.env.NODE_ENV !== 'production') {
+        console.log('\n' + '='.repeat(40))
+        console.log(`[OTP] Sending dual-channel OTP for identifier: ${maskPII(to)}`)
+        console.log(`[OTP] Type: ${type}`)
+        console.log(`[OTP] Code: \x1b[33m${otp}\x1b[0m`)
+        console.log('='.repeat(40) + '\n')
+    }
 
     if (type === 'EMAIL' || type === 'BOTH') {
         const emailTo = to.includes('@') ? to : null;

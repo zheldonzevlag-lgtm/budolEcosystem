@@ -470,13 +470,50 @@ app.post('/register', async (req, res) => {
 
     // Validation
     if (!phoneNumber) return res.status(400).json({ error: 'Mobile number is required' });
+
+    // PH Cybersecurity & BSP Compliance: Password Complexity Validation
+    if (password) {
+        const passwordRegex = /^(?=.*\d)(?=.*[!@#$%^&*])(?=.*[a-z])(?=.*[A-Z]).{8,}$/;
+        if (!passwordRegex.test(password)) {
+            return res.status(400).json({
+                error: 'Password must be at least 8 characters and include uppercase, lowercase, number, and special character.'
+            });
+        }
+    }
+
     if (pin && (pin.length !== 6 || isNaN(pin))) {
         return res.status(400).json({ error: 'PIN must be exactly 6 digits' });
     }
 
     try {
-        const passwordHash = password ? await bcrypt.hash(password, 10) : 'SOCIAL_OR_MOBILE_ONLY';
-        const pinHash = pin ? await bcrypt.hash(pin, 10) : null;
+        // Normalize phone number similar to quick registration & check-phone
+        let normalizedPhone = phoneNumber.replace(/\D/g, '');
+        if (normalizedPhone.startsWith('63')) {
+            normalizedPhone = '0' + normalizedPhone.substring(2);
+        }
+
+        // Prevent duplicate accounts before attempting create (unique constraint safety)
+        const existingUser = await prisma.user.findFirst({
+            where: {
+                OR: [
+                    { phoneNumber: phoneNumber },
+                    { phoneNumber: normalizedPhone },
+                    { phoneNumber: '+63' + normalizedPhone.substring(1) }
+                ]
+            }
+        });
+
+        if (existingUser) {
+            console.warn('[Registration] Attempt to register duplicate phoneNumber:', phoneNumber, 'normalized:', normalizedPhone);
+            return res.status(409).json({
+                error: 'This mobile number is already registered. Please sign in instead.',
+                code: 'PHONE_TAKEN',
+                userId: existingUser.id
+            });
+        }
+
+        const passwordHash = password ? await bcrypt.hash(password, 12) : 'SOCIAL_OR_MOBILE_ONLY'; // Use 12 rounds for BSP compliance
+        const pinHash = pin ? await bcrypt.hash(pin, 12) : null; // Use 12 rounds for BSP compliance
         // ALWAYS generate a real OTP as per user request
         const otpCode = generateOTP();
         const otpExpiresAt = new Date(getNowUTC().getTime() + 10 * 60 * 1000); // 10 mins
