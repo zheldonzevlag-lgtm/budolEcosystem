@@ -18,7 +18,7 @@ const getLocalExternalIPs = () => {
 const nextConfig = {
     reactStrictMode: false,
     allowedDevOrigins: getLocalExternalIPs(),
-    output: 'standalone',
+    
     images: {
         unoptimized: true
     },
