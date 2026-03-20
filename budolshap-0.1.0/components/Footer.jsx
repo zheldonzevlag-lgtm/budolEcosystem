@@ -101,7 +101,7 @@ const Footer = () => {
                     </div>
                 </div>
                 <p className="py-4 text-sm text-slate-500">
-                    Copyright 2026 © <BudolPayText text="budolShap" /> All Right Reserved.
+                    Copyright 2026 © <BudolPayText text="budolShap" /> All Right Reserved. <span className="text-[10px] ml-2 opacity-50">v5.1.0</span>
                 </p>
             </div>
             <HowToGuide isOpen={isGuideOpen} onClose={() => setIsGuideOpen(false)} />
