@@ -1,5 +1,6 @@
 'use client'
-import React from 'react'
+export const dynamic = 'force-dynamic'
+import React, { Suspense } from 'react'
 import { useAuth } from '@/context/AuthContext'
 import {
   User,
@@ -20,7 +21,7 @@ import { useRouter, useSearchParams } from 'next/navigation'
 import AddressModal from '@/components/AddressModal'
 import { toast } from 'react-hot-toast'
 
-const ProfilePage = () => {
+const ProfilePageContent = () => {
   const { user, handleLogout, login } = useAuth()
   const router = useRouter()
   const searchParams = useSearchParams()
@@ -450,6 +451,14 @@ const ProfilePage = () => {
         </div>
       )}
     </div >
+  )
+}
+
+const ProfilePage = () => {
+  return (
+    <Suspense fallback={<div className="min-h-screen bg-slate-50 flex items-center justify-center"><div className="animate-pulse text-slate-400">Loading Profile...</div></div>}>
+      <ProfilePageContent />
+    </Suspense>
   )
 }
 

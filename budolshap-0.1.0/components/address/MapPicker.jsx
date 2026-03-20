@@ -8,15 +8,17 @@ import { MapPin, Navigation, Loader2, Search, AlertCircle, Plus, Minus } from 'l
 import { useMapSettings } from '@/hooks/useMapSettings';
 import GoogleMapView from './GoogleMapView';
 
-// Fix for default marker icons in Leaflet
-const DefaultIcon = L.icon({
-    iconUrl: 'https://unpkg.com/leaflet@1.7.1/dist/images/marker-icon.png',
-    shadowUrl: 'https://unpkg.com/leaflet@1.7.1/dist/images/marker-shadow.png',
-    iconSize: [25, 41],
-    iconAnchor: [12, 41]
-});
+// Fix for default marker icons in Leaflet - only run on client
+if (typeof window !== 'undefined') {
+    const DefaultIcon = L.icon({
+        iconUrl: 'https://unpkg.com/leaflet@1.7.1/dist/images/marker-icon.png',
+        shadowUrl: 'https://unpkg.com/leaflet@1.7.1/dist/images/marker-shadow.png',
+        iconSize: [25, 41],
+        iconAnchor: [12, 41]
+    });
 
-L.Marker.prototype.options.icon = DefaultIcon;
+    L.Marker.prototype.options.icon = DefaultIcon;
+}
 
 // Map Events Component
 function MapEvents({ onMoveEnd, onClick }) {
