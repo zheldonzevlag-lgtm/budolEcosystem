@@ -35,7 +35,7 @@ export const DEFAULT_SETTINGS = {
     enabledMapProviders: ["OSM"],
 
     // Email Provider Defaults
-    emailProvider: "GOOGLE",
+    emailProvider: "CONSOLE",
     smtpHost: "smtp.gmail.com",
     smtpPort: 587,
     smtpUser: null,
@@ -67,12 +67,59 @@ export async function getSystemSettings(forceRefresh = false) {
     }
 
     try {
-        let settings = await prisma.systemSettings.findUnique({
-            where: { id: "default" }
-        });
+        let settings;
+        try {
+            settings = await prisma.systemSettings.findUnique({
+                where: { id: "default" }
+            });
+        } catch (findError) {
+            // Handle case where columns don't exist in the database
+            // Try to add missing columns dynamically
+            console.warn("[Settings] findUnique failed, attempting to fix schema:", findError.message);
+            
+            // Check if it's a column not found error
+            if (findError.message?.includes('does not exist')) {
+                // Try to add each potentially missing column
+                const columnsToCheck = [
+                    'emailProvider', 'smtpHost', 'smtpPort', 'smtpUser', 'smtpPass',
+                    'smtpFrom', 'brevoApiKey', 'gmassApiKey',
+                    'smsProvider', 'zerixApiKey', 'itextmoApiKey', 'itextmoClientCode',
+                    'viberApiKey', 'brevoSmsApiKey', 'marketingAdConfigs'
+                ];
+                
+                for (const col of columnsToCheck) {
+                    try {
+                        let colType = 'TEXT';
+                        if (col === 'smtpPort') colType = 'INTEGER';
+                        if (col === 'marketingAdConfigs') colType = 'JSONB';
+                        
+                        await prisma.$executeRawUnsafe(
+                            `ALTER TABLE "SystemSettings" ADD COLUMN IF NOT EXISTS "${col}" ${colType}`
+                        );
+                        console.log(`[Settings] Added column: ${col} as ${colType}`);
+                    } catch (_e) { /* Column may already exist or other error */ }
+                }
+                
+                // Retry fetch after adding columns
+                settings = await prisma.systemSettings.findUnique({
+                    where: { id: "default" }
+                });
+            } else {
+                throw findError;
+            }
+        }
 
         if (!settings) {
             try {
+                // Try to add missing columns before creating
+                for (const col of ['emailProvider', 'smsProvider', 'marketingAdConfigs']) {
+                    try {
+                        await prisma.$executeRawUnsafe(
+                            `ALTER TABLE "SystemSettings" ADD COLUMN IF NOT EXISTS "${col}" TEXT`
+                        );
+                    } catch (_e) { /* ignore */ }
+                }
+                
                 settings = await prisma.systemSettings.create({
                     data: DEFAULT_SETTINGS
                 });
@@ -193,9 +240,37 @@ export async function updateSystemSettings(data) {
         }
 
         // 1. Find or create the settings record
-        const existing = await prisma.systemSettings.findUnique({
-            where: { id: "default" }
-        });
+        let existing;
+        try {
+            existing = await prisma.systemSettings.findUnique({
+                where: { id: "default" }
+            });
+        } catch (findError) {
+            // Handle case where columns don't exist
+            if (findError.message?.includes('does not exist')) {
+                console.warn("[Settings] findUnique failed in update, attempting to fix schema:");
+                const columnsToCheck = [
+                    'emailProvider', 'smtpHost', 'smtpPort', 'smtpUser', 'smtpPass',
+                    'smtpFrom', 'brevoApiKey', 'gmassApiKey',
+                    'smsProvider', 'zerixApiKey', 'itextmoApiKey', 'itextmoClientCode',
+                    'viberApiKey', 'brevoSmsApiKey', 'marketingAdConfigs'
+                ];
+                
+                for (const col of columnsToCheck) {
+                    try {
+                        await prisma.$executeRawUnsafe(
+                            `ALTER TABLE "SystemSettings" ADD COLUMN IF NOT EXISTS "${col}" TEXT`
+                        );
+                    } catch (_e) { /* ignore */ }
+                }
+                
+                existing = await prisma.systemSettings.findUnique({
+                    where: { id: "default" }
+                });
+            } else {
+                throw findError;
+            }
+        }
 
         let settings;
         if (existing) {

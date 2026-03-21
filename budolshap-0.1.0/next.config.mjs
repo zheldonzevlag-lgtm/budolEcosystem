@@ -2,22 +2,30 @@ import os from 'os';
 
 /** @type {import('next').NextConfig} */
 const getLocalExternalIPs = () => {
-    const interfaces = os.networkInterfaces();
-    const ips = ['localhost', '127.0.0.1', '0.0.0.0'];
+    try {
+        const interfaces = os.networkInterfaces();
+        const ips = ['localhost', '127.0.0.1', '0.0.0.0'];
 
-    for (const name of Object.keys(interfaces)) {
-        for (const iface of interfaces[name]) {
-            if (iface.family === 'IPv4' && !iface.internal) {
-                ips.push(iface.address);
+        for (const name of Object.keys(interfaces)) {
+            for (const iface of interfaces[name]) {
+                if (iface.family === 'IPv4' && !iface.internal) {
+                    ips.push(iface.address);
+                }
             }
         }
+        return ips;
+    } catch (e) {
+        console.warn("[Config] Failed to fetch network interfaces, falling back to defaults.");
+        return ['localhost', '127.0.0.1', '0.0.0.0'];
     }
-    return ips;
 };
 
 const nextConfig = {
     reactStrictMode: false,
-    allowedDevOrigins: getLocalExternalIPs(),
+    // Only apply in development to avoid crashing AWS Fargate network interface lookups
+    ...(process.env.NODE_ENV === 'development' && {
+        allowedDevOrigins: getLocalExternalIPs()
+    }),
     
     images: {
         unoptimized: true

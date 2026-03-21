@@ -231,9 +231,9 @@ export async function POST(request) {
                 otpMatches &&
                 otpRecord.expiresAt >= new Date(now.getTime() - skewLeeway)
             ) {
-                isValidPassword = true
-                // Consume OTP
-                await prisma.verificationCode.delete({ where: { identifier: searchIdentifier } })
+                    isValidPassword = true
+                    // Consume OTP
+                    await prisma.verificationCode.delete({ where: { identifier: searchIdentifier } })
             }
         } else {
             // Verify password

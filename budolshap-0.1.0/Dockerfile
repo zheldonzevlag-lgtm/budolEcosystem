@@ -25,6 +25,9 @@ COPY . .
 # Build the Next.js application
 ENV NEXT_TELEMETRY_DISABLED=1
 ENV NODE_ENV=production
+ENV NEXT_PUBLIC_CURRENCY_SYMBOL="₱"
+ENV NEXT_PUBLIC_SOCKET_URL="https://budolws.duckdns.org:4000"
+ENV NEXT_PUBLIC_SSO_URL="https://budolid.duckdns.org"
 # Provide a dummy DATABASE_URL for the build phase (prevents Prisma initialization errors during prerendering)
 ENV DATABASE_URL="postgresql://dummy:dummy@localhost:5432/dummy"
 RUN npm run build
@@ -32,5 +35,5 @@ RUN npm run build
 # Expose port
 EXPOSE 3000
 
-# Start the application
+# Start the application - Let the code in lib/settings.js handle database repair natively.
 CMD ["npm", "start"]
