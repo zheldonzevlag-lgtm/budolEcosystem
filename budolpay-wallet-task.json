@@ -1,0 +1,53 @@
+{
+  "executionRoleArn": "arn:aws:iam::194442925745:role/BudolECSExecutionRole",
+  "taskRoleArn": "arn:aws:iam::194442925745:role/BudolECSTaskRole",
+  "networkMode": "awsvpc",
+  "requiresCompatibilities": [
+    "FARGATE"
+  ],
+  "cpu": "256",
+  "memory": "512",
+  "family": "budolpay-wallet-task",
+  "containerDefinitions": [
+    {
+      "name": "budolpay-wallet",
+      "image": "194442925745.dkr.ecr.ap-southeast-1.amazonaws.com/budolpay-wallet:latest",
+      "portMappings": [
+        {
+          "containerPort": 8002,
+          "hostPort": 8002,
+          "protocol": "tcp"
+        }
+      ],
+      "essential": true,
+      "environment": [
+        {
+          "name": "NODE_ENV",
+          "value": "production"
+        },
+        {
+          "name": "PORT",
+          "value": "8002"
+        }
+      ],
+      "secrets": [
+        {
+          "name": "DATABASE_URL",
+          "valueFrom": "arn:aws:secretsmanager:ap-southeast-1:194442925745:secret:budol/db-url-NxLd8V"
+        },
+        {
+          "name": "JWT_SECRET",
+          "valueFrom": "arn:aws:secretsmanager:ap-southeast-1:194442925745:secret:budol/jwt-secret-RlaVaW"
+        }
+      ],
+      "logConfiguration": {
+        "logDriver": "awslogs",
+        "options": {
+          "awslogs-group": "/ecs/budolpay-wallet",
+          "awslogs-region": "ap-southeast-1",
+          "awslogs-stream-prefix": "ecs"
+        }
+      }
+    }
+  ]
+}

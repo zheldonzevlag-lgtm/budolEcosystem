@@ -11,7 +11,7 @@ WORKDIR /app
 COPY --from=builder /app/package*.json ./
 COPY --from=builder /app/node_modules ./node_modules
 COPY --from=builder /app/index.js ./
-COPY --from=builder /app/.env ./
+
 
 EXPOSE 8003
 CMD ["node", "index.js"]

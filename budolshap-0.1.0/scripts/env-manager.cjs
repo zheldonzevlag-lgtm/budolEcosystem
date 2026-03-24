@@ -84,16 +84,23 @@ if (fs.existsSync(sourceEnvPath)) {
                     const key = match[1].trim();
                     const value = match[2].trim();
 
-                    // Service-aware mapping for DATABASE_URL
+                    // Service-aware mapping for DATABASE_URL and DIRECT_URL
                     if (key === 'BUDOLID_DATABASE_URL' && envPath.includes('budolID-0.1.0')) {
                         envMap.set('DATABASE_URL', value);
+                        envMap.set('DIRECT_URL', value);
                     } else if (key === 'BUDOLSHAP_DATABASE_URL' && envPath.includes('budolshap-0.1.0')) {
                         envMap.set('DATABASE_URL', value);
+                        envMap.set('DIRECT_URL', value);
                     } else if (key === 'BUDOLACCOUNTING_DATABASE_URL' && envPath.includes('budolAccounting-0.1.0')) {
                         envMap.set('DATABASE_URL', value);
+                        envMap.set('DIRECT_URL', value);
                     } else if (key === 'DATABASE_URL' && !envPath.includes('budolID') && !envPath.includes('budolshap') && !envPath.includes('budolAccounting')) {
-                        // Default DATABASE_URL for budolpay services
+                        // Default DATABASE_URL and DIRECT_URL for budolpay services
                         envMap.set('DATABASE_URL', value);
+                        envMap.set('DIRECT_URL', value);
+                    } else if (key === 'DIRECT_URL') {
+                         // Explicit DIRECT_URL (if provided in source)
+                         envMap.set('DIRECT_URL', value);
                     } else if (key.startsWith('BUDOL') && key.endsWith('_DATABASE_URL')) {
                         // Keep service-specific URLs in the map but don't map to DATABASE_URL for other services
                         envMap.set(key, value);

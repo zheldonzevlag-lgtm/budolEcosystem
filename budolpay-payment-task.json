@@ -1,0 +1,43 @@
+{
+  "containerDefinitions": [
+    {
+      "name": "budolpay-payment",
+      "image": "194442925745.dkr.ecr.ap-southeast-1.amazonaws.com/budolpay-payment:latest",
+      "cpu": 0,
+      "portMappings": [
+        {
+          "containerPort": 8004,
+          "hostPort": 8004,
+          "protocol": "tcp"
+        }
+      ],
+      "essential": true,
+      "environment": [
+        { "name": "NODE_ENV", "value": "production" },
+        { "name": "PORT", "value": "8004" },
+        { "name": "BUDOLID_URL", "value": "http://budol-id.budol.internal:8000" },
+        { "name": "PAYMONGO_PUBLIC_KEY", "value": "pk_test_t9hevWGf7dhg5rN4KPgYr8j7" },
+        { "name": "PAYMONGO_SECRET_KEY", "value": "sk_test_QknCY1gyNypmFp3XdnTgBMjL" }
+      ],
+      "secrets": [
+        { "name": "DATABASE_URL", "valueFrom": "arn:aws:secretsmanager:ap-southeast-1:194442925745:secret:budol/db-url-NxLd8V" },
+        { "name": "JWT_SECRET", "valueFrom": "arn:aws:secretsmanager:ap-southeast-1:194442925745:secret:budol/jwt-secret-RlaVaW" }
+      ],
+      "logConfiguration": {
+        "logDriver": "awslogs",
+        "options": {
+          "awslogs-group": "/ecs/budolpay-payment",
+          "awslogs-region": "ap-southeast-1",
+          "awslogs-stream-prefix": "ecs"
+        }
+      }
+    }
+  ],
+  "family": "budolpay-payment-task",
+  "executionRoleArn": "arn:aws:iam::194442925745:role/BudolECSExecutionRole",
+  "taskRoleArn": "arn:aws:iam::194442925745:role/BudolECSTaskRole",
+  "networkMode": "awsvpc",
+  "requiresCompatibilities": [ "FARGATE" ],
+  "cpu": "512",
+  "memory": "1024"
+}

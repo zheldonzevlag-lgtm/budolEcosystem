@@ -1,0 +1,39 @@
+{
+  "containerDefinitions": [
+    {
+      "name": "budolpay-websocket",
+      "image": "194442925745.dkr.ecr.ap-southeast-1.amazonaws.com/budolpay-websocket:latest",
+      "cpu": 0,
+      "portMappings": [
+        {
+          "containerPort": 4000,
+          "hostPort": 4000,
+          "protocol": "tcp"
+        }
+      ],
+      "essential": true,
+      "environment": [
+        { "name": "NODE_ENV", "value": "production" },
+        { "name": "PORT", "value": "4000" }
+      ],
+      "secrets": [
+        { "name": "JWT_SECRET", "valueFrom": "arn:aws:secretsmanager:ap-southeast-1:194442925745:secret:budol/jwt-secret-RlaVaW" }
+      ],
+      "logConfiguration": {
+        "logDriver": "awslogs",
+        "options": {
+          "awslogs-group": "/ecs/budolpay-websocket",
+          "awslogs-region": "ap-southeast-1",
+          "awslogs-stream-prefix": "ecs"
+        }
+      }
+    }
+  ],
+  "family": "budolpay-websocket-task",
+  "executionRoleArn": "arn:aws:iam::194442925745:role/BudolECSExecutionRole",
+  "taskRoleArn": "arn:aws:iam::194442925745:role/BudolECSTaskRole",
+  "networkMode": "awsvpc",
+  "requiresCompatibilities": [ "FARGATE" ],
+  "cpu": "256",
+  "memory": "512"
+}
