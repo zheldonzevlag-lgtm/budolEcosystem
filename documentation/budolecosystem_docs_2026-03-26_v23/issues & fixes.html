@@ -1,0 +1,78 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>v23 Issues & Fixes: Vercel Production Restoration - Budol Ecosystem</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --primary: #0052CC;
+            --secondary: #172B4D;
+            --bg-sidebar: #F4F5F7;
+            --bg-main: #FFFFFF;
+            --text-main: #172B4D;
+            --border: #DFE1E6;
+            --warning: #FFAB00;
+        }
+        body { font-family: 'Inter', sans-serif; margin: 0; display: flex; color: var(--text-main); line-height: 1.6; }
+        .sidebar { width: 280px; background: var(--bg-sidebar); height: 100vh; position: sticky; top: 0; border-right: 1px solid var(--border); padding: 20px; box-sizing: border-box; }
+        .main-content { flex: 1; padding: 40px 60px; max-width: 1000px; }
+        h1 { color: var(--secondary); font-size: 2.5rem; margin-top: 0; }
+        h2 { color: var(--primary); border-bottom: 2px solid var(--border); padding-bottom: 10px; margin-top: 30px; }
+        .nav-link { display: block; padding: 10px; text-decoration: none; color: var(--text-main); border-radius: 4px; font-weight: 500; }
+        .nav-link:hover { background: #EBECF0; color: var(--primary); }
+        .nav-link.active { background: #E6EFFC; color: var(--primary); }
+        .issue-fix { border: 1px solid var(--border); border-radius: 8px; margin: 20px 0; overflow: hidden; }
+        .issue { background: #FFEBE6; padding: 15px; font-weight: 600; border-bottom: 1px solid var(--border); }
+        .fix { background: #E3FCEF; padding: 15px; }
+    </style>
+</head>
+<body>
+    <div class="sidebar">
+        <h3 style="color: var(--primary);">v23 Documentation</h3>
+        <a href="index.html" class="nav-link">Overview</a>
+        <a href="walkthrough.html" class="nav-link">Walkthrough</a>
+        <a href="task.html" class="nav-link">Task Checklist</a>
+        <a href="developer_manual.html" class="nav-link">Developer Manual</a>
+        <a href="system_admin_manual.html" class="nav-link">System Admin Manual</a>
+        <a href="user_manual.html" class="nav-link">User Manual</a>
+        <hr>
+        <a href="risk_register.html" class="nav-link">Risk Register</a>
+        <a href="Mitigation.html" class="nav-link">Mitigation</a>
+        <a href="issues%20&%20fixes.html" class="nav-link active">Issues & Fixes</a>
+        <a href="test_results.html" class="nav-link">Test Results</a>
+        <a href="future_recommendations.html" class="nav-link">Future Recommendations</a>
+        <hr>
+        <a href="../../knowledgebase.html" class="nav-link">Back to KB</a>
+    </div>
+    <div class="main-content">
+        <h1>Historical Issues & Emergency Fixes</h1>
+        
+        <div class="issue-fix">
+            <div class="issue">ISSUE: Storefront displaying "0 products" on Vercel deployment.</div>
+            <div class="fix">FIX: Restored production data from local PostgreSQL backups into Vercel's 'public' schema using the custom manual-data-sync.js script.</div>
+        </div>
+
+        <div class="issue-fix">
+            <div class="issue">ISSUE: User authentication (SSO) failing on login attempt.</div>
+            <div class="fix">FIX: Restored 'User' records to the 'budolid' schema and synchronized the JWT_SECRET environment variable across all SSO-dependent services.</div>
+        </div>
+
+        <div class="issue-fix">
+            <div class="issue">ISSUE: Vercel Postgres connection timeout (10s proxy limit) during bulk restoration.</div>
+            <div class="fix">FIX: Replaced monolithic psql restores with a partitioned Node.js sync script that performs row-by-row insertion with ON CONFLICT clauses.</div>
+        </div>
+
+        <div class="issue-fix">
+            <div class="issue">ISSUE: Prisma Interactive Transaction Timeout (5841ms > 5000ms) during order creation.</div>
+            <div class="fix">FIX: Increased interactive transaction timeout to 15s and optimized stock updates by using a bulk findMany call inside the transaction to reduce database round-trips.</div>
+        </div>
+
+        <div class="issue-fix">
+            <div class="issue">ISSUE: ERR_CONNECTION_REFUSED to 192.168.1.10:4000 in production console.</div>
+            <div class="fix">FIX: Modified lib/realtime.js to ignore LOCAL_IP in production and automatically fall back to POLLING mode if a localhost Socket.io URL is detected.</div>
+        </div>
+    </div>
+</body>
+</html>

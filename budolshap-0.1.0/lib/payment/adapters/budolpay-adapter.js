@@ -7,11 +7,35 @@ import { BasePaymentAdapter } from './base-adapter.js';
 export class BudolPayAdapter extends BasePaymentAdapter {
     constructor() {
         super();
-        this.gatewayUrl = process.env.PAYMENT_GATEWAY_URL || process.env.GATEWAY_URL || `http://${process.env.LOCAL_IP || 'localhost'}:8004`;
+        
+        // --- AGGRESSIVE PRODUCTION MIRROR LOGIC ---
+        // 1. Get raw URL from environment
+        const rawUrl = process.env.PAYMENT_GATEWAY_URL || 'http://localhost:8080/pg';
+        
+        // 2. Determine if we must override
+        const isVercel = process.env.VERCEL === '1' || !!process.env.NEXT_PUBLIC_VERCEL_ENV;
+        const isStaleDuck = rawUrl.includes('duckdns.org');
+        
+        if (isVercel || isStaleDuck) {
+            console.log(`[BudolPay Adapter] 🏗️ Production/Vercel Detected. (Stale: ${isStaleDuck}, Vercel: ${isVercel})`);
+            console.log('[BudolPay Adapter] 🚀 Overriding with healthy gateway: https://payment-gateway-service-two.vercel.app');
+            // FORCE healthy gateway mirror for production
+            this.gatewayUrl = 'https://payment-gateway-service-two.vercel.app';
+        } else {
+            this.gatewayUrl = rawUrl;
+        }
+
+        console.log(`[BudolPayAdapter] Initialized with URL: ${this.gatewayUrl} (Raw Env URL: ${rawUrl})`);
+        
         this.apiKey = process.env.BUDOLPAY_API_KEY || 'bs_key_2025';
         
-        // If using the main API Gateway (8080), ensure the /payments prefix is present
-        if (this.gatewayUrl.includes(':8080') && !this.gatewayUrl.includes('/payments')) {
+        // Legacy logic: only append /payments if it's a specific older gateway format
+        // We SKIP this for the Vercel healthy mirror to avoid double /payments or incorrect paths
+        const isLegacyGateway = (this.gatewayUrl.includes(':8080') || this.gatewayUrl.includes('duckdns.org')) && 
+                                !this.gatewayUrl.includes('vercel.app');
+        
+        if (isLegacyGateway && !this.gatewayUrl.includes('/payments')) {
+            console.log(`[BudolPay Adapter] 🌐 Legacy Gateway detected (${this.gatewayUrl}). Adding /payments prefix.`);
             this.gatewayUrl = this.gatewayUrl.endsWith('/') 
                 ? `${this.gatewayUrl}payments` 
                 : `${this.gatewayUrl}/payments`;
@@ -29,20 +53,19 @@ export class BudolPayAdapter extends BasePaymentAdapter {
     async createPaymentIntent(amount, currency, method, billing, options = {}) {
         const url = `${this.gatewayUrl}/create-intent`;
         
-        // Convert centavos to decimal for budolPay Gateway if needed
-        // The documentation example shows 100.00 for PHP 100
+        // Convert centavos to decimal for budolPay Gateway
         const decimalAmount = amount / 100;
 
         const body = {
             amount: decimalAmount,
             currency: currency || 'PHP',
             description: options.description || 'Order from budolShap',
-            provider: 'internal', // Explicitly use budolPay internal wallet flow
-            paymentMethod: method, // Optional: if gateway supports pre-selecting method
+            provider: 'internal', 
+            paymentMethod: method,
             metadata: {
                 orderId: options.orderId || 'unknown',
-                orderIds: options.orderIds, // Support for multi-store orders
-                checkoutId: options.checkoutId, // Support for master checkout
+                orderIds: options.orderIds,
+                checkoutId: options.checkoutId,
                 app: 'budolShap',
                 storeName: options.storeName || 'budolShap Store',
                 customer_email: billing?.email,
@@ -62,7 +85,6 @@ export class BudolPayAdapter extends BasePaymentAdapter {
                 body: JSON.stringify(body)
             });
 
-            // Handle empty response or non-OK status before parsing JSON
             if (!response.ok) {
                 const text = await response.text();
                 let errorData;
@@ -75,53 +97,36 @@ export class BudolPayAdapter extends BasePaymentAdapter {
                 throw new Error(errorData.error || errorData.message || `BudolPay Gateway error: ${response.status}`);
             }
 
-            // Check if response is JSON
             const contentType = response.headers.get('content-type');
             if (!contentType || !contentType.includes('application/json')) {
                 const text = await response.text();
-                console.error(`[BudolPay] Expected JSON but received ${contentType}. Raw response:`, text.slice(0, 500));
-                
-                // If it's an empty response, provide a more helpful error
                 if (!text || text.trim() === '') {
                     throw new Error('BudolPay Gateway returned an empty response. This may be due to an internal service timeout.');
                 }
-                
                 throw new Error(`Invalid response from BudolPay Gateway: Expected JSON but received ${contentType || 'unknown'}`);
             }
 
             const data = await response.json();
-
-            console.log('[BudolPay] ✅ Gateway Response:', JSON.stringify(data, null, 2));
-
-            // The gateway should return a checkoutUrl and a paymentIntentId
             let checkoutUrl = data.checkoutUrl || data.checkout_url;
             
-            // --- FIX FOR IP-BASED BROWSING (Localhost Mismatch) ---
-            // If the user is browsing via IP (e.g. 192.168.1.x), the gateway might 
-            // return a 'localhost' URL because it's called from the backend.
-            // We need to rewrite it to the actual host the user is using.
+            // --- HOSTNAME REWRITE FOR LOCAL IP BROWSING ---
             if (checkoutUrl && options.successUrl) {
                 try {
                     const successUrlObj = new URL(options.successUrl);
                     const checkoutUrlObj = new URL(checkoutUrl);
-                    
-                    // If successUrl is on an IP/different host, but checkoutUrl is on localhost
                     if (successUrlObj.hostname !== checkoutUrlObj.hostname && checkoutUrlObj.hostname === 'localhost') {
-                        console.log(`[BudolPay Adapter] 🔄 Hostname mismatch detected. Rewriting checkoutUrl from ${checkoutUrlObj.hostname} to ${successUrlObj.hostname}`);
-                        checkoutUrlObj.hostname = successUrlObj.hostname; // This replaces only the hostname, keeping the original port
+                        checkoutUrlObj.hostname = successUrlObj.hostname;
                         checkoutUrl = checkoutUrlObj.toString();
                     }
                 } catch (e) {
-                    console.error('[BudolPay Adapter] Failed to parse URLs for hostname fix:', e.message);
+                    console.error('[BudolPay Adapter] Failed to parse URLs:', e.message);
                 }
             }
             
             if (checkoutUrl && options.orderId) {
-                // If there's a fragment (#), insert before it
                 const hashIndex = checkoutUrl.indexOf('#');
                 const separator = checkoutUrl.includes('?') ? '&' : '?';
                 const queryParam = `${separator}orderId=${options.orderId}`;
-                
                 if (hashIndex !== -1) {
                     checkoutUrl = checkoutUrl.slice(0, hashIndex) + queryParam + checkoutUrl.slice(hashIndex);
                 } else {
@@ -142,47 +147,29 @@ export class BudolPayAdapter extends BasePaymentAdapter {
                         paymentIntentId: paymentIntentId
                     }))}`,
                     amount: amount,
-                label: options.storeName || 'budolShap Store'
-            },
+                    label: options.storeName || 'budolShap Store'
+                },
                 paymentIntentId: paymentIntentId,
                 status: data.status || 'pending',
                 originalResponse: data
             };
 
         } catch (error) {
-            console.error('[BudolPay Adapter Error]', error);
-            throw error;
+            // Include diagnostic info in the error message for production troubleshooting
+            const debugPrefix = `[Gateway URL: ${this.gatewayUrl}] [ENV VERCEL: ${process.env.VERCEL}]`;
+            console.error(`[BudolPay Adapter Error] ${debugPrefix}`, error);
+            throw new Error(`Payment initiation failed: ${error.message} ${debugPrefix}`);
         }
     }
 
-    /**
-     * Retrieve a payment intent from budolPay Gateway
-     * @param {string} id - Payment Intent ID
-     */
     async getPaymentIntent(id) {
         const url = `${this.gatewayUrl}/status/${id}`;
-
         try {
             const response = await fetch(url, {
-                headers: {
-                    'x-api-key': this.apiKey
-                }
+                headers: { 'x-api-key': this.apiKey }
             });
-
-            // Check if response is JSON
-            const contentType = response.headers.get('content-type');
-            if (!contentType || !contentType.includes('application/json')) {
-                const text = await response.text();
-                console.error(`[BudolPay] Expected JSON but received ${contentType}. Raw response:`, text.slice(0, 500));
-                throw new Error(`Invalid response from BudolPay Gateway: Expected JSON but received ${contentType || 'unknown'}`);
-            }
-
             const data = await response.json();
-
-            if (!response.ok) {
-                throw new Error(data.error || 'Failed to retrieve payment intent');
-            }
-
+            if (!response.ok) throw new Error(data.error || 'Failed to retrieve payment intent');
             return {
                 id: id,
                 status: data.status,
@@ -195,10 +182,6 @@ export class BudolPayAdapter extends BasePaymentAdapter {
         }
     }
 
-    /**
-     * Verify a transaction status (Phase 2: Transaction Service)
-     * @param {string} transactionId - Transaction or Payment Intent ID
-     */
     async verifyTransaction(transactionId) {
         return this.getPaymentIntent(transactionId);
     }

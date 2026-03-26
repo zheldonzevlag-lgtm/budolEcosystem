@@ -38,17 +38,18 @@ export default function Home() {
     const products = useSelector(state => state.product?.list) || [];
 
     // Use SWR for automatic polling (respects RealtimeProvider config)
-    const { data, isLoading } = useSWR('/api/products', {
+    const { data: swrData, isLoading } = useSWR('/api/products', {
         revalidateOnFocus: false,
         revalidateOnReconnect: false,
-        dedupingInterval: 5000,
-        onSuccess: (data) => {
-            // Only update Redux if data actually changed (prevent unnecessary re-renders)
-            if (JSON.stringify(data) !== JSON.stringify(products)) {
-                dispatch(setProduct(data))
-            }
-        }
+        dedupingInterval: 5000
     })
+
+    // Robust synchronization with Redux
+    useEffect(() => {
+        if (swrData && JSON.stringify(swrData) !== JSON.stringify(products)) {
+            dispatch(setProduct(swrData))
+        }
+    }, [swrData, products, dispatch])
 
     useEffect(() => {
         dispatch(setLoading(isLoading))

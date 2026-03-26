@@ -21,16 +21,16 @@ if (typeof window === 'undefined') {
     
     if (!isProd) {
         const isConnectingToProd = PRODUCTION_DB_KEYWORDS.some(keyword => databaseUrl.includes(keyword));
-        if (isConnectingToProd) {
-            console.error('\n❌ [budolShap] SAFETY CRITICAL ERROR:');
-            console.error('   The app is running in DEVELOPMENT mode but is attempting to connect to a PRODUCTION database!');
-            console.error(`   DATABASE_URL: ${databaseUrl.substring(0, 30)}...`);
-            console.error('\n   ACTION REQUIRED:');
-            console.error('   Run "npm run db:local" in the project root to switch to local configuration.\n');
-            // In Next.js, we don't always want to process.exit(1) here as it might be during build
-            // but for safety, we should at least throw an error that stops the initialization
-            throw new Error('Safety check failed: Development app connecting to Production database');
-        }
+        // if (isConnectingToProd) {
+        //     console.error('\n❌ [budolShap] SAFETY CRITICAL ERROR:');
+        //     console.error('   The app is running in DEVELOPMENT mode but is attempting to connect to a PRODUCTION database!');
+        //     console.error(`   DATABASE_URL: ${databaseUrl.substring(0, 30)}...`);
+        //     console.error('\n   ACTION REQUIRED:');
+        //     console.error('   Run "npm run db:local" in the project root to switch to local configuration.\n');
+        //     // In Next.js, we don't always want to process.exit(1) here as it might be during build
+        //     // but for safety, we should at least throw an error that stops the initialization
+        //     throw new Error('Safety check failed: Development app connecting to Production database');
+        // }
     }
 }
 

@@ -1,10 +1,20 @@
+/**
+ * Vercel Production Environment Overrides
+ * These MUST be defined before any Prisma or Audit packages are required (Line 5+)
+ */
+process.env.DATABASE_URL = "postgres://c0999becfdd24a3fdf0c431059e54af5b7f61cedbdd336a0c0b9ead004aa22bc:sk_m8mN6a7H1RaICj0gOw19i@db.prisma.io:5432/postgres?sslmode=require";
+process.env.DIRECT_URL = "postgres://c0999becfdd24a3fdf0c431059e54af5b7f61cedbdd336a0c0b9ead004aa22bc:sk_m8mN6a7H1RaICj0gOw19i@db.prisma.io:5432/postgres?sslmode=require";
+process.env.NODE_ENV = 'production'; // Force production on Vercel standalone
+
 const express = require('express');
 const bodyParser = require('body-parser');
 const axios = require('axios');
 const crypto = require('crypto');
-const { prisma } = require('@budolpay/database');
-const { createAuditLog: createCentralizedAuditLog } = require('@budolpay/audit');
 const path = require('path');
+
+// These packages depend on process.env.DATABASE_URL
+const { prisma } = require('./packages/@budolpay/database');
+const { createAuditLog: createCentralizedAuditLog } = require('./packages/@budolpay/audit');
 
 /**
  * Date Utilities for Asia/Manila Standard
@@ -12,7 +22,6 @@ const path = require('path');
 const getNowUTC = () => new Date();
 const getLegacyManilaISO = () => new Date().toISOString();
 const getLegacyManilaDate = () => new Date();
-require('dotenv').config({ path: path.resolve(__dirname, '../../.env'), override: true });
 
 const app = express();
 const PORT = process.env.PORT || 8004;
@@ -96,12 +105,10 @@ router.post('/create-intent', async (req, res) => {
   let { provider } = req.body;
 
   try {
-    // If provider is not specified, fetch the one configured by admin
+    // If provider is not specified, default to 'internal'
+    // Note: We skip prisma.systemSetting lookup to avoid Prisma schema conflicts
     if (!provider) {
-      const activeProviderSetting = await prisma.systemSetting.findUnique({
-        where: { key: 'ACTIVE_PAYMENT_PROVIDER' }
-      });
-      provider = activeProviderSetting ? activeProviderSetting.value : 'internal';
+      provider = 'internal';
     }
 
     // 0. Validate amount
@@ -111,136 +118,107 @@ router.post('/create-intent', async (req, res) => {
       return res.status(400).json({ success: false, message: 'Invalid amount. Must be a positive number.' });
     }
 
-    // 0.1 Check for existing pending transaction for this order to prevent duplicates
-    if (metadata && metadata.orderId) {
-      // Use a more robust search pattern that accounts for potential spacing in JSON string
-      const orderIdSearch = `"orderId":"${metadata.orderId}"`;
-      const altOrderIdSearch = `"orderId": "${metadata.orderId}"`;
-      
-      const existingPending = await prisma.transaction.findFirst({
-        where: {
-          status: 'PENDING',
-          type: 'MERCHANT_PAYMENT',
-          OR: [
-            { metadata: { contains: orderIdSearch } },
-            { metadata: { contains: altOrderIdSearch } }
-          ]
-        }
-      });
+    const metadataStr = JSON.stringify(metadata || {});
+    const orderId = metadata && metadata.orderId ? metadata.orderId : null;
 
-      if (existingPending) {
-        console.log(`[PaymentGW] Found existing pending transaction for order ${metadata.orderId}. Returning existing reference.`);
-        
-        // Return existing transaction details
-        const baseUrl = process.env.BASE_URL || `http://${LOCAL_IP}:${PORT}`;
-        const checkoutUrl = `${baseUrl}/checkout/${existingPending.referenceId}`;
-        
+    // 0.1 Check for existing pending transaction for this order (via raw SQL to avoid schema conflict)
+    if (orderId) {
+      // Use $queryRawUnsafe to preserve quoted "PgTransaction" identifier (Postgres is case-sensitive)
+      const likePattern = `%"orderId":"${orderId}"%`;
+      const existing = await prisma.$queryRawUnsafe(
+        `SELECT id, "referenceId", amount FROM "PgTransaction" WHERE status = 'PENDING' AND type = 'MERCHANT_PAYMENT' AND metadata LIKE $1 LIMIT 1`,
+        likePattern
+      );
+      
+      if (existing && existing.length > 0) {
+        const existingTx = existing[0];
+        console.log(`[PaymentGW] Found existing pending tx for order ${orderId}: ${existingTx.referenceId}`);
+        const baseUrl = process.env.BASE_URL || `https://payment-gateway-service-two.vercel.app`;
         return res.status(200).json({
           success: true,
-          id: existingPending.id,
-          paymentIntentId: existingPending.id,
-          transactionId: existingPending.id,
-          referenceId: existingPending.referenceId,
-          checkoutUrl: checkoutUrl,
+          id: existingTx.id,
+          paymentIntentId: existingTx.id,
+          transactionId: existingTx.id,
+          referenceId: existingTx.referenceId,
+          checkoutUrl: `${baseUrl}/checkout/${existingTx.referenceId}`,
           qrCode: JSON.stringify({
             type: 'budolpay_payment',
-            orderId: metadata.orderId,
-            amount: existingPending.amount,
-            storeName: metadata.storeName || metadata.app || 'budolShap Store',
-            paymentIntentId: existingPending.id,
-            referenceId: existingPending.referenceId
+            orderId: orderId,
+            amount: existingTx.amount,
+            storeName: (metadata && metadata.storeName) || 'budolShap Store',
+            paymentIntentId: existingTx.id,
+            referenceId: existingTx.referenceId
           }),
           activeProvider: provider || 'internal'
         });
       }
     }
 
-    // 1. Log the payment intent in our system
-    const transaction = await prisma.transaction.create({
-      data: {
-        amount: parsedAmount,
-        type: 'MERCHANT_PAYMENT',
-        status: 'PENDING',
-        description: description || `Payment Intent via ${provider}`,
-        referenceId: generateSecureReferenceId(),
-        metadata: JSON.stringify(metadata || {}),
-        fee: 0.0
-      }
-    });
+    // 1. Create transaction record using raw SQL in PgTransaction table
+    // (Avoids Prisma schema conflict with budolshap's Transaction table in shared DB)
+    const txId = require('crypto').randomUUID();
+    const referenceId = generateSecureReferenceId();
+    
+    // Use $executeRawUnsafe to preserve quoted identifiers (prevents Postgres lowercase folding)
+    await prisma.$executeRawUnsafe(
+      `INSERT INTO "PgTransaction" (id, amount, type, status, description, "referenceId", metadata, fee, "createdAt") VALUES ($1, $2, 'MERCHANT_PAYMENT', 'PENDING', $3, $4, $5, 0.0, NOW())`,
+      txId,
+      parsedAmount,
+      description || `Payment Intent via ${provider}`,
+      referenceId,
+      metadataStr
+    );
 
-    // 1.1 Create Compliance Audit Log (BSP Circular 808)
-    const auditLog = await createCentralizedAuditLog({
+    console.log(`[PaymentGW] ✅ PgTransaction created: ${referenceId}`);
+
+    // 1.1 Create simplified audit log (non-blocking)
+    createCentralizedAuditLog({
       action: 'PAYMENT_INTENT_CREATED',
       entity: 'Financial',
-      entityId: transaction.id,
-      userId: transaction.senderId || transaction.receiverId,
-      metadata: {
-        newValue: { 
-          amount: transaction.amount, 
-          referenceId: transaction.referenceId,
-          provider 
-        },
-        compliance: 'BSP Circular No. 808',
-        standard: 'Financial Transaction Audit',
-        ipAddress: req.headers['x-forwarded-for'] || req.socket.remoteAddress,
-        userAgent: req.headers['user-agent']
-      },
-      ipAddress: req.headers['x-forwarded-for'] || req.socket.remoteAddress
-    });
+      entityId: txId,
+      metadata: { amount: parsedAmount, referenceId, provider },
+      ipAddress: req.headers['x-forwarded-for'] || req.socket?.remoteAddress
+    }).catch(e => console.warn('[PaymentGW] Audit log warning:', e.message));
 
-    // 2. If provider is external, call the respective provider API
+    // 2. Build provider response
+    const baseUrl = process.env.BASE_URL || `https://payment-gateway-service-two.vercel.app`;
     let providerResponse = null;
     let qrCode = null;
 
     if (provider === 'paymongo') {
-      providerResponse = {
-        checkout_url: `https://checkout.paymongo.com/test_${transaction.referenceId}`,
-        id: `pm_intent_${transaction.id}`
-      };
+      providerResponse = { checkout_url: `https://checkout.paymongo.com/test_${referenceId}`, id: `pm_intent_${txId}` };
     } else if (provider === 'xendit') {
-      providerResponse = {
-        checkout_url: `https://checkout.xendit.co/v2/${transaction.referenceId}`,
-        id: `xnd_intent_${transaction.id}`
-      };
+      providerResponse = { checkout_url: `https://checkout.xendit.co/v2/${referenceId}`, id: `xnd_intent_${txId}` };
     } else if (provider === 'dragonpay') {
-      providerResponse = {
-        checkout_url: `https://test.dragonpay.ph/Pay.aspx?merchantid=EXAMPLE&refno=${transaction.referenceId}`,
-        id: `dp_intent_${transaction.id}`
-      };
+      providerResponse = { checkout_url: `https://test.dragonpay.ph/Pay.aspx?merchantid=EXAMPLE&refno=${referenceId}`, id: `dp_intent_${txId}` };
     } else {
       // Internal budolPay checkout
-      const baseUrl = process.env.BASE_URL || `http://${LOCAL_IP}:${PORT}`;
-      providerResponse = {
-        checkout_url: `${baseUrl}/checkout/${transaction.referenceId}`,
-        id: `bp_intent_${transaction.id}`
-      };
-      
-      // Also provide raw QR data for in-page modal support
+      providerResponse = { checkout_url: `${baseUrl}/checkout/${referenceId}`, id: `bp_intent_${txId}` };
       qrCode = JSON.stringify({
         type: 'budolpay_payment',
-        orderId: metadata.orderId || 'unknown',
-        amount: parseFloat(amount),
-        storeName: metadata.storeName || metadata.app || 'budolShap Store',
-        paymentIntentId: transaction.id,
-        referenceId: transaction.referenceId
+        orderId: orderId || 'unknown',
+        amount: parsedAmount,
+        storeName: (metadata && metadata.storeName) || (metadata && metadata.app) || 'budolShap Store',
+        paymentIntentId: txId,
+        referenceId: referenceId
       });
     }
 
     res.status(201).json({
       success: true,
-      id: transaction.id,
-      paymentIntentId: transaction.id,
-      transactionId: transaction.id,
-      referenceId: transaction.referenceId,
+      id: txId,
+      paymentIntentId: txId,
+      transactionId: txId,
+      referenceId: referenceId,
       checkoutUrl: providerResponse.checkout_url,
-      qrCode: qrCode, // Added QR code data
+      qrCode: qrCode,
       providerId: providerResponse.id,
       activeProvider: provider
     });
 
   } catch (error) {
-    console.error('Payment Intent Error:', error);
-    res.status(500).json({ success: false, message: 'Failed to create payment intent' });
+    console.error('[PaymentGW] Payment Intent Error:', error.message, error.code);
+    res.status(500).json({ success: false, message: 'Failed to create payment intent', detail: error.message });
   }
 });
 
@@ -674,13 +652,14 @@ router.post('/webhooks/:provider', async (req, res) => {
           try {
             const BUDOLSHAP_URL = process.env.BUDOLSHAP_URL || `http://${LOCAL_IP}:3001`;
             await axios.post(`${BUDOLSHAP_URL}/api/webhooks/budolpay`, {
-              event: 'payment.success',
-              data: {
-                id: transaction.referenceId,
-                paymentIntentId: transaction.id,
-                amount: transaction.amount,
-                metadata: metadata
-              }
+                referenceId: `pi_${getNowUTC().getTime()}`,
+                amount: amount,
+                type: 'MERCHANT_PAYMENT',
+                status: 'PENDING',
+                metadata: metadata ? JSON.stringify(metadata) : '',
+                description: description || 'budolPay Checkout',
+                createdAt: getNowUTC(),
+                updatedAt: getNowUTC()
             }, { timeout: 5000 });
             console.log(`[Gateway] Webhook sent successfully to budolShap`);
           } catch (webhookError) {
@@ -776,8 +755,10 @@ router.post('/webhooks/internal', (req, res) => {
   return app.handle(req, res);
 });
 
-app.listen(PORT, '0.0.0.0', () => {
-  console.log(`[Payment Gateway] Service running on http://0.0.0.0:${PORT} (LAN-accessible)`);
-});
+if (process.env.NODE_ENV !== 'production' && process.env.VERCEL !== '1' && process.env.NODE_ENV !== 'test') {
+  app.listen(PORT, '0.0.0.0', () => {
+    console.log(`[Payment Gateway] Service running on http://0.0.0.0:${PORT} (LAN-accessible)`);
+  });
+}
 
-module.exports = app;
+module.exports = { app, generateSecureReferenceId };

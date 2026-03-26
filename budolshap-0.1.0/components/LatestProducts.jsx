@@ -9,13 +9,13 @@ const LatestProducts = () => {
 
     const displayQuantity = 4
     const products = useSelector(state => state.product?.list) || []
-    const loading = useSelector(state => state.product?.loading)
+    const isLoading = useSelector(state => state.product?.isLoading)
 
     return (
         <div className='px-6 mb-section-y max-w-6xl mx-auto'>
-            <Title title='Latest Products' description={`Showing ${products.length < displayQuantity ? (loading ? displayQuantity : products.length) : displayQuantity} of ${loading ? '...' : products.length} products`} href='/shop' />
+            <Title title='Latest Products' description={`Showing ${products.length < displayQuantity ? (isLoading ? displayQuantity : products.length) : displayQuantity} of ${isLoading ? '...' : products.length} products`} href='/shop' />
             <div className='mt-12 grid grid-cols-2 sm:flex flex-wrap gap-6 justify-between'>
-                {loading ? (
+                {isLoading ? (
                     Array(displayQuantity).fill(0).map((_, i) => (
                         <ProductSkeleton key={i} />
                     ))

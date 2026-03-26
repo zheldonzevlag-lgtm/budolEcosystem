@@ -336,169 +336,145 @@ export async function createOrder(orderData) {
     }
 
     // 5. Create orders in transaction
-    const { checkoutId, orders: createdOrders } = await prisma.$transaction(async (tx) => {
-        // 5a. Decrement Stock (Atomic Check & Update)
-        for (const item of orderItems) {
-            // Re-fetch product inside transaction to get latest stock
-            const product = await tx.product.findUnique({ where: { id: item.productId } });
-            if (!product) throw new Error(`Product ${item.productId} not found`);
+    // --- PHASE 4 OPTIMIZATION: NON-INTERACTIVE BATCH TRANSACTION ---
+    // This approach is much faster and avoids the 5s limit of Prisma Accelerate/Vercel
+    
+    // 1. Fetch current product data (Snapshot) outside transaction
+    const productSnapshot = await prisma.product.findMany({
+        where: { id: { in: productIds } }
+    });
 
-            if (item.variationId && Array.isArray(product.variation_matrix) && product.variation_matrix.length > 0) {
-                // Multi-SKU: Update JSON matrix
-                const matrix = JSON.parse(JSON.stringify(product.variation_matrix)); // Deep copy
-                const variantIndex = matrix.findIndex(v => v.sku === item.variationId);
-                
-                if (variantIndex === -1) {
-                    throw new Error(`Variation ${item.variationId} for product ${product.name} not found`);
+    // 2. Preparation & Validation
+    const transactions = [];
+    let grandTotal = 0;
+
+    // Validate Stock & Build Update Transactions
+    for (const item of orderItems) {
+        const product = productSnapshot.find(p => p.id === item.productId);
+        if (!product) throw new Error(`Product not found: ${item.productId}`);
+        
+        const hasVariations = product.variation_matrix && 
+                              Array.isArray(product.variation_matrix) && 
+                              product.variation_matrix.length > 0;
+
+        if (hasVariations) {
+            const matrix = JSON.parse(JSON.stringify(product.variation_matrix));
+            const variantIndex = matrix.findIndex(v => v.sku === item.variationId);
+            
+            if (variantIndex === -1) throw new Error(`Variation not found: ${item.variationId}`);
+            if (matrix[variantIndex].stock < item.quantity) throw new Error(`Insufficient stock for ${product.name}`);
+            
+            matrix[variantIndex].stock -= item.quantity;
+            const totalStock = matrix.reduce((acc, v) => acc + (v.stock || 0), 0);
+            
+            transactions.push(prisma.product.update({
+                where: { id: item.productId },
+                data: { 
+                    variation_matrix: matrix,
+                    stock: totalStock,
+                    inStock: totalStock > 0
                 }
-
-                if (matrix[variantIndex].stock < item.quantity) {
-                    throw new Error(`Insufficient stock for ${product.name} (${matrix[variantIndex].name || 'Variant'})`);
+            }));
+        } else {
+            if ((product.stock || 0) < item.quantity) throw new Error(`Insufficient stock for ${product.name}`);
+            
+            transactions.push(prisma.product.update({
+                where: { id: item.productId },
+                data: { 
+                    stock: { decrement: item.quantity },
+                    inStock: ((product.stock || 0) - item.quantity) > 0
                 }
-
-                matrix[variantIndex].stock -= item.quantity;
-
-                const totalStock = matrix.reduce((acc, v) => acc + (v.stock || 0), 0);
-
-                // Update product with new matrix
-                await tx.product.update({
-                    where: { id: product.id },
-                    data: { 
-                        variation_matrix: matrix,
-                        stock: totalStock,
-                        inStock: totalStock > 0
-                    }
-                });
-            } else {
-                // Single SKU: Update numeric stock field
-                const currentStock = product.stock || 0;
-                
-                if (currentStock < item.quantity) {
-                    throw new Error(`Insufficient stock for ${product.name}. Available: ${currentStock}`);
-                }
-
-                await tx.product.update({
-                    where: { id: product.id },
-                    data: { 
-                        stock: { decrement: item.quantity },
-                        inStock: (currentStock - item.quantity) > 0
-                    }
-                });
-            }
+            }));
         }
+    }
 
-        // 5b. Create Checkout Record
-        let grandTotal = 0;
-        for (const storeId in itemsByStore) {
-             const storeData = itemsByStore[storeId];
-             const shippingCost = providedShippingCost !== undefined ? providedShippingCost : 50;
-             const total = storeData.subtotal + shippingCost;
-             grandTotal += total;
+    // 3. Create Checkout first (to get ID)
+    for (const storeId in itemsByStore) {
+        const storeData = itemsByStore[storeId];
+        const shippingCost = providedShippingCost !== undefined ? providedShippingCost : 50;
+        grandTotal += (storeData.subtotal + shippingCost);
+    }
+
+    const checkout = await prisma.checkout.create({
+        data: {
+            userId,
+            total: grandTotal,
+            status: 'PENDING'
         }
+    });
 
-        const checkout = await tx.checkout.create({
+    // 4. Build Order Creation Transactions
+    for (const storeId in itemsByStore) {
+        const storeData = itemsByStore[storeId];
+        const shippingCost = providedShippingCost !== undefined ? providedShippingCost : 50;
+        const total = storeData.subtotal + shippingCost;
+
+        transactions.push(prisma.order.create({
             data: {
                 userId,
-                total: grandTotal,
-                status: 'PENDING'
-            }
-        });
-
-        // 6. Clear cart for these items
-        // Fix: Delete only specific variations that were purchased
-        // ONLY clear for COD immediately. For async payments, we wait for webhook or success.
-        const isAsyncPayment = ['GCASH', 'MAYA', 'PAYMAYA', 'GRAB_PAY', 'QRPH', 'CARD', 'BUDOL_PAY', 'budolPay'].includes(paymentMethod.toUpperCase());
-        const userCart = await tx.cart.findUnique({ 
-            where: { userId },
-            select: { id: true }
-        });
-
-        for (const storeId in itemsByStore) {
-            const storeData = itemsByStore[storeId];
-            const shippingCost = providedShippingCost !== undefined ? providedShippingCost : 50; // Use provided cost or fallback to MVP default
-            const total = storeData.subtotal + shippingCost;
-
-            // Create the order
-            const order = await tx.order.create({
-                data: {
-                    userId,
-                    addressId,
-                    storeId,
-                    status: 'ORDER_PLACED',
-                    paymentMethod,
-                    shippingCost,
-                    shipping: shipping || { provider: 'standard' },
-                    total,
-                    isPaid: false,
-                    paymentStatus: 'pending',
-                    checkoutId: checkout.id,
-                    orderItems: {
-                        create: storeData.items.map(item => ({
-                            productId: item.productId,
-                            variationId: item.variationId, // Include variationId
-                            quantity: item.quantity,
-                            price: item.price
-                        }))
-                    }
-                },
-                include: {
-                    orderItems: {
-                        include: {
-                            product: true
-                        }
-                    },
-                    store: true,
-                    user: true
+                addressId,
+                storeId,
+                status: 'ORDER_PLACED',
+                paymentMethod,
+                shippingCost,
+                shipping: shipping || { provider: 'standard' },
+                total,
+                isPaid: false,
+                paymentStatus: 'pending',
+                checkoutId: checkout.id,
+                orderItems: {
+                    create: storeData.items.map(item => ({
+                        productId: item.productId,
+                        variationId: item.variationId,
+                        quantity: item.quantity,
+                        price: item.price
+                    }))
                 }
-            });
+            },
+            include: {
+                orderItems: { include: { product: true } },
+                store: true,
+                user: true
+            }
+        }));
+    }
 
-            results.push(order);
-
-            if (userCart && !isAsyncPayment) {
-                const cartCleanupConditions = storeData.items.map(item => {
-                    const product = products.find(p => p.id === item.productId);
-                    const hasVariations = product?.variation_matrix && 
-                                          Array.isArray(product.variation_matrix) && 
-                                          product.variation_matrix.length > 0;
-                    
-                    // If product has no variations, we must target the base item (variationId: null)
-                    // If it has variations, we use the provided variationId
+    // 5. Batch Cart Cleanup
+    const isAsyncPayment = ['GCASH', 'MAYA', 'PAYMAYA', 'GRAB_PAY', 'QRPH', 'CARD', 'BUDOL_PAY', 'budolPay'].includes(paymentMethod.toUpperCase());
+    if (!isAsyncPayment) {
+        const userCart = await prisma.cart.findUnique({ where: { userId }, select: { id: true } });
+        if (userCart) {
+            const allCartConditions = [];
+            for (const storeId in itemsByStore) {
+                itemsByStore[storeId].items.forEach(item => {
+                    const product = productSnapshot.find(p => p.id === item.productId);
+                    const hasVariations = product?.variation_matrix?.length > 0;
                     const targetVariationId = hasVariations ? (item.variationId || null) : null;
 
-                    // Robust matching: If variationId is null/empty, match both in DB to be safe
                     if (!targetVariationId) {
-                        return {
-                            productId: item.productId,
-                            OR: [
-                                { variationId: null },
-                                { variationId: '' }
-                            ]
-                        };
-                    }
-
-                    return {
-                        productId: item.productId,
-                        variationId: targetVariationId
-                    };
-                });
-
-                console.log(`[OrderService] Cleaning up cart ${userCart.id} for user ${userId} (Non-Async payment).`);
-
-                const deleteResult = await tx.cartItem.deleteMany({
-                    where: {
-                        cartId: userCart.id,
-                        OR: cartCleanupConditions
+                        allCartConditions.push({ productId: item.productId, OR: [{ variationId: null }, { variationId: '' }] });
+                    } else {
+                        allCartConditions.push({ productId: item.productId, variationId: targetVariationId });
                     }
                 });
+            }
 
-                console.log(`[OrderService] Deleted ${deleteResult.count} items from cart ${userCart.id}`);
-            } else if (isAsyncPayment) {
-                console.log(`[OrderService] Async payment method (${paymentMethod}): Skipping cart cleanup until payment success.`);
+            if (allCartConditions.length > 0) {
+                transactions.push(prisma.cartItem.deleteMany({
+                    where: { cartId: userCart.id, OR: allCartConditions }
+                }));
             }
         }
+    }
 
-        return { checkoutId: checkout.id, orders: results };
-    });
+    // 6. Execute All in a single non-interactive transaction
+    console.log(`[OrderService] Executing ${transactions.length} batched operations...`);
+    const batchResults = await prisma.$transaction(transactions);
+    
+    // Extract orders from results (they were added after product updates)
+    const orderResults = batchResults.filter(r => r && r.id && r.orderItems);
+
+    return { checkoutId: checkout.id, orders: orderResults };
 
     // 7. Trigger real-time events
     try {

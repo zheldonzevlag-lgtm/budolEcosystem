@@ -162,15 +162,21 @@ export async function getRealtimeConfig() {
     let socketUrl = settings.socketUrl || 'http://localhost:4000';
 
     // Make Socket.io URL network aware if it's localhost (for mobile testing)
-    if (socketUrl.includes('localhost') && localIp) {
+    const isDevelopment = process.env.NODE_ENV === 'development' || !process.env.NODE_ENV;
+    let provider = settings.realtimeProvider || 'POLLING';
+
+    if (socketUrl.includes('localhost') && localIp && isDevelopment) {
         socketUrl = socketUrl.replace('localhost', localIp);
-        console.log(`[Realtime] Adjusted localhost to ${localIp} for network awareness`);
+        console.log(`[Realtime] Adjusted localhost to ${localIp} for network awareness (Development mode)`);
+    } else if (socketUrl.includes('localhost') && !isDevelopment) {
+        console.warn(`[Realtime] SocketUrl includes localhost in production! Falling back to POLLING.`);
+        provider = 'POLLING';
     }
 
     // Return only necessary public config
     return {
-        provider: settings.realtimeProvider || 'POLLING',
-        realtimeProvider: settings.realtimeProvider || 'POLLING', // For compatibility
+        provider: provider,
+        realtimeProvider: provider, // For compatibility
         pusherKey: settings.pusherKey,
         pusherCluster: settings.pusherCluster,
         socketUrl: socketUrl,

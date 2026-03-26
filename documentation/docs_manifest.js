@@ -1,4 +1,4 @@
-﻿/**
+/**
  * docs_manifest.js
  * WHY: Provides a complete, authoritative list of all documentation folders
  *      so knowledgebase.html can build a fully-populated, date-grouped sidebar
@@ -10,6 +10,8 @@
  * TODO: Re-run this script whenever new documentation folders are added.
  */
 const DOCS_MANIFEST = [
+    // 2026-03-26 (1 versions)
+    "budolecosystem_docs_2026-03-26_v23",
     // 2026-03-02 (14 versions)
     "budolecosystem_docs_2026-03-02_v5.1.4",
     "budolecosystem_docs_2026-03-02_v5.1.3",

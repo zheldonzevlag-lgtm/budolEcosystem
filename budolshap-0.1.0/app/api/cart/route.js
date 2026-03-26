@@ -43,10 +43,17 @@ export async function GET(request) {
         console.log('[CART API] Successfully fetched cart:', cartObj)
         return NextResponse.json(cartObj)
     } catch (error) {
-        console.error('[CART API] Error fetching cart:', error)
-        console.error('[CART API] Error stack:', error.stack)
+        console.error('[CART API] CRITICAL ERROR fetching cart for userId:', userId);
+        console.error('[CART API] Message:', error.message);
+        console.error('[CART API] Stack:', error.stack);
+        
+        // Check for Prisma specific errors
+        if (error.code) {
+            console.error('[CART API] Prisma Error Code:', error.code);
+        }
+
         return NextResponse.json(
-            { error: 'Failed to fetch cart', details: error.message },
+            { error: 'Failed to fetch cart', details: error.message, code: error.code },
             { status: 500 }
         )
     }
@@ -128,8 +135,18 @@ export async function PUT(request) {
         console.log('[CART API] Updated cart response:', cartObj);
         return NextResponse.json(cartObj);
     } catch (error) {
-        console.error('[CART API] Error updating cart:', error);
-        return NextResponse.json({ error: 'Failed to update cart', details: error.message }, { status: 500 });
+        console.error('[CART API] CRITICAL ERROR updating cart for userId:', userId);
+        console.error('[CART API] Message:', error.message);
+        console.error('[CART API] Payload:', JSON.stringify(cart));
+        
+        if (error.code) {
+            console.error('[CART API] Prisma Error Code:', error.code);
+        }
+
+        return NextResponse.json(
+            { error: 'Failed to update cart', details: error.message, code: error.code },
+            { status: 500 }
+        );
     }
 }
 

@@ -95,23 +95,33 @@ export async function getAuthFromCookies() {
         const cookieStore = await cookies()
         const token = cookieStore.get('budolshap_token')?.value || cookieStore.get('token')?.value
 
-        if (!token) return null
+        if (!token) {
+            console.log('[Auth] No token found in cookies for getAuthFromCookies');
+            return null;
+        }
 
         const decoded = verifyToken(token)
-        if (!decoded) return null
+        if (!decoded) {
+            console.error('[Auth] Token found but failed verification in getAuthFromCookies');
+            return null;
+        }
 
         // Normalize the user object for internal use
         const accountType = decoded.role || decoded.accountType
         const isAdmin = decoded.isAdmin === true || accountType === 'ADMIN'
 
-        return {
+        const user = {
             ...decoded,
             id: decoded.userId || decoded.id || decoded.sub,
             accountType,
             isAdmin,
             token
         }
-    } catch (_error) {
+        
+        console.log(`[Auth] getAuthFromCookies successful for user: ${user.id}`);
+        return user;
+    } catch (error) {
+        console.error(`[Auth] Critical error in getAuthFromCookies: ${error.message}`);
         return null
     }
 }
