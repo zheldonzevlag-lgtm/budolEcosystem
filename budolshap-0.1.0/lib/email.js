@@ -98,7 +98,7 @@ const createTransporter = async () => {
     }
 }
 
-const APP_URL = process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'
+const APP_URL = process.env.NEXT_PUBLIC_APP_URL || 'https://budolshap.vercel.app'
 
 /**
  * Helper to format text with Budol branding in HTML emails
@@ -231,7 +231,7 @@ export async function sendVerificationEmail(email, token, name) {
         const settings = await getSystemSettings()
         const transporter = await createTransporter()
         const encodedToken = encodeURIComponent(token)
-        const verifyUrl = `${process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'}/verify-email?token=${encodedToken}`
+        const verifyUrl = `${process.env.NEXT_PUBLIC_APP_URL || 'https://budolshap.vercel.app'}/verify-email?token=${encodedToken}`
 
         // If email is not configured, log to console instead
         if (!transporter) {
@@ -279,7 +279,7 @@ export async function sendVerificationEmail(email, token, name) {
         console.error('Error sending verification email:', error)
         // Log the link as fallback
         const encodedToken = encodeURIComponent(token)
-        const verifyUrl = `${process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'}/verify-email?token=${encodedToken}`
+        const verifyUrl = `${process.env.NEXT_PUBLIC_APP_URL || 'https://budolshap.vercel.app'}/verify-email?token=${encodedToken}`
         console.log('\n⚠️ Email sending failed, but here is the verification link for ' + maskPII(email) + ':')
         console.log(verifyUrl)
         console.log('')
@@ -294,7 +294,7 @@ export async function sendPasswordResetEmail(email, token, name) {
         const settings = await getSystemSettings()
         const transporter = await createTransporter()
         const encodedToken = encodeURIComponent(token)
-        const resetUrl = `${process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'}/reset-password?token=${encodedToken}`
+        const resetUrl = `${process.env.NEXT_PUBLIC_APP_URL || 'https://budolshap.vercel.app'}/reset-password?token=${encodedToken}`
 
         // If email is not configured, log to console instead
         if (!transporter) {
@@ -341,7 +341,7 @@ export async function sendPasswordResetEmail(email, token, name) {
         console.error('Error sending password reset email:', error)
         // Log the link as fallback
         const encodedToken = encodeURIComponent(token)
-        const resetUrl = `${process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'}/reset-password?token=${encodedToken}`
+        const resetUrl = `${process.env.NEXT_PUBLIC_APP_URL || 'https://budolshap.vercel.app'}/reset-password?token=${encodedToken}`
         console.log('\n⚠️ Email sending failed, but here is the reset link for ' + maskPII(email) + ':')
         console.log(resetUrl)
         console.log('')
