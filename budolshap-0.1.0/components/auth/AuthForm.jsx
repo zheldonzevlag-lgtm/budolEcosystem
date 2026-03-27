@@ -6,6 +6,7 @@ import { useAuth } from "@/context/AuthContext"
 import Link from "next/link"
 import { Camera, RefreshCw, CheckCircle2, X, Eye, EyeOff } from "lucide-react"
 import { normalizePhone } from "@/lib/utils/phone-utils"
+import MathCaptcha from "./MathCaptcha"
 
 const isValidEmail = (email) => {
     if (!email) return false
@@ -53,6 +54,7 @@ const AuthForm = ({ mode = 'login', onSuccess, onToggleMode, isModal = false, su
         image: '',
         _honey: ''
     })
+    const [isCaptchaSolved, setIsCaptchaSolved] = useState(false)
 
     useEffect(() => {
         setIsMounted(true)
@@ -91,6 +93,7 @@ const AuthForm = ({ mode = 'login', onSuccess, onToggleMode, isModal = false, su
         setPhoneExists(false);
         setCheckingPassword(false);
         setPasswordMatches(false);
+        setIsCaptchaSolved(false); // Reset captcha on any mode/method switch for security
     }, [loginMethod, mode, isLogin, registrationType]);
 
     // Debounced email check (login + register)
@@ -661,7 +664,14 @@ const AuthForm = ({ mode = 'login', onSuccess, onToggleMode, isModal = false, su
 
     return (
         <form onSubmit={handleSubmit} className="flex flex-col gap-4" autoComplete="off">
-            {/* Honeypot field for anti-spam */}
+            {!isCaptchaSolved ? (
+                <MathCaptcha 
+                    onSolve={() => setIsCaptchaSolved(true)} 
+                    primaryColor={isLogin ? 'blue' : 'rose'} 
+                />
+            ) : (
+                <>
+                    {/* Honeypot field for anti-spam */}
             <input 
                 type="text" 
                 name="_honey" 
@@ -1167,6 +1177,8 @@ const AuthForm = ({ mode = 'login', onSuccess, onToggleMode, isModal = false, su
                         </div>
                     )}
                 </div>
+            )}
+            </>
             )}
         </form>
     )

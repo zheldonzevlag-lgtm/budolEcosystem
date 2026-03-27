@@ -35,8 +35,7 @@ export default function MathCaptcha({ onSolve, primaryColor = 'blue' }) {
         generateChallenge();
     }, []);
 
-    const handleSubmit = (e) => {
-        e.preventDefault();
+    const verifyAnswer = () => {
         const correctAnswer = operator === '+' ? num1 + num2 : num1 - num2;
         if (parseInt(userAnswer) === correctAnswer) {
             onSolve();
@@ -64,7 +63,7 @@ export default function MathCaptcha({ onSolve, primaryColor = 'blue' }) {
             
             <p className="text-sm text-slate-500 mb-4 font-medium">Please solve this simple problem to continue:</p>
             
-            <form onSubmit={handleSubmit} className="space-y-4">
+            <div className="space-y-4">
                 <div className="flex items-center justify-center gap-4 text-2xl font-black text-slate-900 bg-white p-4 rounded-lg border border-slate-200">
                     <span>{num1}</span>
                     <span className="text-slate-400">{operator}</span>
@@ -74,6 +73,12 @@ export default function MathCaptcha({ onSolve, primaryColor = 'blue' }) {
                         type="number"
                         value={userAnswer}
                         onChange={(e) => setUserAnswer(e.target.value)}
+                        onKeyDown={(e) => {
+                            if (e.key === 'Enter') {
+                                e.preventDefault();
+                                verifyAnswer();
+                            }
+                        }}
                         className={`w-20 text-center border-2 rounded-lg focus:outline-none transition-all ${
                             error ? 'border-red-500 bg-red-50 animate-shake' : 'border-slate-200 focus:border-blue-500'
                         }`}
@@ -86,7 +91,10 @@ export default function MathCaptcha({ onSolve, primaryColor = 'blue' }) {
                 {error && <p className="text-xs text-red-500 text-center font-bold">Incorrect answer. Please try again.</p>}
                 
                 <button
-                    type="submit"
+                    type="button"
+                    onClick={() => {
+                        verifyAnswer();
+                    }}
                     className={`w-full py-3 text-white font-bold rounded-lg transition-all transform active:scale-95 flex items-center justify-center gap-2 ${colorClasses[primaryColor] || colorClasses.blue}`}
                 >
                     Verify & Proceed
@@ -94,7 +102,7 @@ export default function MathCaptcha({ onSolve, primaryColor = 'blue' }) {
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
                     </svg>
                 </button>
-            </form>
+            </div>
             
             <p className="text-[10px] text-slate-400 mt-4 text-center uppercase tracking-widest font-bold">Bot Protection Verified</p>
         </div>
