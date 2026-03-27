@@ -1130,7 +1130,7 @@ const AuthForm = ({ mode = 'login', onSuccess, onToggleMode, isModal = false, su
             <button
                 type="submit"
                 disabled={isLoading || (isLogin && loginMethod === 'email' && (!isValidEmail(formData.email) || checkingEmail || !emailExists || (!awaitingOtp && (formData.password.length < 6 || checkingPassword || !passwordMatches)))) || (!isLogin && (checkingPhone || phoneExists || formData.phoneNumber.length !== 10 || (registrationType === 'standard' && (checkingEmail || emailExists || !isValidEmail(formData.email) || formData.password.length < 6 || formData.password !== formData.confirmPassword))))}
-                className={`bg-slate-900 text-white font-semibold rounded-lg hover:bg-slate-800 active:scale-[0.98] transition-all flex justify-center items-center disabled:opacity-70 disabled:cursor-not-allowed ${isModal ? "py-3 text-sm mt-2" : "py-3 text-sm"}`}
+                className={`w-full bg-slate-900 text-white font-semibold rounded-lg hover:bg-slate-800 active:scale-[0.98] transition-all flex justify-center items-center disabled:opacity-70 disabled:cursor-not-allowed ${isModal ? "py-3 text-sm mt-2" : "py-3 text-sm"}`}
             >
                 {isLoading ? (
                     <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin"></div>
