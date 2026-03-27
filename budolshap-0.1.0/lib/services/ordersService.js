@@ -487,24 +487,20 @@ export async function createOrder(orderData) {
         console.error('[OrdersService] Failed to trigger realtime events:', reError);
     }
 
-    return { checkoutId: checkout.id, orders: orderResults };
-
     // 6. Audit Logging
-    for (const order of createdOrders) {
+    for (const order of orderResults) {
         createAuditLog(order.userId, 'ORDER_CREATED', null, {
             entity: 'Order',
             entityId: order.id,
             details: `Order created for store ${order.storeId}. Total: ${order.total}`,
             metadata: { 
                 storeId: order.storeId,
-                // itemsByStore is keyed by storeId, so this should work
                 itemCount: itemsByStore[order.storeId]?.items?.length || 0
             }
         }).catch(e => console.error('[OrdersService] Audit log failed:', e));
     }
 
-    // Return object containing both orders and the master checkout ID
-    return { orders: createdOrders, checkoutId };
+    return { checkoutId: checkout.id, orders: orderResults };
 }
 
 /**
