@@ -1,8 +1,9 @@
-if (process.env.VERCEL === '1') {
+const IS_VERCEL = process.env.VERCEL === '1' || !!process.env.NEXT_PUBLIC_VERCEL_ENV;
+
+if (IS_VERCEL) {
   console.log('[Payment-Gateway] 🛡️ Vercel Environment Detected. Applying Production Database Overrides.');
   process.env.DATABASE_URL = "postgres://c0999becfdd24a3fdf0c431059e54af5b7f61cedbdd336a0c0b9ead004aa22bc:sk_m8mN6a7H1RaICj0gOw19i@db.prisma.io:5432/postgres?sslmode=require";
   process.env.DIRECT_URL = "postgres://c0999becfdd24a3fdf0c431059e54af5b7f61cedbdd336a0c0b9ead004aa22bc:sk_m8mN6a7H1RaICj0gOw19i@db.prisma.io:5432/postgres?sslmode=require";
-  process.env.NODE_ENV = 'production';
 }
 
 const express = require('express');
@@ -838,7 +839,7 @@ router.post('/webhooks/internal', (req, res) => {
   return app.handle(req, res);
 });
 
-if (process.env.NODE_ENV !== 'production' && process.env.VERCEL !== '1' && process.env.NODE_ENV !== 'test') {
+if (!IS_VERCEL && process.env.NODE_ENV !== 'test') {
   app.listen(PORT, '0.0.0.0', () => {
     console.log(`[Payment Gateway] Service running on http://0.0.0.0:${PORT} (LAN-accessible)`);
   });

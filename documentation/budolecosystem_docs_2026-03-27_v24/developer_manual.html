@@ -91,16 +91,28 @@ const { isLoading, list } = useSelector((state) => state.product);
 </pre>
 <p><strong>Ref:</strong> <a href="file:///d:/IT%20Projects/clone/budolEcosystem/budolshap-0.1.0/components/LatestProducts.jsx">LatestProducts.jsx</a></p>
 
-<h3>2. PostgreSQL Schema Collision Handling</h3>
-<p>Both storefront and gateway share the same database instance. The gateway now uses a dedicated <code>PgTransaction</code> table to avoid collision with the storefront's <code>Transaction</code> table.</p>
+<h3>2. PostgreSQL Schema Collision Handling (Dual-Table Strategy)</h3>
+<p>On Vercel, both storefront and gateway share the same database instance. To prevent collision with the storefront's <code>Transaction</code> table, the gateway uses a dedicated <code>PgTransaction</code> table in the <code>public</code> schema. In local development, the gateway continues to use the standard <code>Transaction</code> table to maintain compatibility with existing local setups.</p>
 <pre>
-// Using Raw SQL to bypass Prisma schema conflicts
-await prisma.$executeRawUnsafe(
-  `INSERT INTO "PgTransaction" (...) VALUES (...)`,
-  ...params
-);
+// Environment-aware table selection in Gateway
+const getTxTableName = () => (process.env.VERCEL === '1' ? '"PgTransaction"' : '"Transaction"');
+
+// Conditional execution for Vercel vs Local
+if (process.env.VERCEL === '1') {
+  await prisma.$executeRawUnsafe(`INSERT INTO ${tableName} ...`);
+} else {
+  await prisma.transaction.create({ data: { ... } });
+}
 </pre>
 <p><strong>Ref:</strong> <a href="file:///d:/IT%20Projects/clone/budolEcosystem/budolpay-0.1.0/services/payment-gateway-service/index.js">Gateway index.js</a></p>
+
+<h3>3. Vercel Build & Deployment Unblocking</h3>
+<p>Several ESLint errors and an incorrect test configuration were identified as build blockers. These were resolved in the <code>budolshap-0.1.0</code> service to ensure a clean build pipeline.</p>
+<ul>
+    <li>Fixed unreachable code in <code>ordersService.js</code>.</li>
+    <li>Fixed unused variables in <code>next.config.mjs</code>.</li>
+    <li>Synchronized SWR and Redux states in the homepage components.</li>
+</ul>
 
         <hr style="margin-top: 60px;">
         <div style="display: flex; justify-content: space-between;">
