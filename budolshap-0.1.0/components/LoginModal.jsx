@@ -4,6 +4,7 @@ import { useState, useEffect } from "react"
 import { useRouter } from "next/navigation"
 import { useAuthUI } from "@/context/AuthUIContext"
 import AuthForm from "./auth/AuthForm"
+import MathCaptcha from "./auth/MathCaptcha"
 
 const LoginModal = () => {
     const router = useRouter()
@@ -12,6 +13,7 @@ const LoginModal = () => {
 
     const [isLogin, setIsLogin] = useState(true)
     const [isSuccess, setIsSuccess] = useState(false) // Added success state
+    const [isCaptchaSolved, setIsCaptchaSolved] = useState(false) // CAPTCHA gatekeeper state
 
     useEffect(() => {
         setIsMounted(true)
@@ -37,11 +39,13 @@ const LoginModal = () => {
         // Reset to login mode for next time (optional, but good practice)
         setIsLogin(true)
         setIsSuccess(false) // Reset success state
+        setIsCaptchaSolved(false) // Reset CAPTCHA state
         hideLogin()
     }
 
     const handleToggleMode = () => {
         setIsLogin(!isLogin)
+        setIsCaptchaSolved(false) // Reset CAPTCHA when switching modes
     }
 
     const handleLoginSuccess = (data) => {
@@ -106,14 +110,18 @@ const LoginModal = () => {
                     </p>
                 </div>
 
-                <div className="mt-2">
-                    <AuthForm
-                        mode={isLogin ? 'login' : 'register'}
-                        onSuccess={handleLoginSuccess}
-                        onToggleMode={() => setIsLogin(true)} // Switch to login after successful register
-                        isModal={true}
-                        submitLabel={loginType === 'session_expired' && "Restore Session"}
-                    />
+                <div className="mt-2 text-slate-700">
+                    {!isLogin && !isCaptchaSolved ? (
+                        <MathCaptcha onSolve={() => setIsCaptchaSolved(true)} primaryColor="blue" />
+                    ) : (
+                        <AuthForm
+                            mode={isLogin ? 'login' : 'register'}
+                            onSuccess={handleLoginSuccess}
+                            onToggleMode={() => setIsLogin(true)} // Switch to login after successful register
+                            isModal={true}
+                            submitLabel={loginType === 'session_expired' && "Restore Session"}
+                        />
+                    )}
                 </div>
 
                 <div className="text-center text-sm text-slate-500 border-t border-slate-100 pt-5">

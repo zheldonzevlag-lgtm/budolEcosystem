@@ -268,7 +268,53 @@ app.get('/register', (req, res) => {
                         Create your universal ecosystem account.
                     </p>
 
-                    <form id="registerForm" class="space-y-4">
+                    <div id="captcha-container">
+                        <div class="p-6 bg-slate-50 rounded-xl border-2 border-slate-100 mb-4 animate-in fade-in slide-in-from-bottom-4 duration-500">
+                            <div class="flex items-center gap-2 mb-4">
+                                <div class="p-2 rounded-lg bg-${primaryColor}-100 text-${primaryColor}-600">
+                                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
+                                    </svg>
+                                </div>
+                                <h3 class="font-bold text-slate-800 uppercase tracking-tight">Security Gatekeeper</h3>
+                            </div>
+                            
+                            <p class="text-xs text-slate-500 mb-4 font-bold uppercase tracking-wider">Shield Challenge: Solve to proceed</p>
+                            
+                            <div class="space-y-4">
+                                <div class="flex items-center justify-center gap-4 text-3xl font-black text-slate-900 bg-white p-4 rounded-xl border-2 border-slate-100 shadow-inner">
+                                    <span id="captcha-n1">0</span>
+                                    <span id="captcha-op" class="text-slate-300">+</span>
+                                    <span id="captcha-n2">0</span>
+                                    <span class="text-slate-300">=</span>
+                                    <input
+                                        type="number"
+                                        id="captcha-input"
+                                        class="w-24 text-center border-3 border-transparent bg-slate-50 rounded-lg focus:outline-none focus:bg-white focus:border-${primaryColor}-500 transition-all text-slate-900"
+                                        placeholder="?"
+                                        required
+                                    />
+                                </div>
+                                
+                                <p id="captcha-error" class="text-xs text-red-500 text-center font-bold hidden animate-bounce">Verification failed. Try again.</p>
+                                
+                                <button
+                                    type="button"
+                                    id="verify-captcha-btn"
+                                    class="w-full py-4 bg-${primaryColor}-600 hover:bg-${primaryColor}-700 text-white font-black rounded-xl transition-all shadow-lg shadow-${primaryColor}-500/20 flex items-center justify-center gap-3 group"
+                                >
+                                    <span>Verify Challenge</span>
+                                    <svg class="w-5 h-5 group-hover:translate-x-1 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M14 5l7 7-7 7" />
+                                    </svg>
+                                </button>
+                            </div>
+                            
+                            <p class="text-[9px] text-slate-400 mt-4 text-center uppercase tracking-[0.2em] font-black">Powered by Budol Shield v1.0</p>
+                        </div>
+                    </div>
+
+                    <form id="registerForm" class="space-y-4 hidden">
                         <input type="hidden" name="apiKey" value="${activeApiKey}" />
                         
                         <div class="grid grid-cols-2 gap-4">
@@ -385,6 +431,58 @@ app.get('/register', (req, res) => {
             <script>
                 document.addEventListener('DOMContentLoaded', () => {
                     console.log('BudolID Registration Script Initialized');
+                    
+                    // --- CAPTCHA Logic ---
+                    const captchaContainer = document.getElementById('captcha-container');
+                    const registerForm = document.getElementById('registerForm');
+                    const captchaN1 = document.getElementById('captcha-n1');
+                    const captchaN2 = document.getElementById('captcha-n2');
+                    const captchaOp = document.getElementById('captcha-op');
+                    const captchaInput = document.getElementById('captcha-input');
+                    const verifyBtn = document.getElementById('verify-captcha-btn');
+                    const captchaError = document.getElementById('captcha-error');
+
+                    let correctAnswer = 0;
+
+                    function generateChallenge() {
+                        const n1 = Math.floor(Math.random() * 9) + 1;
+                        const n2 = Math.floor(Math.random() * 9) + 1;
+                        const op = Math.random() > 0.5 ? '+' : '-';
+                        
+                        let finalN1 = n1;
+                        let finalN2 = n2;
+
+                        if (op === '-' && n1 < n2) {
+                            finalN1 = n2;
+                            finalN2 = n1;
+                        }
+
+                        captchaN1.textContent = finalN1;
+                        captchaN2.textContent = finalN2;
+                        captchaOp.textContent = op;
+                        correctAnswer = op === '+' ? finalN1 + finalN2 : finalN1 - finalN2;
+                        captchaInput.value = '';
+                        captchaError.classList.add('hidden');
+                        captchaInput.classList.remove('border-red-500', 'bg-red-50');
+                    }
+
+                    verifyBtn.addEventListener('click', () => {
+                        if (parseInt(captchaInput.value) === correctAnswer) {
+                            captchaContainer.classList.add('hidden');
+                            registerForm.classList.remove('hidden');
+                            window.scrollTo({ top: 0, behavior: 'smooth' });
+                        } else {
+                            captchaError.classList.remove('hidden');
+                            captchaInput.classList.add('border-red-500', 'bg-red-50');
+                            setTimeout(() => {
+                                generateChallenge();
+                            }, 1000);
+                        }
+                    });
+
+                    generateChallenge();
+                    // ---------------------
+
                     const activeApiKey = "${activeApiKey}";
                     const emailInput = document.getElementById('email');
                     const phoneInput = document.getElementById('phoneNumber');
