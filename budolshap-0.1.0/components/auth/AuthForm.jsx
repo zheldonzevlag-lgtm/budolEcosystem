@@ -670,7 +670,7 @@ const AuthForm = ({ mode = 'login', onSuccess, onToggleMode, isModal = false, su
                     primaryColor={isLogin ? 'blue' : 'rose'} 
                 />
             ) : (
-                <>
+                <div className="space-y-4 animate-in fade-in duration-500">
                     {/* Honeypot field for anti-spam */}
             <input 
                 type="text" 
@@ -1178,7 +1178,7 @@ const AuthForm = ({ mode = 'login', onSuccess, onToggleMode, isModal = false, su
                     )}
                 </div>
             )}
-            </>
+                </div>
             )}
         </form>
     )
