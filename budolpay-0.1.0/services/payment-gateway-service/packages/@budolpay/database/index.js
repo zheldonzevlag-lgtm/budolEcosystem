@@ -13,7 +13,9 @@ const getDatabaseUrl = () => {
   // Remove any existing schema= parameter to ensure public schema access
   const baseUrl = url.split('?')[0];
   const params = new URLSearchParams(url.split('?')[1] || '');
-  params.delete('schema'); // Use default 'public' schema
+  if (process.env.VERCEL === '1') {
+    params.delete('schema'); // Use default 'public' schema on Vercel shared DB
+  }
   const paramStr = params.toString();
   return paramStr ? `${baseUrl}?${paramStr}` : baseUrl;
 };

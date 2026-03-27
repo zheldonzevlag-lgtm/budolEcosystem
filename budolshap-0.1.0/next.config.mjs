@@ -14,7 +14,7 @@ const getLocalExternalIPs = () => {
             }
         }
         return ips;
-    } catch (e) {
+    } catch (_) {
         console.warn("[Config] Failed to fetch network interfaces, falling back to defaults.");
         return ['localhost', '127.0.0.1', '0.0.0.0'];
     }

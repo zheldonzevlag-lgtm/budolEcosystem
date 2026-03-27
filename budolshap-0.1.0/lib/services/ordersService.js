@@ -474,11 +474,9 @@ export async function createOrder(orderData) {
     // Extract orders from results (they were added after product updates)
     const orderResults = batchResults.filter(r => r && r.id && r.orderItems);
 
-    return { checkoutId: checkout.id, orders: orderResults };
-
     // 7. Trigger real-time events
     try {
-        for (const order of createdOrders) {
+        for (const order of orderResults) {
             await triggerRealtimeEvent(`store-${order.storeId}`, 'new-order', {
                 orderId: order.id,
                 total: order.total,
@@ -488,6 +486,8 @@ export async function createOrder(orderData) {
     } catch (reError) {
         console.error('[OrdersService] Failed to trigger realtime events:', reError);
     }
+
+    return { checkoutId: checkout.id, orders: orderResults };
 
     // 6. Audit Logging
     for (const order of createdOrders) {

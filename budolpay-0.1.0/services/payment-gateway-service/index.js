@@ -1,10 +1,9 @@
-/**
- * Vercel Production Environment Overrides
- * These MUST be defined before any Prisma or Audit packages are required (Line 5+)
- */
-process.env.DATABASE_URL = "postgres://c0999becfdd24a3fdf0c431059e54af5b7f61cedbdd336a0c0b9ead004aa22bc:sk_m8mN6a7H1RaICj0gOw19i@db.prisma.io:5432/postgres?sslmode=require";
-process.env.DIRECT_URL = "postgres://c0999becfdd24a3fdf0c431059e54af5b7f61cedbdd336a0c0b9ead004aa22bc:sk_m8mN6a7H1RaICj0gOw19i@db.prisma.io:5432/postgres?sslmode=require";
-process.env.NODE_ENV = 'production'; // Force production on Vercel standalone
+if (process.env.VERCEL === '1') {
+  console.log('[Payment-Gateway] 🛡️ Vercel Environment Detected. Applying Production Database Overrides.');
+  process.env.DATABASE_URL = "postgres://c0999becfdd24a3fdf0c431059e54af5b7f61cedbdd336a0c0b9ead004aa22bc:sk_m8mN6a7H1RaICj0gOw19i@db.prisma.io:5432/postgres?sslmode=require";
+  process.env.DIRECT_URL = "postgres://c0999becfdd24a3fdf0c431059e54af5b7f61cedbdd336a0c0b9ead004aa22bc:sk_m8mN6a7H1RaICj0gOw19i@db.prisma.io:5432/postgres?sslmode=require";
+  process.env.NODE_ENV = 'production';
+}
 
 const express = require('express');
 const bodyParser = require('body-parser');
@@ -85,13 +84,30 @@ router.get('/health', (req, res) => {
   res.status(200).json({ status: 'Payment Gateway Service is healthy', timestamp: getLegacyManilaDate() });
 });
 
+// Helper to get transaction table name (Vercel uses PgTransaction to avoid collision)
+const getTxTableName = () => (process.env.VERCEL === '1' ? '"PgTransaction"' : '"Transaction"');
+
 // Check Transaction Status
 router.get('/status/:referenceId', async (req, res) => {
   const { referenceId } = req.params;
   try {
-    const transaction = await prisma.transaction.findUnique({
-      where: { referenceId: referenceId }
-    });
+    const tableName = getTxTableName();
+    let transaction;
+    
+    if (process.env.VERCEL === '1') {
+      // Use raw SQL on Vercel to avoid schema collision
+      const results = await prisma.$queryRawUnsafe(
+        `SELECT status FROM ${tableName} WHERE "referenceId" = $1 LIMIT 1`,
+        referenceId
+      );
+      transaction = results && results.length > 0 ? results[0] : null;
+    } else {
+      // Use standard Prisma for local dev
+      transaction = await prisma.transaction.findUnique({
+        where: { referenceId: referenceId }
+      });
+    }
+
     if (!transaction) return res.status(404).json({ error: 'Transaction not found' });
     res.json({ status: transaction.status });
   } catch (error) {
@@ -123,10 +139,11 @@ router.post('/create-intent', async (req, res) => {
 
     // 0.1 Check for existing pending transaction for this order (via raw SQL to avoid schema conflict)
     if (orderId) {
-      // Use $queryRawUnsafe to preserve quoted "PgTransaction" identifier (Postgres is case-sensitive)
+      // Use $queryRawUnsafe to preserve quoted identifiers (Postgres is case-sensitive)
       const likePattern = `%"orderId":"${orderId}"%`;
+      const tableName = getTxTableName();
       const existing = await prisma.$queryRawUnsafe(
-        `SELECT id, "referenceId", amount FROM "PgTransaction" WHERE status = 'PENDING' AND type = 'MERCHANT_PAYMENT' AND metadata LIKE $1 LIMIT 1`,
+        `SELECT id, "referenceId", amount FROM ${tableName} WHERE status = 'PENDING' AND type = 'MERCHANT_PAYMENT' AND metadata LIKE $1 LIMIT 1`,
         likePattern
       );
       
@@ -154,22 +171,38 @@ router.post('/create-intent', async (req, res) => {
       }
     }
 
-    // 1. Create transaction record using raw SQL in PgTransaction table
-    // (Avoids Prisma schema conflict with budolshap's Transaction table in shared DB)
+    // 1. Create transaction record
+    // (Avoids Prisma schema conflict with budolshap's Transaction table in shared DB on Vercel)
     const txId = require('crypto').randomUUID();
     const referenceId = generateSecureReferenceId();
+    const tableName = getTxTableName();
     
-    // Use $executeRawUnsafe to preserve quoted identifiers (prevents Postgres lowercase folding)
-    await prisma.$executeRawUnsafe(
-      `INSERT INTO "PgTransaction" (id, amount, type, status, description, "referenceId", metadata, fee, "createdAt") VALUES ($1, $2, 'MERCHANT_PAYMENT', 'PENDING', $3, $4, $5, 0.0, NOW())`,
-      txId,
-      parsedAmount,
-      description || `Payment Intent via ${provider}`,
-      referenceId,
-      metadataStr
-    );
+    if (process.env.VERCEL === '1') {
+      // Use $executeRawUnsafe to preserve quoted identifiers (prevents Postgres lowercase folding)
+      await prisma.$executeRawUnsafe(
+        `INSERT INTO ${tableName} (id, amount, type, status, description, "referenceId", metadata, fee, "createdAt") VALUES ($1, $2, 'MERCHANT_PAYMENT', 'PENDING', $3, $4, $5, 0.0, NOW())`,
+        txId,
+        parsedAmount,
+        description || `Payment Intent via ${provider}`,
+        referenceId,
+        metadataStr
+      );
+    } else {
+      // Standard Prisma create for local dev
+      await prisma.transaction.create({
+        data: {
+          id: txId,
+          amount: parsedAmount,
+          type: 'MERCHANT_PAYMENT',
+          status: 'PENDING',
+          description: description || `Payment Intent via ${provider}`,
+          referenceId: referenceId,
+          metadata: metadataStr
+        }
+      });
+    }
 
-    console.log(`[PaymentGW] ✅ PgTransaction created: ${referenceId}`);
+    console.log(`[PaymentGW] ✅ ${tableName.replace(/"/g, '')} created: ${referenceId}`);
 
     // 1.1 Create simplified audit log (non-blocking)
     createCentralizedAuditLog({
@@ -230,9 +263,20 @@ router.get('/checkout/:referenceId', async (req, res) => {
   const { orderId } = req.query;
 
   try {
-    const transaction = await prisma.transaction.findUnique({
-      where: { referenceId: referenceId }
-    });
+    const tableName = getTxTableName();
+    let transaction;
+    
+    if (process.env.VERCEL === '1') {
+      const results = await prisma.$queryRawUnsafe(
+        `SELECT id, amount, status, metadata FROM ${tableName} WHERE "referenceId" = $1 LIMIT 1`,
+        referenceId
+      );
+      transaction = results && results.length > 0 ? results[0] : null;
+    } else {
+      transaction = await prisma.transaction.findUnique({
+        where: { referenceId: referenceId }
+      });
+    }
 
     if (!transaction) {
       return res.status(404).send('Transaction not found');
@@ -563,9 +607,20 @@ router.post('/webhooks/:provider', async (req, res) => {
 
     if (status === 'paid' || status === 'COMPLETED' || status === 'succeeded') {
       // 2. Check if transaction already completed to avoid duplicate processing
-      const existingTx = await prisma.transaction.findUnique({
-        where: { referenceId: referenceId }
-      });
+      const tableName = getTxTableName();
+      let existingTx;
+      
+      if (process.env.VERCEL === '1') {
+        const results = await prisma.$queryRawUnsafe(
+          `SELECT id, amount, status, type, metadata, "senderId", "receiverId", "referenceId" FROM ${tableName} WHERE "referenceId" = $1 LIMIT 1`,
+          referenceId
+        );
+        existingTx = results && results.length > 0 ? results[0] : null;
+      } else {
+        existingTx = await prisma.transaction.findUnique({
+          where: { referenceId: referenceId }
+        });
+      }
 
       if (!existingTx) {
         console.error(`[Gateway] Transaction not found for reference: ${referenceId}`);
@@ -602,13 +657,27 @@ router.post('/webhooks/:provider', async (req, res) => {
       }
 
       // 3. Update Transaction Status
-      const transaction = await prisma.transaction.update({
-        where: { referenceId: referenceId },
-        data: { 
-          status: 'COMPLETED',
-          completedAt: getLegacyManilaDate()
-        }
-      });
+      let transaction;
+      if (process.env.VERCEL === '1') {
+        await prisma.$executeRawUnsafe(
+          `UPDATE ${tableName} SET status = 'COMPLETED', "completedAt" = NOW() WHERE "referenceId" = $1`,
+          referenceId
+        );
+        // Refresh transaction object
+        const results = await prisma.$queryRawUnsafe(
+          `SELECT id, amount, status, type, metadata, "senderId", "receiverId", "referenceId" FROM ${tableName} WHERE "referenceId" = $1 LIMIT 1`,
+          referenceId
+        );
+        transaction = results[0];
+      } else {
+        transaction = await prisma.transaction.update({
+          where: { referenceId: referenceId },
+          data: { 
+            status: 'COMPLETED',
+            completedAt: getLegacyManilaDate()
+          }
+        });
+      }
 
       // 3.1 Create Compliance Audit Log (BSP Circular 808)
       const auditLog = await createCentralizedAuditLog({
@@ -705,10 +774,24 @@ router.post('/webhooks/:provider', async (req, res) => {
       }
     } else if (status === 'failed' || status === 'FAILED' || status === 'cancelled' || status === 'CANCELLED') {
       // Handle Failure/Cancellation
-      const transaction = await prisma.transaction.update({
-        where: { referenceId: referenceId },
-        data: { status: status.toUpperCase() }
-      });
+      let transaction;
+      if (process.env.VERCEL === '1') {
+        await prisma.$executeRawUnsafe(
+          `UPDATE ${tableName} SET status = $1 WHERE "referenceId" = $2`,
+          status.toUpperCase(),
+          referenceId
+        );
+        const results = await prisma.$queryRawUnsafe(
+          `SELECT id, amount, status, type, metadata, "senderId", "receiverId", "referenceId" FROM ${tableName} WHERE "referenceId" = $1 LIMIT 1`,
+          referenceId
+        );
+        transaction = results[0];
+      } else {
+        transaction = await prisma.transaction.update({
+          where: { referenceId: referenceId },
+          data: { status: status.toUpperCase() }
+        });
+      }
 
       const auditLog = await createCentralizedAuditLog({
         action: `GATEWAY_PAYMENT_${status.toUpperCase()}`,
