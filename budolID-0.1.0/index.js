@@ -1358,9 +1358,11 @@ app.post('/auth/register', async (req, res) => {
     const { email, password, firstName, lastName, phoneNumber } = req.body;
     try {
         // 1. CyberSecurity: Password Complexity Validation (BSP/PCI DSS)
-        const passwordRegex = /^(?=.*\\d)(?=.*[!@#$%^&*])(?=.*[a-z])(?=.*[A-Z]).{8,}$/;
-        if (!passwordRegex.test(password)) {
-            return res.status(400).json({ error: 'Password must be at least 8 characters and include uppercase, lowercase, number, and special character.' });
+        // Skip for Quick Registration (Phone Only) where password is auto-generated
+        const isQuickReg = req.body.isQuickReg === true || req.body.registrationType === 'phone_only';
+        const passwordRegex = /^(?=.*\d)(?=.*[!@#$%^&*])(?=.*[a-z])(?=.*[A-Z]).{8,}$/;
+        if (!isQuickReg && !passwordRegex.test(password)) {
+            return res.status(400).json({ error: `SSO-SECURE: Password must be at least 8 characters and include uppercase, lowercase, number, and special character. (Debug: isQuickReg=${isQuickReg}, type=${req.body.registrationType})` });
         }
 
         // 2. NPC Compliance: Normalize phone number if provided

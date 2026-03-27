@@ -74,9 +74,9 @@ export async function POST(request) {
 
         // PH Cybersecurity & BSP Compliance: Password Complexity Validation
         const passwordRegex = /^(?=.*\d)(?=.*[!@#$%^&*])(?=.*[a-z])(?=.*[A-Z]).{8,}$/;
-        if (!passwordRegex.test(password)) {
+        if (!isQuickReg && !passwordRegex.test(password)) {
             return NextResponse.json(
-                { error: 'Password must be at least 8 characters and include uppercase, lowercase, number, and special character.' },
+                { error: `PH Cybersecurity: Password must be at least 8 characters and include uppercase, lowercase, number, and special character. (Debug: isQuickReg=${isQuickReg}, type=${registrationType})` },
                 { status: 400 }
             )
         }
@@ -113,7 +113,8 @@ export async function POST(request) {
                 phoneNumber,
                 registrationIp: ip,
                 deviceFingerprint: deviceFingerprint || 'unknown-device',
-                profilePicture: image // Pass the profile picture for trust scoring
+                profilePicture: image, // Pass the profile picture for trust scoring
+                registrationType
             });
 
             console.log('[Eco-Sync] Successfully registered in budolID:', budolIdResult.userId);

@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 
-const BUDOL_ID_URL = process.env.BUDOL_ID_URL || 'http://localhost:8000';
+const BUDOL_ID_URL = process.env.BUDOL_ID_URL || process.env.NEXT_PUBLIC_SSO_URL || 'http://127.0.0.1:8000';
 
 export async function GET(request) {
     const { searchParams } = new URL(request.url);

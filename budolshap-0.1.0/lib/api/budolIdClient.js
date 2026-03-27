@@ -6,7 +6,8 @@
 const BUDOL_ID_URL = process.env.BUDOL_ID_URL || 
                      process.env.AUTH_SERVICE_URL || 
                      process.env.SSO_URL || 
-                      'http://localhost:8000';
+                     process.env.NEXT_PUBLIC_SSO_URL ||
+                      'http://127.0.0.1:8000';
  
  // Helper to construct URL based on service port
  const getServiceUrl = (endpoint) => {
@@ -36,7 +37,8 @@ export async function registerWithBudolId(userData) {
         phoneNumber, 
         registrationIp, 
         deviceFingerprint,
-        profilePicture // New: profile picture for trust scoring
+        profilePicture,
+        registrationType // Pass registration type (standard or phone_only)
     } = userData;
     
     const url = getServiceUrl('/auth/register');
@@ -56,7 +58,8 @@ export async function registerWithBudolId(userData) {
                 phoneNumber,
                 registrationIp,
                 deviceFingerprint,
-                profilePicture
+                profilePicture,
+                registrationType
             }),
         });
 
