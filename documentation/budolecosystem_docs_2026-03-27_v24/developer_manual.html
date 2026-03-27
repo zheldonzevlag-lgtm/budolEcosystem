@@ -95,13 +95,19 @@ const { isLoading, list } = useSelector((state) => state.product);
 <p>On Vercel, both storefront and gateway share the same database instance. To prevent collision with the storefront's <code>Transaction</code> table, the gateway uses a dedicated <code>PgTransaction</code> table in the <code>public</code> schema. In local development, the gateway continues to use the standard <code>Transaction</code> table to maintain compatibility with existing local setups.</p>
 <pre>
 // Environment-aware table selection in Gateway
-const getTxTableName = () => (process.env.VERCEL === '1' ? '"PgTransaction"' : '"Transaction"');
+const IS_VERCEL = process.env.VERCEL === '1' || !!process.env.NEXT_PUBLIC_VERCEL_ENV;
+const tableName = IS_VERCEL ? '"PgTransaction"' : '"Transaction"';
 
 // Conditional execution for Vercel vs Local
-if (process.env.VERCEL === '1') {
+if (IS_VERCEL) {
   await prisma.$executeRawUnsafe(`INSERT INTO ${tableName} ...`);
 } else {
   await prisma.transaction.create({ data: { ... } });
+}
+
+// Guaranteed local server start
+if (!IS_VERCEL && process.env.NODE_ENV !== 'test') {
+  app.listen(PORT, '0.0.0.0', () => { ... });
 }
 </pre>
 <p><strong>Ref:</strong> <a href="file:///d:/IT%20Projects/clone/budolEcosystem/budolpay-0.1.0/services/payment-gateway-service/index.js">Gateway index.js</a></p>
