@@ -54,8 +54,26 @@ server.listen(PORT, () => {
     🚀 Socket.io Microservice Running!
     ----------------------------------
     PORT:    ${PORT}
-    TRIGGER: http://localhost:${PORT}/trigger
+    TRIGGER: /trigger
     ----------------------------------
     waiting for connections...
     `);
 });
+
+// Graceful Shutdown Handlers (Render/Production Support)
+const gracefulShutdown = () => {
+    console.log('🛑 Received kill signal, shutting down gracefully');
+    server.close(() => {
+        console.log('👋 Closed out remaining connections');
+        process.exit(0);
+    });
+
+    // Force close after 10s if not shut down
+    setTimeout(() => {
+        console.error('⚠️ Could not close connections in time, forcefully shutting down');
+        process.exit(1);
+    }, 10000);
+};
+
+process.on('SIGTERM', gracefulShutdown);
+process.on('SIGINT', gracefulShutdown);

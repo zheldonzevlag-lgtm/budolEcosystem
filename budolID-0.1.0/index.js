@@ -1,6 +1,7 @@
 require('dotenv').config();
 const express = require('express');
 const { PrismaClient } = require('./generated/client');
+const { triggerRealtimeEvent } = require('./utils/realtime');
 const jwt = require('jsonwebtoken');
 const bcrypt = require('bcryptjs');
 const cors = require('cors');
@@ -1127,6 +1128,13 @@ app.post('/auth/sso/login-form', async (req, res) => {
             }
         });
 
+        // Notify Ecosystem of SSO Login
+        await triggerRealtimeEvent('ecosystem:sso', 'sso:login', {
+            userId: user.id,
+            email: user.email,
+            appName: ecosystemApp.name
+        });
+
         res.redirect(`${ecosystemApp.redirectUri}?token=${token}`);
     } catch (error) {
         res.status(500).send(error.message);
@@ -1403,6 +1411,12 @@ app.post('/auth/register', async (req, res) => {
         // 5. BIR/BSP Audit Logging: Record creation event without exposing full PII
         console.log(`\n[AUDIT LOG] Account Created | Timestamp: ${new Date().toISOString()} | UserID: ${user.id} | Email: ${maskPII(email)} | Status: SUCCESS`);
 
+        // Notify Ecosystem of New Registration
+        await triggerRealtimeEvent('ecosystem:sso', 'sso:register', {
+            userId: user.id,
+            email: user.email
+        });
+
         res.status(201).json({ message: 'User created in budolID', userId: user.id });
     } catch (error) {
         console.error('[Registration Error]:', error.message);
@@ -1529,6 +1543,14 @@ app.post('/auth/sso/login', async (req, res) => {
                 token,
                 expiresAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000)
             }
+        });
+
+        // Notify Ecosystem of SSO Login (API)
+        await triggerRealtimeEvent('ecosystem:sso', 'sso:login', {
+            userId: user.id,
+            email: user.email,
+            appName: ecosystemApp.name,
+            method: identifierType
         });
 
         console.log(`[SSO Login API] Success for ${identifierType}:`, email);

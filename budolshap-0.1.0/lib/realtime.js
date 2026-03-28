@@ -107,48 +107,71 @@ export async function triggerRealtimeEvent(channel, event, data) {
             }
         }
 
-        // 1. POLLING MODE (Default/Fallback)
-        if (provider === 'POLLING') {
+        // 1. POLLING MODE (Direct POLLING if configured or as a fallback)
+        if (provider === 'POLLING' || provider === 'SWR') {
             return { success: true, mode: 'POLLING' };
         }
 
-        // 2. PUSHER MODE
-        if (provider === 'PUSHER') {
-            const pusher = getPusher(settings);
-            await pusher.trigger(channel, event, data);
-            return { success: true, mode: 'PUSHER' };
-        }
+        // Multi-Layer Fallback Chain (Only active in Production)
+        const isProduction = process.env.NODE_ENV === 'production';
 
-        // 3. SOCKET_IO MODE
+        // 2. SOCKET_IO (Primary)
         if (provider === 'SOCKET_IO') {
-            // Configuration for WebSocket trigger
-            // In Production (AWS), triggers should use internal VPC DNS for security and speed
-            const internalUrl = process.env.INTERNAL_WS_URL || settings.socketUrl || 'http://localhost:4000';
-            const triggerUrl = `${internalUrl}/trigger`;
+            try {
+                const internalUrl = process.env.INTERNAL_WS_URL || settings.socketUrl || 'http://localhost:4000';
+                const triggerUrl = `${internalUrl}/trigger`;
 
-            console.log(`[Realtime] Triggering Socket.io event [${event}] on [${channel}] via ${triggerUrl}`);
+                console.log(`[Realtime] Triggering Socket.io event [${event}] via ${triggerUrl}`);
 
-            const response = await fetch(triggerUrl, {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json'
-                },
-                body: JSON.stringify({
-                    channel,
-                    event,
-                    data
-                })
-            });
+                const response = await fetch(triggerUrl, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ channel, event, data }),
+                    signal: AbortSignal.timeout(3500) // 3.5s timeout for production fallback
+                });
 
-            if (!response.ok) {
-                const errorText = await response.text();
-                throw new Error(`Socket.io trigger failed: ${response.status} ${errorText}`);
+                if (response.ok) {
+                    return { success: true, mode: 'SOCKET_IO' };
+                }
+                
+                if (isProduction) {
+                    console.warn(`[Realtime] Socket.io failed (${response.status}) in PROD. Falling back to Pusher...`);
+                    provider = 'PUSHER'; // Move to next step in chain
+                } else {
+                    const errorText = await response.text();
+                    throw new Error(`Socket.io trigger failed: ${response.status} ${errorText}`);
+                }
+            } catch (err) {
+                if (isProduction) {
+                    console.error(`[Realtime] Socket.io error in PROD: ${err.message}. Falling back to Pusher...`);
+                    provider = 'PUSHER';
+                } else {
+                    throw err;
+                }
             }
-
-            return { success: true, mode: 'SOCKET_IO' };
         }
 
-        return { success: false, error: 'Unknown provider' };
+        // 3. PUSHER (Secondary Fallback - Only if Socket.io failed in PROD)
+        if (provider === 'PUSHER') {
+            if (settings.pusherAppId && settings.pusherKey && settings.pusherSecret && settings.pusherCluster) {
+                try {
+                    const pusher = getPusher(settings);
+                    await pusher.trigger(channel, event, data);
+                    return { success: true, mode: isProduction ? 'PUSHER (Fallback)' : 'PUSHER' };
+                } catch (pusherErr) {
+                    console.error(`[Realtime] Pusher failed: ${pusherErr.message}`);
+                }
+            } else if (isProduction) {
+                console.warn("[Realtime] Pusher fallback skipped (Missing credentials).");
+            }
+            // Final level in production fallback: Success but client will poll
+            if (isProduction) {
+                console.log("[Realtime] Final level fallback to POLLING for prod triggered event.");
+                return { success: true, mode: 'POLLING (Final Fallback)' };
+            }
+        }
+
+        return { success: false, error: 'Unknown provider or provider failed' };
     } catch (error) {
         console.error("[Realtime] Event trigger failed:", error.message);
         return { success: false, error: error.message };

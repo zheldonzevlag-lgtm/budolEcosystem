@@ -79,55 +79,73 @@ function getPusher(settings: Record<string, string>) {
 export async function triggerRealtimeEvent(channel: string, event: string, data: any) {
   try {
     const settings = await getSettings();
-    const provider = settings['REALTIME_METHOD'] || 'SWR';
+    let provider = settings['REALTIME_METHOD'] || 'SWR';
+    const isProduction = process.env.NODE_ENV === 'production';
 
     console.log(`[Realtime-Server] Triggering event ${event} on channel ${channel} using ${provider}`);
 
+    // 1. SOCKETIO Block with Production Fallback
+    if (provider === 'SOCKETIO') {
+      try {
+        // Prioritize internal VPC URL for server-side triggers
+        let socketUrl = process.env.INTERNAL_WS_URL || settings['REALTIME_SOCKETIO_URL'] || 'http://localhost:4000';
+        const localIp = process.env.LOCAL_IP;
+
+        if (socketUrl.includes('localhost') && localIp && !isProduction) {
+          socketUrl = socketUrl.replace('localhost', localIp);
+        }
+
+        const triggerUrl = `${socketUrl}/trigger`;
+        console.log(`[Realtime-Server] Sending trigger to ${triggerUrl}`);
+
+        const response = await fetch(triggerUrl, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ channel, event, data }),
+          signal: AbortSignal.timeout(3500) // Fast fallback for potentially sleeping Render service
+        });
+
+        if (response.ok) {
+          return { success: true, mode: 'SOCKETIO' };
+        }
+
+        if (isProduction) {
+          console.warn(`[Realtime-Server] Socket.io failed (${response.status}) in PROD. Falling back to PUSHER...`);
+          provider = 'PUSHER';
+        } else {
+          const errorText = await response.text();
+          throw new Error(`Socket.io trigger failed: ${response.status} ${errorText}`);
+        }
+      } catch (err: any) {
+        if (isProduction) {
+          console.error(`[Realtime-Server] Socket.io error in PROD: ${err.message}. Falling back to PUSHER...`);
+          provider = 'PUSHER';
+        } else {
+          throw err;
+        }
+      }
+    }
+
+    // 2. PUSHER Block (Secondary or Direct)
     if (provider === 'PUSHER') {
       const pusher = getPusher(settings);
       if (pusher) {
-        await pusher.trigger(channel, event, data);
-        return { success: true, mode: 'PUSHER' };
+        try {
+          await pusher.trigger(channel, event, data);
+          return { success: true, mode: isProduction ? 'PUSHER (Fallback)' : 'PUSHER' };
+        } catch (pusherErr: any) {
+          console.error(`[Realtime-Server] Pusher trigger failed: ${pusherErr.message}`);
+          if (isProduction) provider = 'SWR';
+          else throw pusherErr;
+        }
       } else {
-        console.warn("[Realtime-Server] Pusher credentials missing. Falling back to SWR (no-op).");
+        console.warn("[Realtime-Server] Pusher credentials missing.");
+        if (isProduction) provider = 'SWR';
       }
     }
 
-    if (provider === 'SOCKETIO') {
-      // Prioritize internal VPC URL for server-side triggers
-      let socketUrl = process.env.INTERNAL_WS_URL || settings['REALTIME_SOCKETIO_URL'] || 'http://localhost:4000';
-      const localIp = process.env.LOCAL_IP;
-
-      if (socketUrl.includes('localhost') && localIp) {
-        socketUrl = socketUrl.replace('localhost', localIp);
-      }
-
-      const triggerUrl = `${socketUrl}/trigger`;
-
-      console.log(`[Realtime-Server] Sending trigger to ${triggerUrl}`);
-
-      const response = await fetch(triggerUrl, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify({
-          channel,
-          event,
-          data
-        })
-      });
-
-      if (!response.ok) {
-        const errorText = await response.text();
-        throw new Error(`Socket.io trigger failed: ${response.status} ${errorText}`);
-      }
-
-      return { success: true, mode: 'SOCKETIO' };
-    }
-
-    // SWR/POLLING mode doesn't need explicit trigger, clients will poll
-    if (provider === 'SWR') {
+    // 3. SWR/POLLING Block (Tertiary Fallback)
+    if (provider === 'SWR' || provider === 'POLLING') {
       return { success: true, mode: 'SWR' };
     }
 
