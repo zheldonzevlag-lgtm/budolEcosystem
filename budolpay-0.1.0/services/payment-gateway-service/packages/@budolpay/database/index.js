@@ -8,14 +8,15 @@ const globalForPrisma = global;
 // Both budolshap and payment-gateway-service share the same Vercel Postgres instance.
 // PgTransaction table exists in the 'public' schema.
 const getDatabaseUrl = () => {
-  const url = process.env.DATABASE_URL;
+  let url = process.env.DATABASE_URL;
   if (!url) return undefined;
-  // Remove any existing schema= parameter to ensure public schema access
+  
+  // Trim whitespace/CRLF (Vercel sync hack)
+  url = url.trim();
+
+  // NOTE: In the unified Vercel cluster, we use isolated schemas (budolpay, budolid, etc.)
   const baseUrl = url.split('?')[0];
   const params = new URLSearchParams(url.split('?')[1] || '');
-  if (process.env.VERCEL === '1') {
-    params.delete('schema'); // Use default 'public' schema on Vercel shared DB
-  }
   const paramStr = params.toString();
   return paramStr ? `${baseUrl}?${paramStr}` : baseUrl;
 };

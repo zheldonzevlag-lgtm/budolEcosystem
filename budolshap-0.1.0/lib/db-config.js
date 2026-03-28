@@ -29,6 +29,12 @@ export function configureDatabaseEnv() {
         // Production: Use Vercel Postgres
         console.log('🔵 Using PostgreSQL (Production/Vercel)');
 
+        // Prefer PRISMA_DATABASE_URL (Prisma Accelerate) if DATABASE_URL is not set
+        // PRISMA_DATABASE_URL is the accelerate-format URL set by Vercel's Prisma Postgres integration
+        if (!process.env.DATABASE_URL && process.env.PRISMA_DATABASE_URL) {
+            process.env.DATABASE_URL = process.env.PRISMA_DATABASE_URL;
+        }
+
         // Vercel Postgres provides these variables
         if (!process.env.DATABASE_URL && process.env.POSTGRES_PRISMA_URL) {
             process.env.DATABASE_URL = process.env.POSTGRES_PRISMA_URL;

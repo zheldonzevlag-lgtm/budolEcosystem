@@ -1,0 +1,98 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>System Admin Manual - v27 Database Mirroring</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --primary: #0052CC;
+            --bg-sidebar: #F4F5F7;
+            --text-main: #172B4D;
+            --text-sub: #6B778C;
+            --border: #DFE1E6;
+            --accent-green-bg: #E3FCEF;
+            --accent-green-text: #006644;
+        }
+        body { font-family: 'Inter', sans-serif; margin: 0; display: flex; color: var(--text-main); background: #FFFFFF; }
+        .sidebar { width: 280px; background: var(--bg-sidebar); height: 100vh; border-right: 1px solid var(--border); padding: 24px; position: fixed; }
+        .sidebar h2 { font-size: 14px; color: var(--text-sub); text-transform: uppercase; letter-spacing: 1px; margin-bottom: 16px; }
+        .sidebar-nav { list-style: none; padding: 0; }
+        .sidebar-nav li { margin-bottom: 8px; }
+        .sidebar-nav a { text-decoration: none; color: var(--text-main); font-size: 15px; display: block; padding: 8px 12px; border-radius: 4px; transition: background 0.2s; }
+        .sidebar-nav a:hover, .sidebar-nav a.active { background: #EBECF0; color: var(--primary); }
+        .main-content { margin-left: 280px; padding: 48px 80px; width: 100%; max-width: 1000px; }
+        .header { margin-bottom: 40px; }
+        .header h1 { font-size: 32px; margin: 0 0 8px 0; }
+        .card { background: #FFFFFF; border: 1px solid var(--border); border-radius: 8px; padding: 24px; margin-bottom: 32px; box-shadow: 0 1px 2px rgba(0,0,0,0.05); }
+        .card h3 { margin-top: 0; font-size: 20px; }
+        .terminal { background: #172B4D; color: #FFFFFF; padding: 16px; border-radius: 6px; font-family: 'Fira Code', monospace; font-size: 13px; line-height: 1.5; margin: 16px 0; overflow-x: auto; }
+        .step { display: flex; gap: 12px; margin-bottom: 12px; }
+        .step-num { min-width: 24px; height: 24px; background: var(--primary); color: #FFF; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 12px; font-weight: 700; }
+    </style>
+</head>
+<body>
+    <div class="sidebar">
+        <h2>Documentation</h2>
+        <ul class="sidebar-nav">
+            <li><a href="index.html">Overview</a></li>
+            <li><a href="implementation_plan.html">Implementation Plan</a></li>
+            <li><a href="walkthrough.html">Walkthrough</a></li>
+            <li><a href="developer_manual.html">Developer Manual</a></li>
+            <li><a href="system_admin_manual.html" class="active">System Admin</a></li>
+            <li><a href="user_manual.html">User Manual</a></li>
+            <li><a href="risk_register.html">Risk Register</a></li>
+            <li><a href="Mitigation.html">Mitigations</a></li>
+            <li><a href="issues & fixes.html">Issues & Fixes</a></li>
+            <li><a href="test_results.html">Test Results</a></li>
+            <li><a href="future_recommendations.html">Future Recommendations</a></li>
+        </ul>
+        <hr style="border: 0; border-top: 1px solid var(--border); margin: 24px 0;">
+        <h2>Links</h2>
+        <ul class="sidebar-nav">
+            <li><a href="../../knowledgebase.html">Back to Knowledge Base</a></li>
+        </ul>
+    </div>
+
+    <div class="main-content">
+        <div class="header">
+            <h1>System Admin Manual</h1>
+            <div class="metadata">
+                <span>Version: 27.0.0</span>
+                <span>Component: Vercel Postgres Infrastructure</span>
+            </div>
+        </div>
+
+        <div class="card">
+            <h3>Infrastructure Connection</h3>
+            <p>Admin access to the consolidated Vercel PostgreSQL instance is restricted to authenticated psql clients using SSL mode. The following environment variables must be configured in Vercel to maintain mirroring integrity:</p>
+            <div class="terminal">
+                DATABASE_URL="postgres://[USER]:[PASS]@[HOST]:5432/postgres?sslmode=require"<br>
+                PRISMA_DATABASE_URL="prisma+postgres://[API_KEY]@[PROXY_HOST]/"
+            </div>
+        </div>
+
+        <div class="card">
+            <h3>Standard Mirroring Procedure</h3>
+            <div class="step">
+                <div class="step-num">1</div>
+                <div class="step-text"><strong>Wipe Schemas:</strong> Clear existing tables in <code>public</code>, <code>budolid</code>, <code>budolpay</code>, and <code>budolaccounting</code> using the <code>wipe.sql</code> utility script.</div>
+            </div>
+            <div class="step">
+                <div class="step-num">2</div>
+                <div class="step-text"><strong>Import Base:</strong> Execute <code>psql -f budolshap_1db.sql</code> which reconstructs the public, id, and pay schemas.</div>
+            </div>
+            <div class="step">
+                <div class="step-num">3</div>
+                <div class="step-text"><strong>Import Accounting:</strong> Execute <code>psql -f budolAccounting.sql</code> ensuring the search path is set to the <code>budolaccounting</code> schema.</div>
+            </div>
+        </div>
+
+        <div class="card">
+            <h3>Backup Location</h3>
+            <p>Manual SQL backups are stored on the localized server: <code>G:\IT\database-backup\03-29-2026\</code></p>
+        </div>
+    </div>
+</body>
+</html>

@@ -45,8 +45,9 @@ export default function Home() {
     })
 
     // Robust synchronization with Redux
+    // Guard: only dispatch if swrData is a valid array (API may return error objects on failure)
     useEffect(() => {
-        if (swrData && JSON.stringify(swrData) !== JSON.stringify(products)) {
+        if (swrData && Array.isArray(swrData) && JSON.stringify(swrData) !== JSON.stringify(products)) {
             dispatch(setProduct(swrData))
         }
     }, [swrData, products, dispatch])

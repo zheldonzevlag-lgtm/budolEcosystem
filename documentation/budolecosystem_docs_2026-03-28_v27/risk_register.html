@@ -1,0 +1,103 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Risk Register & Mitigations - v27 Database Mirroring</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --primary: #0052CC;
+            --bg-sidebar: #F4F5F7;
+            --text-main: #172B4D;
+            --text-sub: #6B778C;
+            --border: #DFE1E6;
+        }
+        body { font-family: 'Inter', sans-serif; margin: 0; display: flex; color: var(--text-main); background: #FFFFFF; }
+        .sidebar { width: 280px; background: var(--bg-sidebar); height: 100vh; border-right: 1px solid var(--border); padding: 24px; position: fixed; }
+        .sidebar h2 { font-size: 14px; color: var(--text-sub); text-transform: uppercase; letter-spacing: 1px; margin-bottom: 16px; }
+        .sidebar-nav { list-style: none; padding: 0; }
+        .sidebar-nav li { margin-bottom: 8px; }
+        .sidebar-nav a { text-decoration: none; color: var(--text-main); font-size: 15px; display: block; padding: 8px 12px; border-radius: 4px; transition: background 0.2s; }
+        .sidebar-nav a:hover, .sidebar-nav a.active { background: #EBECF0; color: var(--primary); }
+        .main-content { margin-left: 280px; padding: 48px 80px; width: 100%; max-width: 1000px; }
+        .header { margin-bottom: 40px; }
+        .header h1 { font-size: 32px; margin: 0 0 8px 0; }
+        .card { background: #FFFFFF; border: 1px solid var(--border); border-radius: 8px; padding: 24px; margin-bottom: 32px; box-shadow: 0 1px 2px rgba(0,0,0,0.05); }
+        .card h3 { margin-top: 0; font-size: 20px; }
+        th, td { padding: 12px; text-align: left; border-bottom: 1px solid var(--border); }
+        .risk-high { color: #DE350B; font-weight: 700; }
+        .risk-medium { color: #FF991F; font-weight: 700; }
+    </style>
+</head>
+<body>
+    <div class="sidebar">
+        <h2>Documentation</h2>
+        <ul class="sidebar-nav">
+            <li><a href="index.html">Overview</a></li>
+            <li><a href="implementation_plan.html">Implementation Plan</a></li>
+            <li><a href="walkthrough.html">Walkthrough</a></li>
+            <li><a href="developer_manual.html">Developer Manual</a></li>
+            <li><a href="system_admin_manual.html">System Admin</a></li>
+            <li><a href="user_manual.html">User Manual</a></li>
+            <li><a href="risk_register.html" class="active">Risk Register</a></li>
+            <li><a href="Mitigation.html">Mitigations</a></li>
+            <li><a href="issues & fixes.html">Issues & Fixes</a></li>
+            <li><a href="test_results.html">Test Results</a></li>
+            <li><a href="future_recommendations.html">Future Recommendations</a></li>
+        </ul>
+        <hr style="border: 0; border-top: 1px solid var(--border); margin: 24px 0;">
+        <h2>Links</h2>
+        <ul class="sidebar-nav">
+            <li><a href="../../knowledgebase.html">Back to Knowledge Base</a></li>
+        </ul>
+    </div>
+
+    <div class="main-content">
+        <h1>Risk Register & Mitigation Strategy</h1>
+        
+        <div class="card">
+            <h3>Risk Register</h3>
+            <table style="width: 100%; border-collapse: collapse;">
+                <thead>
+                    <tr>
+                        <th>ID</th>
+                        <th>Risk Description</th>
+                        <th>Severity</th>
+                        <th>Status</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td>R-01</td>
+                        <td>Schema Collision (Public Namespace)</td>
+                        <td class="risk-high">HIGH</td>
+                        <td>RESOLVED</td>
+                    </tr>
+                    <tr>
+                        <td>R-02</td>
+                        <td>Restricted Superuser Privileges (Vercel)</td>
+                        <td class="risk-medium">MEDIUM</td>
+                        <td>MONITORING</td>
+                    </tr>
+                    <tr>
+                        <td>R-03</td>
+                        <td>Socket.io Local IP Leak</td>
+                        <td class="risk-medium">MEDIUM</td>
+                        <td>OPEN</td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+
+        <div class="card">
+            <h3>Mitigation Details</h3>
+            <ul>
+                <li><strong>R-01:</strong> Implemented <code>wipe.sql</code> to cascade-drop all ecosystem tables before restoration, ensuring no legacy Prisma fragments cause key collisions.</li>
+                <li><strong>R-02:</strong> Stripped <code>REVOKE</code> commands from SQL dumps that targeted system roles not owned by the Vercel user. Verified table ownership post-import.</li>
+                <li><strong>R-03:</strong> Documented the requirement to update client-side environment variables for the WebSocket server (Socket.io) to point to the production gateway instead of <code>192.168.1.10</code>.</li>
+            </ul>
+        </div>
+    </div>
+</body>
+</html>

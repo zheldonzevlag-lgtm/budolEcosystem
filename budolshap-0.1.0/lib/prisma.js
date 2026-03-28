@@ -39,6 +39,20 @@ const globalForPrisma = globalThis
 // Use a version-specific key to force reload of Prisma Client when this file changes
 const prismaKey = 'prisma_v330'
 
+// Trim any trailing whitespace/CRLF from critical env vars
+// Reason: Vercel env sync can introduce \r\n at end of values, corrupting connection strings
+if (typeof window === 'undefined') {
+    if (process.env.DATABASE_URL) {
+        process.env.DATABASE_URL = process.env.DATABASE_URL.trim();
+    }
+    if (process.env.DIRECT_URL) {
+        process.env.DIRECT_URL = process.env.DIRECT_URL.trim();
+    }
+    if (process.env.POSTGRES_URL) {
+        process.env.POSTGRES_URL = process.env.POSTGRES_URL.trim();
+    }
+}
+
 export const prisma = globalForPrisma[prismaKey] || new PrismaClient({
     datasources: {
         db: {

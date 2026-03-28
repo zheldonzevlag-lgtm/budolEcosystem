@@ -16,16 +16,18 @@ export class BudolPayAdapter extends BasePaymentAdapter {
         const isVercel = process.env.VERCEL === '1' || !!process.env.NEXT_PUBLIC_VERCEL_ENV;
         const isStaleDuck = rawUrl.includes('duckdns.org');
         
-        if (isVercel || isStaleDuck) {
-            console.log(`[BudolPay Adapter] 🏗️ Production/Vercel Detected. (Stale: ${isStaleDuck}, Vercel: ${isVercel})`);
-            console.log('[BudolPay Adapter] 🚀 Overriding with healthy gateway: https://payment-gateway-service-two.vercel.app');
-            // FORCE healthy gateway mirror for production
-            this.gatewayUrl = 'https://payment-gateway-service-two.vercel.app';
+        if (!process.env.PAYMENT_GATEWAY_URL && isVercel) {
+            console.warn('[BudolPay Adapter] ⚠️ CRITICAL: PAYMENT_GATEWAY_URL is not set in Vercel. Falling back to localhost (this will likely fail in production).');
+        }
+
+        if (isStaleDuck) {
+            console.log(`[BudolPay Adapter] 🏗️ Stale Gateway Detected. (URL: ${rawUrl})`);
+            this.gatewayUrl = rawUrl;
         } else {
             this.gatewayUrl = rawUrl;
         }
 
-        console.log(`[BudolPayAdapter] Initialized with URL: ${this.gatewayUrl} (Raw Env URL: ${rawUrl})`);
+        console.log(`[BudolPayAdapter] Initialized. Gateway: ${this.gatewayUrl} | Env Vercel: ${process.env.VERCEL}`);
         
         this.apiKey = process.env.BUDOLPAY_API_KEY || 'bs_key_2025';
         
