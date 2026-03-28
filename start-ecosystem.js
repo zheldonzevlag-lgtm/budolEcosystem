@@ -109,7 +109,10 @@ async function start() {
             name: 'budolPay (Gateway)',
             cwd: path.join(__dirname, 'budolpay-0.1.0', 'services', 'payment-gateway-service'),
             command: 'node',
-            args: ['index.js'],
+            // WHY: Entry point moved from index.js -> api/index.js for Vercel serverless compatibility.
+            // api/index.js is the universal entry point that works for BOTH local and Vercel.
+            // The IS_VERCEL flag inside the file controls listen() vs module.exports behaviour.
+            args: ['api/index.js'],
             port: 8004,
             color: '\x1b[36m' // Cyan
         },

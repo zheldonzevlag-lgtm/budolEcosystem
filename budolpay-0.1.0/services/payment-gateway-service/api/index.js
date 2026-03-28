@@ -1,3 +1,4 @@
+require('dotenv').config({ path: require('path').resolve(__dirname, '../.env'), override: true });
 const IS_VERCEL = process.env.VERCEL === '1' || !!process.env.NEXT_PUBLIC_VERCEL_ENV;
 
 if (IS_VERCEL) {
