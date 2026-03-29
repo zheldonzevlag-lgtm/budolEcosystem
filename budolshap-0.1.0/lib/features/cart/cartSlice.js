@@ -5,7 +5,12 @@ const cartSlice = createSlice({
     initialState: {
         total: 0,
         cartItems: {},
-        isLoading: true,
+        // WHY: Start as false so the cart page never hangs on a spinner for
+        // guests or users with cleared site data. The layout sets isLoading=true
+        // explicitly before starting a server fetch, and setCart/setCartLoading(false)
+        // resolves it. Defaulting to true caused infinite spinners when the
+        // setCartLoading(false) dispatch raced against component rendering.
+        isLoading: false,
     },
     reducers: {
         addToCart: (state, action) => {

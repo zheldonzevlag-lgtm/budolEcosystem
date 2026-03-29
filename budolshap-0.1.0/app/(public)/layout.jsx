@@ -92,10 +92,10 @@ export default function PublicLayout({ children }) {
 
     // Fetch cart when userId is available or when navigating (fallback)
     useEffect(() => {
-        if (!userId) {
-            dispatch(setCartLoading(false));
-            return;
-        }
+        // WHY: If no userId (guest/cleared site data), cartSlice already starts at
+        // isLoading=false, so the cart page immediately shows the empty state.
+        // No spinner dispatch needed here.
+        if (!userId) return;
 
         const fetchCart = async (isBackground = false) => {
             if (!isBackground) console.log('[Layout] Fetching cart for user:', userId);
@@ -132,7 +132,8 @@ export default function PublicLayout({ children }) {
                     setInitialLoadDone(true);
                 } else {
                     console.error('[Layout] Failed to fetch cart, status:', response.status);
-                    // Do NOT enable auto-sync if fetch failed to avoid overwriting server data with empty state
+                    // Resolve the loading state on a failed response so the UI doesn't hang
+                    dispatch(setCartLoading(false));
                 }
             } catch (error) {
                 console.error("[Layout] Failed to fetch cart:", error);
@@ -141,12 +142,16 @@ export default function PublicLayout({ children }) {
             }
         };
 
-        // Reset initialLoadDone before fetching if userId changed
-        // But if it's just a pathname change, we do a background refresh
+        // Background refresh on pathname change (same user); foreground fetch on new login
         const isBackground = prevUserIdRef.current === userId;
         
         if (!isBackground) {
             setInitialLoadDone(false);
+            // WHY: Opt-in to loading spinner only when a real foreground fetch starts.
+            // Since cartSlice starts at isLoading=false, guests/cleared-data sessions
+            // never see a hanging spinner. We set true here only for logged-in users
+            // so setCart() (which sets isLoading=false) properly resolves the spinner.
+            dispatch(setCartLoading(true));
         }
         
         fetchCart(isBackground);
