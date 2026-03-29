@@ -6,6 +6,10 @@ import { toast } from "react-hot-toast"
 import { getUser } from "@/lib/auth-client"
 import AddressFormManager from "./address/AddressFormManager"
 
+// WHY: Empty defaults used when mode='address' so no PII from a previous
+// session bleeds into the form for a guest or a newly logged-in user.
+const EMPTY_CONTACT = { name: '', firstName: '', lastName: '', email: '', phone: '' };
+
 const AddressModal = ({ setShowAddressModal, onAddressesAdded, mode = 'address' }) => {
 
     const [userMeta, setUserMeta] = useState({ id: null, name: '', email: '', phone: '', address: null, hasPassword: false, kycStatus: 'UNVERIFIED' })
@@ -18,6 +22,9 @@ const AddressModal = ({ setShowAddressModal, onAddressesAdded, mode = 'address' 
         const loadUser = async () => {
             const localUser = getUser()
 
+            // WHY: If there is no local user, the modal must not open.
+            // clearAuth() now also expires cookies, so getUser() returns null
+            // immediately after logout — preventing PII from leaking into the form.
             if (!localUser) {
                 toast.error("Please login first")
                 setShowAddressModal(false)
@@ -30,27 +37,44 @@ const AddressModal = ({ setShowAddressModal, onAddressesAdded, mode = 'address' 
                     throw new Error("Unable to fetch user profile")
                 }
                 const dbUser = await response.json()
-                const name = dbUser?.name || localUser.name || ''
-                const email = dbUser?.email || localUser.email || ''
-                const phone = dbUser?.phoneNumber || localUser.phone || ''
-                // Security: Never send the hashed password to the client
                 const hasPassword = !!dbUser?.password && dbUser.password !== 'NO_PASSWORD_SET'
                 const kycStatus = dbUser?.kycStatus || 'UNVERIFIED'
-                
-                // Get extended name fields from metadata if available
-                const firstName = dbUser?.metadata?.firstName || ''
-                const lastName = dbUser?.metadata?.lastName || ''
-                
-                // Get the first address if it exists
                 const userAddress = dbUser?.Address?.[0] || null
-                
-                setUserMeta({ id: localUser.id, name, email, phone, address: userAddress, hasPassword, kycStatus, firstName, lastName })
+
+                // WHY: In 'address' mode the user is adding a NEW delivery address.
+                // Pre-filling name/phone/email with the logged-in user's data is a
+                // privacy risk — if the previous user's cookies hadn't been fully
+                // cleared, that data would appear for the next user.
+                // Only pre-fill contact info in 'profile' edit mode.
+                const contactInfo = isProfileMode
+                    ? {
+                        name: dbUser?.name || localUser.name || '',
+                        firstName: dbUser?.metadata?.firstName || '',
+                        lastName: dbUser?.metadata?.lastName || '',
+                        email: dbUser?.email || localUser.email || '',
+                        phone: dbUser?.phoneNumber || localUser.phone || '',
+                    }
+                    : EMPTY_CONTACT;
+
+                setUserMeta({
+                    id: localUser.id,
+                    ...contactInfo,
+                    address: userAddress,
+                    hasPassword,
+                    kycStatus
+                })
             } catch (error) {
                 console.error("Error loading user info:", error)
-                const nameFallback = localUser.name || ''
-                const emailFallback = localUser.email || ''
-                const phoneFallback = localUser.phone || ''
-                setUserMeta({ id: localUser.id, name: nameFallback, email: emailFallback, phone: phoneFallback, address: null, hasPassword: false })
+                setUserMeta({
+                    id: localUser.id,
+                    ...(isProfileMode
+                        ? { name: localUser.name || '', email: localUser.email || '', phone: localUser.phone || '', firstName: '', lastName: '' }
+                        : EMPTY_CONTACT
+                    ),
+                    address: null,
+                    hasPassword: false,
+                    kycStatus: 'UNVERIFIED'
+                })
                 toast.error(error.message || "Failed to load user info")
             } finally {
                 setIsLoadingUser(false)
@@ -58,6 +82,7 @@ const AddressModal = ({ setShowAddressModal, onAddressesAdded, mode = 'address' 
         }
 
         loadUser()
+    // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [setShowAddressModal])
 
     const handleSaveProfile = async (formData) => {
@@ -243,22 +268,26 @@ const AddressModal = ({ setShowAddressModal, onAddressesAdded, mode = 'address' 
 
                             <AddressFormManager 
                                 initialData={{ 
-                                    name: userMeta.name, 
+                                    // WHY: Contact fields (name/email/phone) are only populated from the
+                                    // DB user in 'profile' mode. In 'address' mode they start BLANK so
+                                    // a previous session's PII can never pre-fill a new address form.
+                                    name: userMeta.name,
                                     firstName: userMeta.firstName,
                                     lastName: userMeta.lastName,
-                                    email: userMeta.email, 
+                                    email: userMeta.email,
                                     phone: userMeta.phone,
                                     hasPassword: userMeta.hasPassword,
-                                    city: userMeta.address?.city || '',
-                                    barangay: userMeta.address?.barangay || '',
-                                    detailedAddress: userMeta.address?.street || '',
+                                    // Address location fields: only pre-fill in profile mode
+                                    city: isProfileMode ? (userMeta.address?.city || '') : '',
+                                    barangay: isProfileMode ? (userMeta.address?.barangay || '') : '',
+                                    detailedAddress: isProfileMode ? (userMeta.address?.street || '') : '',
                                     latitude: userMeta.address?.latitude || 14.5995,
                                     longitude: userMeta.address?.longitude || 120.9842,
-                                    zip: userMeta.address?.zip || '',
-                                    province: userMeta.address?.state || '',
-                                    notes: userMeta.address?.notes || '',
-                                    isDefault: userMeta.address?.isDefault || false,
-                                    label: userMeta.address?.label || ''
+                                    zip: isProfileMode ? (userMeta.address?.zip || '') : '',
+                                    province: isProfileMode ? (userMeta.address?.state || '') : '',
+                                    notes: '',
+                                    isDefault: false,
+                                    label: ''
                                 }}
                                 onSave={isProfileMode ? handleSaveProfile : handleSaveAddress}
                                 onCancel={() => setShowAddressModal(false)}

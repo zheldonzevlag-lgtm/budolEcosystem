@@ -41,10 +41,15 @@ export default function PublicLayout({ children }) {
                 const parsed = JSON.parse(savedCart);
                 if (parsed && typeof parsed === 'object') {
                     dispatch(setCart(parsed));
+                } else {
+                    dispatch(setCartLoading(false));
                 }
             } catch (e) {
                 console.error('Failed to parse cart from LS', e);
+                dispatch(setCartLoading(false));
             }
+        } else {
+            dispatch(setCartLoading(false));
         }
     }, [dispatch]);
 
@@ -87,7 +92,10 @@ export default function PublicLayout({ children }) {
 
     // Fetch cart when userId is available or when navigating (fallback)
     useEffect(() => {
-        if (!userId) return;
+        if (!userId) {
+            dispatch(setCartLoading(false));
+            return;
+        }
 
         const fetchCart = async (isBackground = false) => {
             if (!isBackground) console.log('[Layout] Fetching cart for user:', userId);

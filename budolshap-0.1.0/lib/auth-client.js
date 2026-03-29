@@ -109,13 +109,27 @@ export function setAuth(token, user) {
 
 export function clearAuth() {
     if (typeof window === 'undefined') return;
-    // Clear all storage to ensure no user data remains
+
+    // WHY: Clear all storage to ensure no user data remains after logout.
+    // This prevents other components (e.g., AddressModal) from reading
+    // stale PII from localStorage via getUser().
     localStorage.clear();
     sessionStorage.clear();
 
-    // Explicitly remove auth items (redundant but safe)
+    // Explicitly remove auth items (redundant but safe against partial clear)
     localStorage.removeItem('token');
     localStorage.removeItem('user');
+
+    // WHY: Expire auth cookies explicitly. Without this, getUser() can recover
+    // the old user from the `budolshap_user` cookie even after localStorage is
+    // cleared, causing PII (name, phone, email, address) to leak into the
+    // AddressModal form for guests on subsequent page interactions.
+    // Setting max-age=0 immediately expires the cookies.
+    const expireCookie = '; path=/; max-age=0; SameSite=Lax';
+    document.cookie = `budolshap_token=${expireCookie}`;
+    document.cookie = `budolshap_user=${expireCookie}`;
+    document.cookie = `token=${expireCookie}`;
+    document.cookie = `user=${expireCookie}`;
 }
 
 export async function logout() {
