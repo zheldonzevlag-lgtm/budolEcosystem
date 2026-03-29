@@ -1,4 +1,5 @@
-﻿const DOCS_MANIFEST = [
+const DOCS_MANIFEST = [
+    "budolecosystem_docs_2026-03-29_v30",
     "budolecosystem_docs_2026-03-29_v28",
     "budolecosystem_docs_2026-03-28_v27",
     "budolecosystem_docs_2026-03-27_v26",
