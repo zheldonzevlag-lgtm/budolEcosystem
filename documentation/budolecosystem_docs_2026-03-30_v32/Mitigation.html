@@ -1,0 +1,58 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Mitigation Strategy - v32 Mobile Vercel Sync</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        :root { --primary: #0052CC; --bg-sidebar: #F4F5F7; --text-main: #172B4D; --text-sub: #6B778C; --border: #DFE1E6; --warning: #FFAB00; }
+        body { font-family: 'Inter', sans-serif; margin: 0; display: flex; color: var(--text-main); }
+        .sidebar { width: 280px; background: var(--bg-sidebar); height: 100vh; border-right: 1px solid var(--border); padding: 24px; position: fixed; }
+        .sidebar-nav { list-style: none; padding: 0; }
+        .sidebar-nav a { text-decoration: none; color: var(--text-main); font-size: 15px; display: block; padding: 8px 12px; border-radius: 4px; }
+        .sidebar-nav a:hover, .sidebar-nav a.active { background: #EBECF0; color: var(--primary); }
+        .main-content { margin-left: 280px; padding: 48px 80px; width: 100%; max-width: 1000px; }
+        .strategy-card { border-left: 4px solid var(--warning); padding: 16px; background: #FFFAE6; margin-bottom: 24px; border-radius: 4px; }
+    </style>
+</head>
+<body>
+    <div class="sidebar">
+        <h2>v32 Docs</h2>
+        <ul class="sidebar-nav">
+            <li><a href="index.html">Overview</a></li>
+            <li><a href="implementation_plan.html">Implementation Plan</a></li>
+            <li><a href="walkthrough.html">Walkthrough</a></li>
+            <li><a href="Mitigation.html" class="active">Mitigation</a></li>
+            <li><a href="issues%20&%20fixes.html">Issues & Fixes</a></li>
+            <li><a href="future_recommendations.html">Future Recommendations</a></li>
+        </ul>
+        <hr style="border: 0; border-top: 1px solid var(--border); margin: 24px 0;">
+        <ul class="sidebar-nav">
+            <li><a href="../../knowledgebase.html">Back to Knowledge Base</a></li>
+        </ul>
+    </div>
+
+    <div class="main-content">
+        <h1>Mitigation Strategies: v32 Production Release</h1>
+        
+        <div class="strategy-card">
+            <h3>M1: Schema Drift Mitigation</h3>
+            <p><strong>ISSUE:</strong> Local dev uses different schemas than Vercel production by default.</p>
+            <p><strong>MITIGATION:</strong> Standardized <code>DATABASE_URL</code> in <code>push_env.cjs</code> to include <code>&schema=budolpay</code>. Added verification scripts to confirm column existence before app logic execution.</p>
+        </div>
+
+        <div class="strategy-card">
+            <h3>M2: "Account not found" Prevention</h3>
+            <p><strong>ISSUE:</strong> Philippine phone number formats (+63 vs 09) vary between app input and DB storage.</p>
+            <p><strong>MITIGATION:</strong> Implemented a "Smart Normalizer" in the <code>check-phone</code> API bridge. The query now performs an OR search across 4 formats: exact, 09x, +639x, and bare 9x.</p>
+        </div>
+
+        <div class="strategy-card">
+            <h3>M3: Local Dev Stability</h3>
+            <p><strong>ISSUE:</strong> Porting Vercel code might break local Express services.</p>
+            <p><strong>MITIGATION:</strong> New API bridges are "Passive Additions" in the <code>admin</code> Next.js app. The mobile app continues to prioritize port 8001 for local connections, ensuring zero impact on development stability.</p>
+        </div>
+    </div>
+</body>
+</html>

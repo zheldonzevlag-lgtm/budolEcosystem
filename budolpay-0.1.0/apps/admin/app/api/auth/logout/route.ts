@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server';
+export const dynamic = "force-dynamic";
 import { cookies } from 'next/headers';
 import { prisma } from '@/lib/prisma';
 import { createAuditLog } from '@/lib/audit';

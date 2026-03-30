@@ -1,0 +1,82 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Walkthrough - v32 Mobile Vercel Sync</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        :root { --primary: #0052CC; --bg-sidebar: #F4F5F7; --text-main: #172B4D; --text-sub: #6B778C; --border: #DFE1E6; }
+        body { font-family: 'Inter', sans-serif; margin: 0; display: flex; color: var(--text-main); }
+        .sidebar { width: 280px; background: var(--bg-sidebar); height: 100vh; border-right: 1px solid var(--border); padding: 24px; position: fixed; }
+        .sidebar-nav { list-style: none; padding: 0; }
+        .sidebar-nav a { text-decoration: none; color: var(--text-main); font-size: 15px; display: block; padding: 8px 12px; border-radius: 4px; }
+        .sidebar-nav a:hover, .sidebar-nav a.active { background: #EBECF0; color: var(--primary); }
+        .main-content { margin-left: 280px; padding: 48px 80px; width: 100%; max-width: 1000px; }
+        .diff-box { background: #F4F5F7; border: 1px solid var(--border); border-radius: 6px; padding: 20px; margin: 20px 0; }
+        .diff-title { font-weight: 700; font-size: 14px; margin-bottom: 12px; color: var(--text-sub); text-transform: uppercase; }
+        .code-added { color: #006644; background: #E3FCEF; padding: 2px 4px; border-radius: 3px; }
+        .code-removed { color: #BF2600; background: #FFEBE6; padding: 2px 4px; border-radius: 3px; }
+    </style>
+</head>
+<body>
+    <div class="sidebar">
+        <h2>v32 Docs</h2>
+        <ul class="sidebar-nav">
+            <li><a href="index.html">Overview</a></li>
+            <li><a href="implementation_plan.html">Implementation Plan</a></li>
+            <li><a href="walkthrough.html" class="active">Walkthrough</a></li>
+            <li><a href="developer_manual.html">Developer Manual</a></li>
+            <li><a href="risk_register.html">Risk Register</a></li>
+        </ul>
+        <hr style="border: 0; border-top: 1px solid var(--border); margin: 24px 0;">
+        <ul class="sidebar-nav">
+            <li><a href="../../knowledgebase.html">Back to Knowledge Base</a></li>
+        </ul>
+    </div>
+
+    <div class="main-content">
+        <h1>Technical Walkthrough: Mobile Vercel Bridge</h1>
+
+        <section>
+            <h3>1. Problem Discovery: The "Account not found" Mystery</h3>
+            <p>Users like <strong>Tony Stark</strong> were seeing "Account not found" on the mobile app when connected to Vercel, despite their records existing in the database.</p>
+            <div class="diff-box">
+                <div class="diff-title">Discrepancy Analysis</div>
+                <ul>
+                    <li><strong>Mobile App:</strong> Normalizes inputs to <code>+63...</code>.</li>
+                    <li><strong>Vercel DB:</strong> Stores many records in local <code>09...</code> format.</li>
+                    <li><strong>Vercel API:</strong> Returns <code>404 Not Found</code> because the specific <code>check-phone</code> route was missing from Next.js.</li>
+                </ul>
+            </div>
+        </section>
+
+        <section>
+            <h3>2. Solution: The Next.js API Bridge</h3>
+            <p>We implemented a robust normalization layer in the new Next.js routes to ensure multi-format compatibility.</p>
+            <div class="diff-box">
+                <div class="diff-title">Smart Phone Search Logic</div>
+                <p>The new <code>check-phone</code> route now performs an OR search across three formats:</p>
+                <div style="background: #fff; border: 1px solid #ddd; padding: 12px; margin-top: 10px;">
+                    <code>WHERE phoneNumber IN (input, normalized_09, normalized_+63)</code>
+                </div>
+            </div>
+        </section>
+
+        <section>
+            <h3>3. Handshake Flow (Vercel Support)</h3>
+            <p>The login flow now matches the local Express behavior precisely:</p>
+            <ol>
+                <li><strong>Identify:</strong> Checks existence and device trust. Triggers OTP if new device.</li>
+                <li><strong>Verify PIN:</strong> Authenticates with hashed PIN and issues 30-day JWT.</li>
+                <li><strong>Setup PIN:</strong> Allows seamless onboarding for new mobile accounts.</li>
+            </ol>
+        </section>
+
+        <section style="margin-top: 40px; padding: 20px; background: #DEEBFF; border-radius: 8px;">
+            <h3>Verification Proof</h3>
+            <p>Routes have been verified in the <code>admin</code> app structure. Local development is protected because the mobile app continues to use port <code>8001</code> for local connections, while the Vercel path is now fully populated.</p>
+        </section>
+    </div>
+</body>
+</html>

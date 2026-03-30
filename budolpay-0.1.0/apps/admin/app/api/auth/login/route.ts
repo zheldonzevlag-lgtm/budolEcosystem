@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server';
+export const dynamic = "force-dynamic";
 import { prisma } from '@/lib/prisma';
 import { checkRateLimit } from '@/lib/rate-limit';
 import { createAuditLog } from '@/lib/audit';

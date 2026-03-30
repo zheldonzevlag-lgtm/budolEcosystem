@@ -1,0 +1,125 @@
+import { NextResponse } from 'next/server';
+import { prisma } from '@/lib/prisma';
+import bcrypt from 'bcryptjs';
+import jwt from 'jsonwebtoken';
+
+export const dynamic = 'force-dynamic';
+
+const JWT_SECRET = process.env.JWT_SECRET || 'GJ7Lxn0/kdV/KuZJ5xJ7Ip0RvMerrGW5n0gf44mfHgc=';
+
+/**
+ * [Vercel Bridge] Mobile PIN Verification
+ * Matches logic in Express auth-service/index.js (line 802)
+ */
+export async function POST(request: Request) {
+    try {
+        const body = await request.json();
+        const { phoneNumber, pin, deviceId } = body;
+
+        if (!phoneNumber || !pin) {
+            return NextResponse.json({ error: 'Phone and PIN are required' }, { status: 400 });
+        }
+
+        // Normalize phone number (+63 -> 0)
+        let normalizedPhone = phoneNumber.replace(/\D/g, '');
+        if (normalizedPhone.startsWith('63')) {
+            normalizedPhone = '0' + normalizedPhone.substring(2);
+        }
+
+        // Find user
+        const user = await prisma.user.findFirst({
+            where: {
+                OR: [
+                    { phoneNumber: phoneNumber },
+                    { phoneNumber: normalizedPhone },
+                    { phoneNumber: '+63' + normalizedPhone.substring(1) }
+                ]
+            }
+        });
+
+        if (!user) {
+            return NextResponse.json({ error: 'Account not found' }, { status: 404 });
+        }
+
+        if (!user.pinHash) {
+            return NextResponse.json({ error: 'PIN not set up' }, { status: 400 });
+        }
+
+        // Verify PIN (PCI DSS 8.2 compliant comparison)
+        const isMatch = await bcrypt.compare(pin, user.pinHash);
+        if (!isMatch) {
+            // Log failed attempt for audit (AuditLog model is available)
+            await prisma.auditLog.create({
+                data: {
+                    userId: user.id,
+                    action: 'MOBILE_LOGIN_FAILED',
+                    entity: 'User',
+                    entityId: user.id,
+                    metadata: { reason: 'Invalid PIN', deviceId }
+                }
+            });
+
+            return NextResponse.json({ error: 'Invalid security PIN' }, { status: 401 });
+        }
+
+        // Handle Device Trust Update
+        let updatedTrustedDevices = user.trustedDevices || '';
+        if (deviceId && !updatedTrustedDevices.includes(deviceId)) {
+            updatedTrustedDevices = updatedTrustedDevices 
+                ? `${updatedTrustedDevices},${deviceId}` 
+                : deviceId;
+        }
+
+        // Update login state
+        await prisma.user.update({
+            where: { id: user.id },
+            data: {
+                lastLoginAt: new Date(),
+                trustedDevices: updatedTrustedDevices
+            }
+        });
+
+        // Audit Success
+        await prisma.auditLog.create({
+            data: {
+                userId: user.id,
+                action: 'MOBILE_LOGIN_SUCCESS',
+                entity: 'User',
+                entityId: user.id,
+                metadata: { deviceId }
+            }
+        });
+
+        // Issue JWT (BSP Standard Multi-Factor Identity)
+        const token = jwt.sign(
+            { 
+                userId: user.id, 
+                role: user.role,
+                phone: user.phoneNumber,
+                email: user.email 
+            },
+            JWT_SECRET,
+            { expiresIn: '30d' } // Mobile sessions are usually longer
+        );
+
+        return NextResponse.json({
+            status: 'SUCCESS',
+            token,
+            user: {
+                id: user.id,
+                firstName: user.firstName,
+                lastName: user.lastName,
+                role: user.role,
+                phoneNumber: user.phoneNumber,
+                email: user.email,
+                avatarUrl: user.avatarUrl,
+                kycStatus: user.kycStatus,
+                kycTier: user.kycTier
+            }
+        });
+
+    } catch (error: any) {
+        console.error('[API Verify PIN Error]', error);
+        return NextResponse.json({ error: 'Internal Server Error' }, { status: 500 });
+    }
+}
