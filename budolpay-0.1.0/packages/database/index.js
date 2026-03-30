@@ -6,7 +6,10 @@ const globalForPrisma = global;
 // Ensures the client always targets the 'budolpay' schema to avoid collisions with budolShap
 const getIsolatingUrl = () => {
   const url = process.env.DATABASE_URL;
-  if (!url) return undefined;
+  if (!url || url.length === 0) {
+    // Fallback for build-time static optimization on Vercel
+    return "postgresql://postgres:postgres@localhost:5432/budolpay?schema=budolpay";
+  }
   
   // If it already has a schema specified, respect it (unless it's public)
   if (url.includes('schema=budolpay')) return url;

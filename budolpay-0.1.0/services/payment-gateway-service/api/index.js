@@ -16,7 +16,10 @@ const { PrismaClient } = require('@prisma/client');
 
 const getDatabaseUrl = () => {
   let url = process.env.DATABASE_URL;
-  if (!url) return undefined;
+  if (!url || url.trim().length === 0) {
+    // Fallback for build-time static optimization on Vercel
+    return "postgresql://postgres:postgres@localhost:5432/budolpay?schema=public";
+  }
   url = url.trim();
   const baseUrl = url.split('?')[0];
   const params = new URLSearchParams(url.split('?')[1] || '');

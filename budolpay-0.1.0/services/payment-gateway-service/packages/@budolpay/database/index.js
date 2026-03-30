@@ -9,7 +9,10 @@ const globalForPrisma = global;
 // PgTransaction table exists in the 'public' schema.
 const getDatabaseUrl = () => {
   let url = process.env.DATABASE_URL;
-  if (!url) return undefined;
+  if (!url || url.trim().length === 0) {
+    // Fallback for build-time static optimization on Vercel
+    return "postgresql://postgres:postgres@localhost:5432/budolpay?schema=public";
+  }
   
   // Trim whitespace/CRLF (Vercel sync hack)
   url = url.trim();
