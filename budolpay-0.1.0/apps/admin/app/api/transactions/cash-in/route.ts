@@ -129,7 +129,13 @@ export async function POST(req: Request) {
             }).catch(() => null); // Fail silently for pusher
         } catch (e) { }
 
-        return NextResponse.json({ message: 'Cash in successful', transaction: result });
+        const responseData = {
+            ...result,
+            amount: Number(result.amount),
+            fee: Number(result.fee)
+        };
+
+        return NextResponse.json({ message: 'Cash in successful', transaction: responseData });
 
     } catch (error: any) {
         console.error('[Cash In API] Error:', error.message);

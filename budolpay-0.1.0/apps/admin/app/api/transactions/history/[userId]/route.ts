@@ -28,7 +28,13 @@ export async function GET(req: Request, { params }: { params: { userId: string }
             }
         });
         
-        return NextResponse.json(transactions);
+        const mappedTransactions = transactions.map(tx => ({
+            ...tx,
+            amount: Number(tx.amount),
+            fee: Number(tx.fee)
+        }));
+
+        return NextResponse.json(mappedTransactions);
 
     } catch (error: any) {
         console.error('[Transaction History API] Error:', error.message);

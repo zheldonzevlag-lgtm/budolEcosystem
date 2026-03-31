@@ -20,7 +20,7 @@ export async function GET(req: Request, { params }: { params: { userId: string }
         }
         
         return NextResponse.json({
-            balance: wallet.balance,
+            balance: Number(wallet.balance),
             currency: wallet.currency
         });
 

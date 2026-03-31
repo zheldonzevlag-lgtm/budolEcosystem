@@ -143,7 +143,13 @@ export async function POST(req: Request) {
             return transaction;
         });
 
-        return NextResponse.json({ message: 'Transfer successful', transaction: result });
+        const responseData = {
+            ...result,
+            amount: Number(result.amount),
+            fee: Number(result.fee)
+        };
+
+        return NextResponse.json({ message: 'Transfer successful', transaction: responseData });
 
     } catch (error: any) {
         console.error('[P2P Transfer API] Error:', error.message);
