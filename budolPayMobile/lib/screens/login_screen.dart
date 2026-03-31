@@ -455,7 +455,10 @@ class _LoginScreenState extends State<LoginScreen> with WidgetsBindingObserver {
           ),
           ElevatedButton(
             onPressed: () => Navigator.pop(ctx, true),
-            style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFFF43F5E)),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: const Color(0xFFF43F5E),
+              foregroundColor: Colors.white,
+            ),
             child: const Text('Reset PIN'),
           ),
         ],
