@@ -77,7 +77,7 @@ class ApiService extends ChangeNotifier {
     }
     return const String.fromEnvironment(
       'API_HOST',
-      defaultValue: 'localhost',
+      defaultValue: 'budolpay.vercel.app',
     );
   }
 
@@ -558,7 +558,7 @@ class ApiService extends ChangeNotifier {
     required String otp,
     required String type,
   }) async {
-    final url = '$authUrl/verify-otp';
+    final url = '$authUrl/login/mobile/verify-otp';
     final response = await http.post(
       Uri.parse(url),
       headers: {'Content-Type': 'application/json'},
