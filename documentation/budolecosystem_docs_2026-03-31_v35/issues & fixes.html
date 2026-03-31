@@ -1,0 +1,53 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>v35 Issues & Fixes - BudolPay</title>
+    <style>
+        body { font-family: -apple-system, system-ui, sans-serif; padding: 48px; background: #F4F5F7; color: #172B4D; }
+        .container { max-width: 900px; margin: 0 auto; background: white; padding: 48px; border-radius: 12px; }
+        .issue { border-bottom: 1px solid #DFE1E6; padding: 24px 0; }
+        h3 { color: #de350b; margin-top: 0; }
+        .fix { background: #E3FCEF; padding: 16px; border-radius: 8px; border-left: 4px solid #00875A; margin-top: 12px; }
+        .code { font-family: monospace; font-size: 0.85rem; color: #172B4D; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Post-Mortem: v35 Build & Postgres Migration</h1>
+        
+        <div class="issue">
+            <h3>Issue 1: PrismaClientInitializationError during Static Analysis</h3>
+            <p><strong>Root Cause:</strong> Next.js 14 attempted to evaluate database-fetching pages (<code>/accounting</code>, <code>/</code>) during the build phase on Vercel preview machines, which do not have <code>DATABASE_URL</code> accessibility.</p>
+            <div class="fix">
+                <strong>Fix applied:</strong> Core database client now uses a resilient fallback to <code>localhost:5432</code> if <code>DATABASE_URL</code> is empty during the <code>PHASE_PRODUCTION_BUILD</code>.
+            </div>
+        </div>
+
+        <div class="issue">
+            <h3>Issue 2: DynamicServerUsage Error in API Routes</h3>
+            <p><strong>Root Cause:</strong> API routes in <code>/api/audit-logs</code> and <code>/api/transactions</code> accessed <code>request.url</code>. In Next.js 14, this forces a route to be dynamic, but since it wasn't explicitly marked, the static optimizer failed.</p>
+            <div class="fix">
+                <strong>Fix applied:</strong> Added <code>export const dynamic = 'force-dynamic';</code> to both API routes.
+            </div>
+        </div>
+
+        <div class="issue">
+            <h3>Issue 3: Prisma Accelerate Latency & Billing Concerns</h3>
+            <p><strong>Root Cause:</strong> The production environment was using <code>db.prisma.io</code> intermediate proxy, causing unnecessary latency and potential cost overhead.</p>
+            <div class="fix">
+                <strong>Fix applied:</strong> Integrated native <strong>Vercel Postgres (Postgres Nexus)</strong> storage directly into the project environment. 
+            </div>
+        </div>
+
+        <div class="issue">
+            <h3>Issue 4: Admin Search Params Type Errors</h3>
+            <p><strong>Fix applied:</strong> Refactored <code>SettingsPage</code> props in <code>settings-orig</code> to correctly handle <code>searchParams</code> as a promise-compatible or synchronous object depending on Next.js exact versioning needs.</p>
+        </div>
+
+        <div style="margin-top: 48px;">
+            <a href="index.html" class="link">← Back to Overview</a>
+        </div>
+    </div>
+</body>
+</html>

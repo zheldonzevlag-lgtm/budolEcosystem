@@ -86,24 +86,30 @@ const getSystemSettings = async (forceRefresh = false) => {
 };
 
 const createTransporter = (settings) => {
-    const provider = settings.emailProvider || 'GOOGLE';
+    const provider = settings.NOTIFICATION_EMAIL_PROVIDER || settings.emailProvider || 'GOOGLE';
+    const smtpHost = settings.NOTIFICATION_EMAIL_SMTP_HOST || settings.smtpHost;
+    const smtpPort = settings.NOTIFICATION_EMAIL_SMTP_PORT || settings.smtpPort;
+    const smtpUser = settings.NOTIFICATION_EMAIL_SMTP_USER || settings.smtpUser;
+    const smtpPass = settings.NOTIFICATION_EMAIL_SMTP_PASS || settings.smtpPass;
+    const brevoApiKey = settings.NOTIFICATION_BREVO_API_KEY || settings.brevoApiKey;
+    const gmassApiKey = settings.NOTIFICATION_GMASS_API_KEY || settings.gmassApiKey;
     
     if (provider === 'BREVO') {
         return nodemailer.createTransport({
-            host: 'smtp-relay.brevo.com',
-            port: parseInt(settings.smtpPort) || 587,
+            host: smtpHost || 'smtp-relay.brevo.com',
+            port: parseInt(smtpPort) || 587,
             auth: {
-                user: settings.smtpUser || process.env.BREVO_USER,
-                pass: settings.brevoApiKey || settings.smtpPass || process.env.BREVO_PASS
+                user: smtpUser || process.env.BREVO_USER,
+                pass: brevoApiKey || smtpPass || process.env.BREVO_PASS
             }
         });
     } else if (provider === 'GMASS') {
         return nodemailer.createTransport({
-            host: 'smtp.gmass.co',
-            port: parseInt(settings.smtpPort) || 587,
+            host: smtpHost || 'smtp.gmass.co',
+            port: parseInt(smtpPort) || 587,
             auth: {
-                user: settings.smtpUser || process.env.GMASS_USER,
-                pass: settings.gmassApiKey || settings.smtpPass || process.env.GMASS_PASS
+                user: smtpUser || process.env.GMASS_USER,
+                pass: gmassApiKey || smtpPass || process.env.GMASS_PASS
             }
         });
     } else {
@@ -111,8 +117,8 @@ const createTransporter = (settings) => {
         return nodemailer.createTransport({
             service: 'gmail',
             auth: {
-                user: settings.smtpUser || process.env.EMAIL_USER,
-                pass: settings.smtpPass || process.env.EMAIL_PASS
+                user: smtpUser || process.env.EMAIL_USER,
+                pass: smtpPass || process.env.EMAIL_PASS
             }
         });
     }
@@ -122,7 +128,7 @@ const sendEmail = async (to, subject, text, html) => {
     try {
         const settings = await getSystemSettings();
         const transporter = createTransporter(settings);
-        const from = settings.smtpFrom || process.env.EMAIL_USER || 'no-reply@budolpay.com';
+        const from = settings.NOTIFICATION_EMAIL_SENDER || settings.smtpFrom || process.env.EMAIL_USER || 'no-reply@budolpay.com';
         
         const info = await transporter.sendMail({
             from: `"budolPay" <${from}>`,
@@ -131,7 +137,7 @@ const sendEmail = async (to, subject, text, html) => {
             text,
             html
         });
-        console.log(`[Notification] Email sent to ${maskPII(to)} via ${settings.emailProvider}: ${info.messageId}`);
+        console.log(`[Notification] Email sent to ${maskPII(to)} via ${settings.NOTIFICATION_EMAIL_PROVIDER || settings.emailProvider || 'GOOGLE'}: ${info.messageId}`);
         return true;
     } catch (err) {
         console.error(`[Notification] Email failed: ${err.message}`);
@@ -142,7 +148,7 @@ const sendEmail = async (to, subject, text, html) => {
 const sendSMS = async (to, message) => {
     try {
         const settings = await getSystemSettings();
-        const provider = settings.smsProvider || 'CONSOLE';
+        const provider = settings.NOTIFICATION_SMS_PROVIDER || settings.smsProvider || 'CONSOLE';
         const phone = to.startsWith('0') ? '63' + to.substring(1) : to;
 
         console.log(`[Notification] Sending SMS to ${maskPII(to)} via ${provider}`);
@@ -150,7 +156,7 @@ const sendSMS = async (to, message) => {
         if (provider === 'ZERIX') {
             await axios.get(`https://api.zerixtext.com/api/v1/send`, {
                 params: {
-                    apiKey: settings.zerixApiKey,
+                    apiKey: settings.NOTIFICATION_ZERIX_API_KEY || settings.zerixApiKey,
                     number: phone,
                     message: message
                 }
@@ -159,8 +165,8 @@ const sendSMS = async (to, message) => {
             await axios.post(`https://www.itexmo.com/php_api/api.php`, {
                 1: phone,
                 2: message,
-                3: settings.itextmoApiKey,
-                passwd: settings.itextmoClientCode
+                3: settings.NOTIFICATION_ITEXTMO_API_KEY || settings.itextmoApiKey,
+                passwd: settings.NOTIFICATION_ITEXTMO_CLIENT_CODE || settings.itextmoClientCode
             });
         } else if (provider === 'BREVO_SMS' || provider === 'BREVO') {
             await axios.post('https://api.brevo.com/v3/transactionalSMS/sms', {
@@ -170,7 +176,7 @@ const sendSMS = async (to, message) => {
                 recipient: phone,
                 content: message
             }, {
-                headers: { 'api-key': settings.brevoSmsApiKey || settings.brevoApiKey }
+                headers: { 'api-key': settings.NOTIFICATION_BREVO_SMS_API_KEY || settings.brevoSmsApiKey || settings.NOTIFICATION_BREVO_API_KEY || settings.brevoApiKey }
             });
         } else if (provider === 'VIBER') {
             await axios.post('https://chatapi.viber.com/pa/send_message', {
@@ -179,7 +185,7 @@ const sendSMS = async (to, message) => {
                 text: message,
                 sender: { name: 'budolPay' }
             }, {
-                headers: { 'X-Viber-Auth-Token': settings.viberApiKey }
+                headers: { 'X-Viber-Auth-Token': settings.NOTIFICATION_VIBER_API_KEY || settings.viberApiKey }
             });
         } else {
             // Highlight 6-digit OTP in console log if present
@@ -195,7 +201,7 @@ const sendSMS = async (to, message) => {
 };
 
 const sendOTP = async (to, otp, type = 'EMAIL') => {
-    console.error(`[Notification-DEBUG] sendOTP called for ${maskPII(to)} via ${type}`);
+    console.error(`[Notification-DEBUG] sendOTP called for ${maskPII(to)} via ${type}. OTP: \x1b[33m${otp}\x1b[0m`);
     const subject = 'Your budolPay Verification Code';
     const message = `Your verification code is: ${otp}. This code will expire in 10 minutes.`;
     

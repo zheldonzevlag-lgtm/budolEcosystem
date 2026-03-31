@@ -122,6 +122,11 @@ class ApiService extends ChangeNotifier {
 
   static String computeBaseUrlFromHost(String rawHost) {
     final hostOnly = _hostOnly(rawHost);
+    
+    if (hostOnly.endsWith('vercel.app') || hostOnly.endsWith('onrender.com') || hostOnly.endsWith('duckdns.org')) {
+      return 'https://$hostOnly/api';
+    }
+    
     final port = _portFromHost(rawHost);
     if (port != null) {
       return 'http://$hostOnly:$port';
@@ -131,6 +136,11 @@ class ApiService extends ChangeNotifier {
 
   static String computeAuthUrlFromHost(String rawHost) {
     final hostOnly = _hostOnly(rawHost);
+    
+    if (hostOnly.endsWith('vercel.app') || hostOnly.endsWith('onrender.com') || hostOnly.endsWith('duckdns.org')) {
+      return 'https://$hostOnly/api/auth';
+    }
+    
     return 'http://$hostOnly:8001';
   }
 

@@ -14,35 +14,42 @@ const JWT_SECRET = process.env.JWT_SECRET || 'GJ7Lxn0/kdV/KuZJ5xJ7Ip0RvMerrGW5n0
 export async function POST(request: Request) {
     try {
         const body = await request.json();
-        const { phoneNumber, pin, deviceId } = body;
+        const { phoneNumber, userId, pin, deviceId } = body;
 
-        if (!phoneNumber || !pin) {
-            return NextResponse.json({ error: 'Phone and PIN are required' }, { status: 400 });
+        if ((!phoneNumber && !userId) || !pin) {
+            return NextResponse.json({ error: 'User identifier and PIN are required' }, { status: 400 });
         }
 
-        // Normalize phone number (+63 -> 0)
-        let normalizedPhone = phoneNumber.replace(/\D/g, '');
-        if (normalizedPhone.startsWith('63')) {
-            normalizedPhone = '0' + normalizedPhone.substring(2);
-        }
-
-        // Find user
-        const user = await prisma.user.findFirst({
-            where: {
-                OR: [
-                    { phoneNumber: phoneNumber },
-                    { phoneNumber: normalizedPhone },
-                    { phoneNumber: '+63' + normalizedPhone.substring(1) }
-                ]
+        // Search for user (consistent with local index.js)
+        let user;
+        if (userId) {
+            user = await prisma.user.findUnique({ where: { id: userId } });
+        } else if (phoneNumber) {
+            // Normalize phone number (+63 -> 0)
+            let normalizedPhone = phoneNumber.replace(/\D/g, '');
+            if (normalizedPhone.startsWith('63')) {
+                normalizedPhone = '0' + normalizedPhone.substring(2);
             }
-        });
+            user = await prisma.user.findFirst({
+                where: {
+                    OR: [
+                        { phoneNumber: phoneNumber },
+                        { phoneNumber: normalizedPhone },
+                        { phoneNumber: '+63' + normalizedPhone.substring(1) }
+                    ]
+                }
+            });
+        }
 
         if (!user) {
-            return NextResponse.json({ error: 'Account not found' }, { status: 404 });
+            return NextResponse.json({ error: 'User not found' }, { status: 404 });
         }
 
         if (!user.pinHash) {
-            return NextResponse.json({ error: 'PIN not set up' }, { status: 400 });
+            return NextResponse.json({
+                status: 'PIN_SETUP_REQUIRED',
+                error: 'PIN not set'
+            }, { status: 403 });
         }
 
         // Verify PIN (PCI DSS 8.2 compliant comparison)
@@ -62,12 +69,28 @@ export async function POST(request: Request) {
             return NextResponse.json({ error: 'Invalid security PIN' }, { status: 401 });
         }
 
-        // Handle Device Trust Update
-        let updatedTrustedDevices = user.trustedDevices || '';
-        if (deviceId && !updatedTrustedDevices.includes(deviceId)) {
-            updatedTrustedDevices = updatedTrustedDevices 
-                ? `${updatedTrustedDevices},${deviceId}` 
-                : deviceId;
+        // 4. Handle Device Trust Update (Consistent with local JSON format)
+        let devices = [];
+        try {
+            devices = user.trustedDevices ? JSON.parse(user.trustedDevices) : [];
+        } catch {
+            // Fallback for comma-separated legacy or corrupt data
+            devices = user.trustedDevices ? user.trustedDevices.split(',').map((id: string) => ({ deviceId: id, isVerified: true })) : [];
+        }
+
+        if (deviceId) {
+            const deviceIndex = devices.findIndex((d: any) => d.deviceId === deviceId);
+            if (deviceIndex !== -1) {
+                devices[deviceIndex].isVerified = true;
+                devices[deviceIndex].lastUsed = new Date();
+            } else {
+                devices.push({
+                    deviceId,
+                    addedAt: new Date(),
+                    lastUsed: new Date(),
+                    isVerified: true
+                });
+            }
         }
 
         // Update login state
@@ -75,7 +98,7 @@ export async function POST(request: Request) {
             where: { id: user.id },
             data: {
                 lastLoginAt: new Date(),
-                trustedDevices: updatedTrustedDevices
+                trustedDevices: JSON.stringify(devices)
             }
         });
 

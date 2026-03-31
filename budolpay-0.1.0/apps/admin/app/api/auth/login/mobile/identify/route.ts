@@ -5,6 +5,18 @@ import notifications from '@budolpay/notifications';
 export const dynamic = 'force-dynamic';
 
 /**
+ * HELPER: Simple PII masking for mirroring local logic
+ */
+function maskPII(val: string): string {
+    if (!val) return '***';
+    if (val.includes('@')) {
+        const [u, d] = val.split('@');
+        return `${u.charAt(0)}***@${d}`;
+    }
+    return val.length > 4 ? `****${val.slice(-4)}` : '****';
+}
+
+/**
  * WHY: This endpoint bridges the Vercel production backend for the budolPay Mobile app.
  * It replaces the Express auth-service /login/mobile/identify endpoint (index.js line 768).
  * WHAT: Identifies a user by phone OR email, checks device trust, and triggers OTP if needed.
@@ -95,16 +107,8 @@ export async function POST(request: Request) {
             return NextResponse.json({ error: 'Account not found' }, { status: 404 });
         }
 
-        // 3. If no PIN is set, user must set it up first
-        if (!user.pinHash) {
-            return NextResponse.json({
-                status: 'PIN_REQUIRED',
-                message: 'Please set up your 6-digit PIN',
-                userId: user.id
-            });
-        }
-
-        // 4. Device Trust Verification (PCI DSS 10.x requirement for multi-factor)
+        // 3. Identification Phase Success (Audit)
+        // Device Trust Verification (PCI DSS 10.x requirement for multi-factor)
         let isDeviceTrusted = false;
         if (user.trustedDevices && deviceId) {
             try {
@@ -116,12 +120,15 @@ export async function POST(request: Request) {
                 if (device) isDeviceTrusted = true;
             } catch {
                 // Treat as comma-separated fallback
-                isDeviceTrusted = user.trustedDevices.split(',').includes(deviceId);
+                isDeviceTrusted = user.trustedDevices.split(',').includes(deviceId || '');
             }
         }
 
-        if (!isDeviceTrusted) {
-            // New device or untrusted -> Trigger OTP (BSP Circular 808)
+        console.log(`[Identify] User found. Trusted Device: ${isDeviceTrusted}, PIN Set: ${!!user.pinHash}`);
+
+        // 4. Challenge Phase: Trigger OTP if (New Device OR No PIN set)
+        //    WHY: Mirroring Local index.js logic (Line 866).
+        if (!isDeviceTrusted || !user.pinHash) {
             const otpCode = Math.floor(100000 + Math.random() * 900000).toString();
             const expiresAt = new Date(Date.now() + 10 * 60000); // 10 mins
 
@@ -134,23 +141,50 @@ export async function POST(request: Request) {
                 }
             });
 
-            // Send via dual-channel (Email + SMS)
-            await notifications.sendOTP(user.email || phoneNumber, otpCode, 'BOTH');
+            // Send via dual-channel (BSP Circular 808 compliant)
+            console.log(`[Identify] Sending login OTP to user...`);
+            try {
+                if (user.email && user.email.includes('@')) {
+                    await notifications.sendOTP(user.email, otpCode, 'EMAIL');
+                }
+                
+                if (user.phoneNumber) {
+                    await notifications.sendOTP(user.phoneNumber, otpCode, 'SMS');
+                }
+                
+                if (!user.email && !user.phoneNumber) {
+                    console.warn('[Identify] User has no email or phone number for OTP');
+                }
+            } catch (err: any) {
+                console.error(`[Identify] sendOTP failed: ${err.message}`);
+            }
 
+            // Always return OTP_REQUIRED if trust or PIN is missing
             return NextResponse.json({
                 status: 'OTP_REQUIRED',
-                message: 'A verification code has been sent to your registered contact',
-                tempToken: Buffer.from(`${user.id}:${otpCode}`).toString('base64')
+                userId: user.id,
+                user: {
+                    id: user.id,
+                    phoneNumber: maskPII(user.phoneNumber || ''),
+                    firstName: maskPII(user.firstName || ''),
+                    lastName: maskPII(user.lastName || '')
+                },
+                message: !user.pinHash ? 'Account found. Verifying for PIN setup.' : 'New device detected. Verifying your identity.'
             });
         }
 
-        // 5. Device is trusted -> Proceed to PIN/Biometric
+        // 5. Authenticated Path: Device Trusted AND PIN Set -> Proceed to PIN entry
         return NextResponse.json({
             status: 'AUTH_REQUIRED',
-            message: 'Please enter your security PIN',
-            firstName: user.firstName,
-            lastName: user.lastName,
-            avatarUrl: user.avatarUrl
+            userId: user.id,
+            user: {
+                id: user.id,
+                phoneNumber: maskPII(user.phoneNumber || ''),
+                firstName: user.firstName,
+                lastName: user.lastName,
+                avatarUrl: user.avatarUrl
+            },
+            message: 'Please enter your security PIN'
         });
 
     } catch (error: any) {
