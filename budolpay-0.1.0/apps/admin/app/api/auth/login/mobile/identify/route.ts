@@ -151,15 +151,10 @@ export async function POST(request: Request) {
                 if (user.phoneNumber) {
                     await notifications.sendOTP(user.phoneNumber, otpCode, 'SMS');
                 }
-                
-                if (!user.email && !user.phoneNumber) {
-                    console.warn('[Identify] User has no email or phone number for OTP');
-                }
             } catch (err: any) {
                 console.error(`[Identify] sendOTP failed: ${err.message}`);
             }
 
-            // Always return OTP_REQUIRED if trust or PIN is missing
             return NextResponse.json({
                 status: 'OTP_REQUIRED',
                 userId: user.id,
