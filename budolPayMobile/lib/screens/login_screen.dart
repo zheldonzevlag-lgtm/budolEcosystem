@@ -431,6 +431,69 @@ class _LoginScreenState extends State<LoginScreen> with WidgetsBindingObserver {
     }
   }
 
+  Future<void> _handleForgotPin() async {
+    if (_userId == null) {
+      // No session - go back to phone entry
+      setState(() => _currentStep = LoginStep.phone);
+      return;
+    }
+
+    // Confirm intent before clearing PIN
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        backgroundColor: const Color(0xFF1E293B),
+        title: const Text('Reset PIN?', style: TextStyle(color: Colors.white)),
+        content: const Text(
+          'A verification code will be sent to your registered phone/email. You will need to set a new PIN.',
+          style: TextStyle(color: Colors.white70),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, false),
+            child: const Text('Cancel', style: TextStyle(color: Colors.white54)),
+          ),
+          ElevatedButton(
+            onPressed: () => Navigator.pop(ctx, true),
+            style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFFF43F5E)),
+            child: const Text('Reset PIN'),
+          ),
+        ],
+      ),
+    );
+
+    if (confirmed != true || !mounted) return;
+
+    setState(() => _isLoading = true);
+    try {
+      // WHY: Clear pinHash on backend so next verify-otp returns PIN_SETUP_REQUIRED
+      await context.read<ApiService>().resetPin(userId: _userId!);
+      if (mounted) {
+        _pinController.clear();
+        // Re-identify to send a fresh OTP
+        final identifier = _loginMethod == LoginMethod.email
+            ? _emailController.text.trim()
+            : _phoneController.text.trim();
+        if (identifier.isNotEmpty) {
+          await _handleIdentify();
+        } else {
+          // No cached identifier - go back to phone step
+          setState(() => _currentStep = LoginStep.phone);
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('Please enter your phone number to receive a reset code.'),
+              backgroundColor: Colors.blue,
+            ),
+          );
+        }
+      }
+    } catch (e) {
+      _showError(e.toString());
+    } finally {
+      if (mounted) setState(() => _isLoading = false);
+    }
+  }
+
   Future<void> _handleVerifyPin() async {
     final pin = _pinController.text.trim();
     if (pin.isEmpty) return;
@@ -1069,6 +1132,15 @@ class _LoginScreenState extends State<LoginScreen> with WidgetsBindingObserver {
         ),
         const SizedBox(height: 24),
         _buildButton('Login', _handleVerifyPin),
+        const SizedBox(height: 12),
+        // Forgot PIN: clears stored PIN and triggers OTP re-verification for PIN reset
+        TextButton(
+          onPressed: _isLoading ? null : _handleForgotPin,
+          child: const Text(
+            'Forgot PIN?',
+            style: TextStyle(color: Color(0xFFF43F5E), fontSize: 14),
+          ),
+        ),
       ],
     );
   }

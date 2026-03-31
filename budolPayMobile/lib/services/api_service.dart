@@ -747,6 +747,52 @@ class ApiService extends ChangeNotifier {
     }
   }
 
+  // WHY: Allows users who forgot their PIN to reset it via OTP verification
+  // WHAT: Calls the /login/mobile/reset-pin endpoint to clear pinHash on the backend
+  Future<Map<String, dynamic>> resetPin({required String userId}) async {
+    final url = '$authUrl/login/mobile/reset-pin';
+    final body = json.encode({'userId': userId});
+
+    _addLog(ApiLog(
+      type: LogType.request,
+      method: 'POST',
+      url: url,
+      requestBody: body,
+    ));
+
+    try {
+      final response = await http.post(
+        Uri.parse(url),
+        headers: {'Content-Type': 'application/json'},
+        body: body,
+      ).timeout(const Duration(seconds: 30));
+
+      _addLog(ApiLog(
+        type: LogType.response,
+        method: 'POST',
+        url: url,
+        statusCode: response.statusCode,
+        responseBody: response.body,
+      ));
+
+      final decoded = _safeDecode(response, context: 'resetPin');
+      final Map<String, dynamic> data = decoded is Map ? Map<String, dynamic>.from(decoded) : {};
+      if (response.statusCode == 200) {
+        return data;
+      } else {
+        throw Exception(data['error'] ?? 'PIN reset failed');
+      }
+    } catch (e) {
+      _addLog(ApiLog(
+        type: LogType.error,
+        method: 'POST',
+        url: url,
+        error: e.toString(),
+      ));
+      rethrow;
+    }
+  }
+
   Future<Map<String, dynamic>> register({
     String? email,
     String? password,
