@@ -34,7 +34,7 @@ export async function GET() {
                         lastName: true,
                         email: true,
                         phoneNumber: true,
-                        avatar: true
+                        avatarUrl: true
                     }
                 }
             },
