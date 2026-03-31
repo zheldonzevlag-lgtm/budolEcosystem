@@ -45,13 +45,9 @@ export async function POST(req: Request) {
 
         if (!sender) throw new Error("Sender not found");
 
-        /*
-        TODO: Uncomment for production BSP compliance
         if (sender.kycTier === 'BASIC') {
             throw new Error("Verification required: BASIC accounts cannot send money P2P. Please upgrade to FULLY VERIFIED.");
         }
-        */
-
 
         const senderBalance = sender.wallet ? Number(sender.wallet.balance) : 0;
         if (senderBalance < Number(amount)) {
