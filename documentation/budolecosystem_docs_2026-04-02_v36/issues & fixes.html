@@ -1,0 +1,53 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>v36 Issues & Fixes - BudolPay Mobile Infrastructure</title>
+    <style>
+        body { font-family: -apple-system, system-ui, sans-serif; line-height: 1.6; color: #172B4D; background: #F4F5F7; padding: 48px; }
+        .container { max-width: 1000px; margin: 0 auto; background: white; padding: 48px; border-radius: 12px; box-shadow: 0 4px 12px rgba(9,30,66,0.08); }
+        h1 { font-size: 2.22rem; margin-bottom: 32px; border-bottom: 2px solid #DFE1E6; padding-bottom: 16px; color: #DE350B; }
+        .issue-card { margin-bottom: 32px; padding: 24px; border: 1px solid #DFE1E6; border-radius: 8px; border-left: 5px solid #DE350B; }
+        .issue-card h3 { margin-top: 0; color: #DE350B; font-size: 1.25rem; }
+        .fix-section { background: #E3FCEF; padding: 16px; border-radius: 4px; border-left: 4px solid #36B37E; margin-top: 16px; }
+        .fix-section strong { color: #006644; }
+        .status-tag { background: #E3FCEF; color: #006644; padding: 2px 8px; border-radius: 4px; font-size: 0.75rem; font-weight: 700; margin-left: 8px; text-transform: uppercase; }
+        .link { color: #0052cc; text-decoration: none; font-weight: 600; }
+        .link:hover { border-bottom: 1px solid #0052cc; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <a href="index.html" class="link">← Back to Overview</a>
+        <h1>Bug Report: v36 Release Issues & Fixes</h1>
+        
+        <div class="issue-card">
+            <h3>Invisible "Forgot PIN" Button <span class="status-tag">Resolved</span></h3>
+            <p><strong>ISSUE:</strong> Android Dark Theme defaulted button text to a dark color against a dark background, making the reset link completely invisible on some devices.</p>
+            <div class="fix-section">
+                <strong>FIX:</strong> Applied explicit <code>foregroundColor: Colors.white</code> and <code>textStyle: TextStyle(fontWeight: FontWeight.bold)</code> to the Flutter TextButton component.
+            </div>
+        </div>
+
+        <div class="issue-card">
+            <h3>PIN not set (Vercel API Mismatch) <span class="status-tag">Resolved</span></h3>
+            <p><strong>ISSUE:</strong> Mobile app was stuck in a loop during PIN setup. The backend was hitting a 404 on the preview branch during the final step due to monorepo branch syncing failure.</p>
+            <div class="fix-section">
+                <strong>FIX:</strong> Merged <code>feature/auth-bridge-v32</code> into <code>main</code> and updated Flutter <code>api_service.dart</code> to target <code>budolpay.vercel.app</code> as the default fallback.
+            </div>
+        </div>
+
+        <div class="issue-card">
+            <h3>Invalid recipient resolving (Self-Transfer) <span class="status-tag">Resolved</span></h3>
+            <p><strong>ISSUE:</strong> The P2P transfer route allowed users to input their own phone number as the recipient, which leads to ledger duplication and account balance instability.</p>
+            <div class="fix-section">
+                <strong>FIX:</strong> Added server-side validation: <code>if (senderId === resolvedReceiverId) throw new Error("Cannot send money to yourself");</code>
+            </div>
+        </div>
+
+        <div style="margin-top: 48px;">
+            <a href="test_results.html" class="link">Next: Test Results →</a>
+        </div>
+    </div>
+</body>
+</html>
