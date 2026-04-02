@@ -10,13 +10,6 @@ import { NextRequest, NextResponse } from 'next/server';
 
 export const dynamic = 'force-dynamic';
 
-// Disable body parsing - we need to forward the raw multipart/form-data stream
-export const config = {
-  api: {
-    bodyParser: false,
-  },
-};
-
 // The verification service URL - set VERIFICATION_SERVICE_URL in Vercel env vars
 // Falls back to the Vercel production deployment URL, or local development address
 const getVerificationServiceUrl = () => {
