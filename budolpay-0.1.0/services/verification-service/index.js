@@ -13,7 +13,18 @@ const PORT = process.env.PORT || 8006;
 // Configure Multer for KYC uploads
 const storage = multer.diskStorage({
   destination: (req, file, cb) => {
-    cb(null, path.join(__dirname, 'uploads/'));
+    // Vercel serverless has a read-only filesystem. Only /tmp is writable.
+    const dest = process.env.VERCEL === '1' ? '/tmp/uploads/' : path.join(__dirname, 'uploads/');
+    
+    // Ensure directory exists if in Vercel (mkdirSync)
+    if (process.env.VERCEL === '1') {
+      const fs = require('fs');
+      if (!fs.existsSync('/tmp/uploads')) {
+        fs.mkdirSync('/tmp/uploads', { recursive: true });
+      }
+    }
+    
+    cb(null, dest);
   },
   filename: (req, file, cb) => {
     cb(null, `${Date.now()}-${file.originalname}`);
@@ -104,6 +115,10 @@ app.get('/status/:userId', async (req, res) => {
   }
 });
 
-app.listen(PORT, () => {
-  console.log(`BudolPay KYC Verification Service running on port ${PORT}`);
-});
+if (require.main === module) {
+  app.listen(PORT, () => {
+    console.log(`BudolPay KYC Verification Service running on port ${PORT}`);
+  });
+}
+
+module.exports = app;
