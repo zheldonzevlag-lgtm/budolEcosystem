@@ -431,13 +431,16 @@ router.get('/system/settings', async (req, res) => {
     }
 });
 
-// Apply Proxy Routes
+// Apply Proxy Routes (Mirror with /api prefix for mobile app compatibility)
 services.forEach(({ route, target }) => {
-    console.log(`[Gateway] Configuring proxy: ${route} -> ${target}`);
-    app.use(route, createProxyMiddleware({
+    const apiRoute = `/api${route.startsWith('/') ? '' : '/'}${route}`;
+    console.log(`[Gateway] Configuring proxy: ${route} & ${apiRoute} -> ${target}`);
+    
+    app.use([apiRoute, route], createProxyMiddleware({
         target,
         changeOrigin: true,
         pathRewrite: {
+            [`^${apiRoute}`]: '',
             [`^${route}`]: '',
         },
         logLevel: 'debug',

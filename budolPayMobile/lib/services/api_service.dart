@@ -1,5 +1,7 @@
 import 'dart:convert';
+import 'dart:io';
 import 'package:http/http.dart' as http;
+import 'package:http_parser/http_parser.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:flutter/foundation.dart';
@@ -971,6 +973,72 @@ class ApiService extends ChangeNotifier {
       rethrow;
     }
   }
+
+  Future<Map<String, dynamic>> uploadProfilePicture(File imageFile) async {
+    await _ensureInitialized();
+    if (user == null || token == null) throw Exception('User session expired. Please login again.');
+
+    final url = '$baseUrl/verification/upload';
+    
+    _addLog(ApiLog(
+      type: LogType.request,
+      method: 'POST (Multipart)',
+      url: url,
+      requestBody: 'File: ${imageFile.path}, type: PROFILE_PICTURE',
+    ));
+
+    try {
+      final request = http.MultipartRequest('POST', Uri.parse(url));
+      request.headers['Authorization'] = 'Bearer $token';
+      
+      request.fields['userId'] = user!['id'];
+      request.fields['type'] = 'PROFILE_PICTURE';
+
+      final file = await http.MultipartFile.fromPath(
+        'document',
+        imageFile.path,
+        contentType: MediaType('image', 'jpeg'),
+      );
+      request.files.add(file);
+
+      final streamedResponse = await request.send().timeout(const Duration(seconds: 60));
+      final response = await http.Response.fromStream(streamedResponse);
+
+      _addLog(ApiLog(
+        type: LogType.response,
+        method: 'POST (Multipart)',
+        url: url,
+        statusCode: response.statusCode,
+        responseBody: response.body,
+      ));
+
+      final decoded = _safeDecode(response, context: 'uploadProfilePicture');
+      final Map<String, dynamic> data = decoded is Map ? Map<String, dynamic>.from(decoded) : {};
+
+      if (response.statusCode == 201) {
+        if (data['avatarUrl'] != null) {
+          // Update local user data
+          final updatedUser = Map<String, dynamic>.from(user!);
+          updatedUser['avatarUrl'] = data['avatarUrl'];
+          user = updatedUser;
+          await _saveSession();
+          notifyListeners();
+        }
+        return data;
+      } else {
+        throw Exception(data['error'] ?? 'Failed to upload profile picture');
+      }
+    } catch (e) {
+      _addLog(ApiLog(
+        type: LogType.error,
+        method: 'POST (Multipart)',
+        url: url,
+        error: e.toString(),
+      ));
+      rethrow;
+    }
+  }
+
 
   Future<Map<String, dynamic>> updateMpin({
     required String oldPin,

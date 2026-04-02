@@ -59,11 +59,13 @@ app.post(['/verify', '/upload'], upload.single('document'), async (req, res) => 
 
     const updateData = {};
 
-    // Logic from v485 Developer Manual
-    if (type === 'SELFIE' && faceTemplate) {
+    // Logic for Profile Picture vs KYC
+    if (type === 'PROFILE_PICTURE') {
+      updateData.avatarUrl = `/verification/uploads/${req.file.filename}`;
+    } else if (type === 'SELFIE' && faceTemplate) {
       updateData.faceTemplate = faceTemplate;
       updateData.isFaceVerified = true;
-      updateData.kycStatus = 'VERIFIED'; // Changed from 'APPROVED' per compliance
+      updateData.kycStatus = 'VERIFIED';
       updateData.kycTier = 'FULLY_VERIFIED';
     } else {
       updateData.kycStatus = 'PENDING';
@@ -74,14 +76,15 @@ app.post(['/verify', '/upload'], upload.single('document'), async (req, res) => 
       data: updateData
     });
 
-    if (updateData.kycStatus === 'VERIFIED') {
+    if (type !== 'PROFILE_PICTURE' && updateData.kycStatus === 'VERIFIED') {
       await sendVerificationSuccess(updatedUser.email);
     }
 
     res.status(201).json({
       success: true,
-      status: updateData.kycStatus,
-      tier: updateData.kycTier
+      status: type === 'PROFILE_PICTURE' ? 'UPDATED' : updateData.kycStatus,
+      tier: updatedUser.kycTier,
+      avatarUrl: updatedUser.avatarUrl
     });
   } catch (error) {
     console.error('Verification Error:', error);

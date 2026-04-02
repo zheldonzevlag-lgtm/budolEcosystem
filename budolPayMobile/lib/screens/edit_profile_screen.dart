@@ -1,6 +1,8 @@
+import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../services/api_service.dart';
+import 'kyc_capture_screen.dart';
 
 class EditProfileScreen extends StatefulWidget {
   const EditProfileScreen({super.key});
@@ -146,6 +148,41 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
     }
   }
 
+  Future<void> _pickProfilePicture() async {
+    try {
+      final String? imagePath = await Navigator.push<String>(
+        context,
+        MaterialPageRoute(
+          builder: (context) => const KYCCaptureScreen(
+            captureType: KYCCaptureType.face,
+          ),
+        ),
+      );
+
+      if (imagePath != null && mounted) {
+        setState(() => _isLoading = true);
+        
+        final apiService = context.read<ApiService>();
+        await apiService.uploadProfilePicture(File(imagePath));
+        
+        if (mounted) {
+           ScaffoldMessenger.of(context).showSnackBar(
+             const SnackBar(content: Text('Profile picture updated'), backgroundColor: Colors.green),
+           );
+        }
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Failed to update profile picture: $e'), backgroundColor: Colors.red),
+        );
+      }
+    } finally {
+      if (mounted) setState(() => _isLoading = false);
+    }
+  }
+
+
   @override
   Widget build(BuildContext context) {
     final user = context.watch<ApiService>().user;
@@ -167,29 +204,37 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Center(
-                child: Stack(
-                  children: [
-                    CircleAvatar(
-                      radius: 50,
-                      backgroundColor: const Color(0xFFF43F5E).withValues(alpha: 0.1),
-                      child: Text(
-                        (user?['firstName']?[0] ?? '') + (user?['lastName']?[0] ?? ''),
-                        style: const TextStyle(fontSize: 32, fontWeight: FontWeight.bold, color: Color(0xFFF43F5E)),
+                child: GestureDetector(
+                  onTap: _isLoading ? null : _pickProfilePicture,
+                  child: Stack(
+                    children: [
+                      CircleAvatar(
+                        radius: 50,
+                        backgroundColor: const Color(0xFFF43F5E).withValues(alpha: 0.1),
+                        backgroundImage: (user?['avatarUrl'] != null && user!['avatarUrl'].toString().isNotEmpty)
+                            ? NetworkImage('${context.read<ApiService>().baseUrl}${user['avatarUrl']}')
+                            : null,
+                        child: (user?['avatarUrl'] == null || user!['avatarUrl'].toString().isEmpty)
+                            ? Text(
+                                (user?['firstName']?[0] ?? '') + (user?['lastName']?[0] ?? ''),
+                                style: const TextStyle(fontSize: 32, fontWeight: FontWeight.bold, color: Color(0xFFF43F5E)),
+                              )
+                            : null,
                       ),
-                    ),
-                    Positioned(
-                      bottom: 0,
-                      right: 0,
-                      child: Container(
-                        padding: const EdgeInsets.all(4),
-                        decoration: const BoxDecoration(
-                          color: Color(0xFFF43F5E),
-                          shape: BoxShape.circle,
+                      Positioned(
+                        bottom: 0,
+                        right: 0,
+                        child: Container(
+                          padding: const EdgeInsets.all(4),
+                          decoration: const BoxDecoration(
+                            color: Color(0xFFF43F5E),
+                            shape: BoxShape.circle,
+                          ),
+                          child: const Icon(Icons.camera_alt, color: Colors.white, size: 20),
                         ),
-                        child: const Icon(Icons.camera_alt, color: Colors.white, size: 20),
                       ),
-                    ),
-                  ],
+                    ],
+                  ),
                 ),
               ),
               const SizedBox(height: 32),

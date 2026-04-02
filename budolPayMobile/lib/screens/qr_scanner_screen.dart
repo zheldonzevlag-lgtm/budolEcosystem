@@ -1,6 +1,8 @@
 import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
+import 'package:flutter/services.dart';
+import 'package:image_picker/image_picker.dart';
 import 'package:mobile_scanner/mobile_scanner.dart';
 import 'package:provider/provider.dart';
 import '../services/api_service.dart';
@@ -14,8 +16,30 @@ class QRScannerScreen extends StatefulWidget {
   State<QRScannerScreen> createState() => _QRScannerScreenState();
 }
 
-class _QRScannerScreenState extends State<QRScannerScreen> {
+class _QRScannerScreenState extends State<QRScannerScreen> with SingleTickerProviderStateMixin {
   bool _isProcessing = false;
+  late MobileScannerController _controller;
+  late AnimationController _animationController;
+  late Animation<double> _animation;
+
+  @override
+  void initState() {
+    super.initState();
+    _controller = MobileScannerController();
+    _animationController = AnimationController(
+      vsync: this,
+      duration: const Duration(seconds: 2),
+    )..repeat(reverse: true);
+    
+    _animation = Tween<double>(begin: 0, end: 1).animate(_animationController);
+  }
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    _animationController.dispose();
+    super.dispose();
+  }
 
   void _onDetect(BarcodeCapture capture) {
     if (_isProcessing) return;
@@ -25,8 +49,22 @@ class _QRScannerScreenState extends State<QRScannerScreen> {
       final String? code = barcode.rawValue;
       if (code != null) {
         debugPrint('Barcode found! $code');
+        HapticFeedback.mediumImpact();
         _processQRCode(code);
         break;
+      }
+    }
+  }
+
+  Future<void> _pickImage() async {
+    final ImagePicker picker = ImagePicker();
+    final XFile? image = await picker.pickImage(source: ImageSource.gallery);
+    if (image != null) {
+      final BarcodeCapture? capture = await _controller.analyzeImage(image.path);
+      if (capture != null && capture.barcodes.isNotEmpty) {
+        _processQRCode(capture.barcodes.first.rawValue ?? '');
+      } else {
+        _showError('No QR code found in image');
       }
     }
   }
@@ -78,10 +116,30 @@ class _QRScannerScreenState extends State<QRScannerScreen> {
         title: const Text('Scan to Pay'),
         backgroundColor: Theme.of(context).colorScheme.primary,
         foregroundColor: Colors.white,
+        actions: [
+          ValueListenableBuilder(
+            valueListenable: _controller,
+            builder: (context, state, child) {
+              final torchState = state.torchState;
+              return IconButton(
+                icon: Icon(
+                  torchState == TorchState.on ? Icons.flash_on : Icons.flash_off,
+                  color: Colors.white,
+                ),
+                onPressed: () => _controller.toggleTorch(),
+              );
+            },
+          ),
+          IconButton(
+            icon: const Icon(Icons.photo_library, color: Colors.white),
+            onPressed: _pickImage,
+          ),
+        ],
       ),
       body: Stack(
         children: [
           MobileScanner(
+            controller: _controller,
             onDetect: _onDetect,
             errorBuilder: (context, error) {
               return Center(
@@ -110,15 +168,17 @@ class _QRScannerScreenState extends State<QRScannerScreen> {
               );
             },
           ),
-          Center(
-            child: Container(
-              width: 250,
-              height: 250,
-              decoration: BoxDecoration(
-                border: Border.all(color: Colors.white, width: 2),
-                borderRadius: BorderRadius.circular(12),
-              ),
-            ),
+          AnimatedBuilder(
+            animation: _animation,
+            builder: (context, child) {
+              return CustomPaint(
+                painter: QRScannerOverlayPainter(
+                  animationValue: _animation.value,
+                  scanAreaSize: 260.0,
+                ),
+                child: Container(),
+              );
+            },
           ),
           if (_isProcessing)
             Container(
@@ -394,5 +454,109 @@ class PaymentSummaryScreen extends StatelessWidget {
         ),
       ),
     );
+  }
+}
+
+class QRScannerOverlayPainter extends CustomPainter {
+  final double animationValue;
+  final double scanAreaSize;
+
+  QRScannerOverlayPainter({
+    required this.animationValue,
+    required this.scanAreaSize,
+  });
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final double width = size.width;
+    final double height = size.height;
+    final double scanWidth = scanAreaSize;
+    final double scanHeight = scanAreaSize;
+    
+    final double left = (width - scanWidth) / 2;
+    final double top = (height - scanHeight) / 2;
+    final Rect scanRect = Rect.fromLTWH(left, top, scanWidth, scanHeight);
+
+    // Draw background with cutout
+    final Paint backgroundPaint = Paint()..color = Colors.black.withAlpha(178); // ~0.7 opacity
+    final Path backgroundPath = Path()..addRect(Rect.fromLTWH(0, 0, width, height));
+    final Path cutoutPath = Path()..addRRect(RRect.fromRectAndRadius(scanRect, const Radius.circular(12)));
+    
+    final Path finalPath = Path.combine(PathOperation.difference, backgroundPath, cutoutPath);
+    canvas.drawPath(finalPath, backgroundPaint);
+
+    // Draw frame corners (Techno style)
+    final Paint cornerPaint = Paint()
+      ..color = const Color(0xFFF43F5E) // BudolPay Pink
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = 3.0
+      ..strokeCap = StrokeCap.round;
+
+    const double cornerSize = 30.0;
+    const double radius = 12.0;
+
+    // Top Left
+    canvas.drawPath(
+      Path()
+        ..moveTo(left, top + cornerSize)
+        ..lineTo(left, top + radius)
+        ..arcToPoint(Offset(left + radius, top), radius: const Radius.circular(radius))
+        ..lineTo(left + cornerSize, top),
+      cornerPaint,
+    );
+
+    // Top Right
+    canvas.drawPath(
+      Path()
+        ..moveTo(left + scanWidth - cornerSize, top)
+        ..lineTo(left + scanWidth - radius, top)
+        ..arcToPoint(Offset(left + scanWidth, top + radius), radius: const Radius.circular(radius))
+        ..lineTo(left + scanWidth, top + cornerSize),
+      cornerPaint,
+    );
+
+    // Bottom Left
+    canvas.drawPath(
+      Path()
+        ..moveTo(left, top + scanHeight - cornerSize)
+        ..lineTo(left, top + scanHeight - radius)
+        ..arcToPoint(Offset(left + radius, top + scanHeight), radius: const Radius.circular(radius))
+        ..lineTo(left + cornerSize, top + scanHeight),
+      cornerPaint,
+    );
+
+    // Bottom Right
+    canvas.drawPath(
+      Path()
+        ..moveTo(left + scanWidth - cornerSize, top + scanHeight)
+        ..lineTo(left + scanWidth - radius, top + scanHeight)
+        ..arcToPoint(Offset(left + scanWidth, top + scanHeight - radius), radius: const Radius.circular(radius))
+        ..lineTo(left + scanWidth, top + scanHeight - cornerSize),
+      cornerPaint,
+    );
+
+    // Draw scanning laser line
+    final double laserTop = top + (scanHeight * animationValue);
+    final Paint laserPaint = Paint()
+      ..shader = LinearGradient(
+        colors: [
+          const Color(0xFFF43F5E).withAlpha(0),
+          const Color(0xFFF43F5E),
+          const Color(0xFFF43F5E).withAlpha(0),
+        ],
+      ).createShader(Rect.fromLTWH(left, laserTop - 2, scanWidth, 4));
+
+    canvas.drawRect(Rect.fromLTWH(left + 10, laserTop - 1, scanWidth - 20, 2), laserPaint);
+    
+    // Add glowing effect to the laser
+    final Paint glowPaint = Paint()
+      ..color = const Color(0xFFF43F5E).withAlpha(76) // ~0.3 opacity
+      ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 8);
+    canvas.drawRect(Rect.fromLTWH(left + 5, laserTop - 2, scanWidth - 10, 4), glowPaint);
+  }
+
+  @override
+  bool shouldRepaint(QRScannerOverlayPainter oldDelegate) {
+    return oldDelegate.animationValue != animationValue;
   }
 }
