@@ -18,9 +18,15 @@ export const config = {
 };
 
 // The verification service URL - set VERIFICATION_SERVICE_URL in Vercel env vars
-// Falls back to the local development address
+// Falls back to the Vercel production deployment URL, or local development address
 const getVerificationServiceUrl = () => {
-  return process.env.VERIFICATION_SERVICE_URL || `http://${process.env.LOCAL_IP || 'localhost'}:8006`;
+  if (process.env.VERIFICATION_SERVICE_URL) {
+    return process.env.VERIFICATION_SERVICE_URL;
+  }
+  if (process.env.NODE_ENV === 'production') {
+    return 'https://budolpay-verification-service.vercel.app';
+  }
+  return `http://${process.env.LOCAL_IP || 'localhost'}:8006`;
 };
 
 async function proxyRequest(req: NextRequest, path: string[]) {
