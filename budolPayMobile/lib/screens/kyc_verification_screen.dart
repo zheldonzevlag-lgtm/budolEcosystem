@@ -12,6 +12,8 @@ import '../services/face_embedding_service.dart';
 import 'package:latlong2/latlong.dart';
 import '../utils/timezone_utils.dart';
 import '../widgets/map_picker.dart';
+import 'kyc_capture_screen.dart';
+
 
 class KYCVerificationScreen extends StatefulWidget {
   const KYCVerificationScreen({super.key});
@@ -202,16 +204,31 @@ class _KYCVerificationScreenState extends State<KYCVerificationScreen> {
 
   Future<void> _pickImage(ImageSource source, bool isSelfie) async {
     try {
-      final XFile? pickedFile = await _picker.pickImage(
-        source: source,
-        preferredCameraDevice: isSelfie ? CameraDevice.front : CameraDevice.rear,
-        maxWidth: 1200,
-        maxHeight: 1200,
-        imageQuality: 85,
-      );
+      String? imagePath;
 
-      if (pickedFile != null) {
-        final file = File(pickedFile.path);
+      if (source == ImageSource.camera) {
+        // Use custom KYCCaptureScreen for both ID and Selfie to get guidance frames
+        imagePath = await Navigator.push<String>(
+          context,
+          MaterialPageRoute(
+            builder: (context) => KYCCaptureScreen(
+              captureType: isSelfie ? KYCCaptureType.face : KYCCaptureType.idCard,
+            ),
+          ),
+        );
+      } else {
+        // Fallback to standard ImagePicker for gallery uploads
+        final XFile? pickedFile = await _picker.pickImage(
+          source: source,
+          maxWidth: 1024,
+          maxHeight: 1024,
+          imageQuality: 85,
+        );
+        imagePath = pickedFile?.path;
+      }
+
+      if (imagePath != null) {
+        final file = File(imagePath);
         setState(() {
           if (isSelfie) {
             _selfieImage = file;
