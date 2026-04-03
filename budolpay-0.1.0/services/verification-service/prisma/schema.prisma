@@ -1,0 +1,57 @@
+// This is a minimal local copy of the schema for the verification-service
+// It only includes the models this service directly needs for Vercel deployment
+// Full schema is in packages/database/prisma/schema.prisma
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL")
+}
+
+model User {
+  id             String                 @id @default(uuid())
+  email          String                 @unique
+  firstName      String?
+  lastName       String?
+  isFaceVerified Boolean                @default(false)
+  kycStatus      KYCStatus              @default(NONE)
+  kycTier        KYCTier                @default(BASIC)
+  avatarUrl      String?
+  faceTemplate   String?
+  verificationDocs VerificationDocument[]
+}
+
+model VerificationDocument {
+  id           String   @id @default(uuid())
+  userId       String
+  type         String
+  documentType String
+  faceTemplate String?
+  status       String   @default("PENDING")
+  blobData     Bytes?
+  remoteUrl    String?
+  ocrData      Json?
+  rotation     Int      @default(0)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+  user         User     @relation(fields: [userId], references: [id])
+
+  @@index([userId])
+}
+
+enum KYCStatus {
+  NONE
+  PENDING
+  VERIFIED
+  REJECTED
+}
+
+enum KYCTier {
+  BASIC
+  SEMI_VERIFIED
+  FULLY_VERIFIED
+}
