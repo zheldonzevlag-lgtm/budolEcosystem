@@ -250,6 +250,15 @@ class RealtimeService {
   }
 
   /**
+   * PUBLIC: Broadcast an update to all ANY_UPDATE subscribers.
+   * Used by RealtimeProvider's guaranteed polling heartbeat so all dashboard
+   * pages refresh even when no WebSocket event arrives (e.g. Pusher idle).
+   */
+  broadcast(data?: any): void {
+    this.emit('ANY_UPDATE', data ?? { source: 'heartbeat' });
+  }
+
+  /**
    * Emit data to all subscribers of an event
    */
   private emit(event: string, data: any): void {
