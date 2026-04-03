@@ -41,16 +41,18 @@ export default function EmployeesPage() {
   const [changeRequests, setChangeRequests] = useState<any[]>([]);
   const [isLoading, setIsLoading] = useState(true);
 
-  async function fetchData() {
+  async function fetchData(silent = false) {
+    if (!silent) setIsLoading(true);
     try {
       const [empRes, logsRes, settingsRes, requestsRes] = await Promise.all([
-        fetch('/api/employees'),
-        fetch('/api/audit-logs?limit=15'),
-        fetch('/api/settings/security'),
+        fetch('/api/employees', { cache: 'no-store' }),
+        fetch('/api/audit-logs?limit=15', { cache: 'no-store' }),
+        fetch('/api/settings/security', { cache: 'no-store' }),
         fetch('/api/employees', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ action: 'GET_CHANGE_REQUESTS' })
+          body: JSON.stringify({ action: 'GET_CHANGE_REQUESTS' }),
+          cache: 'no-store'
         })
       ]);
 
@@ -61,7 +63,7 @@ export default function EmployeesPage() {
     } catch (error) {
       console.error("Failed to fetch data:", error);
     } finally {
-      setIsLoading(false);
+      if (!silent) setIsLoading(false);
     }
   }
 
@@ -72,7 +74,7 @@ export default function EmployeesPage() {
   useEffect(() => {
     // Rely on global RealtimeProvider for initialization, just bind to updates 
     return realtime.on("ANY_UPDATE", () => {
-      fetchData();
+      fetchData(true); // Silent refresh
     });
   }, []);
 

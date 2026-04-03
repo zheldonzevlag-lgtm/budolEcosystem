@@ -65,24 +65,24 @@ export default function TransactionsPage() {
 
     // Subscribe to unified realtime telemetry updates instead of legacy hardcoded socket.io
     return realtime.on("ANY_UPDATE", () => {
-      fetchTransactions();
+      fetchTransactions(true); // Background refresh
     });
   }, [statusFilter, typeFilter]);
 
-  const fetchTransactions = async () => {
-    setLoading(true);
+  const fetchTransactions = async (isBackground = false) => {
+    if (!isBackground) setLoading(true);
     try {
       const params = new URLSearchParams();
       if (statusFilter !== "ALL") params.append("status", statusFilter);
       if (typeFilter !== "ALL") params.append("type", typeFilter);
       
-      const res = await fetch(`/api/transactions?${params.toString()}`);
+      const res = await fetch(`/api/transactions?${params.toString()}`, { cache: 'no-store' });
       const data = await res.json();
       setTransactions(data);
     } catch (e) {
       console.error("Failed to fetch transactions:", e);
     } finally {
-      setLoading(false);
+      if (!isBackground) setLoading(false);
     }
   };
 

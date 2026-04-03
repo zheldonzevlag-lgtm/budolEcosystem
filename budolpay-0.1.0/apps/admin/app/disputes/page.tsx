@@ -29,16 +29,16 @@ export default function DisputesPage() {
         
         // Listen to global updates
         return realtime.on("ANY_UPDATE", () => {
-             fetchData();
+             fetchData(true); // Silent refresh
         });
     }, []);
 
-    const fetchData = async () => {
-        setLoading(true);
+    const fetchData = async (silent = false) => {
+        if (!silent) setLoading(true);
         try {
             const [disputesRes, reconRes] = await Promise.all([
-                fetch('/api/disputes'),
-                fetch('/api/reconciliation')
+                fetch('/api/disputes', { cache: 'no-store' }),
+                fetch('/api/reconciliation', { cache: 'no-store' })
             ]);
             const disputesData = await disputesRes.json();
             const reconData = await reconRes.json();
@@ -55,7 +55,7 @@ export default function DisputesPage() {
         } catch (error) {
             console.error('Failed to fetch data:', error);
         } finally {
-            setLoading(false);
+            if (!silent) setLoading(false);
         }
     };
 
@@ -83,7 +83,7 @@ export default function DisputesPage() {
                     <p className="text-sm text-slate-500">Manage transaction conflicts and financial integrity reports</p>
                 </div>
                 <button 
-                    onClick={fetchData}
+                    onClick={() => fetchData()}
                     className="px-4 py-2 bg-slate-900 text-white text-xs font-bold rounded-lg hover:bg-slate-800 transition-all shadow-sm"
                 >
                     REFRESH DATA

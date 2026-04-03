@@ -32,21 +32,21 @@ export default function SecurityPage() {
   useEffect(() => {
     // Re-bind listener when filter changes to ensure closure has correct filter value
     return realtime.on("ANY_UPDATE", () => {
-      fetchLogs();
+      fetchLogs(true); // Background refresh to avoid flicker
     });
   }, [filter]);
 
-  const fetchLogs = async () => {
-    setLoading(true);
+  const fetchLogs = async (isBackground = false) => {
+    if (!isBackground) setLoading(true);
     try {
       const url = filter === "All Actions" ? "/api/security" : `/api/security?filter=${filter}`;
-      const res = await fetch(url);
+      const res = await fetch(url, { cache: 'no-store' });
       const data = await res.json();
       setLogs(data);
     } catch (e) {
       console.error("Failed to fetch logs:", e);
     } finally {
-      setLoading(false);
+      if (!isBackground) setLoading(false);
     }
   };
 

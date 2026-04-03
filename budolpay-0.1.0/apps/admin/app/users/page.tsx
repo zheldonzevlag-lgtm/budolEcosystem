@@ -147,7 +147,7 @@ export default function UsersPage() {
     if (!silent) setLoading(true);
     try {
       const url = filter === "ALL" ? "/api/users" : `/api/users?kycStatus=${filter}`;
-      const res = await fetch(url);
+      const res = await fetch(url, { cache: 'no-store' });
       const data = await res.json();
       setUsers(data);
       

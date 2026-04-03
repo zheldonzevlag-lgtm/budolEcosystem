@@ -36,17 +36,20 @@ export async function POST(request: Request) {
         }
     }
 
-    // Log the logout event if we found a user
-    if (userId) {
+    // Log the logout event if we found a user or at least identified a session
+    if (token) {
         const ip = request.headers.get('x-forwarded-for') || '127.0.0.1';
+        
+        // Use the identified userId or mark as anonymous logout if we can't verify
         await createAuditLog({
             action: 'USER_LOGOUT',
-            userId: userId,
+            userId: userId || 'SYSTEM', // Fallback to system if userId not resolved but session existed
             entity: 'Security',
-            entityId: userId,
+            entityId: userId || 'SESSION_CLOSED',
             ipAddress: ip,
             metadata: {
                 userAgent: request.headers.get('user-agent'),
+                tokenIdentifier: token.substring(0, 8) + '...',
                 compliance: {
                     pci_dss: '10.2.3',
                     bsp: 'Circular 808'

@@ -13,10 +13,18 @@ const path = require('path');
 const multer = require('multer');
 const { PrismaClient } = require('@prisma/client');
 const nodemailer = require('nodemailer');
+const cloudinary = require('cloudinary').v2;
 require('dotenv').config({ path: path.resolve(__dirname, '../../.env'), override: true });
 
 const app = express();
 const PORT = process.env.PORT || 8006;
+
+// ── Cloudinary Configuration ──────────────────────────────────────────────────
+cloudinary.config({
+  cloud_name: process.env.NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME,
+  api_key: process.env.CLOUDINARY_API_KEY,
+  api_secret: process.env.CLOUDINARY_API_SECRET,
+});
 
 // ── Prisma Client ─────────────────────────────────────────────────────────────
 // Initialize with fallback to avoid crash during Vercel build-time static pass
@@ -109,9 +117,35 @@ app.post(['/verify', '/upload', '/api/upload', '/api/verify'], upload.single('do
       return res.status(400).json({ error: 'User ID is required' });
     }
 
+    const user = await prisma.user.findUnique({ where: { id: userId } });
+    if (!user) {
+      return res.status(404).json({ error: 'User not found' });
+    }
+
     // Store document record in DB if a file was uploaded
     if (req.file) {
-      const remoteUrl = `/verification/uploads/${req.file.filename}`;
+      const now = new Date();
+      const dateStr = now.toISOString().split('T')[0];
+      const timeStr = now.toTimeString().split(' ')[0].replace(/:/g, '-').slice(0, 5);
+      const userName = `${user.firstName || 'Unknown'} ${user.lastName || 'User'}`.replace(/\s+/g, ' ').trim();
+      const folderPath = `home/budolpay/kyc/${userName} ${dateStr} ${timeStr}`;
+      
+      console.log(`[Verification] Processing file: ${req.file.originalname} for user ${userName} in ${folderPath}`);
+      
+      // 1. Upload to Cloudinary for persistent storage
+      const result = await cloudinary.uploader.upload(req.file.path, {
+        folder: folderPath,
+        resource_type: 'auto',
+        public_id: `${type}_${Date.now()}`
+      });
+      
+      const remoteUrl = result.secure_url;
+      console.log(`[Verification] Cloudinary upload success: ${remoteUrl}`);
+
+      // 2. Prepare binary fallback (optional but good for compliance)
+      const fs = require('fs');
+      const blobData = fs.readFileSync(req.file.path);
+
       await prisma.verificationDocument.create({
         data: {
           userId,
@@ -119,14 +153,23 @@ app.post(['/verify', '/upload', '/api/upload', '/api/verify'], upload.single('do
           documentType: documentType || 'GOVERNMENT_ID',
           status: 'PENDING',
           remoteUrl,
+          blobData,
           faceTemplate: faceTemplate || null,
           ocrData: {
             originalName: req.file.originalname,
             mimeType: req.file.mimetype,
             size: req.file.size,
+            cloudinary_id: result.public_id
           },
         },
       });
+
+      // 3. Cleanup temporary file
+      try {
+        fs.unlinkSync(req.file.path);
+      } catch (err) {
+        console.warn(`[Verification] Failed to delete temp file: ${err.message}`);
+      }
     }
 
     const updateData = {};

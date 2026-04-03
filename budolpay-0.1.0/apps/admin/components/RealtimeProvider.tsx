@@ -20,7 +20,7 @@ import { useRouter } from 'next/navigation';
 import { realtime } from '@/lib/realtime';
 
 const DEFAULT_POLL_MS = 10000;
-const SLOW_POLL_MS = 60000; // 1 minute safety net when WS is healthy
+const SLOW_POLL_MS = 300000; // 5 minute safety net when WS is healthy (prevents flicker)
 
 export default function RealtimeProvider() {
   const router = useRouter();
@@ -33,24 +33,36 @@ export default function RealtimeProvider() {
     if (mountedRef.current) return;
     mountedRef.current = true;
 
-    const triggerRefresh = () => {
-      console.log(`[RealtimeProvider] Triggering refresh (WS: ${realtime.isWebSocketConnected() ? 'OK' : 'OFFLINE'})`);
+    const triggerRefresh = (source = 'heartbeat') => {
+      console.log(`[RealtimeProvider] Triggering refresh (Source: ${source}, WS: ${realtime.isWebSocketConnected() ? 'OK' : 'OFFLINE'})`);
       router.refresh();
-      realtime.broadcast({ source: 'heartbeat', ts: Date.now() });
+      // Only broadcast if triggered by heartbeat to avoid infinite loops with internal events
+      if (source === 'heartbeat') {
+        realtime.broadcast({ source: 'heartbeat', ts: Date.now() });
+      }
     };
 
     const updateTimer = (connected: boolean) => {
       setWsConnected(connected);
-      if (timerRef.current) clearInterval(timerRef.current);
+      if (timerRef.current) {
+        clearInterval(timerRef.current);
+        timerRef.current = null;
+      }
       
-      const newInterval = connected ? SLOW_POLL_MS : configRef.current.intervalMs;
-      timerRef.current = setInterval(triggerRefresh, newInterval);
-      console.log(`[RealtimeProvider] Heartbeat adapted to ${newInterval}ms (WS is ${connected ? 'CONNECTED' : 'DISCONNECTED'})`);
+      if (connected) {
+        console.log(`[RealtimeProvider] WebSocket CONNECTED — Polling DISABLED for zero-flicker performance.`);
+        return;
+      }
+
+      // If disconnected or using SWR, enable polling heartbeat
+      const newInterval = configRef.current.intervalMs;
+      timerRef.current = setInterval(() => triggerRefresh('heartbeat'), newInterval);
+      console.log(`[RealtimeProvider] Polling ENABLED (${newInterval}ms) — WS is DISCONNECTED or SWR in use.`);
     };
 
     const bootstrap = async () => {
       try {
-        const res = await fetch('/api/system/realtime');
+        const res = await fetch('/api/system/realtime', { cache: 'no-store' });
         if (res.ok) {
           const data = await res.json();
           configRef.current.intervalMs = data.swrPollingInterval || DEFAULT_POLL_MS;
@@ -62,19 +74,32 @@ export default function RealtimeProvider() {
       // Initial start
       updateTimer(realtime.isWebSocketConnected());
 
+      // Listen for ANY_UPDATE to trigger instant server-side refresh
+      // This bridges the gap between WebSocket events and Server Components
+      const unbindUpdate = realtime.on("ANY_UPDATE", (data) => {
+        // If the update came from heartbeat, we already called refresh
+        if (data?.source !== 'heartbeat') {
+          console.log(`[RealtimeProvider] Instant refresh from event:`, data);
+          router.refresh();
+        }
+      });
+
       // Listen for WebSocket status changes to adapt heartbeat on-the-fly
       realtime.onWebSocketStatusChange((connected) => {
         updateTimer(connected);
       });
 
       // Initialize the connection
-      realtime.init().catch(() => {});
+      await realtime.init().catch(() => {});
+      
+      return unbindUpdate;
     };
 
-    bootstrap();
+    const cleanupPromise = bootstrap();
 
     return () => {
       if (timerRef.current) clearInterval(timerRef.current);
+      cleanupPromise.then(unbind => unbind?.());
     };
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
