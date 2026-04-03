@@ -20,16 +20,32 @@ const PORT = process.env.PORT || 8006;
 
 // ── Prisma Client ─────────────────────────────────────────────────────────────
 // Initialize with fallback to avoid crash during Vercel build-time static pass
-const getDatabaseUrl = () => {
+// BudolPay Schema Isolation Logic
+// Ensures the client always targets the 'budolpay' schema to avoid collisions
+const getIsolatingUrl = () => {
   const url = process.env.DATABASE_URL;
   if (!url || url.trim().length === 0) {
-    return 'postgresql://postgres:postgres@localhost:5432/budolpay?schema=public';
+    return 'postgresql://postgres:postgres@localhost:5432/budolpay?schema=budolpay';
   }
-  return url.trim();
+  
+  const trimmedUrl = url.trim();
+  // If it already has a schema specified, respect it (unless it's public)
+  if (trimmedUrl.includes('schema=budolpay')) return trimmedUrl;
+  
+  // Force budolpay schema if it's pointing to public or has no schema
+  const baseUrl = trimmedUrl.split('?')[0];
+  const params = new URLSearchParams(trimmedUrl.split('?')[1] || '');
+  params.set('schema', 'budolpay');
+  
+  return `${baseUrl}?${params.toString()}`;
 };
 
 const prisma = new PrismaClient({
-  datasources: { db: { url: getDatabaseUrl() } },
+  datasources: {
+    db: {
+      url: getIsolatingUrl(),
+    },
+  },
 });
 
 // ── Minimal Email Notification ────────────────────────────────────────────────
