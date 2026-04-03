@@ -1,0 +1,48 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>System Admin Manual - KYC Stabilization v40</title>
+    <style>
+        body { font-family: 'Inter', sans-serif; line-height: 1.6; color: #333; max-width: 1200px; margin: 0 auto; padding: 20px; background: #fff; }
+        h1, h2, h3 { color: #2c3e50; }
+        .config-table { width: 100%; border-collapse: collapse; margin: 20px 0; }
+        .config-table th, .config-table td { border: 1px solid #ddd; padding: 12px; text-align: left; }
+        .config-table th { background-color: #f8f9fa; }
+        .status-badge { background: #2ecc71; color: #fff; padding: 2px 8px; border-radius: 12px; font-size: 0.8em; }
+    </style>
+</head>
+<body>
+    <h1>System Admin Manual: KYC Infrastructure on Vercel</h1>
+    <p>This document details the configuration and maintenance steps for the <code>verification-service</code> deployed on Vercel.</p>
+
+    <h2>Deployment Configuration</h2>
+    <table class="config-table">
+        <tr><th>Metric</th><th>Configuration Value</th></tr>
+        <tr><td><strong>Platform</strong></td><td>Vercel Serverless (Node.js 20.x)</td></tr>
+        <tr><td><strong>Production URL</strong></td><td><code>verification-service-six.vercel.app</code></td></tr>
+        <tr><td><strong>Proxy Entry</strong></td><td><code>budolpay.vercel.app/api/verification/*</code></td></tr>
+        <tr><td><strong>Database</strong></td><td>Vercel Postgres (Prisma Accelerate Connection)</td></tr>
+        <tr><td><strong>Runtime Schema</strong></td><td><code>budolpay</code> <span class="status-badge">Isolated</span></td></tr>
+    </table>
+
+    <h2>Environment Variables</h2>
+    <p>The service requires the following production secrets:</p>
+    <ul>
+        <li><code>DATABASE_URL</code>: <code>postgres://...&schema=budolpay</code> (Prisma Postgres Platform)</li>
+        <li><code>DIRECT_URL</code>: <code>...&schema=budolpay</code> (Direct Driver Access)</li>
+        <li><code>PRISMA_ENGINES_CACHE_DIR</code>: <code>/tmp/prisma_cache</code> (Necessary for Vercel deployment stability)</li>
+    </ul>
+
+    <h2>Maintenance Procedures</h2>
+    <h3>Redeployment</h3>
+    <p>To apply schema changes, run:</p>
+    <pre><code>vercel --prod --yes</code></pre>
+
+    <h3>Health Checks</h3>
+    <p>Monitor the <code>/api/verification/upload</code> endpoint. A 404 indicates a failure in the Admin app proxy routing. A 500 with "Prisma" in the logs indicate a database connection schema mismatch.</p>
+
+    <p><a href="index.html">&larr; Back to Index</a></p>
+</body>
+</html>
