@@ -17,7 +17,7 @@ const getVerificationServiceUrl = () => {
     return process.env.VERIFICATION_SERVICE_URL;
   }
   if (process.env.NODE_ENV === 'production') {
-    return 'https://budolpay-verification-service.vercel.app';
+    return 'https://verification-service-six.vercel.app';
   }
   return `http://${process.env.LOCAL_IP || 'localhost'}:8006`;
 };
