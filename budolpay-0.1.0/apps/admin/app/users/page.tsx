@@ -21,6 +21,7 @@ import {
   Info
 } from "lucide-react";
 import { formatManilaTime } from "@/lib/utils";
+import { realtime } from "@/lib/realtime";
 
 export default function UsersPage() {
   const [users, setUsers] = useState<any[]>([]);
@@ -35,12 +36,10 @@ export default function UsersPage() {
   useEffect(() => {
     fetchUsers();
     
-    // Auto-refresh every 5 seconds to get new KYC submissions
-    const interval = setInterval(() => {
+    // Subscribe to unified realtime telemetry updates instead of legacy hardcoded polling
+    return realtime.on("ANY_UPDATE", () => {
       fetchUsers(true);
-    }, 5000);
-
-    return () => clearInterval(interval);
+    });
   }, [filter]);
 
   useEffect(() => {

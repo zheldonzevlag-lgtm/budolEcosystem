@@ -3,6 +3,7 @@ import { Inter } from "next/font/google";
 import "./globals.css";
 import Sidebar from "@/components/Sidebar";
 import MainContent from "@/components/MainContent";
+import RealtimeProvider from "@/components/RealtimeProvider";
 
 const inter = Inter({ subsets: ["latin"] });
 
@@ -20,6 +21,7 @@ export default function RootLayout({
     <html lang="en">
       <body className={`${inter.className} bg-slate-50`}>
         <div className="flex min-h-screen">
+          <RealtimeProvider />
           <Sidebar />
           <MainContent>
             {children}

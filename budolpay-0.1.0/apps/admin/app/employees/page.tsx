@@ -70,34 +70,10 @@ export default function EmployeesPage() {
   }, []);
 
   useEffect(() => {
-    let isMounted = true;
-    const initRealtime = async () => {
-      try {
-        console.log("[Employees] Connecting to realtime...");
-        await realtime.init();
-
-        realtime.on("AUDIT_LOG_CREATED", (newLog) => {
-          if (!isMounted) return;
-          console.log("[Realtime] New audit log received in Employees:", newLog.action);
-
-          setAuditLogs(prevLogs => {
-            // Avoid duplicates
-            if (prevLogs.some(log => log.id === newLog.id)) return prevLogs;
-            // Employees page usually shows all logs or a subset, here we show latest 15 as per initial fetch
-            return [newLog, ...prevLogs.slice(0, 14)];
-          });
-        });
-      } catch (err) {
-        console.error("[Realtime] Init failed in Employees:", err);
-      }
-    };
-
-    initRealtime();
-
-    return () => {
-      isMounted = false;
-      realtime.off("AUDIT_LOG_CREATED");
-    };
+    // Rely on global RealtimeProvider for initialization, just bind to updates 
+    return realtime.on("ANY_UPDATE", () => {
+      fetchData();
+    });
   }, []);
 
   const handleUpdateRole = async (userId: string, newRole: string) => {

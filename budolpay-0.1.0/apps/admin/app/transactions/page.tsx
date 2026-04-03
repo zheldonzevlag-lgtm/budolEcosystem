@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { io } from "socket.io-client";
+import { realtime } from "@/lib/realtime";
 import {
   ArrowUpRight,
   ArrowDownLeft,
@@ -63,23 +63,10 @@ export default function TransactionsPage() {
   useEffect(() => {
     fetchTransactions();
 
-    // Socket.io Real-time Setup
-    const GATEWAY_URL = process.env.NEXT_PUBLIC_GATEWAY_URL || "http://localhost:8080";
-    const socket = io(GATEWAY_URL);
-
-    socket.on("connect", () => {
-      console.log("[Socket] Connected to Gateway");
-      socket.emit("join", "admin");
+    // Subscribe to unified realtime telemetry updates instead of legacy hardcoded socket.io
+    return realtime.on("ANY_UPDATE", () => {
+      fetchTransactions();
     });
-
-    socket.on("new_transaction", (newTx) => {
-      console.log("[Socket] New transaction received:", newTx);
-      setTransactions((prev) => [newTx, ...prev]);
-    });
-
-    return () => {
-      socket.disconnect();
-    };
   }, [statusFilter, typeFilter]);
 
   const fetchTransactions = async () => {

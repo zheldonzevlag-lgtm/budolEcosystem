@@ -114,17 +114,17 @@ class RealtimeService {
       this.reinit();
     });
 
-    // Listen for all events and emit them to local callbacks
-    const events = ["AUDIT_LOG_CREATED", "SECURITY_ALERT", "SYSTEM_CONFIG_CHANGED"];
-    events.forEach(event => {
-      channel.bind(event, (data: any) => {
-        console.log(`[Realtime] Pusher event received: ${event}`);
-        if (event === "SYSTEM_CONFIG_CHANGED") {
-          console.log("[Realtime] System config change detected via Pusher, re-initializing...");
-          this.reinit();
-        }
-        this.emit(event, data);
-      });
+    // Listen for all events globally via bind_global
+    channel.bind_global((eventName: string, data: any) => {
+      // Ignore internal pusher events
+      if (eventName.startsWith("pusher:")) return;
+      
+      console.log(`[Realtime] Pusher event received: ${eventName}`);
+      if (eventName === "SYSTEM_CONFIG_CHANGED" || eventName === "REALTIME_CONFIG_CHANGED") {
+        console.log(`[Realtime] Config change detected via Pusher, re-initializing...`);
+        this.reinit();
+      }
+      this.emit(eventName, data);
     });
 
     this.pusher.connection.bind("connected", () => {
@@ -196,6 +196,10 @@ class RealtimeService {
             this.lastEmittedId = latestLog.id;
           }
         }
+
+        // Guarantee a global refresh on the frontend if in polling mode so all pages stay up to date
+        // even if no specific audit log was generated.
+        this.emit("ANY_UPDATE", { sourceEvent: "POLLING_TICK" });
       } catch (error) {
         console.error("[Realtime] Polling failed:", error);
       }
@@ -252,6 +256,15 @@ class RealtimeService {
     const eventCallbacks = this.callbacks.get(event);
     if (eventCallbacks) {
       eventCallbacks.forEach(callback => callback(data));
+    }
+    
+    // Globally catch-all dispatch to ensure features like automatic router.refresh() 
+    // catch all incoming changes automatically.
+    if (event !== "ANY_UPDATE") {
+      const globalCallbacks = this.callbacks.get("ANY_UPDATE");
+      if (globalCallbacks) {
+        globalCallbacks.forEach(callback => callback({ sourceEvent: event, data }));
+      }
     }
   }
 

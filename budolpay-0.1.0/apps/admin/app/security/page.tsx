@@ -30,49 +30,11 @@ export default function SecurityPage() {
   }, [filter]);
 
   useEffect(() => {
-    let isMounted = true;
-    const initRealtime = async () => {
-      try {
-        console.log("[Security] Connecting to realtime...");
-        await realtime.init();
-        
-        realtime.on("AUDIT_LOG_CREATED", (newLog) => {
-          if (!isMounted) return;
-          console.log("[Realtime] New audit log received:", newLog.action);
-          
-          // Check if it matches current filter
-          const matchesFilter = filter === "All Actions" || 
-            (filter === "Security" && (newLog.entity === "Security" || newLog.action.includes("SECURITY") || newLog.action.includes("LOGIN") || newLog.action.includes("LOGOUT") || newLog.action.includes("OTP") || newLog.action.includes("AUTH"))) ||
-            (filter === "Financial" && (newLog.entity === "Financial" || newLog.entity === "Dispute" || newLog.action.includes("TRANSFER") || newLog.action.includes("PAYMENT") || newLog.action.includes("SETTLEMENT") || newLog.action.includes("CASH_IN") || newLog.action.includes("CASH_OUT"))) ||
-            (filter === "System" && (newLog.entity === "System" || newLog.entity === "Regulatory" || newLog.entity === "SystemSetting" || newLog.action.includes("AUDIT") || newLog.action.includes("REPORT") || newLog.action.includes("CONFIG")));
-
-          if (matchesFilter) {
-            setLogs(prevLogs => {
-              // Avoid duplicates (if polling and realtime overlap)
-              if (prevLogs.some(log => log.id === newLog.id)) return prevLogs;
-              const normalizedLog = {
-                ...newLog,
-                createdAt: newLog.createdAt || newLog.timestamp || new Date().toISOString(),
-                user: newLog.user || { firstName: 'System' }
-              };
-              return [normalizedLog, ...prevLogs.slice(0, 49)];
-            });
-          }
-        });
-      } catch (err) {
-        console.error("[Realtime] Init failed:", err);
-      }
-    };
-
-    initRealtime();
-
-    return () => {
-      isMounted = false;
-      // Do NOT call realtime.disconnect() here as it would kill connection for other components
-      // RealtimeService should manage its own lifecycle as a singleton
-      realtime.off("AUDIT_LOG_CREATED"); 
-    };
-  }, [filter]); // Re-bind listener when filter changes to ensure closure has correct filter value
+    // Re-bind listener when filter changes to ensure closure has correct filter value
+    return realtime.on("ANY_UPDATE", () => {
+      fetchLogs();
+    });
+  }, [filter]);
 
   const fetchLogs = async () => {
     setLoading(true);

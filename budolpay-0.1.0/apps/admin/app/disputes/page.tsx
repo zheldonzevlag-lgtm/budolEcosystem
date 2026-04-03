@@ -17,6 +17,7 @@ import {
   Calendar
 } from "lucide-react";
 import { formatManilaTime, getNowUTC } from "@/lib/utils";
+import { realtime } from "@/lib/realtime";
 
 export default function DisputesPage() {
     const [disputes, setDisputes] = useState([]);
@@ -25,6 +26,11 @@ export default function DisputesPage() {
 
     useEffect(() => {
         fetchData();
+        
+        // Listen to global updates
+        return realtime.on("ANY_UPDATE", () => {
+             fetchData();
+        });
     }, []);
 
     const fetchData = async () => {
