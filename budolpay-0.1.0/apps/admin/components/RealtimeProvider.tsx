@@ -3,37 +3,30 @@
 /**
  * RealtimeProvider - Global realtime update orchestrator
  *
- * WHY THIS EXISTS:
- * The Admin Dashboard contains both Server Components (Home dashboard, Accounting)
- * and Client Components (Users, Transactions, Employees, Security, Disputes).
- * Both need fresh data without a manual page reload.
- *
- * ROOT CAUSE OF PREVIOUS FAILURE:
- * Pusher/Socket.io are configured as the realtime provider, but no backend
- * code currently publishes events to Pusher. This means the WebSocket
- * connection stays idle and pages never update automatically.
- *
- * HOW THIS FIX WORKS:
+ * HOW THIS ADAPTIVE FIX WORKS:
  * 1. Fetches the configured poll interval from `/api/system/realtime`.
- * 2. Runs a GUARANTEED polling timer on that interval, regardless of provider.
- * 3. Each tick calls router.refresh() (Server Components) AND realtime.broadcast()
- *    (Client Components that subscribed to ANY_UPDATE).
- * 4. If Pusher/Socket.io delivers an event first, that triggers an instant update.
- *    The periodic poll is then the reliable safety net.
- *
- * TODO: Add Pusher.trigger() calls in API routes (e.g. after transaction creation,
- *       user verification) to achieve true instant push updates.
+ * 2. Connects to the configured WebSocket provider (Pusher/Socket.io).
+ * 3. ADAPTIVE HEARTBEAT:
+ *    - If WebSocket is CONNECTED: Heartbeat is SLOW (60s) to save resources,
+ *      acting only as a safety net.
+ *    - If WebSocket is DISCONNECTED: Heartbeat is FAST (configured interval, default 10s)
+ *      acting as the primary synchronization mechanism (SWR fallback).
+ * 4. Each heartbeat/event triggers `router.refresh()` (Server Components) 
+ *    and `realtime.broadcast()` (Client Components).
  */
 
-import { useEffect, useRef } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { realtime } from '@/lib/realtime';
 
-const FALLBACK_POLL_MS = 10000; // 10 seconds default
+const DEFAULT_POLL_MS = 10000;
+const SLOW_POLL_MS = 60000; // 1 minute safety net when WS is healthy
 
 export default function RealtimeProvider() {
   const router = useRouter();
   const timerRef = useRef<NodeJS.Timeout | null>(null);
+  const [wsConnected, setWsConnected] = useState(false);
+  const configRef = useRef({ intervalMs: DEFAULT_POLL_MS });
   const mountedRef = useRef(false);
 
   useEffect(() => {
@@ -41,39 +34,50 @@ export default function RealtimeProvider() {
     mountedRef.current = true;
 
     const triggerRefresh = () => {
-      // Refresh Server Component data (home dashboard, accounting pages)
+      console.log(`[RealtimeProvider] Triggering refresh (WS: ${realtime.isWebSocketConnected() ? 'OK' : 'OFFLINE'})`);
       router.refresh();
-      // Notify all Client Component pages that subscribed to ANY_UPDATE
-      // (users, transactions, employees, security, disputes call their own fetchData)
       realtime.broadcast({ source: 'heartbeat', ts: Date.now() });
     };
 
-    const start = async () => {
-      let intervalMs = FALLBACK_POLL_MS;
+    const updateTimer = (connected: boolean) => {
+      setWsConnected(connected);
+      if (timerRef.current) clearInterval(timerRef.current);
+      
+      const newInterval = connected ? SLOW_POLL_MS : configRef.current.intervalMs;
+      timerRef.current = setInterval(triggerRefresh, newInterval);
+      console.log(`[RealtimeProvider] Heartbeat adapted to ${newInterval}ms (WS is ${connected ? 'CONNECTED' : 'DISCONNECTED'})`);
+    };
+
+    const bootstrap = async () => {
       try {
         const res = await fetch('/api/system/realtime');
         if (res.ok) {
           const data = await res.json();
-          intervalMs = data.swrPollingInterval || FALLBACK_POLL_MS;
-          console.log(`[RealtimeProvider] Heartbeat configured: ${intervalMs}ms (provider: ${data.provider})`);
-          // Also init the WebSocket connection (Pusher/Socket.io) for instant updates
-          // These will call broadcast() themselves when events arrive.
-          realtime.init().catch(() => {});
+          configRef.current.intervalMs = data.swrPollingInterval || DEFAULT_POLL_MS;
         }
-      } catch {
-        console.warn('[RealtimeProvider] Could not load realtime config, using default.');
+      } catch (err) {
+        console.warn('[RealtimeProvider] Failed to fetch config, using defaults.');
       }
 
-      // Start the guaranteed polling heartbeat
-      timerRef.current = setInterval(triggerRefresh, intervalMs);
-      console.log(`[RealtimeProvider] Polling heartbeat started (${intervalMs}ms).`);
+      // Initial start
+      updateTimer(realtime.isWebSocketConnected());
+
+      // Listen for WebSocket status changes to adapt heartbeat on-the-fly
+      realtime.onWebSocketStatusChange((connected) => {
+        updateTimer(connected);
+      });
+
+      // Initialize the connection
+      realtime.init().catch(() => {});
     };
 
-    start();
+    bootstrap();
 
     return () => {
       if (timerRef.current) clearInterval(timerRef.current);
     };
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+
+  return null;
 }
