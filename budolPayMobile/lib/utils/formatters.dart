@@ -65,6 +65,13 @@ class AmountUtils {
   static String formatNoSymbol(double amount) {
     return NumberFormat('###0.00', 'en_US').format(amount);
   }
+
+  static double parse(String text) {
+    if (text.isEmpty) return 0.0;
+    // Remove commas added by the CurrencyInputFormatter
+    final cleanText = text.replaceAll(',', '');
+    return double.tryParse(cleanText) ?? 0.0;
+  }
 }
 
 class DateUtils {

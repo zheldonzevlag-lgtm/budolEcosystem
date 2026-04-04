@@ -400,7 +400,9 @@ export default function EmployeesPage() {
                           {emp.firstName?.[0]}{emp.lastName?.[0]}
                         </div>
                         <div>
-                          <div className="font-bold text-slate-900">{emp.firstName} {emp.lastName}</div>
+                            <div className="font-bold text-slate-900">
+                            {(emp.firstName || emp.lastName) ? `${emp.firstName} ${emp.lastName}` : (emp as any).name || emp.email}
+                          </div>
                           <div className="text-[10px] text-slate-400 font-mono">{emp.email}</div>
                         </div>
                       </div>
@@ -494,7 +496,22 @@ export default function EmployeesPage() {
                     <td className="px-6 py-3">
                       <div className="flex items-center gap-2">
                         <span className={`w-1.5 h-1.5 rounded-full ${log.user?.role === 'ADMIN' ? 'bg-budolshap-primary' : 'bg-indigo-400'}`}></span>
-                        <span className="font-bold text-slate-700">{log.user?.firstName} {log.user?.lastName}</span>
+                      <div className="flex flex-col">
+                        <span className="font-bold text-slate-700">
+                          {log.user ? (
+                            (log.user.firstName || log.user.lastName) 
+                              ? `${log.user.firstName} ${log.user.lastName}` 
+                              : (log.user as any).name || log.user.email
+                          ) : (
+                            <span className="text-slate-400 italic">System / Anonymous</span>
+                          )}
+                        </span>
+                        {log.user?.role && (
+                          <span className="text-[10px] uppercase tracking-wider text-slate-400 font-medium">
+                            {log.user.role}
+                          </span>
+                        )}
+                      </div>
                       </div>
                     </td>
                     <td className="px-6 py-3">

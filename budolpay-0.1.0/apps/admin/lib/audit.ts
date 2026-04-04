@@ -32,11 +32,9 @@ export async function createAuditLog(params: {
       action: params.action,
       entity: params.entity,
       entityId: params.entityId,
-      // Ensure userId is either a valid UUID or null to prevent FK violations (P2003)
-      // If 'SYSTEM' or other non-UUID is passed, we log it as null but keep record in metadata
-      userId: (params.userId && /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(params.userId)) 
-        ? params.userId 
-        : null,
+      // Ensure userId is tracked if provided (v44.1 Fix)
+      // Custom IDs like 'admin-reynaldo-id' are now supported
+      userId: params.userId || null,
       oldValue: params.oldValue,
       newValue: params.newValue,
       metadata: metadata,

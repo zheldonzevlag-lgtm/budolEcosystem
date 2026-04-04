@@ -3,6 +3,7 @@ import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 import '../services/api_service.dart';
 import '../utils/formatters.dart';
+import '../utils/phone_utils.dart';
 import '../utils/ui_utils.dart';
 
 class SendMoneyScreen extends StatefulWidget {
@@ -75,7 +76,7 @@ class _SendMoneyScreenState extends State<SendMoneyScreen> {
 
   Future<void> _handleTransfer() async {
     final recipientInput = _recipientController.text.trim();
-    final recipient = recipientInput.replaceAll('-', ''); // Send clean number to backend
+    final recipient = PhoneUtils.normalizePhoneNumber(recipientInput) ?? recipientInput.replaceAll('-', ''); // Send clean number to backend
     final amountText = _amountController.text.trim();
     final message = _messageController.text.trim();
 
@@ -101,8 +102,8 @@ class _SendMoneyScreenState extends State<SendMoneyScreen> {
       return;
     }
 
-    final amount = double.tryParse(amountText);
-    if (amount == null || amount <= 0) {
+    final amount = AmountUtils.parse(amountText);
+    if (amount <= 0) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('Please enter a valid amount')),
       );

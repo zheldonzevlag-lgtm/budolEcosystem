@@ -61,7 +61,7 @@ class ApiService extends ChangeNotifier {
   Map<String, dynamic>? _systemSettings;
   String? _deviceId;
   bool _hasSeenAds = false;
-  String _appVersion = '1.3.72'; // v1.3.72 - Latest Build
+  String _appVersion = '1.3.81'; // v1.3.81 - Phone Normalization Hotfix
 
   String get appVersion => _appVersion;
   Future<void>? _initFuture;

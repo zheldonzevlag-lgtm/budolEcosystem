@@ -88,8 +88,8 @@ class _TransferScreenState extends State<TransferScreen> {
             ElevatedButton(
               onPressed: () {
                 final amountText = _amountController.text.trim();
-                final amount = double.tryParse(amountText);
-                if (amount == null || amount <= 0) {
+                final amount = AmountUtils.parse(amountText);
+                if (amount <= 0) {
                   ScaffoldMessenger.of(context).showSnackBar(
                     const SnackBar(content: Text('Please enter a valid amount')),
                   );

@@ -40,8 +40,8 @@ class _CashInScreenState extends State<CashInScreen> {
       return;
     }
 
-    final amount = double.tryParse(amountText);
-    if (amount == null || amount <= 0) {
+    final amount = AmountUtils.parse(amountText);
+    if (amount <= 0) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('Please enter a valid amount')),
       );

@@ -61,7 +61,21 @@ class _CashOutScreenState extends State<CashOutScreen> {
             const SizedBox(height: 48),
             ElevatedButton(
               onPressed: () {
-                _showSuccessDialog();
+                final amountText = _amountController.text.trim();
+                if (amountText.isEmpty) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(content: Text('Please enter an amount')),
+                  );
+                  return;
+                }
+                final amount = AmountUtils.parse(amountText);
+                if (amount <= 0) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(content: Text('Please enter a valid amount')),
+                  );
+                  return;
+                }
+                _showSuccessDialog(amount);
               },
               style: ElevatedButton.styleFrom(
                 backgroundColor: const Color(0xFFF43F5E),
@@ -115,7 +129,7 @@ class _CashOutScreenState extends State<CashOutScreen> {
     );
   }
 
-  void _showSuccessDialog() {
+  void _showSuccessDialog(double amount) {
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
@@ -130,7 +144,7 @@ class _CashOutScreenState extends State<CashOutScreen> {
               style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
             ),
             const SizedBox(height: 8),
-            Text('₱${_amountController.text} has been sent to $_selectedMethod.'),
+            Text('₱${amount.toStringAsFixed(2)} has been sent to $_selectedMethod.'),
             const SizedBox(height: 24),
             ElevatedButton(
               onPressed: () {

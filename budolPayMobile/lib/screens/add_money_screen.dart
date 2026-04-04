@@ -22,8 +22,8 @@ class _AddMoneyScreenState extends State<AddMoneyScreen> {
   Future<void> _handleCashIn() async {
     if (_amountController.text.isEmpty) return;
     
-    final amount = double.tryParse(_amountController.text);
-    if (amount == null || amount <= 0) {
+    final amount = AmountUtils.parse(_amountController.text);
+    if (amount <= 0) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('Please enter a valid amount')),
       );
