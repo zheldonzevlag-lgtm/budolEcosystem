@@ -14,6 +14,7 @@ const multer = require('multer');
 const { PrismaClient } = require('@prisma/client');
 const nodemailer = require('nodemailer');
 const cloudinary = require('cloudinary').v2;
+const { createWorker } = require('tesseract.js');
 require('dotenv').config({ path: path.resolve(__dirname, '../../.env'), override: true });
 
 const app = express();
@@ -107,6 +108,37 @@ app.get(['/health', '/api/health'], (req, res) => {
   res.json({ status: 'ok', service: 'verification-service', timestamp: new Date().toISOString() });
 });
 
+/**
+ * Heuristic parser for identity documents
+ */
+const parseIdentityFromText = (text) => {
+  const data = {};
+  const cleanText = text.replace(/\s+/g, ' ');
+
+  // Common ID patterns (e.g. Philippine UMID, Driver License, Passport)
+  const idMatch = text.match(/\b\d{4}-\d{4}-\d{4}-\d{4}\b/) || 
+                  text.match(/\b[A-Z]\d{2}-\d{2}-\d{6}\b/) || 
+                  text.match(/\b[A-Z]\d{7,9}\b/);
+  if (idMatch) data.id_number = idMatch[0];
+
+  // Name extraction (very heuristic)
+  const nameMatch = text.match(/(?:NAME|FULL NAME)[:\s]+([A-Z\s]{3,})/i) || 
+                    text.match(/([A-Z]{3,}\s[A-Z]{3,})/);
+  if (nameMatch && !data.id_number?.includes(nameMatch[1])) {
+    data.full_name = nameMatch[1].trim();
+  }
+
+  // Date of Birth
+  const dobMatch = text.match(/(?:BIRTH|DOB|DATE OF BIRTH)[:\s]+(\d{2}[\/\-]\d{2}[\/\-]\d{4})/i) || 
+                   text.match(/(\d{4}[\/\-]\d{2}[\/\-]\d{2})/);
+  if (dobMatch) data.birth_date = dobMatch[1];
+
+  data.extracted_at = new Date().toISOString();
+  data.source = "Tesseract.js Engine";
+  
+  return data;
+};
+
 // ── KYC Upload Handler ─────────────────────────────────────────────────────────
 // Aliased as /upload AND /verify for mobile app compatibility
 app.post(['/verify', '/upload', '/api/upload', '/api/verify'], upload.single('document'), async (req, res) => {
@@ -142,7 +174,24 @@ app.post(['/verify', '/upload', '/api/upload', '/api/verify'], upload.single('do
       const remoteUrl = result.secure_url;
       console.log(`[Verification] Cloudinary upload success: ${remoteUrl}`);
 
-      // 2. Prepare binary fallback (optional but good for compliance)
+      // 2. Perform OCR Analysis
+      let extractedData = {};
+      if (type.includes('ID')) {
+        try {
+          console.log(`[Verification] Starting OCR extraction for ${req.file.originalname}...`);
+          const worker = await createWorker('eng');
+          const { data: { text } } = await worker.recognize(req.file.path);
+          await worker.terminate();
+          
+          extractedData = parseIdentityFromText(text);
+          console.log(`[Verification] OCR Success:`, extractedData);
+        } catch (ocrError) {
+          console.error(`[Verification] OCR Extraction failed:`, ocrError);
+          // Fallback to metadata
+        }
+      }
+
+      // 3. Prepare binary fallback (optional but good for compliance)
       const fs = require('fs');
       const blobData = fs.readFileSync(req.file.path);
 
@@ -159,7 +208,8 @@ app.post(['/verify', '/upload', '/api/upload', '/api/verify'], upload.single('do
             originalName: req.file.originalname,
             mimeType: req.file.mimetype,
             size: req.file.size,
-            cloudinary_id: result.public_id
+            cloudinary_id: result.public_id,
+            ...extractedData
           },
         },
       });
