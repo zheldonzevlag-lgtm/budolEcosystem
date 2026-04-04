@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
-import { triggerRealtimeEvent } from '@/lib/realtime-server';
+import { createAuditLog } from '@/lib/audit';
 import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
 
@@ -13,6 +13,7 @@ const JWT_SECRET = process.env.JWT_SECRET || 'GJ7Lxn0/kdV/KuZJ5xJ7Ip0RvMerrGW5n0
  * Matches logic in Express auth-service/index.js (line 802)
  */
 export async function POST(request: Request) {
+    const ip = request.headers.get('x-forwarded-for') || '127.0.0.1';
     try {
         const body = await request.json();
         const { phoneNumber, userId, pin, deviceId } = body;
@@ -21,12 +22,11 @@ export async function POST(request: Request) {
             return NextResponse.json({ error: 'User identifier and PIN are required' }, { status: 400 });
         }
 
-        // Search for user (consistent with local index.js)
+        // Search for user
         let user;
         if (userId) {
             user = await prisma.user.findUnique({ where: { id: userId } });
         } else if (phoneNumber) {
-            // Normalize phone number (+63 -> 0)
             let normalizedPhone = phoneNumber.replace(/\D/g, '');
             if (normalizedPhone.startsWith('63')) {
                 normalizedPhone = '0' + normalizedPhone.substring(2);
@@ -56,33 +56,24 @@ export async function POST(request: Request) {
         // Verify PIN (PCI DSS 8.2 compliant comparison)
         const isMatch = await bcrypt.compare(pin, user.pinHash);
         if (!isMatch) {
-            // Log failed attempt for audit (AuditLog model is available)
-            await prisma.auditLog.create({
-                data: {
-                    userId: user.id,
-                    action: 'MOBILE_LOGIN_FAILED',
-                    entity: 'User',
-                    entityId: user.id,
-                    metadata: { reason: 'Invalid PIN', deviceId }
-                }
+            // Log failed attempt for audit (Standardized v43.5)
+            await createAuditLog({
+                userId: user.id,
+                action: 'MOBILE_LOGIN_FAILED',
+                entity: 'Security',
+                entityId: user.id,
+                ipAddress: ip,
+                metadata: { reason: 'Invalid PIN', deviceId, compliance: { pci_dss: '10.2.4' } }
             });
             
-            // Trigger realtime update for dashboard
-            await triggerRealtimeEvent('admin', 'MOBILE_LOGIN_FAILED', { 
-                phoneNumber: user.phoneNumber, 
-                reason: 'Invalid PIN',
-                deviceId 
-            });
-
             return NextResponse.json({ error: 'Invalid security PIN' }, { status: 401 });
         }
 
-        // 4. Handle Device Trust Update (Consistent with local JSON format)
+        // 4. Handle Device Trust Update
         let devices = [];
         try {
             devices = user.trustedDevices ? JSON.parse(user.trustedDevices) : [];
         } catch {
-            // Fallback for comma-separated legacy or corrupt data
             devices = user.trustedDevices ? user.trustedDevices.split(',').map((id: string) => ({ deviceId: id, isVerified: true })) : [];
         }
 
@@ -110,33 +101,17 @@ export async function POST(request: Request) {
             }
         });
 
-        // Audit Success
-        await prisma.auditLog.create({
-            data: {
-                userId: user.id,
-                action: 'MOBILE_LOGIN_SUCCESS',
-                entity: 'User',
-                entityId: user.id,
-                metadata: { deviceId }
-            }
-        });
-
-        // Trigger realtime update for dashboard — Ensure instant synchronization (v43.1)
-        await triggerRealtimeEvent('admin', 'AUDIT_LOG_CREATED', {
+        // Audit Success (Standardized v43.5)
+        await createAuditLog({
+            userId: user.id,
             action: 'MOBILE_LOGIN_SUCCESS',
-            entity: 'User',
+            entity: 'Security',
             entityId: user.id,
-            user: {
-                firstName: user.firstName,
-                lastName: user.lastName,
-                email: user.email,
-                role: user.role
-            },
-            createdAt: new Date().toISOString(),
-            metadata: { deviceId }
+            ipAddress: ip,
+            metadata: { deviceId, compliance: { pci_dss: '10.2.1' } }
         });
 
-        // Issue JWT (BSP Standard Multi-Factor Identity)
+        // Issue JWT
         const token = jwt.sign(
             { 
                 userId: user.id, 
@@ -145,7 +120,7 @@ export async function POST(request: Request) {
                 email: user.email 
             },
             JWT_SECRET,
-            { expiresIn: '30d' } // Mobile sessions are usually longer
+            { expiresIn: '30d' }
         );
 
         return NextResponse.json({

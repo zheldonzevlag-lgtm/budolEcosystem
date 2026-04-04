@@ -22,6 +22,21 @@ export async function POST(request: Request) {
         
         if (!limiter.success) {
             console.warn(`[Login API] Rate limit exceeded for IP: ${ip}`);
+            
+            // Log Rate Limit Hit for Forensic Audit (v43.5)
+            await createAuditLog({
+                action: 'USER_LOGIN_LOCKED',
+                userId: 'SYSTEM',
+                entity: 'Security',
+                entityId: ip,
+                ipAddress: ip,
+                metadata: {
+                    email,
+                    reason: 'Too many attempts',
+                    compliance: { pci_dss: '10.2.4' }
+                }
+            });
+
             return NextResponse.json(
                 { 
                     error: 'Too many login attempts. Please try again later.',
@@ -43,89 +58,126 @@ export async function POST(request: Request) {
 
         console.log(`[Login API] Attempting SSO login via: ${ssoUrl}/auth/sso/login`);
         
-        const ssoResponse = await fetch(`${ssoUrl}/auth/sso/login`, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-                email,
-                password,
-                apiKey
-            })
-        });
+        try {
+            const ssoResponse = await fetch(`${ssoUrl}/auth/sso/login`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    email,
+                    password,
+                    apiKey
+                })
+            });
 
-        const ssoData = await ssoResponse.json();
+            const ssoData = await ssoResponse.json();
 
-        if (!ssoResponse.ok) {
-            return NextResponse.json(
-                { error: ssoData.error || 'Authentication failed' },
-                { status: ssoResponse.status }
-            );
-        }
+            if (!ssoResponse.ok) {
+                // Log Failed Login Attempt (v43.5)
+                await createAuditLog({
+                    action: 'USER_LOGIN_FAILURE',
+                    userId: 'SYSTEM',
+                    entity: 'Security',
+                    entityId: email,
+                    ipAddress: ip,
+                    metadata: {
+                        reason: ssoData.error || 'Authentication failed',
+                        userAgent: request.headers.get('user-agent'),
+                        compliance: { pci_dss: '10.2.4' }
+                    }
+                });
 
-        const { token } = ssoData;
+                return NextResponse.json(
+                    { error: ssoData.error || 'Authentication failed' },
+                    { status: ssoResponse.status }
+                );
+            }
 
-        // 2. Verify token immediately to get user details for local sync
-        // (Optional if we trust the login response, but good practice)
-        const verifyResponse = await fetch(`${ssoUrl}/auth/verify`, {
-            headers: { 'Authorization': `Bearer ${token}` }
-        });
-        const verifyData = await verifyResponse.json();
-        
-        if (!verifyData.valid) {
-            return NextResponse.json({ error: 'Token validation failed' }, { status: 401 });
-        }
-        
-        const { user: ssoUser } = verifyData;
+            const { token } = ssoData;
 
-        // 3. Sync User Locally
-        let localUser = await prisma.user.findUnique({
-            where: { email: ssoUser.email }
-        });
+            // 2. Verify token immediately to get user details for local sync
+            const verifyResponse = await fetch(`${ssoUrl}/auth/verify`, {
+                headers: { 'Authorization': `Bearer ${token}` }
+            });
+            const verifyData = await verifyResponse.json();
+            
+            if (!verifyData.valid) {
+                 // Log Verification Failure (v43.5)
+                await createAuditLog({
+                    action: 'USER_LOGIN_FAILURE',
+                    userId: 'SYSTEM',
+                    entity: 'Security',
+                    entityId: email,
+                    ipAddress: ip,
+                    metadata: { reason: 'Token verification failed after successful login' }
+                });
+                return NextResponse.json({ error: 'Token validation failed' }, { status: 401 });
+            }
+            
+            const { user: ssoUser } = verifyData;
 
-        if (!localUser) {
-            localUser = await prisma.user.create({
-                data: {
-                    email: ssoUser.email,
-                    firstName: ssoUser.firstName || 'SSO',
-                    lastName: ssoUser.lastName || 'User',
-                    passwordHash: 'SSO_MANAGED', // No password stored locally
-                    phoneNumber: ssoUser.phoneNumber || `SSO_${Date.now()}`,
-                    role: 'STAFF', 
-                    kycStatus: 'VERIFIED'
+            // 3. Sync User Locally
+            let localUser = await prisma.user.findUnique({
+                where: { email: ssoUser.email }
+            });
+
+            if (!localUser) {
+                localUser = await prisma.user.create({
+                    data: {
+                        email: ssoUser.email,
+                        firstName: ssoUser.firstName || 'SSO',
+                        lastName: ssoUser.lastName || 'User',
+                        passwordHash: 'SSO_MANAGED', // No password stored locally
+                        phoneNumber: ssoUser.phoneNumber || `SSO_${Date.now()}`,
+                        role: 'STAFF', 
+                        kycStatus: 'VERIFIED'
+                    }
+                });
+            }
+
+            // 4. Set Session Cookie
+            const response = NextResponse.json({ success: true });
+            
+            // Log Login Action for Forensic Audit Trail
+            await createAuditLog({
+                action: 'USER_LOGIN',
+                userId: localUser.id,
+                entity: 'Security',
+                entityId: localUser.id,
+                ipAddress: ip,
+                metadata: {
+                    userAgent: request.headers.get('user-agent'),
+                    authMethod: 'SSO_BUDOLID',
+                    compliance: {
+                        pci_dss: '10.2.1',
+                        bsp: 'Circular 808'
+                    }
                 }
             });
+
+            console.log(`[Login API] Setting budolpay_token for ${email}`);
+            response.cookies.set('budolpay_token', token, {
+                httpOnly: true,
+                secure: process.env.NODE_ENV === 'production',
+                sameSite: 'lax',
+                path: '/',
+                maxAge: 60 * 60 * 24 * 7 // 7 days
+            });
+
+            return response;
+
+        } catch (fetchError: any) {
+            console.error('[Login API] Fetch error during SSO login:', fetchError.message);
+            // Log SSO Downtime / Error (v43.5)
+            await createAuditLog({
+                action: 'USER_LOGIN_FAILURE',
+                userId: 'SYSTEM',
+                entity: 'Security',
+                entityId: email,
+                ipAddress: ip,
+                metadata: { reason: 'SSO Service Offline', error: fetchError.message }
+            });
+            throw fetchError; // Re-throw to catch block
         }
-
-        // 4. Set Session Cookie
-        const response = NextResponse.json({ success: true });
-        
-        // Log Login Action for Forensic Audit Trail
-        await createAuditLog({
-            action: 'USER_LOGIN',
-            userId: localUser.id,
-            entity: 'Security',
-            entityId: localUser.id,
-            ipAddress: ip,
-            metadata: {
-                userAgent: request.headers.get('user-agent'),
-                authMethod: 'SSO_BUDOLID',
-                compliance: {
-                    pci_dss: '10.2.1',
-                    bsp: 'Circular 808'
-                }
-            }
-        });
-
-        console.log(`[Login API] Setting budolpay_token for ${email}`);
-        response.cookies.set('budolpay_token', token, {
-            httpOnly: true,
-            secure: process.env.NODE_ENV === 'production',
-            sameSite: 'lax',
-            path: '/',
-            maxAge: 60 * 60 * 24 * 7 // 7 days
-        });
-
-        return response;
 
     } catch (error: any) {
         console.error('Login API Error:', error);

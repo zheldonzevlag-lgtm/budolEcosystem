@@ -34,6 +34,18 @@ export async function GET(request: Request) {
         if (!verifyResponse.ok) {
             const errorText = await verifyResponse.text();
             console.error(`[SSO Callback] Verification failed with status ${verifyResponse.status}:`, errorText);
+            
+            // Log Failure (v43.5)
+            const ip = request.headers.get('x-forwarded-for') || '127.0.0.1';
+            await createAuditLog({
+                action: 'USER_LOGIN_FAILURE',
+                userId: 'SYSTEM',
+                entity: 'Security',
+                entityId: 'SSO_CALLBACK',
+                ipAddress: ip,
+                metadata: { reason: `SSO Verification returned status ${verifyResponse.status}`, error: errorText }
+            });
+
             return NextResponse.redirect(new URL(`/login?error=verification_failed&status=${verifyResponse.status}`, baseUrl));
         }
 
@@ -42,6 +54,18 @@ export async function GET(request: Request) {
 
         if (!verificationData.valid) {
             console.error('[SSO Callback] Token marked as invalid by budolID');
+            
+            // Log Failure (v43.5)
+            const ip = request.headers.get('x-forwarded-for') || '127.0.0.1';
+            await createAuditLog({
+                action: 'USER_LOGIN_FAILURE',
+                userId: 'SYSTEM',
+                entity: 'Security',
+                entityId: 'SSO_CALLBACK',
+                ipAddress: ip,
+                metadata: { reason: 'Token marked as invalid by SSO provider' }
+            });
+
             return NextResponse.redirect(new URL('/login?error=invalid_token', baseUrl));
         }
 
@@ -106,12 +130,25 @@ export async function GET(request: Request) {
 
         return response;
 
-    } catch (error) {
+    } catch (error: any) {
         console.error('SSO Callback Error Details:', {
             error,
             url: request.url
         });
         
+        // Log Unexpected Error (v43.5)
+        try {
+            const ip = request.headers.get('x-forwarded-for') || '127.0.0.1';
+            await createAuditLog({
+                action: 'USER_LOGIN_FAILURE',
+                userId: 'SYSTEM',
+                entity: 'Security',
+                entityId: 'SSO_CALLBACK',
+                ipAddress: ip,
+                metadata: { reason: 'SSO Callback internal error', error: error.message }
+            });
+        } catch (e) {}
+
         // Base URL for redirects, ensuring we don't use 0.0.0.0
         const baseUrl = new URL(request.url);
         if (baseUrl.hostname === '0.0.0.0') {

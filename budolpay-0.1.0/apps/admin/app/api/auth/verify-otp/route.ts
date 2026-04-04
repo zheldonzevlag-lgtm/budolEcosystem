@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
+import { createAuditLog } from '@/lib/audit';
 
 export const dynamic = 'force-dynamic';
 
@@ -9,6 +10,7 @@ export const dynamic = 'force-dynamic';
  * WHAT: Verifies the 6-digit OTP for phone/email validation and device trust.
  */
 export async function POST(request: Request) {
+    const ip = request.headers.get('x-forwarded-for') || '127.0.0.1';
     try {
         const body = await request.json();
         const { userId, otp, type, deviceId } = body;
@@ -27,10 +29,30 @@ export async function POST(request: Request) {
 
         // Validate OTP
         if (user.otpCode !== otp) {
+            // Log Failure (v43.5)
+            await createAuditLog({
+                action: 'OTP_VERIFICATION_FAILURE',
+                userId: user.id,
+                entity: 'User',
+                entityId: user.id,
+                ipAddress: ip,
+                metadata: { reason: 'Invalid OTP code', type, deviceId }
+            });
+
             return NextResponse.json({ error: 'Invalid OTP code' }, { status: 400 });
         }
 
         if (!user.otpExpiresAt || user.otpExpiresAt < new Date()) {
+            // Log Failure (v43.5)
+            await createAuditLog({
+                action: 'OTP_VERIFICATION_FAILURE',
+                userId: user.id,
+                entity: 'User',
+                entityId: user.id,
+                ipAddress: ip,
+                metadata: { reason: 'OTP code has expired', type, deviceId }
+            });
+
             return NextResponse.json({ error: 'OTP code has expired' }, { status: 400 });
         }
 
@@ -72,6 +94,16 @@ export async function POST(request: Request) {
         await prisma.user.update({
             where: { id: userId },
             data: updateData
+        });
+
+        // Log Success (v43.5)
+        await createAuditLog({
+            action: 'OTP_VERIFIED',
+            userId: user.id,
+            entity: 'User',
+            entityId: user.id,
+            ipAddress: ip,
+            metadata: { type, deviceId, compliance: { pci_dss: '10.2.1' } }
         });
 
         return NextResponse.json({

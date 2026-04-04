@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
+import { createAuditLog } from '@/lib/audit';
 
 export const dynamic = 'force-dynamic';
 
@@ -8,11 +9,9 @@ export const dynamic = 'force-dynamic';
  *      to contact support. This endpoint allows a secure self-service reset.
  * WHAT: Clears the user's pinHash. The frontend then calls identify() again
  *       which sends an OTP. After OTP verification, the user sets a new PIN.
- * SECURITY: This endpoint alone does not grant access — the user still needs
- *           to complete the full OTP → setup-pin flow before logging in.
- *           Compliant with BSP Circular 808 multi-factor authentication rules.
  */
 export async function POST(request: Request) {
+    const ip = request.headers.get('x-forwarded-for') || '127.0.0.1';
     try {
         const body = await request.json();
         const { userId } = body;
@@ -28,29 +27,26 @@ export async function POST(request: Request) {
             return NextResponse.json({ error: 'User not found' }, { status: 404 });
         }
 
-        // Clear PIN hash so that the next identify → verify-otp flow
-        // will return PIN_SETUP_REQUIRED instead of AUTH_REQUIRED
+        // Clear PIN hash
         await prisma.user.update({
             where: { id: user.id },
             data: {
                 pinHash: null,
-                otpCode: null,      // Also clear any stale OTP
+                otpCode: null,
                 otpExpiresAt: null
             }
         });
 
-        // Audit the reset for compliance (BSP / PCI DSS traceability)
-        await prisma.auditLog.create({
-            data: {
-                userId: user.id,
-                action: 'MOBILE_PIN_RESET_REQUESTED',
-                entity: 'User',
-                entityId: user.id,
-                metadata: {
-                    compliance: 'BSP Circular No. 808',
-                    standard: 'Self-service PIN Reset',
-                    timestamp: new Date().toISOString()
-                }
+        // Audit the reset (Standardized v43.5)
+        await createAuditLog({
+            userId: user.id,
+            action: 'MOBILE_PIN_RESET_REQUESTED',
+            entity: 'Security',
+            entityId: user.id,
+            ipAddress: ip,
+            metadata: {
+                compliance: 'BSP Circular No. 808',
+                standard: 'Self-service PIN Reset'
             }
         });
 

@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import notifications from '@budolpay/notifications';
+import { createAuditLog } from '@/lib/audit';
 
 export const dynamic = 'force-dynamic';
 
@@ -10,6 +11,7 @@ export const dynamic = 'force-dynamic';
  * WHAT: Generates and resends a new 6-digit OTP for the identified user.
  */
 export async function POST(request: Request) {
+    const ip = request.headers.get('x-forwarded-for') || '127.0.0.1';
     try {
         const body = await request.json();
         const { userId, type } = body; // type can be 'EMAIL', 'SMS', or 'BOTH'
@@ -27,7 +29,6 @@ export async function POST(request: Request) {
         }
 
         // 1. Rate Limiting (BSP Circular 808/1108 Aligned)
-        // Check if an OTP was sent recently (e.g., within the last 60 seconds)
         const now = new Date();
         if (user.otpUpdatedAt && (now.getTime() - new Date(user.otpUpdatedAt).getTime()) < 60000) {
             return NextResponse.json({
@@ -59,13 +60,19 @@ export async function POST(request: Request) {
             if ((deliveryType === 'SMS' || deliveryType === 'BOTH') && user.phoneNumber) {
                 await notifications.sendOTP(user.phoneNumber, otpCode, 'SMS');
             }
-            
-            if (!user.email && !user.phoneNumber) {
-                console.warn('[Resend-OTP] User has no email or phone number for OTP');
-            }
         } catch (err: any) {
             console.error(`[Resend-OTP] sendOTP failed: ${err.message}`);
         }
+
+        // 4. Log Action (v43.5)
+        await createAuditLog({
+            action: 'OTP_RESENT',
+            userId: user.id,
+            entity: 'User',
+            entityId: user.id,
+            ipAddress: ip,
+            metadata: { type: deliveryType, compliance: { bsp: 'Circular 808' } }
+        });
 
         return NextResponse.json({
             message: 'OTP resent successfully',
