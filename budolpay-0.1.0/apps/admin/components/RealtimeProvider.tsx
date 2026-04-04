@@ -50,7 +50,8 @@ export default function RealtimeProvider() {
       }
       
       if (connected) {
-        console.log(`[RealtimeProvider] WebSocket CONNECTED — Polling DISABLED for zero-flicker performance.`);
+        timerRef.current = setInterval(() => triggerRefresh('heartbeat'), 30000); // 30s safety net
+        console.log(`[RealtimeProvider] WebSocket CONNECTED — 30s Safety Heartbeat enabled (v43.1).`);
         return;
       }
 

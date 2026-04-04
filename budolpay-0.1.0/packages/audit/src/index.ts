@@ -80,9 +80,14 @@ async function triggerRealtimeEvent(channel: string, event: string, data: any) {
  */
 async function notifyGateway(channel: string, event: string, data: any) {
   try {
-    const GATEWAY_URL = process.env.NODE_ENV === 'development' 
-      ? `http://${process.env.LOCAL_IP || 'localhost'}:8080` 
-      : (process.env.GATEWAY_URL || `http://${process.env.LOCAL_IP || 'localhost'}:8080`);
+    const gatewayBase = process.env.GATEWAY_URL || (process.env.NODE_ENV === 'development' ? `http://${process.env.LOCAL_IP || 'localhost'}:8080` : null);
+    
+    if (!gatewayBase) {
+      console.log(`[AuditLog] Skipping gateway notification (GATEWAY_URL not set in ${process.env.NODE_ENV} environment)`);
+      return;
+    }
+
+    const GATEWAY_URL = gatewayBase;
 
     console.log(`[AuditLog] Notifying gateway about ${event} for channel ${channel}`);
     

@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
+import { triggerRealtimeEvent } from '@/lib/realtime-server';
 import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
 
@@ -65,6 +66,13 @@ export async function POST(request: Request) {
                     metadata: { reason: 'Invalid PIN', deviceId }
                 }
             });
+            
+            // Trigger realtime update for dashboard
+            await triggerRealtimeEvent('admin', 'MOBILE_LOGIN_FAILED', { 
+                phoneNumber: user.phoneNumber, 
+                reason: 'Invalid PIN',
+                deviceId 
+            });
 
             return NextResponse.json({ error: 'Invalid security PIN' }, { status: 401 });
         }
@@ -111,6 +119,21 @@ export async function POST(request: Request) {
                 entityId: user.id,
                 metadata: { deviceId }
             }
+        });
+
+        // Trigger realtime update for dashboard — Ensure instant synchronization (v43.1)
+        await triggerRealtimeEvent('admin', 'AUDIT_LOG_CREATED', {
+            action: 'MOBILE_LOGIN_SUCCESS',
+            entity: 'User',
+            entityId: user.id,
+            user: {
+                firstName: user.firstName,
+                lastName: user.lastName,
+                email: user.email,
+                role: user.role
+            },
+            createdAt: new Date().toISOString(),
+            metadata: { deviceId }
         });
 
         // Issue JWT (BSP Standard Multi-Factor Identity)
