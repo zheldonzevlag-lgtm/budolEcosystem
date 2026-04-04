@@ -13,8 +13,8 @@ export async function createAuditLog(params: {
   entity: string;
   entityId: string;
   ipAddress?: string;
-  oldValue?: string;
-  newValue?: string;
+  oldValue?: any;
+  newValue?: any;
   metadata?: any;
 }) {
   // Ensure we always have a metadata object for forensic markers
