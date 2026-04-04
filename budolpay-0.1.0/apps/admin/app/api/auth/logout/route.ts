@@ -8,20 +8,26 @@ export const dynamic = "force-dynamic";
 
 /**
  * Standardized Logout Controller (v43.5)
- * Handles both manual exit and session timeouts.
+ * Handles both manual exit and session timeouts for Web & Mobile.
  * Forensic traceability for PCI-DSS 10.2.1 compliance.
  */
 export async function POST(request: Request) {
     try {
         const body = await request.json().catch(() => ({}));
         const { reason = 'MANUAL' } = body; 
-        const actionType = reason === 'TIMEOUT' ? 'USER_SESSION_TIMEOUT' : 'USER_LOGOUT';
 
-        // 1. Identification
+        // 1. Identification (Support Web Cookies & Mobile Header)
         const cookieStore = cookies();
-        const token = cookieStore.get('budolpay_token')?.value;
+        let token = cookieStore.get('budolpay_token')?.value;
+        const authHeader = request.headers.get('Authorization');
+
+        if (!token && authHeader?.startsWith('Bearer ')) {
+            token = authHeader.split(' ')[1];
+        }
+
         let userId = 'SYSTEM';
         let email = 'unknown';
+        const isMobile = !!authHeader;
 
         if (token) {
             try {
@@ -35,7 +41,12 @@ export async function POST(request: Request) {
             }
         }
 
-        // 2. Audit Log (Standardized v43.5)
+        // 2. Action Determination
+        const actionType = reason === 'TIMEOUT' 
+            ? 'USER_SESSION_TIMEOUT' 
+            : (isMobile ? 'MOBILE_LOGOUT' : 'USER_LOGOUT');
+
+        // 3. Audit Log (Standardized v43.5)
         const ip = request.headers.get('x-forwarded-for') || '127.0.0.1';
         await createAuditLog({
             action: actionType,
@@ -47,17 +58,20 @@ export async function POST(request: Request) {
                 reason,
                 email,
                 userAgent: request.headers.get('user-agent'),
-                compliance: { pci_dss: '10.2.1' }
+                compliance: { pci_dss: '10.2.1' },
+                platform: isMobile ? 'MobileApp' : 'WebDashboard'
             }
         });
 
-        // 3. Clear Cookie
+        // 4. Clear Cookie (Web only)
         const response = NextResponse.json({ success: true, action: actionType });
-        response.cookies.set('budolpay_token', '', {
-            httpOnly: true,
-            expires: new Date(0),
-            path: '/',
-        });
+        if (!isMobile) {
+            response.cookies.set('budolpay_token', '', {
+                httpOnly: true,
+                expires: new Date(0),
+                path: '/',
+            });
+        }
 
         console.log(`[Logout API] ${actionType} completed for user: ${email}`);
         return response;
