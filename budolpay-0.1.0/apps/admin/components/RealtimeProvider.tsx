@@ -16,15 +16,18 @@
  */
 
 import { useEffect, useRef, useState } from 'react';
-import { useRouter } from 'next/navigation';
+import { useRouter, usePathname } from 'next/navigation';
 import { realtime } from '@/lib/realtime';
 
 const DEFAULT_POLL_MS = 10000;
-const SLOW_POLL_MS = 300000; // 5 minute safety net when WS is healthy (prevents flicker)
 
 export default function RealtimeProvider() {
   const router = useRouter();
+  const pathname = usePathname();
   const timerRef = useRef<NodeJS.Timeout | null>(null);
+  
+  // (v43.2) Disable realtime bus entirely on login page to avoid flickering
+  if (pathname === '/login') return null;
   const [wsConnected, setWsConnected] = useState(false);
   const configRef = useRef({ intervalMs: DEFAULT_POLL_MS });
   const mountedRef = useRef(false);
@@ -49,16 +52,9 @@ export default function RealtimeProvider() {
         timerRef.current = null;
       }
       
-      if (connected) {
-        timerRef.current = setInterval(() => triggerRefresh('heartbeat'), 30000); // 30s safety net
-        console.log(`[RealtimeProvider] WebSocket CONNECTED — 30s Safety Heartbeat enabled (v43.1).`);
-        return;
-      }
-
-      // If disconnected or using SWR, enable polling heartbeat
-      const newInterval = configRef.current.intervalMs;
-      timerRef.current = setInterval(() => triggerRefresh('heartbeat'), newInterval);
-      console.log(`[RealtimeProvider] Polling ENABLED (${newInterval}ms) — WS is DISCONNECTED or SWR in use.`);
+      // OPTIMIZATION (v43.2): Polling COMPLETELY DISABLED per user request.
+      // We rely 100% on Pusher/Socket.io push events.
+      console.log(`[RealtimeProvider] WebSocket status: ${connected ? 'CONNECTED' : 'DISCONNECTED'}. Polling: DISABLED.`);
     };
 
     const bootstrap = async () => {
