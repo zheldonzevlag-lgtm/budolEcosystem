@@ -20,10 +20,31 @@ export function clearSettingsCache() {
 
 async function getSettings() {
   const now = Date.now();
+  // Use cached settings if fresh (10s TTL)
   if (settingsCache && (now - lastFetch < 10000)) {
     return settingsCache;
   }
 
+  // v43.4: FAST PATH — read directly from env vars on cold starts.
+  // WHY: In Vercel serverless, the in-memory cache resets on every new invocation.
+  // A DB round-trip here adds ~100-200ms to every realtime push.
+  // Env vars are set at deploy time and always available without network calls.
+  const envFallback: Record<string, string> = {};
+  if (process.env.PUSHER_APP_ID) envFallback['REALTIME_PUSHER_APP_ID'] = process.env.PUSHER_APP_ID;
+  if (process.env.PUSHER_KEY) envFallback['REALTIME_PUSHER_KEY'] = process.env.PUSHER_KEY;
+  if (process.env.PUSHER_SECRET) envFallback['REALTIME_PUSHER_SECRET'] = process.env.PUSHER_SECRET;
+  if (process.env.PUSHER_CLUSTER) envFallback['REALTIME_PUSHER_CLUSTER'] = process.env.PUSHER_CLUSTER;
+  if (process.env.REALTIME_METHOD) envFallback['REALTIME_METHOD'] = process.env.REALTIME_METHOD;
+
+  // If we have the critical Pusher env vars, skip the DB query entirely
+  if (envFallback['REALTIME_PUSHER_APP_ID'] && envFallback['REALTIME_PUSHER_KEY']) {
+    console.log("[Realtime-Server] Using env-var fast path (no DB query needed).");
+    settingsCache = envFallback;
+    lastFetch = now;
+    return envFallback;
+  }
+
+  // Fallback: fetch from DB (used when env vars are not set)
   try {
     const allSettings = await prisma.systemSetting.findMany({
       where: {
