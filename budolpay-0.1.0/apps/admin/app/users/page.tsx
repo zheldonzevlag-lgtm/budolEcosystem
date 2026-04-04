@@ -18,7 +18,10 @@ import {
   Eye,
   X,
   RotateCw,
-  Info
+  Info,
+  ZoomIn,
+  ZoomOut,
+  Maximize2
 } from "lucide-react";
 import { formatManilaTime } from "@/lib/utils";
 import { realtime } from "@/lib/realtime";
@@ -32,6 +35,8 @@ export default function UsersPage() {
   const [rotations, setRotations] = useState<Record<string, number>>({});
   const [isSavingRotation, setIsSavingRotation] = useState<Record<string, boolean>>({});
   const [rotationTimeouts, setRotationTimeouts] = useState<Record<string, NodeJS.Timeout>>({});
+  const [expandedImage, setExpandedImage] = useState<{url: string, type: string, rotation: number} | null>(null);
+  const [zoom, setZoom] = useState(1);
 
   useEffect(() => {
     fetchUsers();
@@ -518,6 +523,15 @@ export default function UsersPage() {
                               )}
                             </div>
                           )}
+                          <div className="absolute inset-0 bg-black/0 group-hover:bg-black/30 transition-colors flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity z-10">
+                            <button 
+                              onClick={() => setExpandedImage({ url: docUrl!, type: doc.type, rotation: rotations[doc.id] || 0 })}
+                              className="p-3 bg-white/90 backdrop-blur-sm rounded-full text-slate-800 shadow-xl hover:scale-110 transition-transform"
+                              title="Inspect Image"
+                            >
+                              <Eye size={24} />
+                            </button>
+                          </div>
                           <div className="absolute inset-0 bg-gradient-to-t from-slate-900/10 to-transparent pointer-events-none"></div>
                         </div>
                         <div className="p-4 bg-slate-50 rounded-lg border border-slate-100">
@@ -566,6 +580,80 @@ export default function UsersPage() {
                 </>
               )}
             </div>
+          </div>
+        </div>
+      )}
+      
+      {/* High-Resolution Inspection Viewer */}
+      {expandedImage && (
+        <div className="fixed inset-0 bg-slate-950/95 backdrop-blur-md z-[100] flex flex-col animate-in fade-in duration-300">
+          <div className="p-6 flex justify-between items-center text-white border-b border-white/10 bg-slate-900/50">
+            <div className="flex items-center gap-4">
+              <div className="p-2 bg-blue-500/20 rounded-lg text-blue-400">
+                <Maximize2 size={20} />
+              </div>
+              <div>
+                <h3 className="text-lg font-bold tracking-tight">Identity Inspection Viewer</h3>
+                <p className="text-sm text-slate-400 font-medium uppercase tracking-widest">{expandedImage.type} • Detailed Verification Mode</p>
+              </div>
+            </div>
+            <div className="flex items-center gap-3">
+              <div className="flex items-center bg-slate-800 rounded-lg p-1 border border-white/5 mr-4">
+                <button 
+                  onClick={() => setZoom(prev => Math.max(0.5, prev - 0.25))}
+                  className="p-2 hover:bg-slate-700 rounded-md transition-colors text-slate-400 hover:text-white"
+                  title="Zoom Out"
+                >
+                  <ZoomOut size={18} />
+                </button>
+                <span className="px-3 text-xs font-mono font-bold w-12 text-center text-blue-400">
+                  {Math.round(zoom * 100)}%
+                </span>
+                <button 
+                  onClick={() => setZoom(prev => Math.min(3, prev + 0.25))}
+                  className="p-2 hover:bg-slate-700 rounded-md transition-colors text-slate-400 hover:text-white"
+                  title="Zoom In"
+                >
+                  <ZoomIn size={18} />
+                </button>
+                <div className="w-px h-4 bg-white/10 mx-1"></div>
+                <button 
+                  onClick={() => setZoom(1)}
+                  className="px-3 py-1 hover:bg-slate-700 rounded-md text-[10px] font-bold uppercase tracking-tighter text-slate-400 hover:text-white"
+                >
+                  Reset
+                </button>
+              </div>
+              <button 
+                onClick={() => {
+                  setExpandedImage(null);
+                  setZoom(1);
+                }}
+                className="w-10 h-10 flex items-center justify-center bg-rose-500/10 hover:bg-rose-500 text-rose-500 hover:text-white rounded-full transition-all border border-rose-500/20"
+              >
+                <X size={24} />
+              </button>
+            </div>
+          </div>
+          
+          <div className="flex-1 overflow-auto flex items-center justify-center p-12 cursor-grab active:cursor-grabbing group">
+            <div 
+              style={{ 
+                transform: `scale(${zoom}) rotate(${expandedImage.rotation}deg)`,
+                transition: 'transform 0.2s cubic-bezier(0.4, 0, 0.2, 1)'
+              }}
+              className="relative shadow-[0_0_100px_rgba(0,0,0,0.5)] rounded-lg overflow-hidden bg-slate-900 border border-white/10"
+            >
+              <img 
+                src={expandedImage.url} 
+                alt="Verification Detail" 
+                className="max-w-[70vw] max-h-[70vh] object-contain"
+              />
+            </div>
+          </div>
+          
+          <div className="p-6 text-center text-slate-500 text-[10px] font-bold uppercase tracking-[0.2em] bg-slate-900/50 border-t border-white/10">
+            Internal Security Bureau • Forensic Identity Scrutiny Module
           </div>
         </div>
       )}
