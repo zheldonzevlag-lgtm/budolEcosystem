@@ -109,6 +109,22 @@ class _SendMoneyScreenState extends State<SendMoneyScreen> {
       return;
     }
 
+    final apiService = Provider.of<ApiService>(context, listen: false);
+    final user = apiService.currentUser;
+    if (user != null && user['kycTier'] == 'BASIC') {
+      final double monthlySent = (user['monthlySent'] ?? 0).toDouble();
+      final double remaining = 5000.0 - monthlySent;
+      if (amount > remaining) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Limit Exceeded. Basic accounts can only send ₱5,000 monthly. Remaining: ₱${remaining.toStringAsFixed(2)}'),
+            backgroundColor: Colors.red.shade700,
+          ),
+        );
+        return;
+      }
+    }
+
     setState(() {
       _isLoading = true;
     });
@@ -216,9 +232,32 @@ class _SendMoneyScreenState extends State<SendMoneyScreen> {
                   ),
                 ),
             const SizedBox(height: 24),
-            const Text(
-              'Amount',
-              style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                const Text(
+                  'Amount',
+                  style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+                ),
+                Consumer<ApiService>(
+                  builder: (context, apiService, _) {
+                    final user = apiService.currentUser;
+                    if (user != null && user['kycTier'] == 'BASIC') {
+                      final double monthlySent = (user['monthlySent'] ?? 0).toDouble();
+                      final double remaining = 5000.0 - monthlySent;
+                       return Text(
+                        'Remaining limit: ₱${remaining.toStringAsFixed(2)}',
+                        style: TextStyle(
+                            fontSize: 12, 
+                            color: remaining <= 0 ? Colors.red : Colors.grey[600],
+                            fontWeight: FontWeight.w500
+                        ),
+                      );
+                    }
+                    return const SizedBox();
+                  },
+                ),
+              ],
             ),
             const SizedBox(height: 12),
             TextField(

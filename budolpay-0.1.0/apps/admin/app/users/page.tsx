@@ -456,7 +456,7 @@ export default function UsersPage() {
       {selectedUser && (
         <div className="fixed inset-0 bg-slate-900/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
           <div className="bg-white rounded-2xl shadow-2xl border border-slate-200 w-full max-w-4xl max-h-[90vh] overflow-hidden flex flex-col">
-            <div className="p-6 border-bottom border-slate-100 flex justify-between items-center bg-slate-50">
+            <div className="p-6 border-b border-slate-100 flex justify-between items-center bg-slate-50">
               <div className="flex items-center gap-4">
                 <div>
                   <h3 className="text-xl font-bold text-slate-800">Verification Documents</h3>
@@ -472,6 +472,19 @@ export default function UsersPage() {
               >
                 <X size={20} />
               </button>
+            </div>
+            <div className="px-6 py-2 bg-slate-100 border-b border-slate-200 flex gap-6 text-[11px] uppercase tracking-wider font-bold">
+              {(selectedUser.kycTier === 'BASIC' || !selectedUser.kycTier) ? (
+                <>
+                  <span className="text-slate-500"><strong className="text-amber-600 mr-1">Wallet Limit:</strong> ₱10,000</span>
+                  <span className="text-slate-500"><strong className="text-amber-600 mr-1">Tx Limit (Send/Receive):</strong> ₱5,000 / month</span>
+                </>
+              ) : (
+                <>
+                  <span className="text-slate-500"><strong className="text-green-600 mr-1">Wallet Limit:</strong> ₱500,000</span>
+                  <span className="text-slate-500"><strong className="text-green-600 mr-1">Full Access:</strong> Enabled</span>
+                </>
+              )}
             </div>
             
             <div className="flex-1 overflow-y-auto p-8">

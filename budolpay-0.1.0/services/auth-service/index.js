@@ -251,6 +251,26 @@ app.get('/verify', async (req, res) => {
             timestamp: getLegacyManilaISO()
         }, 'Security', user.id); */
 
+        const startOfMonth = new Date(getNowUTC().getFullYear(), getNowUTC().getMonth(), 1);
+        const endOfMonth = new Date(getNowUTC().getFullYear(), getNowUTC().getMonth() + 1, 0, 23, 59, 59, 999);
+        let monthlySent = 0;
+        let monthlyReceived = 0;
+
+        if (user.kycTier === 'BASIC') {
+            const [sentAgg, receivedAgg] = await Promise.all([
+                prisma.transaction.aggregate({
+                    _sum: { amount: true },
+                    where: { senderId: user.id, status: 'COMPLETED', createdAt: { gte: startOfMonth, lte: endOfMonth } }
+                }),
+                prisma.transaction.aggregate({
+                    _sum: { amount: true },
+                    where: { receiverId: user.id, status: 'COMPLETED', createdAt: { gte: startOfMonth, lte: endOfMonth } }
+                })
+            ]);
+            monthlySent = sentAgg._sum.amount || 0;
+            monthlyReceived = receivedAgg._sum.amount || 0;
+        }
+
         res.json({
             valid: true,
             user: {
@@ -262,7 +282,10 @@ app.get('/verify', async (req, res) => {
                 kycTier: user.kycTier,
                 kycStatus: user.kycStatus,
                 role: user.role,
-                trustedDevices: user.trustedDevices
+                trustedDevices: user.trustedDevices,
+                monthlySent: user.kycTier === 'BASIC' ? monthlySent : undefined,
+                monthlyReceived: user.kycTier === 'BASIC' ? monthlyReceived : undefined,
+                walletBalance: user.wallet?.balance || 0
             },
             // Include extra fields for compatibility if needed
             ecosystem: 'budol',

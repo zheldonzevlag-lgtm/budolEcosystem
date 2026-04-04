@@ -243,15 +243,35 @@ router.post('/process-qr', authorize(PERMISSIONS.WALLET_DEBIT), async (req, res)
             orderId: orderId
         }, 'Financial', transaction.id);
 
+        // 3.0 Enforce KYC Limits (BASIC Tier)
+        let user = await prisma.user.findUnique({ where: { id: userId } });
+        
+        if (user && user.kycTier === 'BASIC') {
+            const startOfMonth = new Date();
+            startOfMonth.setDate(1);
+            startOfMonth.setHours(0, 0, 0, 0);
+
+            const monthlySent = await prisma.transaction.aggregate({
+                where: {
+                    senderId: userId,
+                    status: 'COMPLETED',
+                    createdAt: { gte: startOfMonth }
+                },
+                _sum: { amount: true }
+            });
+            const totalSentThisMonth = parseFloat(monthlySent._sum.amount || 0);
+            
+            if (totalSentThisMonth + parseFloat(qrData.amount) > 5000) {
+                console.warn(`[Wallet] KYC Limit Exceeded for user ${userId}. Attempted: ${qrData.amount}, Total Sent: ${totalSentThisMonth}`);
+                return res.status(403).json({ error: 'Limit Exceeded: BASIC accounts can only send/pay up to ₱5,000 per month. Please verify your account.' });
+            }
+        }
+
         // 3. Check user's wallet
         let wallet = await prisma.wallet.findUnique({ where: { userId } });
         
         if (!wallet) {
             console.log(`[Wallet] Wallet not found for user: ${userId}. Creating new wallet...`);
-            
-            // Failsafe: Ensure the user exists in the database before creating a wallet
-            // to avoid Foreign Key constraint violations (P2003)
-            let user = await prisma.user.findUnique({ where: { id: userId } });
             
             if (!user) {
                 console.log(`[Wallet] User ${userId} not found in database. Attempting to fetch from SSO...`);

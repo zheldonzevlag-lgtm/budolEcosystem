@@ -48,6 +48,31 @@ class _CashInScreenState extends State<CashInScreen> {
       return;
     }
 
+    final apiService = Provider.of<ApiService>(context, listen: false);
+    final user = apiService.currentUser;
+    if (user != null && user['kycTier'] == 'BASIC') {
+      final double monthlyReceived = (user['monthlyReceived'] ?? 0).toDouble();
+      final double walletBalance = (user['walletBalance'] ?? 0).toDouble();
+      final double incomingRemaining = 5000.0 - monthlyReceived;
+      final double walletRemaining = 10000.0 - walletBalance;
+      
+      final double allowed = incomingRemaining < walletRemaining ? incomingRemaining : walletRemaining;
+      
+      if (amount > allowed) {
+        String reason = incomingRemaining < walletRemaining
+            ? 'Monthly incoming limit (₱5,000)' 
+            : 'Wallet balance limit (₱10,000)';
+            
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Limit Exceeded. Basic accounts exceed $reason. Max allowed: ₱${allowed.toStringAsFixed(2)}'),
+            backgroundColor: Colors.red.shade700,
+          ),
+        );
+        return;
+      }
+    }
+
     setState(() {
       _isLoading = true;
     });
@@ -135,9 +160,36 @@ class _CashInScreenState extends State<CashInScreen> {
               ),
             ),
             const SizedBox(height: 24),
-            const Text(
-              'Amount',
-              style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                const Text(
+                  'Amount',
+                  style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+                ),
+                Consumer<ApiService>(
+                  builder: (context, apiService, _) {
+                    final user = apiService.currentUser;
+                    if (user != null && user['kycTier'] == 'BASIC') {
+                      final double monthlyReceived = (user['monthlyReceived'] ?? 0).toDouble();
+                      final double walletBalance = (user['walletBalance'] ?? 0).toDouble();
+                      final double incomingRemaining = 5000.0 - monthlyReceived;
+                      final double walletRemaining = 10000.0 - walletBalance;
+                      final double allowed = incomingRemaining < walletRemaining ? incomingRemaining : walletRemaining;
+                      
+                       return Text(
+                        'Allowed Cash In: ₱${allowed.toStringAsFixed(2)}',
+                        style: TextStyle(
+                            fontSize: 12, 
+                            color: allowed <= 0 ? Colors.red : Colors.grey[600],
+                            fontWeight: FontWeight.w500
+                        ),
+                      );
+                    }
+                    return const SizedBox();
+                  },
+                ),
+              ],
             ),
             const SizedBox(height: 12),
             TextField(

@@ -45,8 +45,24 @@ export async function POST(req: Request) {
 
         if (!sender) throw new Error("Sender not found");
 
+        const startOfMonth = new Date();
+        startOfMonth.setDate(1);
+        startOfMonth.setHours(0, 0, 0, 0);
+
         if (sender.kycTier === 'BASIC') {
-            throw new Error("Verification required: BASIC accounts cannot send money P2P. Please upgrade to FULLY VERIFIED.");
+            const monthlySent = await prisma.transaction.aggregate({
+                where: {
+                    senderId,
+                    status: 'COMPLETED',
+                    createdAt: { gte: startOfMonth },
+                },
+                _sum: { amount: true }
+            });
+            const totalSentThisMonth = Number(monthlySent._sum.amount || 0);
+            
+            if (totalSentThisMonth + Number(amount) > 5000) {
+                throw new Error("Transaction Limit Exceeded: BASIC accounts can only send up to ₱5,000 per month. Please upgrade your account.");
+            }
         }
 
         const senderBalance = sender.wallet ? Number(sender.wallet.balance) : 0;
@@ -56,10 +72,32 @@ export async function POST(req: Request) {
 
         // Validate receiver
         const receiver = await prisma.user.findUnique({
-            where: { id: resolvedReceiverId }
+            where: { id: resolvedReceiverId },
+            include: { wallet: true }
         });
 
         if (!receiver) throw new Error("Receiver not found");
+        
+        if (receiver.kycTier === 'BASIC') {
+            const receiverBalance = receiver.wallet ? Number(receiver.wallet.balance) : 0;
+            if (receiverBalance + Number(amount) > 10000) {
+                 throw new Error("Receiver Limit Exceeded: Basic accounts cannot hold more than ₱10,000.");
+            }
+
+            const monthlyReceived = await prisma.transaction.aggregate({
+                where: {
+                    receiverId: resolvedReceiverId,
+                    status: 'COMPLETED',
+                    createdAt: { gte: startOfMonth },
+                },
+                _sum: { amount: true }
+            });
+            const totalReceivedThisMonth = Number(monthlyReceived._sum.amount || 0);
+
+            if (totalReceivedThisMonth + Number(amount) > 5000) {
+                throw new Error("Receiver Limit Exceeded: Basic accounts can only receive up to ₱5,000 per month.");
+            }
+        }
 
         const result = await prisma.$transaction(async (tx) => {
             // Deduct sender

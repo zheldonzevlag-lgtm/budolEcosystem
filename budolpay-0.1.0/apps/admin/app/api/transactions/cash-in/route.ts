@@ -26,8 +26,26 @@ export async function POST(req: Request) {
             const currentBalance = user.wallet ? Number(user.wallet.balance) : 0;
             const newBalance = currentBalance + Number(amount);
             
-            if (newBalance > 5000) {
-                throw new Error(`Limit Exceeded: BASIC accounts have a maximum wallet balance of ₱5,000. Current: ₱${currentBalance}. Requested: ₱${amount}.`);
+            if (newBalance > 10000) {
+                throw new Error(`Limit Exceeded: BASIC accounts have a maximum wallet balance of ₱10,000. Current: ₱${currentBalance}. Requested: ₱${amount}.`);
+            }
+
+            const startOfMonth = new Date();
+            startOfMonth.setDate(1);
+            startOfMonth.setHours(0, 0, 0, 0);
+
+            const monthlyReceived = await prisma.transaction.aggregate({
+                where: {
+                    receiverId: userId,
+                    status: 'COMPLETED',
+                    createdAt: { gte: startOfMonth },
+                },
+                _sum: { amount: true }
+            });
+            const totalReceivedThisMonth = Number(monthlyReceived._sum.amount || 0);
+
+            if (totalReceivedThisMonth + Number(amount) > 5000) {
+                throw new Error("Limit Exceeded: BASIC accounts can only receive/cash in up to ₱5,000 total per month. Please verify your account to unlock higher limits.");
             }
         }
 
