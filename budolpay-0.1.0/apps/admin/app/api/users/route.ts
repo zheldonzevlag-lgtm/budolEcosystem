@@ -19,7 +19,9 @@ export async function GET(request: Request) {
       orderBy: { createdAt: "desc" },
       include: {
         wallet: true,
-        verificationDocs: true,
+        verificationDocs: {
+          orderBy: { createdAt: "asc" }
+        },
       },
     });
 
@@ -58,7 +60,7 @@ export async function POST(request: Request) {
         include: {
           wallet: true,
           verificationDocs: {
-            orderBy: { createdAt: "desc" },
+            orderBy: { createdAt: "asc" },
           },
         },
       });
