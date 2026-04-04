@@ -9,7 +9,7 @@ import { prisma } from '@/lib/prisma';
  */
 export async function createAuditLog(params: {
   action: string;
-  userId: string;
+  userId?: string;
   entity: string;
   entityId: string;
   ipAddress?: string;
@@ -32,7 +32,7 @@ export async function createAuditLog(params: {
       action: params.action,
       entity: params.entity,
       entityId: params.entityId,
-      userId: params.userId,
+      userId: params.userId || null,
       oldValue: params.oldValue,
       newValue: params.newValue,
       metadata: metadata,
