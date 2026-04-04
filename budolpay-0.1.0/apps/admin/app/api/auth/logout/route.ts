@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server';
+import { cookies } from 'next/headers';
 import { prisma } from '@/lib/prisma';
 import { createAuditLog } from '@/lib/audit';
 import jwt from 'jsonwebtoken';
@@ -17,7 +18,8 @@ export async function POST(request: Request) {
         const actionType = reason === 'TIMEOUT' ? 'USER_SESSION_TIMEOUT' : 'USER_LOGOUT';
 
         // 1. Identification
-        const token = request.cookies.get('budolpay_token')?.value;
+        const cookieStore = cookies();
+        const token = cookieStore.get('budolpay_token')?.value;
         let userId = 'SYSTEM';
         let email = 'unknown';
 
