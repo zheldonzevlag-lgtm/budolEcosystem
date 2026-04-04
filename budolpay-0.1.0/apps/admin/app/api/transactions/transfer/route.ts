@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { v4 as uuidv4 } from "uuid";
-import axios from "axios";
+import { triggerRealtimeEvent } from "@/lib/realtime-server";
 
 export async function POST(req: Request) {
     try {
@@ -120,7 +120,7 @@ export async function POST(req: Request) {
             }
 
             // Compliance Audit Log
-            await tx.auditLog.create({
+            const audit = await tx.auditLog.create({
                 data: {
                     userId: senderId,
                     action: 'P2P_TRANSFER_COMPLETED',
@@ -140,15 +140,18 @@ export async function POST(req: Request) {
                 }
             });
 
-            return transaction;
+            return { transaction, audit };
         });
 
         const responseData = {
-            ...result,
-            amount: Number(result.amount),
-            fee: Number(result.fee)
+            ...result.transaction,
+            amount: Number(result.transaction.amount),
+            fee: Number(result.transaction.fee)
         };
 
+        // v43.3: Automatic real-time sync is now handled by the Prisma Extension in @/lib/prisma
+        // No manual triggers needed here.
+        
         return NextResponse.json({ message: 'Transfer successful', transaction: responseData });
 
     } catch (error: any) {

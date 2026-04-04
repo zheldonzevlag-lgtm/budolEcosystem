@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { v4 as uuidv4 } from "uuid";
-import axios from "axios";
+import { triggerRealtimeEvent } from "@/lib/realtime-server";
 
 export async function POST(req: Request) {
     try {
@@ -47,8 +47,8 @@ export async function POST(req: Request) {
                 }
             });
 
-            // Upsert wallet (create if doesn't exist, though it should)
-            const wallet = await tx.wallet.upsert({
+            // Upsert wallet
+            await tx.wallet.upsert({
                 where: { userId },
                 create: { userId, balance: amount },
                 update: { balance: { increment: amount } }
@@ -94,7 +94,7 @@ export async function POST(req: Request) {
             });
 
             // Audit Log
-            await tx.auditLog.create({
+            const audit = await tx.auditLog.create({
                 data: {
                     userId: userId,
                     action: 'CASH_IN_COMPLETED',
@@ -114,25 +114,16 @@ export async function POST(req: Request) {
                 }
             });
 
-            return completedTransaction;
+            return { transaction: completedTransaction, audit };
         });
 
-        // Try to trigger Pusher update if configured
-        try {
-            await axios.post(`${process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'}/api/system/realtime`, {
-                event: 'transaction_update',
-                channel: `private-user-${userId}`,
-                data: {
-                    message: `Successfully cashed in PHP ${amount}`,
-                    transaction: result
-                }
-            }).catch(() => null); // Fail silently for pusher
-        } catch (e) { }
+        // v43.3: Automatic real-time sync is now handled by the Prisma Extension in @/lib/prisma
+        // No manual triggers needed here.
 
         const responseData = {
-            ...result,
-            amount: Number(result.amount),
-            fee: Number(result.fee)
+            ...result.transaction,
+            amount: Number(result.transaction.amount),
+            fee: Number(result.transaction.fee)
         };
 
         return NextResponse.json({ message: 'Cash in successful', transaction: responseData });

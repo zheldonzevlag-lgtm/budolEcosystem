@@ -51,10 +51,23 @@ export default function RealtimeProvider() {
         clearInterval(timerRef.current);
         timerRef.current = null;
       }
+
+      // (v43.3) ADAPTIVE HEARTBEAT RECOVERY
+      // We restore polling but differentiate by connection state and route.
+      // Rule: Login page NEVER polls (flicker prevention).
+      if (pathname === '/login') {
+        console.log('[RealtimeProvider] Login page detected. Polling suppressed.');
+        return;
+      }
+
+      // If connected: 60s safety pulse. If disconnected: Fast sync (configured or 10s).
+      const interval = connected ? 60000 : (configRef.current.intervalMs || DEFAULT_POLL_MS);
       
-      // OPTIMIZATION (v43.2): Polling COMPLETELY DISABLED per user request.
-      // We rely 100% on Pusher/Socket.io push events.
-      console.log(`[RealtimeProvider] WebSocket status: ${connected ? 'CONNECTED' : 'DISCONNECTED'}. Polling: DISABLED.`);
+      console.log(`[RealtimeProvider] WS: ${connected ? 'OK' : 'OFFLINE'}. Setting heartbeat: ${interval}ms`);
+      
+      timerRef.current = setInterval(() => {
+        triggerRefresh('heartbeat');
+      }, interval);
     };
 
     const bootstrap = async () => {

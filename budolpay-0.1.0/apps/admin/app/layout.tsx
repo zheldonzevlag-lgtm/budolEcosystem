@@ -4,6 +4,7 @@ import "./globals.css";
 import Sidebar from "@/components/Sidebar";
 import MainContent from "@/components/MainContent";
 import RealtimeProvider from "@/components/RealtimeProvider";
+import SessionProvider from "@/components/SessionProvider";
 
 const inter = Inter({ subsets: ["latin"] });
 
@@ -23,9 +24,11 @@ export default function RootLayout({
         <div className="flex min-h-screen">
           <RealtimeProvider />
           <Sidebar />
-          <MainContent>
-            {children}
-          </MainContent>
+          <SessionProvider>
+            <MainContent>
+              {children}
+            </MainContent>
+          </SessionProvider>
         </div>
       </body>
     </html>

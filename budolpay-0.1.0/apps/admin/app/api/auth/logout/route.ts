@@ -5,6 +5,8 @@ import { prisma } from '@/lib/prisma';
 import { createAuditLog } from '@/lib/audit';
 
 export async function POST(request: Request) {
+    const body = await request.json().catch(() => ({}));
+    const { reason = 'MANUAL' } = body;
     const cookieStore = cookies();
     const token = cookieStore.get('budolpay_token')?.value;
     let userId = null;
@@ -42,12 +44,13 @@ export async function POST(request: Request) {
         
         // Use the identified userId or mark as anonymous logout if we can't verify
         await createAuditLog({
-            action: 'USER_LOGOUT',
-            userId: userId || 'SYSTEM', // Fallback to system if userId not resolved but session existed
+            action: reason === 'TIMEOUT' ? 'USER_SESSION_TIMEOUT' : 'USER_LOGOUT',
+            userId: userId || 'SYSTEM', 
             entity: 'Security',
             entityId: userId || 'SESSION_CLOSED',
             ipAddress: ip,
             metadata: {
+                reason,
                 userAgent: request.headers.get('user-agent'),
                 tokenIdentifier: token.substring(0, 8) + '...',
                 compliance: {

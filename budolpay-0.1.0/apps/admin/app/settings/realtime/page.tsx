@@ -83,12 +83,20 @@ export default async function RealtimeSettingsPage() {
     ];
 
     for (const update of updates) {
+      // v43.3 Fix: Only update if the value was actually sent in the form.
+      // If the field was conditionally unmounted, it will be null.
+      // Skipping nulls ensures we don't overwrite saved config with empty strings.
+      if (update.value === null) {
+        console.log(`[Realtime-Config] Skipping update for ${update.key} to preserve existing setting.`);
+        continue;
+      }
+
       await prisma.systemSetting.upsert({
         where: { key: update.key },
-        update: { value: update.value || '' },
+        update: { value: update.value as string },
         create: { 
           key: update.key, 
-          value: update.value || '',
+          value: update.value as string,
           group: 'REALTIME',
           description: `Setting for ${update.key}`
         }
