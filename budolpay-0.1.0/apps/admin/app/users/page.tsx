@@ -523,15 +523,17 @@ export default function UsersPage() {
                               )}
                             </div>
                           )}
-                          <div className="absolute inset-0 bg-black/0 group-hover:bg-black/30 transition-colors flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity z-10">
-                            <button 
-                              onClick={() => setExpandedImage({ url: docUrl!, type: doc.type, rotation: rotations[doc.id] || 0 })}
-                              className="p-3 bg-white/90 backdrop-blur-sm rounded-full text-slate-800 shadow-xl hover:scale-110 transition-transform"
-                              title="Inspect Image"
-                            >
-                              <Eye size={24} />
-                            </button>
-                          </div>
+                          {docUrl && (
+                            <div className="absolute inset-0 bg-black/0 group-hover:bg-black/30 transition-colors flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity z-10">
+                              <button 
+                                onClick={() => setExpandedImage({ url: docUrl, type: doc.type, rotation: rotations[doc.id] || 0 })}
+                                className="p-3 bg-white/90 backdrop-blur-sm rounded-full text-slate-800 shadow-xl hover:scale-110 transition-transform"
+                                title="Inspect Image"
+                              >
+                                <Eye size={24} />
+                              </button>
+                            </div>
+                          )}
                           <div className="absolute inset-0 bg-gradient-to-t from-slate-900/10 to-transparent pointer-events-none"></div>
                         </div>
                         <div className="p-4 bg-slate-50 rounded-lg border border-slate-100">
