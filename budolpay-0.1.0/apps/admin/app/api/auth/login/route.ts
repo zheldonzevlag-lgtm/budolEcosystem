@@ -53,8 +53,12 @@ export async function POST(request: Request) {
 
         // 1. Authenticate against budolID API (Server-to-Server)
         const LOCAL_IP = process.env.LOCAL_IP || 'localhost';
-        const ssoUrl = process.env.SSO_URL || `http://${LOCAL_IP}:8000`;
-        const apiKey = 'bp_key_2025'; // This should be in env
+        const isProd = process.env.NODE_ENV === 'production' || process.env.VERCEL === '1';
+        
+        // Default to Render SSO URL in production if SSO_URL is not set
+        const defaultSsoUrl = isProd ? 'https://budol-id-sso.onrender.com' : `http://${LOCAL_IP}:8000`;
+        const ssoUrl = process.env.SSO_URL || defaultSsoUrl;
+        const apiKey = process.env.BUDOLID_API_KEY || 'bp_key_2025';
 
         console.log(`[Login API] Attempting SSO login via: ${ssoUrl}/auth/sso/login`);
         
