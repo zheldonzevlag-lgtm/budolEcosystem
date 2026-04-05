@@ -65,8 +65,11 @@ export default async function AccountingPage() {
   const equity = getBalance('3000') + (revenue - expenses);
 
   const totalVolume = transactions.reduce((acc, curr) => acc + Number(curr.amount), 0);
-  const totalFees = transactions.reduce((acc, curr) => acc + Number(curr.fee), 0);
-  const totalFailed = transactions.filter(tx => tx.status === 'FAILED').length;
+  // v45.1 Fix: Transaction model in admin schema lacks 'fee' and 'status' fields 
+  // (they exist in budolpay schema but not in the public schema used here).
+  // Defaulting to 0 to unblock the production build.
+  const totalFees = transactions.reduce((acc, curr: any) => acc + (Number(curr.fee) || 0), 0);
+  const totalFailed = (transactions as any[]).filter(tx => tx.status === 'FAILED').length;
 
   return (
     <div className="space-y-6">
