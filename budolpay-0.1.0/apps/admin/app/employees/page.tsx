@@ -499,16 +499,22 @@ export default function EmployeesPage() {
                       <div className="flex flex-col">
                         <span className="font-bold text-slate-700">
                           {log.user ? (
-                            (log.user.firstName || log.user.lastName) 
-                              ? `${log.user.firstName} ${log.user.lastName}` 
+                            // Tier 1: Resolved via Prisma FK relation to public.User
+                            (log.user.firstName || log.user.lastName)
+                              ? `${log.user.firstName} ${log.user.lastName}`
                               : (log.user as any).name || log.user.email
+                          ) : (log.metadata as any)?.actorName ? (
+                            // Tier 2: Identity stored in metadata (v45.1 fix for mobile/auth events
+                            // where the user only exists in budolpay schema, not public.User)
+                            <span className="text-slate-700">{(log.metadata as any).actorName}</span>
                           ) : (
+                            // Tier 3: Unauthenticated / system events
                             <span className="text-slate-400 italic">System / Anonymous</span>
                           )}
                         </span>
-                        {log.user?.role && (
+                        {(log.user?.role || (log.metadata as any)?.actorEmail) && (
                           <span className="text-[10px] uppercase tracking-wider text-slate-400 font-medium">
-                            {log.user.role}
+                            {log.user?.role || (log.metadata as any)?.actorEmail}
                           </span>
                         )}
                       </div>

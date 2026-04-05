@@ -27,6 +27,7 @@ export async function POST(request: Request) {
 
         let userId = 'SYSTEM';
         let email = 'unknown';
+        let actorName = 'System';
         const isMobile = !!authHeader;
 
         if (token) {
@@ -35,6 +36,24 @@ export async function POST(request: Request) {
                 if (decoded) {
                     userId = decoded.id || decoded.userId || decoded.sub || 'SYSTEM';
                     email = decoded.email || 'unknown';
+                    // Try to look up the actual user to get their display name for forensic logs
+                    // WHY: v45.1 - actorName is stored in metadata to bypass FK schema constraint
+                    if (userId !== 'SYSTEM') {
+                        try {
+                            const user = await prisma.user.findUnique({
+                                where: { id: userId },
+                                select: { firstName: true, lastName: true, email: true }
+                            });
+                            if (user) {
+                                actorName = `${user.firstName || ''} ${user.lastName || ''}`.trim() || user.email || email;
+                                email = user.email || email;
+                            } else {
+                                actorName = decoded.name || email;
+                            }
+                        } catch {
+                            actorName = decoded.name || email;
+                        }
+                    }
                 }
             } catch (e) {
                 console.warn('[Logout API] Token decode failed');
@@ -51,6 +70,9 @@ export async function POST(request: Request) {
         await createAuditLog({
             action: actionType,
             userId: userId,
+            // v45.1: Store name in metadata to bypass FK constraint on public.User
+            actorName: actorName,
+            actorEmail: email,
             entity: 'Security',
             entityId: userId,
             ipAddress: ip,

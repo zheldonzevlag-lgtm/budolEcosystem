@@ -59,6 +59,9 @@ export async function POST(request: Request) {
             // Log failed attempt for audit (Standardized v43.5)
             await createAuditLog({
                 userId: user.id,
+                // v45.1: Store name in metadata to bypass FK constraint on public.User
+                actorName: `${user.firstName || ''} ${user.lastName || ''}`.trim() || user.email,
+                actorEmail: user.email,
                 action: 'MOBILE_LOGIN_FAILED',
                 entity: 'Security',
                 entityId: user.id,
@@ -104,6 +107,9 @@ export async function POST(request: Request) {
         // Audit Success (Standardized v43.5)
         await createAuditLog({
             userId: user.id,
+            // v45.1: Store name in metadata to bypass FK constraint on public.User
+            actorName: `${user.firstName || ''} ${user.lastName || ''}`.trim() || user.email,
+            actorEmail: user.email,
             action: 'MOBILE_LOGIN_SUCCESS',
             entity: 'Security',
             entityId: user.id,
