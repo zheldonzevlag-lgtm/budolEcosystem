@@ -36,10 +36,6 @@ export default async function AccountingPage() {
 
   const transactions = await prisma.transaction.findMany({
     orderBy: { createdAt: 'desc' },
-    include: {
-      sender: { select: { email: true, firstName: true, lastName: true } },
-      receiver: { select: { email: true, firstName: true, lastName: true } },
-    }
   });
 
   // Calculate account balances
