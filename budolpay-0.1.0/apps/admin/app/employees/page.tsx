@@ -502,10 +502,9 @@ export default function EmployeesPage() {
                             // Tier 1: Resolved via Prisma FK relation to public.User
                             (log.user.firstName || log.user.lastName)
                               ? `${log.user.firstName} ${log.user.lastName}`
-                              : (log.user as any).name || log.user.email
+                              : log.user.email
                           ) : (log.metadata as any)?.actorName ? (
-                            // Tier 2: Identity stored in metadata (v45.1 fix for mobile/auth events
-                            // where the user only exists in budolpay schema, not public.User)
+                            // Tier 2: Identity stored in metadata (v45.1 fix for mobile/auth events)
                             <span className="text-slate-700">{(log.metadata as any).actorName}</span>
                           ) : (
                             // Tier 3: Unauthenticated / system events

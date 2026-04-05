@@ -52,7 +52,7 @@ model AuditLog {
   entityId  String?
   metadata  Json?    @default("{}")
   status    String?  @default("SUCCESS")
-  User      User?    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  user      User?    @relation("UserAuditLogs", fields: [userId], references: [id], onDelete: Cascade)
 
   @@index([createdAt])
   @@index([userId])
@@ -417,11 +417,12 @@ model Transaction {
 
 model User {
   id                       String           @id
-  name                     String
+  firstName                String?
+  lastName                 String?
   email                    String           @unique
-  password                 String
+  passwordHash             String
   phoneNumber              String?          @unique
-  image                    String
+  image                    String           @default("")
   cart                     Json             @default("{}")
   accountType              AccountType      @default(BUYER)
   emailVerified            Boolean          @default(false)
@@ -434,15 +435,22 @@ model User {
   resetToken               String?
   resetTokenExpiry         DateTime?
   createdAt                DateTime         @default(now())
-  updatedAt                DateTime
+  updatedAt                DateTime         @updatedAt
   buyerReturnRate          Float?           @default(0.0)
   codUnpaidCount           Int?             @default(0)
   permissions              Json?            @default("[]")
   role                     String           @default("USER")
+  department               String?
+  kycStatus                String           @default("NONE")
+  kycTier                  String           @default("BASIC")
+  avatarUrl                String?
+  lastLoginAt              DateTime?
+  pinHash                  String?
+  trustedDevices           String?
   metadata                 Json?            @default("{}")
   deletedAt                DateTime?
   Address                  Address[]
-  AuditLog                 AuditLog[]
+  auditLogs                AuditLog[]       @relation("UserAuditLogs")
   Cart                     Cart?
   Chat_Chat_buyerIdToUser  Chat[]           @relation("Chat_buyerIdToUser")
   Chat_Chat_sellerIdToUser Chat[]           @relation("Chat_sellerIdToUser")
