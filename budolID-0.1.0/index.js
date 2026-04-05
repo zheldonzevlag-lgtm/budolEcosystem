@@ -119,11 +119,13 @@ const maskPII = (str, type = 'AUTO') => {
 app.use(cors());
 app.use(express.json());
 
-app.listen(PORT, '0.0.0.0', () => {
-    const localIP = process.env.LOCAL_IP || '192.168.1.2';
-    console.log(`budolID SSO Service running on http://0.0.0.0:${PORT}`);
-    console.log(`Local LAN access at http://${localIP}:${PORT}`);
-});
+if (process.env.NODE_ENV !== 'test' && !process.env.VERCEL) {
+    app.listen(PORT, '0.0.0.0', () => {
+        const localIP = process.env.LOCAL_IP || '192.168.1.2';
+        console.log(`budolID SSO Service running on http://0.0.0.0:${PORT}`);
+        console.log(`Local LAN access at http://${localIP}:${PORT}`);
+    });
+}
 
 // Request logger
 app.use((req, res, next) => {
@@ -1669,3 +1671,5 @@ app.get('/auth/verify', async (req, res) => {
         res.status(401).json({ error: 'Invalid token', details: error.message });
     }
 });
+
+module.exports = app;
