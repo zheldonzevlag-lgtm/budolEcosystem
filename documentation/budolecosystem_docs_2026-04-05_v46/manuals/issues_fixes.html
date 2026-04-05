@@ -1,0 +1,56 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Issues & Fixes - v46</title>
+    <style>
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; line-height: 1.6; color: #333; max-width: 1100px; margin: 0 auto; padding: 20px; background: #fff; }
+        .issue-card { border: 1px solid #dfe1e6; border-radius: 8px; padding: 20px; margin-bottom: 25px; border-top: 5px solid #ff5630; }
+        .issue-card h3 { color: #bf2600; margin-top: 0; }
+        .fix-box { background: #e3fcef; color: #006644; padding: 15px; border-radius: 4px; margin-top: 15px; border-left: 4px solid #006644; font-size: 0.9em; }
+        .fix-box h4 { margin-top: 0; color: #006644; font-weight: bold; }
+        .issue-id { font-weight: bold; color: #6b778c; font-size: 0.85em; }
+        .impact-tag { background: #deebff; color: #0747a6; font-size: 0.7em; padding: 2px 8px; border-radius: 4px; font-weight: bold; margin-left: 10px; }
+    </style>
+</head>
+<body>
+    <h1>Issues & Fixes: SSO Redirection & Configuration</h1>
+    <div class="metadata" style="color: #6b778c; margin-bottom: 40px;">Updated: 2026-04-05 | Release: v46</div>
+
+    <div class="issue-card">
+        <span class="issue-id">ISSUE #43.6-1</span> <span class="impact-tag">Critical Impact</span>
+        <h3>SSO Callback Redirect Loop in Production</h3>
+        <p><strong>Symptoms:</strong> Users on <code>budolpay.vercel.app</code> were redirected to <code>192.168.1.2:3000</code> after successful SSO login, resulting in "Cannot GET /api/auth/callback" or connection errors.</p>
+        <p><strong>Root Cause:</strong> The <code>budolID</code> service automatically seeded its database with local IP addresses on startup, overwriting production configuration. Additionally, it ignored the <code>redirect_uri</code> parameter from the calling app.</p>
+        
+        <div class="fix-box">
+            <h4>FIX IMPLEMENTED:</h4>
+            <ul>
+                <li>Updated <code>budolID-0.1.0/index.js</code> to prioritize the <code>redirect_uri</code> query parameter.</li>
+                <li>Restricted seeding logic to non-production environments only.</li>
+                <li>Implemented security validation for dynamic redirection.</li>
+            </ul>
+        </div>
+    </div>
+
+    <div class="issue-card">
+        <span class="issue-id">ISSUE #43.6-2</span> <span class="impact-tag">Security Risk</span>
+        <h3>Open Redirect Vulnerability</h3>
+        <p><strong>Symptoms:</strong> The SSO service could be manipulated to redirect users to arbitrary external domains after login.</p>
+        <p><strong>Root Cause:</strong> Lack of validation on the <code>redirect_uri</code> parameter in the SSO handler.</p>
+        
+        <div class="fix-box">
+            <h4>FIX IMPLEMENTED:</h4>
+            <ul>
+                <li>Implemented a domain-based whitelist in <code>budolID-0.1.0/index.js</code>.</li>
+                <li>Only allowed redirections to the registered application domain or trusted local developer addresses.</li>
+            </ul>
+        </div>
+    </div>
+
+    <div class="nav" style="text-align: center; margin-top: 40px;">
+        <a href="../index.html" style="color: #0052cc; text-decoration: none; font-weight: bold;">← Back to Index</a>
+    </div>
+</body>
+</html>

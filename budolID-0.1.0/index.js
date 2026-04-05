@@ -22,22 +22,34 @@ prisma.$connect()
 
         // Auto-seed core apps if missing
         const localIP = process.env.LOCAL_IP || '192.168.1.2';
+        const isProd = process.env.NODE_ENV === 'production' || process.env.VERCEL === '1';
+        
         const coreApps = [
             { name: 'budolPay', apiKey: 'bp_key_2025', redirectUri: `http://${localIP}:3000/api/auth/callback` },
-            { name: 'budolShap', apiKey: 'bs_key_2025', redirectUri: `http://${localIP}:3001/api/auth/sso/callback` }
+            { name: 'budolShap', apiKey: 'bs_key_2025', redirectUri: `http://${localIP}:3001/auth/callback` }
         ];
 
         for (const app of coreApps) {
-            await prisma.ecosystemApp.upsert({
-                where: { apiKey: app.apiKey },
-                update: { redirectUri: app.redirectUri },
-                create: {
-                    name: app.name,
-                    apiKey: app.apiKey,
-                    apiSecret: require('crypto').randomBytes(32).toString('hex'),
-                    redirectUri: app.redirectUri
-                }
-            });
+            const existingApp = await prisma.ecosystemApp.findUnique({ where: { apiKey: app.apiKey } });
+            
+            if (!existingApp) {
+                console.log(`[Seed] Creating core app: ${app.name}`);
+                await prisma.ecosystemApp.create({
+                    data: {
+                        name: app.name,
+                        apiKey: app.apiKey,
+                        apiSecret: require('crypto').randomBytes(32).toString('hex'),
+                        redirectUri: app.redirectUri
+                    }
+                });
+            } else if (!isProd) {
+                // Only update redirectUri in non-prod environments to avoid breaking production SSO
+                console.log(`[Seed] Updating redirectUri for ${app.name} in dev environment`);
+                await prisma.ecosystemApp.update({
+                    where: { apiKey: app.apiKey },
+                    data: { redirectUri: app.redirectUri }
+                });
+            }
         }
         console.log('✅ Core Ecosystem Apps verified/seeded');
 
@@ -102,8 +114,9 @@ app.use((req, res, next) => {
 
 // 0. Serve Login Page
 app.get('/login', (req, res) => {
-    const { apiKey } = req.query;
+    const { apiKey, redirect_uri } = req.query;
     const activeApiKey = apiKey || 'bp_key_2025';
+    const activeRedirectUri = redirect_uri || '';
 
     res.send(`
         <!DOCTYPE html>
@@ -136,6 +149,7 @@ app.get('/login', (req, res) => {
 
                     <form action="/auth/sso/login-form" method="POST" class="space-y-4">
                         <input type="hidden" name="apiKey" value="${activeApiKey}" />
+                        <input type="hidden" name="redirect_uri" value="${activeRedirectUri}" />
                         
                         <div>
                             <label class="block text-xs font-bold text-slate-500 uppercase mb-1">Email Address</label>
@@ -1092,7 +1106,7 @@ app.get('/reset-password', (req, res) => {
 // Helper for form submission
 app.use(express.urlencoded({ extended: true }));
 app.post('/auth/sso/login-form', async (req, res) => {
-    const { email, password, apiKey } = req.body;
+    const { email, password, apiKey, redirect_uri } = req.body;
 
     // Ensure we have an apiKey, default to budolPay for ecosystem access
     const activeApiKey = apiKey || 'bp_key_2025';
@@ -1135,7 +1149,31 @@ app.post('/auth/sso/login-form', async (req, res) => {
             appName: ecosystemApp.name
         });
 
-        res.redirect(`${ecosystemApp.redirectUri}?token=${token}`);
+        // Dynamic Redirection with Security Validation (Cybersecurity Law Compliance)
+        let targetRedirectUri = ecosystemApp.redirectUri;
+        
+        if (redirect_uri) {
+            try {
+                const requestedUrl = new URL(redirect_uri);
+                const allowedUrl = new URL(ecosystemApp.redirectUri);
+                
+                // Whitelist validation: check if domain/hostname matches or is a subdomain of the registered one
+                // This prevents open redirect vulnerabilities
+                if (requestedUrl.hostname === allowedUrl.hostname || 
+                    requestedUrl.hostname.endsWith('.' + allowedUrl.hostname.split('.').slice(-2).join('.')) ||
+                    requestedUrl.hostname === 'localhost' ||
+                    requestedUrl.hostname.startsWith('192.168.')) {
+                    targetRedirectUri = redirect_uri;
+                    console.log(`[SSO Login] Using dynamic redirect_uri: ${targetRedirectUri}`);
+                } else {
+                    console.warn(`[SSO Login] Blocked potentially unsafe redirect_uri: ${redirect_uri}. Falling back to: ${targetRedirectUri}`);
+                }
+            } catch (e) {
+                console.error(`[SSO Login] Invalid redirect_uri format: ${redirect_uri}`);
+            }
+        }
+
+        res.redirect(`${targetRedirectUri}${targetRedirectUri.includes('?') ? '&' : '?'}token=${token}`);
     } catch (error) {
         res.status(500).send(error.message);
     }

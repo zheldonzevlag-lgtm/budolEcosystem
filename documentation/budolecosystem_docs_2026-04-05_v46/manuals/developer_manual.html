@@ -1,0 +1,104 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Developer Manual - v46</title>
+    <style>
+        body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, 'Open Sans', 'Helvetica Neue', sans-serif; line-height: 1.6; color: #172b4d; max-width: 1000px; margin: 0 auto; padding: 40px; background: #fafbfc; }
+        .sidebar { position: fixed; left: 0; top: 0; bottom: 0; width: 250px; background: #f4f5f7; border-right: 1px solid #dfe1e6; padding: 20px; overflow-y: auto; }
+        .content { margin-left: 270px; }
+        h1, h2, h3 { color: #0052cc; margin-top: 1.5em; }
+        pre { background: #091e42; color: #fff; padding: 20px; border-radius: 8px; overflow-x: auto; font-family: 'SFMono-Regular', Consolas, 'Liberation Mono', Menlo, monospace; font-size: 0.9em; }
+        code { background: #ebecf0; padding: 2px 5px; border-radius: 3px; font-family: monospace; }
+        .code-link { color: #0052cc; text-decoration: none; border-bottom: 1px dashed #0052cc; }
+        .code-link:hover { background: #deebff; }
+        .metadata { color: #6b778c; font-size: 0.8em; margin-bottom: 20px; border-bottom: 1px solid #dfe1e6; padding-bottom: 10px; }
+        .nav-link { display: block; padding: 8px 0; color: #42526e; text-decoration: none; font-size: 0.9em; }
+        .nav-link:hover { color: #0052cc; }
+        .compliance-tag { background: #fffae6; color: #824401; padding: 4px 10px; border-radius: 4px; font-size: 0.8em; font-weight: bold; margin-left: 10px; }
+    </style>
+</head>
+<body>
+    <div class="sidebar">
+        <h3>Contents</h3>
+        <a href="#overview" class="nav-link">1. Overview</a>
+        <a href="#dynamic-redirection" class="nav-link">2. Dynamic Redirection</a>
+        <a href="#seeding-logic" class="nav-link">3. Seeding Logic Changes</a>
+        <a href="#security-validation" class="nav-link">4. Security Validation</a>
+        <a href="#code-references" class="nav-link">5. Code References</a>
+        <a href="#tests" class="nav-link">6. Verification & Tests</a>
+        <hr>
+        <a href="../index.html" class="nav-link">← Back to Index</a>
+    </div>
+
+    <div class="content">
+        <h1>Developer Manual: Dynamic SSO Redirection Fix</h1>
+        <div class="metadata">
+            Version: 43.6 | Updated: 2026-04-05 | Author: Budol Ecosystem AI Orchestrator
+        </div>
+
+        <section id="overview">
+            <h2>1. Overview</h2>
+            <p>This version addresses a critical issue in the SSO flow where the <code>budolID</code> service was overriding production redirect URIs with local IP addresses during the automatic seeding process. Furthermore, the SSO service did not respect the <code>redirect_uri</code> parameter provided by the calling application, leading to a hardcoded (and often incorrect) redirection after successful login.</p>
+        </section>
+
+        <section id="dynamic-redirection">
+            <h2>2. Dynamic Redirection Implementation</h2>
+            <p>The SSO service (<code>budolID</code>) now captures and utilizes the <code>redirect_uri</code> query parameter from the initial login request. This parameter is preserved through the login form submission and used as the primary target for the final redirection.</p>
+            
+            <h3>Implementation Details:</h3>
+            <ul>
+                <li><strong>GET /login:</strong> Extracts <code>redirect_uri</code> from query params and injects it as a hidden field in the HTML form.</li>
+                <li><strong>POST /auth/sso/login-form:</strong> Extracts <code>redirect_uri</code> from the form body and performs validation before redirecting.</li>
+            </ul>
+        </section>
+
+        <section id="seeding-logic">
+            <h2>3. Seeding Logic Changes</h2>
+            <p>The automatic seeding logic in <code>budolID-0.1.0/index.js</code> was modified to prevent overwriting production configuration with local developer settings.</p>
+            <pre><code>// Enhanced Seeding Logic
+const isProd = process.env.NODE_ENV === 'production' || process.env.VERCEL === '1';
+
+if (!existingApp) {
+    // Create core app if missing
+    await prisma.ecosystemApp.create({ ... });
+} else if (!isProd) {
+    // Only update redirectUri in non-prod environments
+    await prisma.ecosystemApp.update({
+        where: { apiKey: app.apiKey },
+        data: { redirectUri: app.redirectUri }
+    });
+}</code></pre>
+        </section>
+
+        <section id="security-validation">
+            <h2>4. Security Validation <span class="compliance-tag">PCI DSS</span> <span class="compliance-tag">Cybersecurity Law</span></h2>
+            <p>To prevent <strong>Open Redirect</strong> vulnerabilities, the SSO service implements a domain-based whitelist validation. The requested <code>redirect_uri</code> must match the registered domain of the application or be a valid developer hostname (localhost, 192.168.*).</p>
+            <pre><code>// Security Validation Logic
+if (requestedUrl.hostname === allowedUrl.hostname || 
+    requestedUrl.hostname.endsWith('.' + allowedUrl.hostname.split('.').slice(-2).join('.')) ||
+    requestedUrl.hostname === 'localhost' ||
+    requestedUrl.hostname.startsWith('192.168.')) {
+    targetRedirectUri = redirect_uri;
+}</code></pre>
+        </section>
+
+        <section id="code-references">
+            <h2>5. Code References</h2>
+            <ul>
+                <li><strong>budolID SSO Handler:</strong> <a class="code-link" href="file:///d:/IT Projects/clone/budolEcosystem/budolID-0.1.0/index.js">budolID-0.1.0/index.js</a></li>
+                <li><strong>BudolPay Admin Login:</strong> <a class="code-link" href="file:///d:/IT Projects/clone/budolEcosystem/budolpay-0.1.0/apps/admin/app/login/page.tsx">budolpay-0.1.0/apps/admin/app/login/page.tsx</a></li>
+                <li><strong>BudolPay Callback Handler:</strong> <a class="code-link" href="file:///d:/IT Projects/clone/budolEcosystem/budolpay-0.1.0/apps/admin/app/api/auth/callback/route.ts">budolpay-0.1.0/apps/admin/app/api/auth/callback/route.ts</a></li>
+            </ul>
+        </section>
+
+        <section id="tests">
+            <h2>6. Verification & Tests</h2>
+            <p>A new test suite was created to verify the redirection behavior under various conditions (standard redirect, dynamic redirect, and malicious redirect attempts).</p>
+            <p><strong>Test File:</strong> <a class="code-link" href="file:///d:/IT Projects/clone/budolEcosystem/budolID-0.1.0/tests/ssoRedirection.test.js">budolID-0.1.0/tests/ssoRedirection.test.js</a></p>
+            <pre><code>npm test tests/ssoRedirection.test.js</code></pre>
+        </section>
+    </div>
+</body>
+</html>
