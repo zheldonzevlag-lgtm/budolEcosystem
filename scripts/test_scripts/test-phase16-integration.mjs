@@ -1,5 +1,5 @@
 /**
- * Phase 15 Testing Script: Hybrid Accounting & budolExpress Logic
+ * Phase 16 Testing Script: Branding & Multi-Provider Integration
  * Tests:
  * 1. budolExpress Shipping Rate Calculation (ordersService.js)
  * 2. Hybrid Accounting Sync Hooks (escrow.js & accounting.js)
@@ -99,6 +99,9 @@ async function testAccountingSyncClient() {
         return {
             ok: true,
             status: 200,
+            headers: {
+                get: (name) => name.toLowerCase() === 'content-type' ? 'application/json' : null
+            },
             json: async () => ({ success: true, id: 'acc_sync_test' })
         };
     };
@@ -154,6 +157,9 @@ async function testBudolPayIntegration() {
             return {
                 ok: true,
                 status: 200,
+                headers: {
+                    get: (name) => name.toLowerCase() === 'content-type' ? 'application/json' : null
+                },
                 json: async () => ({ 
                     id: 'pi_test_789', 
                     checkoutUrl: 'http://localhost:8000/checkout/test',
@@ -161,7 +167,13 @@ async function testBudolPayIntegration() {
                 })
             };
         }
-        return { ok: false, status: 404 };
+        return { 
+            ok: false, 
+            status: 404,
+            headers: {
+                get: (name) => null
+            }
+        };
     };
 
     try {
@@ -194,7 +206,7 @@ async function runTests() {
     console.log(`Failed: ${testResults.failed}`);
     
     // Save results to a JSON file for documentation
-    const reportPath = path.join(__dirname, '..', 'documentation', 'test_reports', `test_v15_${new Date().getTime()}.json`);
+    const reportPath = path.join(__dirname, '..', 'documentation', 'test_reports', `test_v16_${new Date().getTime()}.json`);
     if (!fs.existsSync(path.dirname(reportPath))) {
         fs.mkdirSync(path.dirname(reportPath), { recursive: true });
     }
