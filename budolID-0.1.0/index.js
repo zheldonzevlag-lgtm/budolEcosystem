@@ -25,8 +25,16 @@ prisma.$connect()
         const isProd = process.env.NODE_ENV === 'production' || process.env.VERCEL === '1';
         
         const coreApps = [
-            { name: 'budolPay', apiKey: 'bp_key_2025', redirectUri: `http://${localIP}:3000/api/auth/callback` },
-            { name: 'budolShap', apiKey: 'bs_key_2025', redirectUri: `http://${localIP}:3001/auth/callback` }
+            { 
+                name: 'budolPay', 
+                apiKey: 'bp_key_2025', 
+                redirectUri: isProd ? 'https://budolpay.vercel.app/api/auth/callback' : `http://${localIP}:3000/api/auth/callback` 
+            },
+            { 
+                name: 'budolShap', 
+                apiKey: 'bs_key_2025', 
+                redirectUri: isProd ? 'https://budolshap.vercel.app/auth/callback' : `http://${localIP}:3001/auth/callback` 
+            }
         ];
 
         for (const app of coreApps) {
@@ -42,13 +50,24 @@ prisma.$connect()
                         redirectUri: app.redirectUri
                     }
                 });
-            } else if (!isProd) {
-                // Only update redirectUri in non-prod environments to avoid breaking production SSO
-                console.log(`[Seed] Updating redirectUri for ${app.name} in dev environment`);
-                await prisma.ecosystemApp.update({
-                    where: { apiKey: app.apiKey },
-                    data: { redirectUri: app.redirectUri }
-                });
+            } else {
+                // REPAIR LOGIC: If we are in production but the database has a local IP, fix it!
+                const hasLocalIP = existingApp.redirectUri.includes('192.168.') || existingApp.redirectUri.includes('localhost');
+                
+                if (isProd && hasLocalIP) {
+                    console.log(`[Seed] Repairing redirectUri for ${app.name} in production environment`);
+                    await prisma.ecosystemApp.update({
+                        where: { apiKey: app.apiKey },
+                        data: { redirectUri: app.redirectUri }
+                    });
+                } else if (!isProd && !hasLocalIP) {
+                    // Also repair if we are in dev but database has a prod URL (convenience for developers)
+                    console.log(`[Seed] Updating redirectUri for ${app.name} to local environment`);
+                    await prisma.ecosystemApp.update({
+                        where: { apiKey: app.apiKey },
+                        data: { redirectUri: app.redirectUri }
+                    });
+                }
             }
         }
         console.log('✅ Core Ecosystem Apps verified/seeded');
