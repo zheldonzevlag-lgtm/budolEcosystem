@@ -125,6 +125,7 @@ export async function POST(request: Request) {
             });
 
             if (!localUser) {
+                console.log(`[Login API] Creating local user record for: ${ssoUser.email}`);
                 localUser = await prisma.user.create({
                     data: {
                         email: ssoUser.email,
@@ -132,10 +133,19 @@ export async function POST(request: Request) {
                         lastName: ssoUser.lastName || 'User',
                         passwordHash: 'SSO_MANAGED', // No password stored locally
                         phoneNumber: ssoUser.phoneNumber || `SSO_${Date.now()}`,
-                        role: 'STAFF', 
+                        role: ssoUser.role || 'STAFF', 
                         kycStatus: 'VERIFIED'
                     }
                 });
+            } else {
+                // Ensure local role matches SSO role if it changed
+                if (localUser.role !== ssoUser.role && ssoUser.role) {
+                    console.log(`[Login API] Updating local role for ${ssoUser.email} to ${ssoUser.role}`);
+                    localUser = await prisma.user.update({
+                        where: { id: localUser.id },
+                        data: { role: ssoUser.role }
+                    });
+                }
             }
 
             // 4. Set Session Cookie

@@ -1180,10 +1180,14 @@ app.post('/auth/sso/login-form', async (req, res) => {
                 
                 // Whitelist validation: check if domain/hostname matches or is a subdomain of the registered one
                 // This prevents open redirect vulnerabilities
-                if (requestedUrl.hostname === allowedUrl.hostname || 
-                    requestedUrl.hostname.endsWith('.' + allowedUrl.hostname.split('.').slice(-2).join('.')) ||
-                    requestedUrl.hostname === 'localhost' ||
-                    requestedUrl.hostname.startsWith('192.168.')) {
+                const requestedHostname = requestedUrl.hostname.toLowerCase();
+                const allowedHostname = allowedUrl.hostname.toLowerCase();
+
+                if (requestedHostname === allowedHostname || 
+                    requestedHostname.endsWith('.' + allowedHostname) ||
+                    requestedHostname === 'localhost' ||
+                    requestedHostname.startsWith('192.168.') ||
+                    requestedHostname.endsWith('.vercel.app')) {
                     targetRedirectUri = redirect_uri;
                     console.log(`[SSO Login] Using dynamic redirect_uri: ${targetRedirectUri}`);
                 } else {
