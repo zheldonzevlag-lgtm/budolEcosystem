@@ -313,11 +313,11 @@ export default function ForensicAuditTrailsPage() {
                                                         {log.user?.name ? log.user.name.charAt(0).toUpperCase() : '?'}
                                                     </div>
                                                     <div className="flex flex-col min-w-0">
-                                                        <span className="font-bold text-slate-800 text-sm truncate max-w-[150px]" title={log.user?.name}>
-                                                            {log.user?.name || 'Unknown / System'}
+                                                        <span className="font-bold text-slate-800 text-sm truncate max-w-[150px]" title={log.user?.name || log.metadata?.actorName}>
+                                                            {log.user?.name || log.metadata?.actorName || 'Unknown / System'}
                                                         </span>
                                                         <span className="text-xs text-slate-500 font-mono">
-                                                            {log.ipAddress || 'IP Hidden'}
+                                                            {log.user?.email || log.metadata?.actorEmail || log.ipAddress || 'IP Hidden'}
                                                         </span>
                                                     </div>
                                                 </div>
