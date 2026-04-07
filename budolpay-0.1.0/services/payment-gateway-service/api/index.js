@@ -66,17 +66,19 @@ const IS_DEV = process.env.NODE_ENV !== 'production';
 const GATEWAY_URL = IS_DEV ? `http://${LOCAL_IP || 'localhost'}:8080` : (process.env.GATEWAY_URL || 'https://api.budolpay.com');
 
 // --- STARTUP DIAGNOSTIC (v27.2) ---
-(async () => {
-    console.log('[Payment-Gateway] 🔍 Running Startup Diagnostic...');
-    try {
-        const userCount = await prisma.user.count();
-        console.log(`[Payment-Gateway] ✅ Database Connected. Found ${userCount} users in 'budolpay' schema.`);
-    } catch (err) {
-        console.error('[Payment-Gateway] ❌ CRITICAL: Database Connection Failed during startup!');
-        console.error(`[Payment-Gateway] Error Details: ${err.message}`);
-        console.error(`[Payment-Gateway] Configured URL: ${process.env.DATABASE_URL ? (process.env.DATABASE_URL.split('@')[1] || 'hidden') : 'MISSING'}`);
-    }
-})();
+if (process.env.NODE_ENV !== 'test') {
+  (async () => {
+      console.log('[Payment-Gateway] 🔍 Running Startup Diagnostic...');
+      try {
+          const userCount = await prisma.user.count();
+          console.log(`[Payment-Gateway] ✅ Database Connected. Found ${userCount} users in 'budolpay' schema.`);
+      } catch (err) {
+          console.error('[Payment-Gateway] ❌ CRITICAL: Database Connection Failed during startup!');
+          console.error(`[Payment-Gateway] Error Details: ${err.message}`);
+          console.error(`[Payment-Gateway] Configured URL: ${process.env.DATABASE_URL ? (process.env.DATABASE_URL.split('@')[1] || 'hidden') : 'MISSING'}`);
+      }
+  })();
+}
 
 const notifyAdmin = async (event, data) => {
   try {
@@ -882,4 +884,4 @@ if (!IS_VERCEL && process.env.NODE_ENV !== 'test') {
   });
 }
 
-module.exports = app;
+module.exports = { app, generateSecureReferenceId };

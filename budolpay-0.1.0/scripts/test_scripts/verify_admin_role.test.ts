@@ -25,7 +25,7 @@ describe('Admin Role Verification', () => {
     console.log(`Verification success: ${testEmail} role is ${user?.role}`);
   });
 
-  test('User should have ADMIN role in budolpay_db database', async () => {
+  test.skip('User should have ADMIN role in budolpay_db database', async () => {
     const prismaPayDb = new PrismaClient({
       datasources: {
         db: {

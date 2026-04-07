@@ -1,0 +1,93 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Developer Manual - v48 | Budol Ecosystem</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --primary: #00A3BF;
+            --secondary: #172B4D;
+            --bg: #FFFFFF;
+            --sidebar: #F4F5F7;
+            --text: #172B4D;
+            --code-bg: #F4F5F7;
+        }
+        body { font-family: 'Inter', sans-serif; display: flex; color: var(--text); }
+        .sidebar { width: 300px; background: var(--sidebar); height: 100vh; position: sticky; top: 0; padding: 30px; border-right: 1px solid #DFE1E6; }
+        .main { flex: 1; padding: 60px; max-width: 900px; }
+        h1, h2, h3 { color: var(--secondary); margin-bottom: 20px; }
+        .glue-diagram { background: #EBECF0; padding: 30px; border-radius: 8px; margin: 30px 0; font-family: monospace; border: 1px dashed var(--primary); }
+        .code-block { background: var(--code-bg); padding: 20px; border-radius: 6px; font-family: 'Courier New', monospace; font-size: 0.9rem; margin: 20px 0; position: relative; }
+        .code-link { position: absolute; top: 10px; right: 10px; color: #0052CC; text-decoration: none; font-size: 0.8rem; font-weight: 700; }
+        .tech-pill { background: #E3F2FD; color: #1976D2; padding: 4px 10px; border-radius: 12px; font-size: 0.8rem; font-weight: 600; margin-right: 8px; }
+    </style>
+</head>
+<body>
+    <div class="sidebar">
+        <h3>Contents</h3>
+        <ul style="list-style: none; padding-top: 20px;">
+            <li><a href="#glue" style="text-decoration: none; color: #0052CC; display: block; margin-bottom: 12px;">The Ecosystem Glue</a></li>
+            <li><a href="#auth" style="text-decoration: none; color: #0052CC; display: block; margin-bottom: 12px;">SSO Architecture</a></li>
+            <li><a href="#realtime" style="text-decoration: none; color: #0052CC; display: block; margin-bottom: 12px;">Real-time Event Flow</a></li>
+            <li><a href="#audit" style="text-decoration: none; color: #0052CC; display: block; margin-bottom: 12px;">Audit Logging</a></li>
+            <li><a href="index.html" style="text-decoration: none; color: #6B778C; display: block; margin-top: 40px;">← Back to Index</a></li>
+        </ul>
+    </div>
+    <div class="main">
+        <h1>Developer Manual (v48)</h1>
+        <p>This version focuses on ecosystem stabilization and the "glue" that binds our microservices into a cohesive fintech platform.</p>
+
+        <section id="glue">
+            <h2>The Ecosystem Glue</h2>
+            <p>Our applications are "glued" together through three primary mechanisms: Shared Identify, Event-Driven Communication, and Unified Data Auditing.</p>
+            
+            <div class="glue-diagram">
+                [User] --(Login)--> [budolID SSO]<br>
+                &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;|<br>
+                &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;+--(Token/PII)--> [budolPay Services]<br>
+                &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;|&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;|<br>
+                &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;|&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;+--(Event)--> [Payment Gateway]<br>
+                &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;|&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;|&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;|<br>
+                &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;+--(Audit)--> [Postgres Shared Schema] <--(Broadcast)--+
+            </div>
+        </section>
+
+        <section id="auth">
+            <h3>Identity Management (budolID)</h3>
+            <p>BudolID acts as the Central Identity Provider (IdP). It manages <code>EcosystemApp</code> records and issues scoped JWTs. Services verify these tokens using a shared <code>JWT_SECRET</code>.</p>
+            <div class="code-block" style="background: #1e1e1e; color: #d4d4d4;">
+                <a href="file:///d:/IT Projects/clone/budolEcosystem/budolID-0.1.0/index.js" class="code-link">budolID/index.js</a>
+                <span style="color: #6a9955;">// Cross-app initialization</span><br>
+                <span style="color: #569cd6;">const</span> apps = [<span style="color: #ce9178;">'budolPay'</span>, <span style="color: #ce9178;">'budolID'</span>, <span style="color: #ce9178;">'budolShap'</span>];<br>
+                <span style="color: #569cd6;">for</span> (<span style="color: #569cd6;">const</span> app <span style="color: #569cd6;">of</span> apps) {<br>
+                &nbsp;&nbsp;<span style="color: #569cd6;">await</span> prisma.ecosystemApp.upsert({ ... });<br>
+                }
+            </div>
+        </section>
+
+        <section id="realtime">
+            <h3>Real-time Event Propagation</h3>
+            <p>The <code>@budolpay/audit</code> package contains the <code>triggerRealtimeEvent</code> utility which bridges backend actions to the Admin Dashboard via the Socket.io Gateway.</p>
+            <div class="code-block" style="background: #1e1e1e; color: #d4d4d4;">
+                <a href="file:///d:/IT Projects/clone/budolEcosystem/budolpay-0.1.0/packages/audit/src/index.ts" class="code-link">packages/audit/src/index.ts</a>
+                <span style="color: #569cd6;">export const</span> triggerRealtimeEvent = <span style="color: #569cd6;">async</span> (event: <span style="color: #4ec9b0;">RealtimeEvent</span>) => {<br>
+                &nbsp;&nbsp;<span style="color: #569cd6;">const</span> gatewayUrl = process.env.PAYMENT_GATEWAY_URL;<br>
+                &nbsp;&nbsp;<span style="color: #569cd6;">await</span> axios.post(<span style="color: #ce9178;">`${gatewayUrl}/api/notify`</span>, event);<br>
+                };
+            </div>
+        </section>
+
+        <section id="compliance">
+            <h3>Verified Compliance Standards</h3>
+            <p>
+                <span class="tech-pill">PCI DSS</span> 
+                <span class="tech-pill">BSP Circular 808</span>
+                <span class="tech-pill">NPC DPA 2012</span>
+            </p>
+            <p style="font-size: 0.9rem; margin-top: 10px;">Our KYC flow (Verification Service) implements PII masking and Cloudinary-backed document isolation to ensure regulatory compliance across the Philippine fintech landscape.</p>
+        </section>
+    </div>
+</body>
+</html>

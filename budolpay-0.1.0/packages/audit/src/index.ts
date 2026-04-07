@@ -64,7 +64,7 @@ export async function createAuditLog(params: AuditLogParams) {
  * Trigger real-time event for audit logs
  * This function handles the real-time broadcasting for audit events
  */
-async function triggerRealtimeEvent(channel: string, event: string, data: any) {
+export async function triggerRealtimeEvent(channel: string, event: string, data: any) {
   try {
     // For backend services, we need to notify the gateway
     // Always use gateway notification for server-side usage

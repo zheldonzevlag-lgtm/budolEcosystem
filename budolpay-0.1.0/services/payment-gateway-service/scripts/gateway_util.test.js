@@ -1,4 +1,4 @@
-const { generateSecureReferenceId } = require('../index');
+const { generateSecureReferenceId } = require('../api/index');
 
 describe('Gateway Utility - generateSecureReferenceId', () => {
   it('should generate a reference ID starting with JON-', () => {

@@ -1,0 +1,89 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Issues & Fixes - v48 | Budol Ecosystem</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --primary: #0052CC;
+            --secondary: #172B4D;
+            --bg: #F4F5F7;
+            --text: #172B4D;
+            --danger: #FF5630;
+            --info: #0052CC;
+        }
+        body { font-family: 'Inter', sans-serif; background: var(--bg); color: var(--text); padding: 40px; line-height: 1.6; }
+        .container { max-width: 1100px; margin: 0 auto; background: white; padding: 40px; border-radius: 12px; box-shadow: 0 4px 20px rgba(0,0,0,0.08); }
+        h1 { color: var(--secondary); font-size: 2rem; margin-bottom: 24px; }
+        .issue-card { border: 1px solid #DFE1E6; border-radius: 8px; padding: 24px; margin-bottom: 24px; border-left: 6px solid var(--danger); }
+        .fix-card { border-left-color: #36B37E; }
+        .issue-header { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 12px; }
+        .priority { font-size: 0.75rem; font-weight: 700; background: #FFEBE6; color: #BF2600; padding: 2px 8px; border-radius: 3px; }
+        .issue-title { font-weight: 700; font-size: 1.1rem; color: var(--secondary); }
+        .issue-desc { font-size: 0.95rem; color: #6B778C; margin-bottom: 16px; }
+        .fix-steps { background: #F4F5F7; padding: 16px; border-radius: 6px; }
+        .fix-steps h4 { margin-bottom: 8px; display: flex; align-items: center; gap: 8px; color: #006644; }
+        .nav-links { margin-bottom: 20px; }
+        .nav-links a { color: #0052CC; text-decoration: none; font-weight: 600; font-size: 0.9rem; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="nav-links">
+            <a href="index.html">← Back to Index</a>
+        </div>
+        <h1>Issues & Fixes Log (v48)</h1>
+        
+        <div class="issue-card">
+            <div class="issue-header">
+                <span class="issue-title">Vercel Build Failure: Node.js Engine Mismatch</span>
+                <span class="priority">CRITICAL</span>
+            </div>
+            <p class="issue-desc">The <code>payment-gateway-service</code> had a hard-coded engine requirement for Node 20.x, which conflicted with Vercel's newer default environments ($NODE_VERSION=24).</p>
+            <div class="fix-steps">
+                <h4>✅ Resolution</h4>
+                <p>Updated <code>package.json</code> engine constraint to <code>>=20.x</code> to allow flexibility across local and VPC/Vercel environments.</p>
+            </div>
+        </div>
+
+        <div class="issue-card">
+            <div class="issue-header">
+                <span class="issue-title">Test Suite Instability: External Service Dependencies</span>
+                <span class="priority">CRITICAL</span>
+            </div>
+            <p class="issue-desc">Integration tests for Anti-Spam and Payment Security were failing because they attempted to connect to live Auth and Gateway services not present in the monorepo test runner.</p>
+            <div class="fix-steps">
+                <h4>✅ Resolution</h4>
+                <p>Implemented robust <code>axios</code> mocks using <code>jest.mock</code> factory functions in <code>spam_prevention.test.js</code> and <code>payment-security.test.js</code>. Decoupled test logic from environment state.</p>
+            </div>
+        </div>
+
+        <div class="issue-card">
+            <div class="issue-header">
+                <span class="issue-title">Database Diagnostic Hang in Tests</span>
+                <span class="priority">HIGH</span>
+            </div>
+            <p class="issue-desc">A self-invoking diagnostic function in <code>api/index.js</code> was attempting database connections during test imports, causing Jest to hang or fail initialization.</p>
+            <div class="fix-steps">
+                <h4>✅ Resolution</h4>
+                <p>Wrapped startup diagnostics in a <code>process.env.NODE_ENV !== 'test'</code> check to ensure silent imports for unit testing.</p>
+            </div>
+        </div>
+
+        <div class="issue-card">
+            <div class="issue-header">
+                <span class="issue-title">Notification Type/Method Error</span>
+                <span class="priority">MEDIUM</span>
+            </div>
+            <p class="issue-desc">Mismatched model name (systemSetting vs SystemSetting) and method (findFirst vs findMany) in the notifications test mock.</p>
+            <div class="fix-steps">
+                <h4>✅ Resolution</h4>
+                <p>Aligned the mock with the actual Prisma schema and repository implementation.</p>
+            </div>
+        </div>
+
+    </div>
+</body>
+</html>

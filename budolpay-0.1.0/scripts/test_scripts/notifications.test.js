@@ -4,12 +4,11 @@ const { sendOTP, sendNotification } = require('../../packages/notifications');
 jest.mock('@budolpay/database', () => {
     return {
         prisma: {
-            systemSettings: {
-                findUnique: jest.fn().mockResolvedValue({
-                    id: 'default',
-                    emailProvider: 'CONSOLE',
-                    smsProvider: 'CONSOLE',
-                }),
+            systemSetting: {
+                findMany: jest.fn().mockResolvedValue([
+                    { key: 'emailProvider', value: 'CONSOLE', isActive: true },
+                    { key: 'smsProvider', value: 'CONSOLE', isActive: true },
+                ]),
             },
         },
     };
