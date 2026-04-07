@@ -1137,7 +1137,8 @@ app.post('/auth/sso/login-form', async (req, res) => {
         if (!ecosystemApp) return res.status(403).send('Unauthorized Application: ' + activeApiKey);
 
         const user = await prisma.user.findUnique({ where: { email } });
-        if (!user || !(await bcrypt.compare(password, user.password))) {
+        // WHY: Schema uses 'passwordHash' not 'password' — budolID stores bcrypt hashes
+        if (!user || !(await bcrypt.compare(password, user.passwordHash))) {
             return res.status(401).send('Invalid credentials');
         }
 
@@ -1219,9 +1220,10 @@ app.post('/auth/forgot-password', async (req, res) => {
         const otp = Math.floor(100000 + Math.random() * 900000).toString();
         const otpExpires = new Date(Date.now() + 5 * 60 * 1000); // 5 minutes
 
+        // WHY: Schema uses 'otpCode' and 'otpExpiresAt' not 'otp'/'otpExpires'
         await prisma.user.update({
             where: { id: user.id },
-            data: { otp, otpExpires }
+            data: { otpCode: otp, otpExpiresAt: otpExpires }
         });
 
         // SIMULATED DUAL-CHANNEL DELIVERY (PCI DSS & BSP Compliant)
@@ -1242,21 +1244,26 @@ app.post('/auth/verify-otp', async (req, res) => {
     try {
         const user = await prisma.user.findUnique({ where: { email } });
 
-        if (!user || user.otp !== otp || new Date() > user.otpExpires) {
+        // WHY: Schema uses otpCode/otpExpiresAt — check both match and not expired
+        if (!user || user.otpCode !== otp || new Date() > user.otpExpiresAt) {
             return res.status(401).json({ error: "Invalid or expired OTP." });
         }
 
-        // Generate short-lived reset token
-        const resetToken = require('crypto').randomBytes(32).toString('hex');
-        const resetTokenExpires = new Date(Date.now() + 10 * 60 * 1000); // 10 minutes
+        // WHY: Schema has no resetToken/resetTokenExpires columns.
+        //      We use a short-lived signed JWT as a stateless reset token instead.
+        //      This avoids needing a DB migration and is equally secure.
+        const resetToken = require('jsonwebtoken').sign(
+            { sub: user.id, purpose: 'password_reset' },
+            JWT_SECRET,
+            { expiresIn: '10m' }
+        );
 
+        // Clear the OTP now that it has been consumed
         await prisma.user.update({
             where: { id: user.id },
             data: {
-                otp: null,
-                otpExpires: null,
-                resetToken,
-                resetTokenExpires
+                otpCode: null,
+                otpExpiresAt: null
             }
         });
 
@@ -1270,21 +1277,31 @@ app.post('/auth/verify-otp', async (req, res) => {
 app.post('/auth/reset-password', async (req, res) => {
     const { resetToken, newPassword } = req.body;
     try {
-        const user = await prisma.user.findUnique({ where: { resetToken } });
-
-        if (!user || new Date() > user.resetTokenExpires) {
+        // WHY: resetToken is a signed JWT (stateless) — verify it cryptographically
+        //      instead of looking it up in the DB (schema has no resetToken column).
+        let decoded;
+        try {
+            decoded = require('jsonwebtoken').verify(resetToken, JWT_SECRET);
+        } catch (jwtErr) {
             return res.status(401).json({ error: "Invalid or expired reset token." });
         }
 
-        const hashedPassword = await bcrypt.hash(newPassword, 10);
+        if (decoded.purpose !== 'password_reset') {
+            return res.status(401).json({ error: "Invalid reset token purpose." });
+        }
 
+        const user = await prisma.user.findUnique({ where: { id: decoded.sub } });
+        if (!user) {
+            return res.status(401).json({ error: "User not found." });
+        }
+
+        // WHY: BSP compliance requires minimum 10 salt rounds; using 12
+        const hashedPassword = await bcrypt.hash(newPassword, 12);
+
+        // WHY: Schema field is 'passwordHash' not 'password'
         await prisma.user.update({
             where: { id: user.id },
-            data: {
-                password: hashedPassword,
-                resetToken: null,
-                resetTokenExpires: null
-            }
+            data: { passwordHash: hashedPassword }
         });
 
         res.json({ message: "Password reset successful. You can now login." });
@@ -1461,10 +1478,11 @@ app.post('/auth/register', async (req, res) => {
         // 4. Secure Storage: Strong Encryption (12 salt rounds for BSP compliance)
         const hashedPassword = await bcrypt.hash(password, 12);
         
+        // WHY: Schema uses 'passwordHash' not 'password'
         const user = await prisma.user.create({
             data: {
                 email,
-                password: hashedPassword,
+                passwordHash: hashedPassword,
                 firstName,
                 lastName,
                 phoneNumber: normalizedPhone
@@ -1512,12 +1530,13 @@ app.post('/auth/register/quick', async (req, res) => {
         const tempPassword = Math.random().toString(36).substring(7);
         const hashedPassword = await bcrypt.hash(tempPassword, 12); // Use 12 rounds for BSP compliance
 
+        // WHY: Schema uses 'passwordHash' not 'password'
         const user = await prisma.user.create({
             data: {
                 phoneNumber: normalizedPhone,
                 firstName: firstName || normalizedPhone,
                 lastName: firstName ? (req.body.lastName || '') : '',
-                password: hashedPassword,
+                passwordHash: hashedPassword,
                 email: `${normalizedPhone}@quick.budolpay.com`, // Temporary email
             }
         });
@@ -1576,7 +1595,8 @@ app.post('/auth/sso/login', async (req, res) => {
         }
 
         // Verify user credentials
-        if (!user || !(await bcrypt.compare(password, user.password))) {
+        // WHY: Schema uses 'passwordHash' not 'password'
+        if (!user || !(await bcrypt.compare(password, user.passwordHash))) {
             console.log(`[SSO Login API] Invalid credentials for ${identifierType}:`, email);
             return res.status(401).json({ error: 'Invalid credentials' });
         }

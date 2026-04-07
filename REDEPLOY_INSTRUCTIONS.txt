@@ -1,15 +1,26 @@
 # BudolPay Ecosystem Restoration - Action Required
 
-I have successfully committed and pushed the ecosystem-wide fixes to the 'main' branch.
+I have successfully investigated and resolved the Vercel deployment issues for `budolpay` and `budolid-sso`. 
+The code fixes have been committed to the 'main' branch in the ecosystem repository.
 
 ### Completed Actions:
-1.  **BudolID SSO Stability**: Reverted standard Prisma config and fixed build scripts to resolve the 500 error.
-2.  **Forensic Audit Identity**: Injected 'actorName' and 'actorEmail' into mobile audit metadata and implemented a UI fallback in 'budolshap-0.1.0'.
-3.  **BudolPay Deployment Recovery**: Restored the missing 'package.json' in 'apps/admin' and refined 'vercel.json' to resolve the build failure.
+1. **BudolPay Webpack Errors:** Re-created missing backend modules (`lib/prisma`, `lib/rate-limit`, `lib/audit`) directly inside the `budolpay-0.1.0/apps/admin` scope, and seeded the auto-generated `tsconfig.json` to resolve `@/lib/...` Next.js path aliases. A local test via `npx next build` verified the compile is now clean.
+2. **BudolID SSO "No Next.js detected":** Diagnosed the Framework Preset error as a Vercel dashboard configuration oversight. 
+3. **Documentation:** Released v47 documentation updates and integrated them into `knowledgebase.html`.
 
-### Instructions:
-1.  Check the Vercel Dashboard for automatically triggered deployments.
-2.  Once deployed, test a mobile login and verify the 'Actor / IP' column in 'Forensic Audit Trails'.
-3.  Confirm that BudolID SSO login is now functional.
+### REQUIRED VERCEL DASHBOARD CONFIGURATION FIXES:
+For the new pushes to succeed on Vercel, please adjust the project setups in your Vercel Dashboard manually.
 
-Detailed walkthrough is available in: C:\Users\Administrator\.gemini\antigravity\brain\07f779a2-2db6-49b9-967c-e38c35b7584b\walkthrough.md
+**For `budolid-sso` project in Vercel:**
+1. Navigate to: **Settings -> Build and Deployment**
+2. **Framework Preset:** Change this from `Next.js` to **`Other`** (This project is an Express app, not a Next app).
+3. **Root Directory:** Edit this and set it to `budolID-0.1.0` (it is currently empty/`./`).
+4. **Install Command:** Set to `npm install`
+5. **Build Command:** Set to `npm run build`
+
+**For `budolpay-0.1.0` project in Vercel:**
+1. Navigate to: **Settings -> Build and Deployment**
+2. Ensure **Framework Preset** is **`Next.js`**
+3. Ensure **Root Directory** is `budolpay-0.1.0/apps/admin` (If you want to build the Admin app explicitly) or if building from monorepo root, set root to `budolpay-0.1.0` and configure the Build Command to `npm run build --workspaces` (which is standard).
+
+After securing these settings, you may click "Redeploy" in the deployment tabs to automatically fetch the fixed `main` branch.
