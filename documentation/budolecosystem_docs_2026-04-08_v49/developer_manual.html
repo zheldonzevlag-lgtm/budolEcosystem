@@ -1,0 +1,67 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Developer Manual - v49 | Budol Ecosystem</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono&display=swap" rel="stylesheet">
+    <style>
+        :root { --primary: #0052CC; --secondary: #172B4D; --bg: #F4F5F7; --card: #FFFFFF; }
+        body { font-family: 'Inter', sans-serif; background: var(--bg); color: var(--secondary); padding: 40px; margin: 0; line-height: 1.6; }
+        .container { max-width: 900px; margin: 0 auto; background: var(--card); padding: 60px; border-radius: 8px; border: 1px solid #DFE1E6; }
+        h1, h2, h3 { color: var(--secondary); margin-top: 32px; }
+        code { font-family: 'JetBrains Mono', monospace; background: #F4F5F7; padding: 2px 6px; border-radius: 4px; font-size: 0.9em; }
+        pre { background: #172B4D; color: #FFFFFF; padding: 20px; border-radius: 8px; overflow-x: auto; font-family: 'JetBrains Mono', monospace; }
+        .file-link { color: var(--primary); text-decoration: none; font-weight: 600; }
+        .file-link:hover { text-decoration: underline; }
+        .nav { margin-bottom: 20px; display: flex; gap: 10px; }
+        .nav a { font-size: 0.8rem; color: var(--primary); text-decoration: none; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="nav">
+            <a href="index.html">← Back to Dashboard</a>
+            <a href="../budolecosystem_docs_2026-04-08_v48/developer_manual.html">Previous Version (v48)</a>
+        </div>
+
+        <h1>Developer Manual - v49</h1>
+        <p>This version focuses on resolving critical deployment bottlenecks in the Payment Gateway Service and stabilizing the Vercel infrastructure configuration.</p>
+
+        <h2>1. The NOT_FOUND Issue</h2>
+        <p>The "The page could not be found NOT_FOUND" error in production was traced to two primary factors:</p>
+        <ul>
+            <li><strong>Incorrect Export Logic:</strong> The <code>api/index.js</code> file was exporting an object containing the app, rather than the app instance itself. Vercel's Node.js runtime requires the entry point to export the request handler directly.</li>
+            <li><strong>Mismatched Root Directory:</strong> The Vercel project configuration was clearing the <code>rootDirectory</code> to <code>null</code>, causing Vercel to look for <code>api/index.js</code> in the repository root instead of the service subdirectory.</li>
+        </ul>
+
+        <h2>2. Technical Changes</h2>
+        
+        <h3>2.1 Fix: Payment Gateway Export</h3>
+        <p>Modified <a href="file:///d:/IT Projects/clone/budolEcosystem/budolpay-0.1.0/services/payment-gateway-service/api/index.js" class="file-link">budolpay-0.1.0/services/payment-gateway-service/api/index.js</a>:</p>
+        <pre><code>// OLD: module.exports = { app, generateSecureReferenceId };
+// NEW:
+module.exports = app;</code></pre>
+
+        <h3>2.2 Fix: Vercel Infrastructure Pathing</h3>
+        <p>Updated <a href="file:///d:/IT Projects/clone/budolEcosystem/fix-vercel-root.js" class="file-link">fix-vercel-root.js</a> to use the explicit relative path for the monorepo service:</p>
+        <pre><code>const body = JSON.stringify({ 
+    rootDirectory: "budolpay-0.1.0/services/payment-gateway-service" 
+});</code></pre>
+
+        <h2>3. Data Contracts & Routing</h2>
+        <p>The service remains compatible with the following routes mounted in <code>api/index.js</code>:</p>
+        <ul>
+            <li><code>POST /create-intent</code> - Initiates a payment.</li>
+            <li><code>GET /checkout/:referenceId</code> - Renders the payment UI.</li>
+            <li><code>POST /webhooks/:provider</code> - Processes external payment callbacks.</li>
+        </ul>
+
+        <h2>4. Security & Compliance</h2>
+        <p>All changes adhere to PCI DSS requirements by ensuring that sensitive transaction logic is contained within the secure <code>budolpay-0.1.0</code> boundary and that Vercel routing is explicitly restricted to the necessary subdirectories.</p>
+
+        <h2>5. Dependencies</h2>
+        <p>No new dependencies were added. The fix utilizes existing <code>express</code> and <code>prisma</code> configurations.</p>
+    </div>
+</body>
+</html>

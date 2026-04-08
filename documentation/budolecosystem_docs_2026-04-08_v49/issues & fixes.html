@@ -1,0 +1,45 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Issues & Fixes - v49 | Budol Ecosystem</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        :root { --primary: #0052CC; --secondary: #172B4D; --bg: #F4F5F7; --card: #FFFFFF; }
+        body { font-family: 'Inter', sans-serif; background: var(--bg); color: var(--secondary); padding: 40px; margin: 0; }
+        .container { max-width: 900px; margin: 0 auto; background: var(--card); padding: 40px; border-radius: 8px; border: 1px solid #DFE1E6; }
+        .issue-box { border-left: 4px solid #DE350B; background: #FFFAE6; padding: 20px; margin-bottom: 20px; border-radius: 0 4px 4px 0; }
+        .fix-box { border-left: 4px solid #00875A; background: #E3FCEF; padding: 20px; margin-bottom: 40px; border-radius: 0 4px 4px 0; }
+        h3 { margin-top: 0; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Issues & Fixes - v49</h1>
+        
+        <div class="issue-box">
+            <h3>Issue: NOT_FOUND (404) on payment-gateway-service-two.vercel.app</h3>
+            <p><strong>Symptoms:</strong> Payment initiation fails with "The page could not be found" in the BudolShap UI. Transaction reference IDs are not generated on the target server.</p>
+            <p><strong>Root Cause:</strong> Vercel project was configured to look at the repo root instead of the subdirectory, and the handler export was formatted as an object instead of a direct function.</p>
+        </div>
+
+        <div class="fix-box">
+            <h3>Fix: Corrected Export & Path Mapping</h3>
+            <p><strong>Action:</strong> Modified <code>api/index.js</code> to export the <code>app</code> instance directly. Updated the infrastructure patch script to set the correct <code>rootDirectory</code> in the Vercel REST API.</p>
+            <p><strong>Status:</strong> Code patched; Deployment settings ready for re-sync.</p>
+        </div>
+
+        <div class="issue-box">
+            <h3>Issue: Infrastructure Configuration Drift</h3>
+            <p><strong>Symptoms:</strong> Manual patches to Vercel settings via scripts were clearing paths meant for monorepo sub-apps.</p>
+            <p><strong>Root Cause:</strong> <code>fix-vercel-root.js</code> was using <code>rootDirectory: null</code>, which is only appropriate for single-app repositories.</p>
+        </div>
+
+        <div class="fix-box">
+            <h3>Fix: Explicit Pathing for Monorepo Projects</h3>
+            <p><strong>Action:</strong> Set <code>rootDirectory</code> to the specific service path (<code>budolpay-0.1.0/services/payment-gateway-service</code>).</p>
+        </div>
+    </div>
+</body>
+</html>

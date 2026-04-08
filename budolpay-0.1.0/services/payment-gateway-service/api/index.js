@@ -884,4 +884,4 @@ if (!IS_VERCEL && process.env.NODE_ENV !== 'test') {
   });
 }
 
-module.exports = { app, generateSecureReferenceId };
+module.exports = app;
