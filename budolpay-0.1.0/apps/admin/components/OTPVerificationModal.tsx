@@ -16,6 +16,19 @@ export default function OTPVerificationModal({ isOpen, onClose, onVerified, user
     const [isVerifying, setIsVerifying] = useState(false);
     const [error, setError] = useState<string | null>(null);
     const [cooldown, setCooldown] = useState(0);
+    const [actor, setActor] = useState<any>(null);
+
+    useEffect(() => {
+        const fetchActor = async () => {
+            const res = await fetch('/api/auth/me');
+            if (!res.ok) return;
+            const data = await res.json();
+            setActor(data.user || null);
+        };
+        if (isOpen) {
+            fetchActor();
+        }
+    }, [isOpen]);
 
     useEffect(() => {
         if (isOpen && user && cooldown === 0) {
@@ -40,7 +53,8 @@ export default function OTPVerificationModal({ isOpen, onClose, onVerified, user
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
                     action: 'SEND_EDIT_OTP',
-                    userId: user.id
+                    userId: user.id,
+                    adminId: actor?.id
                 })
             });
             if (res.ok) {
@@ -97,7 +111,8 @@ export default function OTPVerificationModal({ isOpen, onClose, onVerified, user
                 body: JSON.stringify({
                     action: 'VERIFY_EDIT_OTP',
                     userId: user.id,
-                    otp: fullOtp
+                    otp: fullOtp,
+                    adminId: actor?.id
                 })
             });
             if (res.ok) {

@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import { X, Save, Trash2, Key, ShieldAlert, ShieldCheck } from 'lucide-react';
+import { X, Save, Trash2, Key, ShieldAlert, ShieldCheck, Loader2, CircleCheck, CircleAlert } from 'lucide-react';
 
 /**
  * Normalizes Philippine phone numbers to E.164 format (+63...)
@@ -19,6 +19,16 @@ const normalizePhone = (phone: string) => {
     }
     return phone; // Return original if it doesn't match known patterns
 };
+
+const normalizePhoneStrict = (phone: string) => {
+    const digits = (phone || '').replace(/\D/g, '');
+    if (digits.startsWith('0') && digits.length === 11) return `+63${digits.substring(1)}`;
+    if (digits.startsWith('63') && digits.length === 12) return `+${digits}`;
+    if (digits.startsWith('9') && digits.length === 10) return `+63${digits}`;
+    return '';
+};
+
+const isValidPhone = (phone: string) => /^\+639\d{9}$/.test(phone);
 
 interface EditUserModalProps {
     isOpen: boolean;
@@ -43,6 +53,8 @@ export default function EditUserModal({ isOpen, onClose, onSuccess, user }: Edit
     const [tempPassword, setTempPassword] = useState<string | null>(null);
     const [deliveryInfo, setDeliveryInfo] = useState<{ target: string, method: string } | null>(null);
     const [pendingMessage, setPendingMessage] = useState<string | null>(null);
+    const [phoneCheckState, setPhoneCheckState] = useState<'idle' | 'checking' | 'ok' | 'exists' | 'invalid' | 'error'>('idle');
+    const [phoneCheckMessage, setPhoneCheckMessage] = useState('');
 
     useEffect(() => {
         const fetchMe = async () => {
@@ -67,11 +79,89 @@ export default function EditUserModal({ isOpen, onClose, onSuccess, user }: Edit
             });
             setTempPassword(null);
             setDeliveryInfo(null);
+            setPhoneCheckState('idle');
+            setPhoneCheckMessage('');
         }
     }, [user]);
 
+    useEffect(() => {
+        if (!isOpen || !user) return;
+
+        const raw = formData.phoneNumber || '';
+        if (!raw.trim()) {
+            setPhoneCheckState('invalid');
+            setPhoneCheckMessage('Phone number is required.');
+            return;
+        }
+
+        const normalized = normalizePhoneStrict(raw);
+        if (!normalized || !isValidPhone(normalized)) {
+            setPhoneCheckState('invalid');
+            setPhoneCheckMessage('Use Philippine mobile format: 09XXXXXXXXX or +639XXXXXXXXX.');
+            return;
+        }
+
+        const originalNormalized = normalizePhoneStrict(user.phoneNumber || '');
+        if (originalNormalized && normalized === originalNormalized) {
+            setPhoneCheckState('ok');
+            setPhoneCheckMessage('Current phone format is valid.');
+            return;
+        }
+
+        const controller = new AbortController();
+        const timer = setTimeout(async () => {
+            try {
+                setPhoneCheckState('checking');
+                setPhoneCheckMessage('Checking database in realtime...');
+                const params = new URLSearchParams({
+                    phone: normalized,
+                    scope: 'LOCAL',
+                    excludeUserId: user.id
+                });
+                const response = await fetch(`/api/auth/check-phone?${params.toString()}`, {
+                    signal: controller.signal
+                });
+                if (!response.ok) {
+                    setPhoneCheckState('error');
+                    setPhoneCheckMessage('Realtime check failed. Try again.');
+                    return;
+                }
+                const data = await response.json();
+                if (data.exists) {
+                    setPhoneCheckState('exists');
+                    setPhoneCheckMessage('Phone number already exists in database.');
+                    return;
+                }
+                setPhoneCheckState('ok');
+                setPhoneCheckMessage('Phone number is valid and available.');
+            } catch (error: any) {
+                if (error?.name === 'AbortError') return;
+                setPhoneCheckState('error');
+                setPhoneCheckMessage('Realtime check failed. Try again.');
+            }
+        }, 450);
+
+        return () => {
+            controller.abort();
+            clearTimeout(timer);
+        };
+    }, [formData.phoneNumber, isOpen, user]);
+
     const handleUpdate = async (e: React.FormEvent) => {
         e.preventDefault();
+        const normalizedPhone = normalizePhoneStrict(formData.phoneNumber);
+        if (!normalizedPhone || !isValidPhone(normalizedPhone)) {
+            alert('Invalid phone format. Use 09XXXXXXXXX or +639XXXXXXXXX.');
+            return;
+        }
+        if (phoneCheckState === 'checking') {
+            alert('Please wait for realtime phone validation to complete.');
+            return;
+        }
+        if (phoneCheckState === 'exists') {
+            alert('Phone number already exists in database. Use a different number.');
+            return;
+        }
         setIsSubmitting(true);
         setPendingMessage(null);
         try {
@@ -85,7 +175,8 @@ export default function EditUserModal({ isOpen, onClose, onSuccess, user }: Edit
                     action: 'UPDATE_PROFILE',
                     userId: user.id,
                     adminId: adminData.user.id,
-                    ...formData
+                    ...formData,
+                    phoneNumber: normalizedPhone
                 })
             });
 
@@ -225,11 +316,37 @@ export default function EditUserModal({ isOpen, onClose, onSuccess, user }: Edit
                         <input
                             type="text"
                             value={formData.phoneNumber}
-                            onChange={(e) => setFormData({ ...formData, phoneNumber: e.target.value })}
+                            onChange={(e) => setFormData({ ...formData, phoneNumber: e.target.value.replace(/[^\d+]/g, '') })}
                             onBlur={(e) => setFormData({ ...formData, phoneNumber: normalizePhone(e.target.value) })}
-                            className="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm focus:ring-2 focus:ring-budolshap-primary outline-none"
-                            placeholder="+639..."
+                            className={`w-full px-3 py-2 border rounded-lg text-sm focus:ring-2 focus:ring-budolshap-primary outline-none ${
+                                phoneCheckState === 'invalid' || phoneCheckState === 'exists' || phoneCheckState === 'error'
+                                    ? 'border-red-400'
+                                    : phoneCheckState === 'ok'
+                                        ? 'border-emerald-300'
+                                        : 'border-slate-200'
+                            }`}
+                            placeholder="09XXXXXXXXX or +639XXXXXXXXX"
                         />
+                        <div className="h-5 flex items-center gap-1.5">
+                            {phoneCheckState === 'checking' && <Loader2 className="w-3.5 h-3.5 animate-spin text-blue-500" />}
+                            {phoneCheckState === 'ok' && <CircleCheck className="w-3.5 h-3.5 text-emerald-500" />}
+                            {(phoneCheckState === 'invalid' || phoneCheckState === 'exists' || phoneCheckState === 'error') && (
+                                <CircleAlert className="w-3.5 h-3.5 text-red-500" />
+                            )}
+                            <p
+                                className={`text-[10px] font-bold ${
+                                    phoneCheckState === 'ok'
+                                        ? 'text-emerald-600'
+                                        : phoneCheckState === 'checking'
+                                            ? 'text-blue-600'
+                                            : (phoneCheckState === 'invalid' || phoneCheckState === 'exists' || phoneCheckState === 'error')
+                                                ? 'text-red-600'
+                                                : 'text-slate-400'
+                                }`}
+                            >
+                                {phoneCheckMessage || 'Realtime phone validation is ready.'}
+                            </p>
+                        </div>
                     </div>
 
                     <div className="grid grid-cols-2 gap-4">
@@ -310,7 +427,7 @@ export default function EditUserModal({ isOpen, onClose, onSuccess, user }: Edit
                     <div className="pt-4 flex flex-col gap-3">
                         <button
                             type="submit"
-                            disabled={isSubmitting}
+                            disabled={isSubmitting || phoneCheckState === 'checking' || phoneCheckState === 'exists' || phoneCheckState === 'invalid' || phoneCheckState === 'error'}
                             className="w-full bg-budolshap-primary text-white py-3 rounded-xl font-bold flex items-center justify-center gap-2 hover:opacity-90 transition disabled:opacity-50"
                         >
                             <Save className="w-4 h-4" />

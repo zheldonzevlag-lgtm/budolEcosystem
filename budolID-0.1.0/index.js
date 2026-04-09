@@ -14,6 +14,14 @@ const prisma = new PrismaClient({
         }
     }
 });
+const BUDOLPAY_DATABASE_URL = process.env.BUDOLPAY_DATABASE_URL || 'postgresql://postgres:r00t@localhost:5432/budolpay?schema=public';
+const budolPayPrisma = new PrismaClient({
+    datasources: {
+        db: {
+            url: BUDOLPAY_DATABASE_URL
+        }
+    }
+});
 
 // Debug connection on startup
 prisma.$connect()
@@ -116,6 +124,116 @@ const maskPII = (str, type = 'AUTO') => {
     return '***';
 };
 
+const buildPhoneCandidates = (phone) => {
+    const normalizedPhone = normalizePhilippinePhone(phone);
+    if (!normalizedPhone) {
+        return null;
+    }
+
+    const normalizedDigits = normalizedPhone.replace(/\D/g, '');
+    const localNumber = `0${normalizedDigits.slice(-10)}`;
+    const localNoZero = normalizedDigits.slice(-10);
+
+    const exactCandidates = Array.from(new Set([
+        normalizedPhone,
+        normalizedDigits,
+        localNumber,
+        localNoZero
+    ]));
+
+    const digitCandidates = Array.from(new Set([
+        normalizedDigits,
+        localNumber,
+        localNoZero
+    ]));
+
+    return {
+        normalizedPhone,
+        exactCandidates,
+        digitCandidates
+    };
+};
+
+const findPhoneInSchemas = async (client, schemas, phoneCandidates) => {
+    for (const schema of schemas) {
+        try {
+            const results = await client.$queryRawUnsafe(
+                `SELECT id, "phoneNumber", email, "firstName", "lastName"
+                 FROM "${schema}"."User"
+                 WHERE "phoneNumber" = ANY($1::text[])
+                    OR regexp_replace(coalesce("phoneNumber", ''), '[^0-9]', '', 'g') = ANY($2::text[])
+                 LIMIT 1`,
+                phoneCandidates.exactCandidates,
+                phoneCandidates.digitCandidates
+            );
+            if (Array.isArray(results) && results.length > 0) {
+                return {
+                    user: results[0],
+                    schema
+                };
+            }
+        } catch (error) {
+            console.warn(`[budolID] Skipping schema "${schema}" due to error:`, error.message);
+        }
+    }
+    return {
+        user: null,
+        schema: null
+    };
+};
+
+const isPhoneExistingInBudolPay = async (phoneCandidates) => {
+    try {
+        const found = await findPhoneInSchemas(budolPayPrisma, ['public', 'budolpay'], phoneCandidates);
+        return found.user;
+    } catch (error) {
+        console.warn('[budolID] budolPay phone check skipped:', error.message);
+        return null;
+    }
+};
+
+const syncUserToBudolPay = async ({ id, email, passwordHash, phoneNumber, firstName, lastName }) => {
+    const phoneCandidates = buildPhoneCandidates(phoneNumber);
+    if (!phoneCandidates) {
+        throw new Error('Cannot sync invalid phone number to budolPay');
+    }
+
+    const existingUser = await budolPayPrisma.user.findFirst({
+        where: {
+            OR: [
+                { id },
+                { email },
+                ...phoneCandidates.exactCandidates.map((candidate) => ({ phoneNumber: candidate }))
+            ]
+        }
+    });
+
+    const syncData = {
+        email,
+        passwordHash,
+        phoneNumber: phoneCandidates.normalizedPhone,
+        firstName,
+        lastName
+    };
+
+    if (existingUser) {
+        await budolPayPrisma.user.update({
+            where: { id: existingUser.id },
+            data: syncData
+        });
+        return existingUser.id;
+    }
+
+    const created = await budolPayPrisma.user.create({
+        data: {
+            id,
+            ...syncData
+        }
+    });
+
+    return created.id;
+};
+
 app.use(cors());
 app.use(express.json());
 
@@ -131,6 +249,11 @@ if (process.env.NODE_ENV !== 'test' && !process.env.VERCEL) {
 app.use((req, res, next) => {
     console.log(`${new Date().toISOString()} ${req.method} ${req.url}`);
     next();
+});
+
+// Health check endpoint
+app.get('/api/health', (req, res) => {
+    res.status(200).json({ status: 'UP', service: 'budolID', timestamp: new Date().toISOString() });
 });
 
 // 0. Serve Login Page
@@ -646,12 +769,12 @@ app.get('/register', (req, res) => {
                         }
 
                         // 1. Format Check (Philippine format, escaped for Node.js backticks)
-                        const phoneRegex = /^(09|\\+639)\\d{9}$/;
+                        const phoneRegex = /^(09|9|63|\\+639)\\d{9}$/;
                         if (!phoneRegex.test(phone)) {
                             spinner.classList.add('hidden');
                             phoneInput.classList.add('input-invalid');
                             phoneInput.classList.remove('input-valid');
-                            phoneError.textContent = 'Use 09xxxxxxxxx or +639xxxxxxxxx';
+                            phoneError.textContent = 'Use 09xxxxxxxxx, 9xxxxxxxxx, 63xxxxxxxxxx, or +639xxxxxxxxx';
                             phoneError.classList.remove('hidden');
                             status.classList.remove('hidden');
                             validIcon.classList.add('hidden');
@@ -1356,8 +1479,8 @@ app.get('/auth/check-phone', async (req, res) => {
     if (!phone) return res.status(400).json({ error: 'Phone number is required' });
 
     try {
-        // Normalize phone number before checking
-        const normalizedPhone = normalizePhilippinePhone(phone);
+        const phoneCandidates = buildPhoneCandidates(phone);
+        const normalizedPhone = phoneCandidates?.normalizedPhone;
         console.log(`🔍 [budolID] Normalized to: "${normalizedPhone}"`);
 
         if (!normalizedPhone) {
@@ -1365,57 +1488,23 @@ app.get('/auth/check-phone', async (req, res) => {
             return res.status(400).json({ error: 'Invalid phone number format' });
         }
 
-        // Search across both schemas: budolid and public
-        const schemas = ['budolid', 'public'];
         let user = null;
         let foundSchema = null;
+        let foundInBudolPay = null;
 
-        for (const schema of schemas) {
-            console.log(`📡 [budolID] Checking schema "${schema}" for "${normalizedPhone}"`);
+        const foundInBudolId = await findPhoneInSchemas(prisma, ['budolid', 'public'], phoneCandidates);
+        if (foundInBudolId.user) {
+            user = foundInBudolId.user;
+            foundSchema = foundInBudolId.schema;
+            console.log(`✅ [budolID] Found in "${foundSchema}":`, user);
+        }
 
-            try {
-                // Try normalized first (only select columns that are guaranteed to exist)
-                const results = await prisma.$queryRawUnsafe(
-                    `SELECT id, "phoneNumber", email, name FROM "${schema}"."User" WHERE "phoneNumber" = $1 LIMIT 1`,
-                    normalizedPhone
-                );
-
-                if (results && results.length > 0) {
-                    user = results[0];
-                    foundSchema = schema;
-                    console.log(`✅ [budolID] Found in "${schema}":`, user);
-                    break;
-                }
-
-                // Try raw variations if normalized didn't work
-                const rawDigits = phone.replace(/[^0-9]/g, '');
-                const variations = [];
-                if (rawDigits.startsWith('63') && rawDigits.length === 12) {
-                    variations.push('0' + rawDigits.substring(2));
-                } else if (rawDigits.startsWith('0')) {
-                    variations.push(rawDigits);
-                }
-
-                for (const variation of variations) {
-                    console.log(`📡 [budolID] Checking variation "${variation}" in "${schema}"`);
-                    const varResults = await prisma.$queryRawUnsafe(
-                        `SELECT id, "phoneNumber", email, name FROM "${schema}"."User" WHERE "phoneNumber" = $1 LIMIT 1`,
-                        variation
-                    );
-                    if (varResults && varResults.length > 0) {
-                        user = varResults[0];
-                        foundSchema = schema;
-                        console.log(`✅ [budolID] Found variation in "${schema}":`, user);
-                        break;
-                    }
-                }
-
-                if (user) break;
-            } catch (schemaError) {
-                // If a specific schema (e.g. "budolid") doesn't exist in this environment,
-                // don't fail the entire request – just log and continue checking others.
-                console.warn(`⚠️ [budolID] Skipping schema "${schema}" due to error:`, schemaError.message);
-                continue;
+        if (!user) {
+            foundInBudolPay = await isPhoneExistingInBudolPay(phoneCandidates);
+            if (foundInBudolPay) {
+                user = foundInBudolPay;
+                foundSchema = 'budolpay.public';
+                console.log(`✅ [budolID] Found in budolPay:`, user);
             }
         }
 
@@ -1429,10 +1518,11 @@ app.get('/auth/check-phone', async (req, res) => {
             normalizedPhone: normalizedPhone,
             foundAs: user ? user.phoneNumber : null,
             email: user ? user.email : null,
-            name: user ? user.name : null,
+            name: user ? `${user.firstName || ''} ${user.lastName || ''}`.trim() : null,
             firstName: user ? user.firstName : null,
             lastName: user ? user.lastName : null,
             schema: foundSchema,
+            source: foundInBudolPay ? 'budolpay' : 'budolid',
             message: user ? `Phone number registered in ${foundSchema}` : 'Phone number is available'
         });
     } catch (error) {
@@ -1455,8 +1545,10 @@ app.post('/auth/register', async (req, res) => {
 
         // 2. NPC Compliance: Normalize phone number if provided
         let normalizedPhone = null;
+        let phoneCandidates = null;
         if (phoneNumber) {
-            normalizedPhone = normalizePhilippinePhone(phoneNumber);
+            phoneCandidates = buildPhoneCandidates(phoneNumber);
+            normalizedPhone = phoneCandidates?.normalizedPhone;
             if (!normalizedPhone) {
                 return res.status(400).json({ error: 'Invalid phone number format' });
             }
@@ -1469,8 +1561,36 @@ app.post('/auth/register', async (req, res) => {
         }
 
         if (normalizedPhone) {
-            const existingUserByPhone = await prisma.user.findFirst({ where: { phoneNumber: normalizedPhone } });
+            const existingUserByPhone = await prisma.user.findFirst({
+                where: {
+                    OR: phoneCandidates.exactCandidates.map((candidate) => ({ phoneNumber: candidate }))
+                }
+            });
+
+            let existingLegacyByDigits = null;
+            if (!existingUserByPhone) {
+                const legacyResults = await prisma.$queryRawUnsafe(
+                    `SELECT id, email, "phoneNumber"
+                     FROM "User"
+                     WHERE regexp_replace(coalesce("phoneNumber", ''), '[^0-9]', '', 'g') = ANY($1::text[])
+                     LIMIT 1`,
+                    phoneCandidates.digitCandidates
+                );
+
+                if (Array.isArray(legacyResults) && legacyResults.length > 0) {
+                    existingLegacyByDigits = legacyResults[0];
+                }
+            }
+
             if (existingUserByPhone) {
+                return res.status(409).json({ error: 'Phone number already registered', code: 'P2002' });
+            }
+            if (existingLegacyByDigits) {
+                return res.status(409).json({ error: 'Phone number already registered', code: 'P2002' });
+            }
+
+            const existingInBudolPay = await isPhoneExistingInBudolPay(phoneCandidates);
+            if (existingInBudolPay) {
                 return res.status(409).json({ error: 'Phone number already registered', code: 'P2002' });
             }
         }
@@ -1488,6 +1608,20 @@ app.post('/auth/register', async (req, res) => {
                 phoneNumber: normalizedPhone
             }
         });
+
+        try {
+            await syncUserToBudolPay({
+                id: user.id,
+                email: user.email,
+                passwordHash: user.passwordHash,
+                phoneNumber: user.phoneNumber,
+                firstName: user.firstName,
+                lastName: user.lastName
+            });
+        } catch (syncError) {
+            await prisma.user.delete({ where: { id: user.id } });
+            return res.status(503).json({ error: 'Registration sync failed. Please retry.' });
+        }
 
         // 5. BIR/BSP Audit Logging: Record creation event without exposing full PII
         console.log(`\n[AUDIT LOG] Account Created | Timestamp: ${new Date().toISOString()} | UserID: ${user.id} | Email: ${maskPII(email)} | Status: SUCCESS`);
@@ -1514,15 +1648,42 @@ app.post('/auth/register/quick', async (req, res) => {
     console.log('[Quick Reg] Attempt for:', phoneNumber);
 
     try {
-        const normalizedPhone = normalizePhilippinePhone(phoneNumber);
+        const phoneCandidates = buildPhoneCandidates(phoneNumber);
+        const normalizedPhone = phoneCandidates?.normalizedPhone;
         if (!normalizedPhone) {
             return res.status(400).json({ error: 'Invalid phone number format' });
         }
 
-        // Check if phone number already exists
-        const existingUser = await prisma.user.findFirst({ where: { phoneNumber: normalizedPhone } });
+        const existingUser = await prisma.user.findFirst({
+            where: {
+                OR: phoneCandidates.exactCandidates.map((candidate) => ({ phoneNumber: candidate }))
+            }
+        });
+
+        let existingLegacyByDigits = null;
+        if (!existingUser) {
+            const legacyResults = await prisma.$queryRawUnsafe(
+                `SELECT id, email, "phoneNumber"
+                 FROM "User"
+                 WHERE regexp_replace(coalesce("phoneNumber", ''), '[^0-9]', '', 'g') = ANY($1::text[])
+                 LIMIT 1`,
+                phoneCandidates.digitCandidates
+            );
+            if (Array.isArray(legacyResults) && legacyResults.length > 0) {
+                existingLegacyByDigits = legacyResults[0];
+            }
+        }
+
         if (existingUser) {
             return res.status(409).json({ error: 'Phone number already registered', userId: existingUser.id });
+        }
+        if (existingLegacyByDigits) {
+            return res.status(409).json({ error: 'Phone number already registered', userId: existingLegacyByDigits.id });
+        }
+
+        const existingInBudolPay = await isPhoneExistingInBudolPay(phoneCandidates);
+        if (existingInBudolPay) {
+            return res.status(409).json({ error: 'Phone number already registered', userId: existingInBudolPay.id });
         }
 
         // Create user with minimal info
@@ -1540,6 +1701,20 @@ app.post('/auth/register/quick', async (req, res) => {
                 email: `${normalizedPhone}@quick.budolpay.com`, // Temporary email
             }
         });
+
+        try {
+            await syncUserToBudolPay({
+                id: user.id,
+                email: user.email,
+                passwordHash: user.passwordHash,
+                phoneNumber: user.phoneNumber,
+                firstName: user.firstName,
+                lastName: user.lastName
+            });
+        } catch (syncError) {
+            await prisma.user.delete({ where: { id: user.id } });
+            return res.status(503).json({ error: 'Quick registration sync failed. Please retry.' });
+        }
 
         console.log('[Quick Reg] Success for:', user.id);
         res.status(201).json({

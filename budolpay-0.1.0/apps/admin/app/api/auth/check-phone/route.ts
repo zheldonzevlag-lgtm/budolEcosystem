@@ -13,6 +13,8 @@ export async function GET(request: Request) {
     try {
         const { searchParams } = new URL(request.url);
         const phone = searchParams.get('phone');
+        const scope = searchParams.get('scope') || 'ALL';
+        const excludeUserId = searchParams.get('excludeUserId');
 
         if (!phone) {
             return NextResponse.json({ error: 'Phone is required' }, { status: 400 });
@@ -45,7 +47,7 @@ export async function GET(request: Request) {
             }
         });
 
-        if (user) {
+        if (user && user.id !== excludeUserId) {
             return NextResponse.json({
                 exists: true,
                 source: 'LOCAL',
@@ -53,6 +55,10 @@ export async function GET(request: Request) {
                 email: user.email,
                 name: `${user.firstName} ${user.lastName}`.trim()
             });
+        }
+
+        if (scope === 'LOCAL') {
+            return NextResponse.json({ exists: false });
         }
 
         // 2. Cross-check with budolID (unified SSO/identity across the ecosystem)

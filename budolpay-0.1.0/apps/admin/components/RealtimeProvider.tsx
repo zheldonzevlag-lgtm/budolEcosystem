@@ -27,15 +27,16 @@ export default function RealtimeProvider() {
   const timerRef = useRef<NodeJS.Timeout | null>(null);
   const [wsConnected, setWsConnected] = useState(false);
   const configRef = useRef({ intervalMs: DEFAULT_POLL_MS });
-  const mountedRef = useRef(false);
-
-  // (v43.2) Disable realtime bus entirely on login page to avoid flickering
-  // FIX: Moved after hooks to comply with React "Rules of Hooks" (v45.1.2)
-  if (pathname === '/login') return null;
 
   useEffect(() => {
-    if (mountedRef.current) return;
-    mountedRef.current = true;
+    if (pathname === '/login') {
+      if (timerRef.current) {
+        clearInterval(timerRef.current);
+        timerRef.current = null;
+      }
+      setWsConnected(false);
+      return;
+    }
 
     const triggerRefresh = (source = 'heartbeat') => {
       console.log(`[RealtimeProvider] Triggering refresh (Source: ${source}, WS: ${realtime.isWebSocketConnected() ? 'OK' : 'OFFLINE'})`);
@@ -51,14 +52,6 @@ export default function RealtimeProvider() {
       if (timerRef.current) {
         clearInterval(timerRef.current);
         timerRef.current = null;
-      }
-
-      // (v43.3) ADAPTIVE HEARTBEAT RECOVERY
-      // We restore polling but differentiate by connection state and route.
-      // Rule: Login page NEVER polls (flicker prevention).
-      if (pathname === '/login') {
-        console.log('[RealtimeProvider] Login page detected. Polling suppressed.');
-        return;
       }
 
       // If connected: 60s safety pulse. If disconnected: Fast sync (configured or 10s).
@@ -112,8 +105,7 @@ export default function RealtimeProvider() {
       if (timerRef.current) clearInterval(timerRef.current);
       cleanupPromise.then(unbind => unbind?.());
     };
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  }, [pathname, router]);
 
   return null;
 }

@@ -7,6 +7,14 @@ import { sendDualChannelNotification } from "@/lib/notifications";
 // In production, this would use Redis or Database
 const otpStore = new Map<string, { otp: string, expiry: number }>();
 
+const normalizePhone = (phone: string) => {
+  const digits = (phone || "").replace(/\D/g, "");
+  if (digits.startsWith("0") && digits.length === 11) return `+63${digits.substring(1)}`;
+  if (digits.startsWith("63") && digits.length === 12) return `+${digits}`;
+  if (digits.startsWith("9") && digits.length === 10) return `+63${digits}`;
+  return null;
+};
+
 export async function GET() {
   try {
     const employees = await prisma.user.findMany({
@@ -68,12 +76,34 @@ export async function POST(request: Request) {
         return NextResponse.json({ error: "User not found" }, { status: 404 });
       }
 
+      let normalizedPhone: string | null = null;
+      if (phoneNumber !== undefined) {
+        normalizedPhone = normalizePhone(phoneNumber);
+        if (!normalizedPhone) {
+          return NextResponse.json({
+            error: "Invalid phone number format. Use 09XXXXXXXXX or +639XXXXXXXXX."
+          }, { status: 400 });
+        }
+        const existingPhoneUser = await prisma.user.findFirst({
+          where: {
+            id: { not: userId },
+            phoneNumber: normalizedPhone
+          },
+          select: { id: true }
+        });
+        if (existingPhoneUser) {
+          return NextResponse.json({
+            error: "Phone number already exists in database."
+          }, { status: 409 });
+        }
+      }
+
       // 1. Identify what changed
       const changes: any = {};
       if (firstName !== undefined && firstName !== oldUser.firstName) changes.firstName = firstName;
       if (lastName !== undefined && lastName !== oldUser.lastName) changes.lastName = lastName;
       if (email !== undefined && email !== oldUser.email) changes.email = email;
-      if (phoneNumber !== undefined && phoneNumber !== oldUser.phoneNumber) changes.phoneNumber = phoneNumber;
+      if (phoneNumber !== undefined && normalizedPhone && normalizedPhone !== oldUser.phoneNumber) changes.phoneNumber = normalizedPhone;
       if (role !== undefined && role !== oldUser.role) changes.role = role;
       if (department !== undefined && department !== oldUser.department) changes.department = department;
 
@@ -241,6 +271,12 @@ export async function POST(request: Request) {
     if (action === "SEND_EDIT_OTP") {
       const user = await prisma.user.findUnique({ where: { id: userId } });
       if (!user) return NextResponse.json({ error: "User not found" }, { status: 404 });
+      const actor = adminId
+        ? await prisma.user.findUnique({
+          where: { id: adminId },
+          select: { id: true, firstName: true, lastName: true, email: true }
+        })
+        : null;
 
       // Generate 6-digit OTP
       const otp = Math.floor(100000 + Math.random() * 900000).toString();
@@ -256,7 +292,9 @@ export async function POST(request: Request) {
         action: "EDIT_MFA_REQUESTED",
         entity: "User",
         entityId: userId,
-        userId: adminId || "SYSTEM",
+        userId: actor?.id || null,
+        actorName: actor ? `${actor.firstName || ''} ${actor.lastName || ''}`.trim() || actor.email : undefined,
+        actorEmail: actor?.email || undefined,
         ipAddress: "Internal System",
         newValue: { channel: "SMS_AND_EMAIL" } as any
       });
@@ -272,6 +310,12 @@ export async function POST(request: Request) {
     if (action === "VERIFY_EDIT_OTP") {
       const { otp } = body;
       const stored = otpStore.get(userId);
+      const actor = adminId
+        ? await prisma.user.findUnique({
+          where: { id: adminId },
+          select: { id: true, firstName: true, lastName: true, email: true }
+        })
+        : null;
 
       if (!stored || Date.now() > stored.expiry) {
         return NextResponse.json({ error: "OTP expired or invalid." }, { status: 400 });
@@ -288,7 +332,9 @@ export async function POST(request: Request) {
         action: "EDIT_MFA_VERIFIED",
         entity: "User",
         entityId: userId,
-        userId: adminId || "SYSTEM",
+        userId: actor?.id || null,
+        actorName: actor ? `${actor.firstName || ''} ${actor.lastName || ''}`.trim() || actor.email : undefined,
+        actorEmail: actor?.email || undefined,
         ipAddress: "Internal System"
       });
 

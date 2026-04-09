@@ -327,14 +327,30 @@ const LalamoveWidget = ({ deliveryAddress, items, onQuoteReceived, isSelected, s
                     signal: abortControllerRef.current.signal
                 });
 
-                // Robust JSON parsing
                 const contentType = response.headers.get("content-type");
-                let data;
+                let data = null;
+                let rawText = '';
                 if (contentType && contentType.includes("application/json")) {
-                    data = await response.json();
+                    try {
+                        data = await response.json();
+                    } catch (jsonError) {
+                        rawText = await response.text().catch(() => '');
+                        console.error('[Lalamove Quote API] Failed to parse JSON response', {
+                            status: response.status,
+                            statusText: response.statusText,
+                            contentType,
+                            bodyPreview: rawText.substring(0, 500)
+                        });
+                        throw new Error(`Unable to parse quote response (${response.status}).`);
+                    }
                 } else {
-                    const text = await response.text();
-                    console.error('[Lalamove Quote API] Received non-JSON response:', text.substring(0, 500));
+                    rawText = await response.text().catch(() => '');
+                    console.error('[Lalamove Quote API] Received non-JSON response', {
+                        status: response.status,
+                        statusText: response.statusText,
+                        contentType,
+                        bodyPreview: rawText.substring(0, 500)
+                    });
                     throw new Error(`Server returned non-JSON response (${response.status}).`);
                 }
 
@@ -345,22 +361,24 @@ const LalamoveWidget = ({ deliveryAddress, items, onQuoteReceived, isSelected, s
                         data: data
                     });
 
-                    // Check if data is valid for error extraction
-                    const isEmptyResponse = !data || (typeof data !== 'object') || 
+                    const isEmptyResponse = !data || (typeof data !== 'object') ||
                         (typeof data === 'object' && data !== null && Object.keys(data).length === 0);
-                    
+
                     if (response.status === 408 || response.status === 504) {
                         throw new Error("Request timed out. Please try again.");
                     } else if (response.status === 503) {
                         throw new Error("Lalamove service temporarily unavailable.");
                     } else if (isEmptyResponse) {
-                        // Handle empty response - Lalamove might not have quotes for this location
-                        console.warn('[Lalamove] Empty response - no delivery quotes available for this location');
                         throw new Error("No delivery quotes available for this location. Please check your address or try a different shipping method.");
                     } else {
-                        // Extract error message from various possible formats - use hardcoded fallback
-                        const errorMessage = 'Lalamove delivery quote failed - please try again or use a different shipping method';
-                        console.error('[Lalamove] Error extracting message from response, using fallback');
+                        const errorMessage =
+                            data?.error ||
+                            data?.message ||
+                            data?.details?.message ||
+                            data?.details?.error?.message ||
+                            data?.details?.errors?.[0]?.message ||
+                            data?.details?.errors?.[0]?.id ||
+                            `Lalamove delivery quote failed (${response.status})`;
                         throw new Error(errorMessage);
                     }
                 }
@@ -389,7 +407,7 @@ const LalamoveWidget = ({ deliveryAddress, items, onQuoteReceived, isSelected, s
                 errorMessage = "Lalamove service is temporarily unavailable. Please try again in a few minutes.";
             } else if (err.message.includes('An invalid response was received from the upstream server')) {
                 errorMessage = "Lalamove service is currently experiencing upstream server issues. Please try again in a few minutes.";
-            } else if (err.message.includes('Failed to get shipping quote') || err.message.includes('non-JSON response')) {
+            } else if (err.message.includes('Failed to get shipping quote') || err.message.includes('non-JSON response') || err.message.includes('Unable to parse quote response')) {
                 errorMessage = "Unable to calculate delivery cost. Service might be down.";
             }
 

@@ -3,6 +3,20 @@ export const dynamic = "force-dynamic";
 import { prisma } from '@/lib/prisma';
 import { checkRateLimit } from '@/lib/rate-limit';
 import { createAuditLog } from '@/lib/audit';
+import notifications from '@budolpay/notifications';
+
+const maskEmail = (email: string) => {
+    const [name, domain] = email.split('@');
+    if (!name || !domain) return email;
+    return `${name[0]}***@${domain}`;
+};
+
+const maskPhone = (phone?: string | null) => {
+    if (!phone) return null;
+    const digits = phone.replace(/\D/g, '');
+    if (digits.length < 4) return phone;
+    return `${digits.slice(0, 3)}***${digits.slice(-4)}`;
+};
 
 export async function POST(request: Request) {
     try {
@@ -134,12 +148,28 @@ export async function POST(request: Request) {
                 });
             }
 
-            // 4. Set Session Cookie
-            const response = NextResponse.json({ success: true });
-            
-            // Log Login Action for Forensic Audit Trail
+            const now = new Date();
+            const otpCode = Math.floor(100000 + Math.random() * 900000).toString();
+            const otpExpiresAt = new Date(now.getTime() + 10 * 60 * 1000);
+
+            await prisma.user.update({
+                where: { id: localUser.id },
+                data: {
+                    otpCode,
+                    otpExpiresAt,
+                    otpUpdatedAt: now
+                }
+            });
+
+            if (localUser.email?.includes('@')) {
+                await notifications.sendOTP(localUser.email, otpCode, 'EMAIL');
+            }
+            if (localUser.phoneNumber) {
+                await notifications.sendOTP(localUser.phoneNumber, otpCode, 'SMS');
+            }
+
             await createAuditLog({
-                action: 'USER_LOGIN',
+                action: 'USER_LOGIN_OTP_CHALLENGE',
                 userId: localUser.id,
                 entity: 'Security',
                 entityId: localUser.id,
@@ -147,6 +177,7 @@ export async function POST(request: Request) {
                 metadata: {
                     userAgent: request.headers.get('user-agent'),
                     authMethod: 'SSO_BUDOLID',
+                    otpRequired: true,
                     compliance: {
                         pci_dss: '10.2.1',
                         bsp: 'Circular 808'
@@ -154,13 +185,21 @@ export async function POST(request: Request) {
                 }
             });
 
-            console.log(`[Login API] Setting budolpay_token for ${email}`);
-            response.cookies.set('budolpay_token', token, {
+            const response = NextResponse.json({
+                otpRequired: true,
+                challenge: {
+                    email: maskEmail(localUser.email),
+                    phone: maskPhone(localUser.phoneNumber),
+                    expiresAt: otpExpiresAt.toISOString()
+                }
+            });
+
+            response.cookies.set('budolpay_preauth_token', token, {
                 httpOnly: true,
                 secure: process.env.NODE_ENV === 'production',
                 sameSite: 'lax',
                 path: '/',
-                maxAge: 60 * 60 * 24 * 7 // 7 days
+                maxAge: 60 * 10
             });
 
             return response;

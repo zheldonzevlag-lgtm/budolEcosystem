@@ -203,6 +203,8 @@ export async function GET(request) {
             };
         });
 
+        console.log(`[API/Products] Successfully processed ${productsWithSold.length} products`);
+
         return NextResponse.json(productsWithSold);
     } catch (error) {
         console.error('Error fetching products:', error);

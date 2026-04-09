@@ -25,6 +25,16 @@ export async function createAuditLog(params: {
   newValue?: any;
   metadata?: any;
 }) {
+  const requestedUserId = typeof params.userId === 'string' ? params.userId.trim() : '';
+  let linkedUserId: string | null = null;
+  if (requestedUserId && requestedUserId !== 'SYSTEM') {
+    const existingUser = await prisma.user.findUnique({
+      where: { id: requestedUserId },
+      select: { id: true }
+    });
+    linkedUserId = existingUser?.id || null;
+  }
+
   // Ensure we always have a metadata object for forensic markers
   const metadata = {
     ...params.metadata,
@@ -33,6 +43,7 @@ export async function createAuditLog(params: {
     //      so mobile users' identities must be stored directly in metadata
     ...(params.actorName && { actorName: params.actorName }),
     ...(params.actorEmail && { actorEmail: params.actorEmail }),
+    ...(requestedUserId && !linkedUserId && { original_userId: requestedUserId }),
     compliance: {
       pci_dss: params.metadata?.compliance?.pci_dss || '10.2',
       bsp_808: true
@@ -50,7 +61,7 @@ export async function createAuditLog(params: {
         action: params.action,
         entity: params.entity,
         entityId: params.entityId,
-        userId: params.userId || null,
+        userId: linkedUserId,
         oldValue: params.oldValue,
         newValue: params.newValue,
         metadata: metadata,
@@ -60,7 +71,7 @@ export async function createAuditLog(params: {
   } catch (error: any) {
     // P2003 is Prisma's error code for foreign key constraint failure
     if (error.code === 'P2003') {
-      console.warn(`[AuditLog] Foreign key constraint failed for userId: ${params.userId}. Storing log with userId: null.`);
+      console.warn(`[AuditLog] Foreign key constraint failed for userId: ${requestedUserId || 'N/A'}. Storing log with userId: null.`);
       return await prisma.auditLog.create({
         data: {
           action: params.action,
@@ -71,7 +82,7 @@ export async function createAuditLog(params: {
           newValue: params.newValue,
           metadata: {
             ...metadata,
-            original_userId: params.userId, // Preserve the failed userId in metadata
+            original_userId: requestedUserId || null,
             warning: 'FK constraint failed - linked user not found in public schema'
           },
           ipAddress: params.ipAddress || 'UNKNOWN'

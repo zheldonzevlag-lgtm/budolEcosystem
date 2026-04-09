@@ -31,22 +31,29 @@ export async function POST(request) {
     } catch (error) {
         console.error('[Lalamove Quote Error]:', error);
 
-        // Log detailed error from Lalamove if available
-        const originalError = error.originalError || null;
-        if (originalError) {
-            console.error('[Lalamove Quote Original Error]:', JSON.stringify(originalError, null, 2));
+        const upstreamStatus = error?.response?.status || null;
+        const originalError = error?.originalError ?? error?.response?.data ?? null;
+        const status = (typeof upstreamStatus === 'number' && upstreamStatus >= 400 && upstreamStatus < 600)
+            ? upstreamStatus
+            : (error?.code === 'LALAMOVE_SERVER_ERROR' ? 503 : 500);
+
+        let details = null;
+        if (typeof originalError === 'string') {
+            details = { raw: originalError };
+        } else if (originalError instanceof Error) {
+            details = { message: originalError.message };
+        } else if (originalError && typeof originalError === 'object') {
+            details = originalError;
+        } else {
+            details = { message: error?.message || 'Failed to get shipping quote' };
         }
 
-        // Ensure error details are serializable and not empty
-        const errorDetails = originalError ? 
-            (originalError instanceof Error ? { message: originalError.message, stack: originalError.stack } : originalError) : 
-            { message: error.message };
-
         return NextResponse.json({
-            error: error.message || 'Failed to get shipping quote',
-            details: errorDetails,
-            code: error.code || 'UNKNOWN',
+            error: error?.message || 'Failed to get shipping quote',
+            details,
+            code: error?.code || 'UNKNOWN',
+            status,
             timestamp: new Date().toISOString()
-        }, { status: 500 });
+        }, { status });
     }
 }

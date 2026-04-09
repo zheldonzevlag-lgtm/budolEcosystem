@@ -8,8 +8,8 @@ require('dotenv').config({ path: path.join(__dirname, '.env') });
 const prisma = new PrismaClient();
 
 async function main() {
-  const email = 'galvezjon59@gmail.com';
-  const password = 'asakapa!';
+  const email = 'reynaldomgalvez@gmail.com';
+  const password = 'tr@1t0r!';
   const hashedPassword = await bcrypt.hash(password, 10);
   
   console.log(`[Seed] Creating user in SSO DB: ${email}`);
@@ -18,20 +18,20 @@ async function main() {
     where: { email },
     update: {
       passwordHash: hashedPassword,
-      firstName: 'Jon',
+      firstName: 'Reynaldo',
       lastName: 'Galvez',
-      phoneNumber: '09123456789',
-      role: 'USER', // Default to USER for SSO, admin portal will sync as STAFF/ADMIN
+      phoneNumber: '09484099388',
+      role: 'ADMIN', 
       emailVerified: true,
       phoneVerified: true
     },
     create: {
       email,
       passwordHash: hashedPassword,
-      firstName: 'Jon',
+      firstName: 'Reynaldo',
       lastName: 'Galvez',
-      phoneNumber: '09123456789',
-      role: 'USER',
+      phoneNumber: '09484099388',
+      role: 'ADMIN',
       emailVerified: true,
       phoneVerified: true
     }

@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { createAuditLog } from '@/lib/audit';
+import notifications from '@budolpay/notifications';
 
 export async function GET(request: Request) {
     const { searchParams } = new URL(request.url);
@@ -91,19 +92,37 @@ export async function GET(request: Request) {
             });
         }
 
-        // 3. Set local session cookie
+        const now = new Date();
+        const otpCode = Math.floor(100000 + Math.random() * 900000).toString();
+        const otpExpiresAt = new Date(now.getTime() + 10 * 60 * 1000);
+        await prisma.user.update({
+            where: { id: localUser.id },
+            data: {
+                otpCode,
+                otpExpiresAt,
+                otpUpdatedAt: now
+            }
+        });
+
+        if (localUser.email?.includes('@')) {
+            await notifications.sendOTP(localUser.email, otpCode, 'EMAIL');
+        }
+        if (localUser.phoneNumber) {
+            await notifications.sendOTP(localUser.phoneNumber, otpCode, 'SMS');
+        }
+
         const protocol = request.headers.get('x-forwarded-proto') || 'http';
         const host = request.headers.get('host');
         const appUrl = process.env.NEXT_PUBLIC_APP_URL && !process.env.NEXT_PUBLIC_APP_URL.includes('localhost:3000') 
             ? process.env.NEXT_PUBLIC_APP_URL 
             : `${protocol}://${host}`;
 
-        const response = NextResponse.redirect(new URL('/', appUrl));
+        const response = NextResponse.redirect(new URL('/login?otp=required', appUrl));
         
         // Log Login Action for Forensic Audit Trail
         const ip = request.headers.get('x-forwarded-for') || '127.0.0.1';
         await createAuditLog({
-            action: 'USER_LOGIN',
+            action: 'USER_LOGIN_OTP_CHALLENGE',
             userId: localUser.id,
             entity: 'Security',
             entityId: localUser.id,
@@ -111,6 +130,7 @@ export async function GET(request: Request) {
             metadata: {
                 userAgent: request.headers.get('user-agent'),
                 authMethod: 'SSO_CALLBACK',
+                otpRequired: true,
                 compliance: {
                     pci_dss: '10.2.1',
                     bsp: 'Circular 808'
@@ -118,14 +138,12 @@ export async function GET(request: Request) {
             }
         });
 
-        console.log(`[SSO Callback] Setting budolpay_token cookie and redirecting to / via ${appUrl}`);
-        // Use the same token for the local cookie so the middleware can verify it
-        response.cookies.set('budolpay_token', token, {
+        response.cookies.set('budolpay_preauth_token', token, {
             httpOnly: true,
-            secure: process.env.NODE_ENV === 'production', // Secure in production (HTTPS), false in dev (HTTP)
+            secure: process.env.NODE_ENV === 'production',
             sameSite: 'lax',
             path: '/',
-            maxAge: 60 * 60 * 24 * 7 // 7 days
+            maxAge: 60 * 10
         });
 
         return response;
