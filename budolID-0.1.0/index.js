@@ -258,10 +258,11 @@ app.get('/api/health', (req, res) => {
 
 // 0. Serve Login Page
 app.get('/login', (req, res) => {
-    const { apiKey, redirect_uri, error } = req.query;
-    console.log(`[GET /login] apiKey: ${apiKey}, error: ${error}`);
+    const { apiKey, redirect_uri, error, email } = req.query;
+    console.log(`[GET /login] apiKey: ${apiKey}, error: ${error}, email: ${email}`);
     const activeApiKey = apiKey || 'bp_key_2025';
     const activeRedirectUri = redirect_uri || '';
+    const preservedEmail = email || '';
 
     const errorToast = error ? `
         <div id="toast-error" class="fixed top-6 left-1/2 -translate-x-1/2 z-[100] flex items-center w-full max-w-xs p-4 text-gray-500 bg-white rounded-xl shadow-2xl border border-gray-100 animate-in slide-in-from-top-10 duration-500" role="alert">
@@ -322,6 +323,7 @@ app.get('/login', (req, res) => {
                             <input 
                                 type="email" 
                                 name="email"
+                                value="${preservedEmail}"
                                 required
                                 class="w-full p-3 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500/50 text-slate-900"
                                 placeholder="juan@budolpay.com"
@@ -1286,7 +1288,7 @@ app.post('/auth/sso/login-form', async (req, res) => {
         // WHY: Schema uses 'passwordHash' not 'password' — budolID stores bcrypt hashes
         if (!user || !(await bcrypt.compare(password, user.passwordHash))) {
             console.log(`[POST /auth/sso/login-form] Login failed for ${email}. Redirecting with error=1`);
-            return res.redirect(`/login?apiKey=${activeApiKey}&redirect_uri=${encodeURIComponent(redirect_uri || '')}&error=1`);
+            return res.redirect(`/login?apiKey=${activeApiKey}&redirect_uri=${encodeURIComponent(redirect_uri || '')}&error=1&email=${encodeURIComponent(email)}`);
         }
 
         const token = jwt.sign(
