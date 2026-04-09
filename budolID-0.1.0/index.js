@@ -258,9 +258,24 @@ app.get('/api/health', (req, res) => {
 
 // 0. Serve Login Page
 app.get('/login', (req, res) => {
-    const { apiKey, redirect_uri } = req.query;
+    const { apiKey, redirect_uri, error } = req.query;
     const activeApiKey = apiKey || 'bp_key_2025';
     const activeRedirectUri = redirect_uri || '';
+
+    const errorHtml = error ? `
+        <div class="mb-6 p-4 bg-red-50 border-l-4 border-red-500 rounded-r-xl flex items-center gap-3 animate-shake">
+            <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#EF4444" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+            <p class="text-xs font-bold text-red-700 uppercase tracking-wide">Invalid credentials provided</p>
+        </div>
+        <style>
+            @keyframes shake {
+                0%, 100% { transform: translateX(0); }
+                10%, 30%, 50%, 70%, 90% { transform: translateX(-4px); }
+                20%, 40%, 60%, 80% { transform: translateX(4px); }
+            }
+            .animate-shake { animation: shake 0.5s cubic-bezier(.36,.07,.19,.97) both; }
+        </style>
+    ` : '';
 
     res.send(`
         <!DOCTYPE html>
@@ -278,6 +293,7 @@ app.get('/login', (req, res) => {
         <body class="min-h-screen bg-slate-900 flex items-center justify-center p-4">
             <div class="max-w-md w-full bg-white rounded-2xl shadow-2xl overflow-hidden">
                 <div class="p-8">
+                    ${errorHtml}
                     <div class="flex justify-center mb-6">
                         <div class="bg-blue-500/10 p-4 rounded-full">
                             <svg xmlns="http://www.w3.org/2000/svg" width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="text-blue-500"><path d="M20 13c0 5-3.5 7.5-7.66 8.95a1 1 0 0 1-.67-.01C7.5 20.5 4 18 4 13V6a1 1 0 0 1 1-1c2 0 4.5-1.2 6.24-2.72a1.17 1.17 0 0 1 1.52 0C14.51 3.81 17 5 19 5a1 1 0 0 1 1 1z"/></svg>
@@ -1262,7 +1278,7 @@ app.post('/auth/sso/login-form', async (req, res) => {
         const user = await prisma.user.findUnique({ where: { email } });
         // WHY: Schema uses 'passwordHash' not 'password' — budolID stores bcrypt hashes
         if (!user || !(await bcrypt.compare(password, user.passwordHash))) {
-            return res.status(401).send('Invalid credentials');
+            return res.redirect(`/login?apiKey=${activeApiKey}&redirect_uri=${encodeURIComponent(redirect_uri || '')}&error=1`);
         }
 
         const token = jwt.sign(
