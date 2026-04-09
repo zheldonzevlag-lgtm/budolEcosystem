@@ -259,22 +259,29 @@ app.get('/api/health', (req, res) => {
 // 0. Serve Login Page
 app.get('/login', (req, res) => {
     const { apiKey, redirect_uri, error } = req.query;
+    console.log(`[GET /login] apiKey: ${apiKey}, error: ${error}`);
     const activeApiKey = apiKey || 'bp_key_2025';
     const activeRedirectUri = redirect_uri || '';
 
-    const errorHtml = error ? `
-        <div class="mb-6 p-4 bg-red-50 border-l-4 border-red-500 rounded-r-xl flex items-center gap-3 animate-shake">
-            <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#EF4444" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
-            <p class="text-xs font-bold text-red-700 uppercase tracking-wide">Invalid credentials provided</p>
+    const errorToast = error ? `
+        <div id="toast-error" class="fixed top-6 right-6 z-[100] flex items-center w-full max-w-xs p-4 text-gray-500 bg-white rounded-xl shadow-2xl border border-gray-100 animate-in slide-in-from-top-4 duration-500" role="alert">
+            <div class="inline-flex items-center justify-center flex-shrink-0 w-10 h-10 text-red-500 bg-red-50 rounded-lg">
+                <svg class="w-5 h-5" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5"><path stroke-linecap="round" stroke-linejoin="round" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/></svg>
+            </div>
+            <div class="ml-4 text-sm font-bold text-gray-800">Invalid credentials.</div>
+            <button type="button" class="ml-auto p-1.5 text-gray-400 hover:text-gray-900 rounded-lg" onclick="document.getElementById('toast-error').remove()">
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
+            </button>
         </div>
-        <style>
-            @keyframes shake {
-                0%, 100% { transform: translateX(0); }
-                10%, 30%, 50%, 70%, 90% { transform: translateX(-4px); }
-                20%, 40%, 60%, 80% { transform: translateX(4px); }
-            }
-            .animate-shake { animation: shake 0.5s cubic-bezier(.36,.07,.19,.97) both; }
-        </style>
+        <script>
+            setTimeout(() => {
+                const toast = document.getElementById('toast-error');
+                if (toast) {
+                    toast.classList.add('transition-all', 'duration-500', 'opacity-0', 'translate-x-full');
+                    setTimeout(() => toast.remove(), 500);
+                }
+            }, 4000);
+        </script>
     ` : '';
 
     res.send(`
@@ -293,7 +300,6 @@ app.get('/login', (req, res) => {
         <body class="min-h-screen bg-slate-900 flex items-center justify-center p-4">
             <div class="max-w-md w-full bg-white rounded-2xl shadow-2xl overflow-hidden">
                 <div class="p-8">
-                    ${errorHtml}
                     <div class="flex justify-center mb-6">
                         <div class="bg-blue-500/10 p-4 rounded-full">
                             <svg xmlns="http://www.w3.org/2000/svg" width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="text-blue-500"><path d="M20 13c0 5-3.5 7.5-7.66 8.95a1 1 0 0 1-.67-.01C7.5 20.5 4 18 4 13V6a1 1 0 0 1 1-1c2 0 4.5-1.2 6.24-2.72a1.17 1.17 0 0 1 1.52 0C14.51 3.81 17 5 19 5a1 1 0 0 1 1 1z"/></svg>
@@ -386,6 +392,7 @@ app.get('/login', (req, res) => {
                     }
                 }
             </script>
+            ${errorToast}
         </body>
         </html>
     `);
@@ -1278,6 +1285,7 @@ app.post('/auth/sso/login-form', async (req, res) => {
         const user = await prisma.user.findUnique({ where: { email } });
         // WHY: Schema uses 'passwordHash' not 'password' — budolID stores bcrypt hashes
         if (!user || !(await bcrypt.compare(password, user.passwordHash))) {
+            console.log(`[POST /auth/sso/login-form] Login failed for ${email}. Redirecting with error=1`);
             return res.redirect(`/login?apiKey=${activeApiKey}&redirect_uri=${encodeURIComponent(redirect_uri || '')}&error=1`);
         }
 
