@@ -1,0 +1,106 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Developer Manual - v121</title>
+    <style>
+        body { font-family: system-ui, -apple-system, sans-serif; line-height: 1.6; max-width: 900px; margin: 0 auto; padding: 2rem; color: #333; }
+        h1, h2 { color: #f43f5e; }
+        section { margin-bottom: 2rem; border-bottom: 1px solid #eee; padding-bottom: 1rem; }
+        code { background: #f1f5f9; padding: 0.2rem 0.4rem; border-radius: 4px; font-family: monospace; }
+        pre { background: #1e293b; color: #f8fafc; padding: 1rem; border-radius: 8px; overflow-x: auto; }
+        .nav { margin-bottom: 2rem; display: flex; justify-content: space-between; }
+        .tag { display: inline-block; padding: 0.2rem 0.6rem; border-radius: 20px; font-size: 0.8rem; font-weight: bold; color: white; margin-right: 0.5rem; }
+        .tag-dev { background: #f43f5e; }
+    </style>
+</head>
+<body>
+    <div class="nav">
+        <a href="../budolecosystem_docs_2026-01-04_v120/manuals/developer_manual.html">← Previous Version (v120)</a>
+        <a href="../index.html">Back to Root Index</a>
+        <a href="../index.html">Next Version (TBD) →</a>
+    </div>
+
+    <header>
+        <h1>Developer Manual: Payment Summary UI & Session Fixes</h1>
+        <p><span class="tag tag-dev">Technical Detail</span> Version 121 | 2026-01-04</p>
+    </header>
+
+    <section>
+        <h2>Purpose</h2>
+        <p>To enhance the Payment Summary user experience by providing more transaction details and resolving a confusing "User not logged in" error during the payment confirmation flow.</p>
+    </section>
+
+    <section>
+        <h2>Technical Details & Code Details</h2>
+        <h3>1. Session Validation Improvement</h3>
+        <p>Modified <code>budolPayMobile/lib/services/api_service.dart</code> to provide a more descriptive error message when the user session is missing or expired before processing a payment.</p>
+        <pre><code>// Enhanced session check in api_service.dart
+if (user == null) {
+  throw Exception('User session expired. Please log in again.');
+}</code></pre>
+
+        <h3>2. Payment Summary UI Refactoring</h3>
+        <p>Refactored <code>PaymentSummaryScreen</code> in <code>budolPayMobile/lib/screens/qr_scanner_screen.dart</code> to include:</p>
+        <ul>
+            <li><strong>SafeArea:</strong> Prevents UI elements from being cut off by device navigation bars.</li>
+            <li><strong>Detail Rows:</strong> New <code>_buildDetailRow</code> helper to display Reference ID, Payment Method, and Store Name.</li>
+            <li><strong>Button Styling:</strong> Replaced <code>TextButton</code> for Cancel with a structured <code>OutlinedButton</code>.</li>
+        </ul>
+        <pre><code>// New UI Structure
+SafeArea(
+  child: Column(
+    children: [
+      _buildDetailRow('Reference ID', referenceId),
+      _buildDetailRow('Payment Method', paymentMethod),
+      // ...
+    ]
+  )
+)</code></pre>
+    </section>
+
+    <section>
+        <h2>Issues & Fixes</h2>
+        <ul>
+            <li><strong>Issue:</strong> User received a generic "User not logged in" error despite having logged in.<br>
+                <strong>Fix:</strong> Improved client-side check in <code>ApiService.processPayment</code> with debug logging and user-friendly error messages.</li>
+            <li><strong>Issue:</strong> "Cancel" text was cut off on some devices.<br>
+                <strong>Fix:</strong> Added <code>SafeArea</code> and converted the text link to a full <code>OutlinedButton</code> with proper vertical padding.</li>
+            <li><strong>Issue:</strong> Missing transaction details (Store Name, Reference ID).<br>
+                <strong>Fix:</strong> Extracted additional fields from <code>paymentData</code> and added them to the summary view.</li>
+        </ul>
+    </section>
+
+    <section>
+        <h2>Test Results</h2>
+        <p>Verified that the Payment Summary screen now correctly displays all four key pieces of information (Amount, Reference, Method, Store). Confirmed that clicking "Cancel" returns the user safely to the scanner without UI clipping.</p>
+        <p><strong>Automated Tests:</strong> Created and passed <code>test/api_service_test.dart</code> and <code>test/payment_summary_test.dart</code> to verify session validation and UI structure.</p>
+        <pre><code>00:05 +4: All tests passed!</code></pre>
+        <ul>
+            <li><strong>ApiService Session Management:</strong> Verified that <code>processPayment</code> correctly identifies missing sessions.</li>
+            <li><strong>PaymentSummaryScreen UI:</strong> Verified existence of <code>SafeArea</code>, <code>SingleChildScrollView</code>, <code>OutlinedButton</code>, and transaction details.</li>
+        </ul>
+    </section>
+
+    <section>
+        <h2>Risk & Mitigation</h2>
+        <ul>
+            <li><strong>Risk:</strong> Session state loss on app reload in web/mobile environments.<br>
+                <strong>Mitigation:</strong> Added descriptive error messages to guide the user back to login rather than failing silently.</li>
+            <li><strong>Risk:</strong> UI Overflow on small screens due to additional transaction details.<br>
+                <strong>Mitigation:</strong> Wrapped the summary content in a <code>SingleChildScrollView</code> and used <code>Expanded</code>/<code>Spacer</code> strategically.</li>
+        </ul>
+    </section>
+
+    <section>
+        <h2>Dependencies</h2>
+        <p>Relies on <code>provider</code> package for <code>ApiService</code> access and <code>material</code> for UI components.</p>
+    </section>
+
+    <section>
+        <h2>Recommendation for Future Enhancement</h2>
+        <p>Implement local persistence (e.g., <code>shared_preferences</code>) for the user session to prevent "User session expired" errors after app restarts or minor network disruptions.</p>
+    </section>
+</body>
+</html>

@@ -1,0 +1,106 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Developer Manual - Budol Ecosystem v3.0.2</title>
+    <style>
+        :root {
+            --primary: #0052CC;
+            --code-bg: #F4F5F7;
+            --text: #172B4D;
+            --sidebar-bg: #0747A6;
+        }
+        body { font-family: sans-serif; display: flex; margin: 0; background: #fafafa; color: var(--text); }
+        .sidebar { width: 250px; background: var(--sidebar-bg); color: white; height: 100vh; position: fixed; padding: 20px; }
+        .sidebar h2 { font-size: 1.2rem; border-bottom: 1px solid rgba(255,255,255,0.2); padding-bottom: 10px; }
+        .sidebar ul { list-style: none; padding: 0; }
+        .sidebar li { margin: 15px 0; }
+        .sidebar a { color: white; text-decoration: none; opacity: 0.8; transition: 0.2s; }
+        .sidebar a:hover { opacity: 1; }
+        
+        .main-content { margin-left: 290px; padding: 40px; max-width: 900px; }
+        h1 { color: var(--primary); }
+        .code-block { background: #272822; color: #f8f8f2; padding: 20px; border-radius: 6px; overflow-x: auto; font-family: 'Courier New', Courier, monospace; margin: 20px 0; line-height: 1.5; }
+        .file-link { background: var(--primary); color: white; padding: 4px 10px; border-radius: 4px; text-decoration: none; font-size: 0.8rem; font-weight: bold; }
+        .file-link:hover { background: #0747A6; }
+        
+        section { margin-bottom: 50px; border-bottom: 1px solid #eee; padding-bottom: 30px; }
+        .rationale { background: #E3FCEF; border-left: 4px solid #36B37E; padding: 15px; margin: 20px 0; }
+    </style>
+</head>
+<body>
+    <div class="sidebar">
+        <h2>Developer Manual</h2>
+        <ul>
+            <li><a href="#architecture">Architecture Overview</a></li>
+            <li><a href="#kyc-flow">KYC Verification Flow</a></li>
+            <li><a href="#api-contracts">API Contracts</a></li>
+            <li><a href="#security">Security & Compliance</a></li>
+            <li><a href="index.html">← Back to Index</a></li>
+        </ul>
+    </div>
+
+    <div class="main-content">
+        <h1>🛠️ Developer Manual v3.0.2</h1>
+        
+        <section id="architecture">
+            <h2>Architecture Overview</h2>
+            <p>The BudolPay Ecosystem uses a microservices architecture. The KYC flow involves the Mobile App, API Gateway, and the Verification Service.</p>
+            <div class="rationale">
+                <strong>Rationale:</strong> Decoupling verification logic allows for independent scaling and easier compliance auditing for PII (Personally Identifiable Information).
+            </div>
+        </section>
+
+        <section id="kyc-flow">
+            <h2>KYC Verification Flow Integration</h2>
+            <p>The mobile app submits documents to the <code>/verification/upload</code> endpoint. We aliased the backend <code>/verify</code> endpoint to support this.</p>
+            
+            <h3>Backend Alignment (Verification Service)</h3>
+            <p>Modified the verification service to accept both <code>/verify</code> and <code>/upload</code> routes and handle multi-part file uploads.</p>
+            <a href="file:///d:/IT Projects/budolEcosystem/budolpay-0.1.0/services/verification-service/index.js" class="file-link">Open verification-service/index.js</a>
+            <div class="code-block">
+<pre>
+app.post(['/verify', '/upload'], upload.single('document'), async (req, res) => {
+  // Logic to handle document upload and user status update
+  // userId, type, faceTemplate are extracted from body
+  // req.file contains the uploaded image
+});
+</pre>
+            </div>
+
+            <h3>Admin Panel Document Resolution</h3>
+            <p>Updated the Admin Dashboard to resolve relative URLs for documents stored on the verification service via the API Gateway.</p>
+            <a href="file:///d:/IT Projects/budolEcosystem/budolpay-0.1.0/apps/admin/app/users/page.tsx" class="file-link">Open apps/admin/app/users/page.tsx</a>
+            <div class="code-block">
+<pre>
+const getDocUrl = (doc: any) => {
+  if (doc.remoteUrl) {
+    const GATEWAY_URL = process.env.NEXT_PUBLIC_GATEWAY_URL || "http://localhost:8080";
+    return `${GATEWAY_URL}${doc.remoteUrl.startsWith('/') ? '' : '/'}${doc.remoteUrl}`;
+  }
+  // Fallback to blobData...
+};
+</pre>
+            </div>
+        </section>
+
+        <section id="api-contracts">
+            <h2>API Contracts</h2>
+            <h3>POST /verification/upload</h3>
+            <ul>
+                <li><strong>Request:</strong> Multipart Form Data</li>
+                <li><strong>Fields:</strong> <code>userId</code>, <code>type</code> (SELFIE/ID_DOCUMENT), <code>documentType</code>, <code>faceTemplate</code> (optional)</li>
+                <li><strong>File:</strong> <code>document</code> (JPEG/PNG)</li>
+                <li><strong>Response:</strong> 201 Created with <code>{ success: true, status: 'VERIFIED'|'PENDING' }</code></li>
+            </ul>
+        </section>
+
+        <section id="security">
+            <h2>Security & Compliance</h2>
+            <p>All KYC status changes are logged in the <code>AuditLog</code> table with PCI DSS 10.2.2 and BSP Circular 808 metadata.</p>
+            <a href="file:///d:/IT Projects/budolEcosystem/budolpay-0.1.0/apps/admin/app/api/users/route.ts" class="file-link">Open apps/admin/app/api/users/route.ts</a>
+        </section>
+    </div>
+</body>
+</html>

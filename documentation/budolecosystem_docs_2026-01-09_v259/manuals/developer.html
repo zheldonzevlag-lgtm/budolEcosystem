@@ -1,0 +1,56 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Developer Manual - v259</title>
+    <style>
+        body { font-family: sans-serif; line-height: 1.6; max-width: 900px; margin: 0 auto; padding: 20px; color: #333; }
+        pre { background: #f4f4f4; padding: 15px; border-radius: 5px; overflow-x: auto; border-left: 4px solid #f43f5e; }
+        h1, h2 { color: #0f172a; border-bottom: 2px solid #eee; padding-bottom: 10px; }
+        .back-link { margin-bottom: 20px; display: block; color: #f43f5e; text-decoration: none; font-weight: bold; }
+        .section { margin-bottom: 40px; }
+    </style>
+</head>
+<body>
+    <a href="../index.html" class="back-link">← Back to v259 Index</a>
+    <h1>Developer Manual Updates - v259</h1>
+
+    <div class="section">
+        <h2>1. Purpose & Reason</h2>
+        <p>The primary goal was to fix the broken real-time notification loop in the budolPay ecosystem. Microservices were failing to communicate with the Gateway due to environment variable collisions (Vercel URLs overriding local settings), and Pusher events were not being triggered correctly for balance updates.</p>
+    </div>
+
+    <div class="section">
+        <h2>2. Technical Implementation Details</h2>
+        <h3>Environment Variable Override</h3>
+        <p>We discovered that <code>dotenv</code> was not overriding existing environment variables injected by the OS or previous runs. We enforced the override globally:</p>
+        <pre>require('dotenv').config({ 
+    path: path.resolve(__dirname, '../../.env'), 
+    override: true 
+});</pre>
+
+        <h3>Pusher Event Flow</h3>
+        <p>The Gateway now correctly initializes Pusher with fallbacks from the database or environment. The <code>/internal/notify</code> endpoint triggers both Socket.io and Pusher events:</p>
+        <pre>pusher.trigger(`user-${userId}`, event, data);</pre>
+    </div>
+
+    <div class="section">
+        <h2>3. Code Details</h2>
+        <ul>
+            <li><strong>Gateway:</strong> Modified <code>index.js</code> to handle asynchronous Pusher initialization and environment overrides.</li>
+            <li><strong>Wallet Service:</strong> Ensured <code>notifyBalanceUpdate</code> sends correctly formatted payloads to the Gateway.</li>
+            <li><strong>Mobile App:</strong> Updated <code>PusherService</code> to handle <code>balance_update</code> events and stream them to the UI.</li>
+        </ul>
+    </div>
+
+    <div class="section">
+        <h2>4. Test Results</h2>
+        <p>Verified P2P Transfer between two users:</p>
+        <ul>
+            <li>Sender: 9e628dfa-d597-458a-ad6e-b75bc3ee41a3</li>
+            <li>Recipient: 6fb9d73a-b1c2-4775-9cd9-0a1f0f608eaa</li>
+            <li>Result: Transaction succeeded; both users received real-time balance updates via Pusher.</li>
+        </ul>
+    </div>
+</body>
+</html>

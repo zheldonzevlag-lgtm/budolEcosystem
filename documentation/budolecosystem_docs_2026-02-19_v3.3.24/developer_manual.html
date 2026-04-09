@@ -1,0 +1,54 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Developer Manual - v3.3.24</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        :root { --primary: #0052CC; --bg-main: #FFFFFF; --bg-sidebar: #F4F5F7; --text-main: #091E42; --border: #DFE1E6; }
+        body { font-family: 'Inter', sans-serif; background: var(--bg-main); color: var(--text-main); line-height: 1.6; margin: 0; display: flex; }
+        .sidebar { width: 280px; background: var(--bg-sidebar); border-right: 1px solid var(--border); height: 100vh; position: sticky; top: 0; padding: 24px; }
+        .main-content { flex-grow: 1; padding: 40px 60px; max-width: 1200px; }
+        h1 { color: var(--primary); border-bottom: 2px solid var(--border); padding-bottom: 10px; }
+        pre { background: #f4f5f7; padding: 16px; border-radius: 8px; overflow-x: auto; }
+    </style>
+</head>
+<body>
+    <div class="sidebar">
+        <h3>Budol Ecosystem</h3>
+        <p>v3.3.24</p>
+        <hr style="border: 0; border-top: 1px solid var(--border); margin: 16px 0;">
+        <nav>
+            <div style="margin-bottom: 8px;"><a href="index.html" style="color: var(--text-main); text-decoration: none;">Release Index</a></div>
+            <div style="margin-bottom: 8px;"><a href="developer_manual.html" style="color: var(--primary); font-weight: 600; text-decoration: none;">Developer Manual</a></div>
+        </nav>
+    </div>
+
+    <div class="main-content">
+        <h1>Developer Manual</h1>
+        <h2>Profile Data Synchronization</h2>
+        <p>This update addresses an issue where the "Edit Profile" screen would display empty fields if the user data was not fully loaded upon initialization.</p>
+        
+        <h3>Implementation Details</h3>
+        <p>We introduced a <code>didChangeDependencies</code> override in <code>EditProfileScreen</code> to listen for updates from the <code>ApiService</code>. When the user data becomes available (and if it hasn't been loaded yet), the text controllers are populated.</p>
+
+        <h4>Code Changes</h4>
+        <p><strong>File:</strong> <a href="file:///d:/IT Projects/budolEcosystem/budolPayMobile/lib/screens/edit_profile_screen.dart">edit_profile_screen.dart</a></p>
+        <pre><code>
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    if (!_isDataLoaded) {
+      final user = context.watch&lt;ApiService&gt;().user;
+      if (user != null) {
+        if (_firstNameController.text.isEmpty) _firstNameController.text = user['firstName'] ?? '';
+        // ... populate other fields
+        _isDataLoaded = true;
+      }
+    }
+  }
+        </code></pre>
+        <p>This ensures that even if the network request completes after the screen is built, the fields will update automatically.</p>
+    </div>
+</body>
+</html>

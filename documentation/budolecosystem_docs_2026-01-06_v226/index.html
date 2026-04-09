@@ -1,0 +1,148 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>budolEcosystem Documentation - v226</title>
+    <style>
+        :root {
+            --primary: #f43f5e;
+            --secondary: #0f172a;
+            --accent: #3b82f6;
+            --text: #f8fafc;
+            --bg: #020617;
+            --card-bg: #1e293b;
+        }
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            line-height: 1.6;
+            color: var(--text);
+            background-color: var(--bg);
+            margin: 0;
+            padding: 0;
+        }
+        .container {
+            max-width: 1000px;
+            margin: 0 auto;
+            padding: 40px 20px;
+        }
+        header {
+            text-align: center;
+            margin-bottom: 60px;
+            border-bottom: 2px solid var(--primary);
+            padding-bottom: 20px;
+        }
+        h1 { color: var(--primary); font-size: 2.5rem; margin-bottom: 10px; }
+        .version-tag {
+            background-color: var(--primary);
+            color: white;
+            padding: 5px 15px;
+            border-radius: 20px;
+            font-size: 0.9rem;
+            font-weight: bold;
+        }
+        section {
+            background: var(--card-bg);
+            padding: 30px;
+            border-radius: 15px;
+            margin-bottom: 30px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.5);
+        }
+        h2 { color: var(--primary); border-left: 5px solid var(--primary); padding-left: 15px; margin-top: 0; }
+        h3 { color: var(--accent); }
+        .code-block {
+            background: #0f172a;
+            padding: 15px;
+            border-radius: 8px;
+            font-family: monospace;
+            overflow-x: auto;
+            border: 1px solid #334155;
+            margin: 10px 0;
+        }
+        .nav-links {
+            display: flex;
+            justify-content: space-between;
+            margin-top: 40px;
+        }
+        .nav-links a {
+            color: var(--primary);
+            text-decoration: none;
+            font-weight: bold;
+        }
+        .nav-links a:hover { text-decoration: underline; }
+    </style>
+</head>
+<body>
+    <div class="nav-links ecosystem-docs-top-nav">
+        <a href="../budolecosystem_docs_2026-01-08_v225/index.html">← Previous (v225)</a>
+        <a href="../index.html">Index</a>
+        <a href="../budolecosystem_docs_2026-01-08_v226/index.html">Next (v226) →</a>
+    </div>
+
+    <div class="container">
+        <div style="margin-bottom: 20px; display: flex; justify-content: space-between; align-items: center; background: #f8fafc; padding: 15px; border-radius: 8px; border: 1px solid #e2e8f0;">
+            <a href="../index.html" style="text-decoration: none; color: #3b82f6; font-weight: bold;">&larr; Main Index</a>
+            <div style="display: flex; gap: 20px;">
+                <a href="../budolecosystem_docs_2026-01-08_v225/index.html" style="text-decoration: none; color: #64748b; font-weight: bold;">&larr; Previous: v225</a>
+                <a href="../budolecosystem_docs_2026-01-08_v226/index.html" style="text-decoration: none; color: #3b82f6; font-weight: bold;">Next: v226 &rarr;</a>
+            </div>
+        </div>
+        <header>
+            <h1>budolEcosystem Documentation</h1>
+            <span class="version-tag">Version 226</span>
+            <p>Settings Crash Fix & Navigator Reset Implementation</p>
+        </header>
+
+        <section>
+            <h2>Issue Description</h2>
+            <p>Users reported a <code>type 'Null' is not a subtype of type 'String'</code> crash when navigating to the Settings screen after logging in as "Tony Stark". Additionally, clicking the "Reset App & Logout" button on the error screen brought users to an empty Settings screen instead of the Login screen.</p>
+        </section>
+
+        <section>
+            <h2>Root Cause Analysis</h2>
+            <ul>
+                <li><strong>Null Subtype Error:</strong> In <code>settings_screen.dart</code>, the <code>user['email']</code> field was being assigned directly to a non-nullable <code>String</code> variable. If the backend returned a null email (as with the "Tony Stark" test account), the widget crashed during build.</li>
+                <li><strong>Navigation Inconsistency:</strong> The global error handler's reset button called <code>logout()</code> but didn't force a navigation reset. Since the <code>SettingsScreen</code> was already on top of the navigation stack, it rebuilt after logout. With no user data, it showed the default "User" state (Image 2) instead of redirecting to Login.</li>
+            </ul>
+        </section>
+
+        <section>
+            <h2>Technical Fixes</h2>
+            <h3>1. Robust Data Parsing</h3>
+            <p>Updated <code>settings_screen.dart</code> to use safe parsing for user profile data:</p>
+            <div class="code-block">
+                String userName = 'User';<br>
+                String email = '';<br>
+                if (user != null) {<br>
+                &nbsp;&nbsp;final firstName = user['firstName']?.toString() ?? '';<br>
+                &nbsp;&nbsp;final lastName = user['lastName']?.toString() ?? '';<br>
+                &nbsp;&nbsp;userName = '$firstName $lastName'.trim();<br>
+                &nbsp;&nbsp;email = user['email']?.toString() ?? '';<br>
+                }
+            </div>
+
+            <h3>2. Navigator State Management</h3>
+            <p>Implemented a <code>GlobalKey&lt;NavigatorState&gt;</code> in <code>main.dart</code>. This allows the global error handler to force a navigation reset even when a build context is unavailable or invalid.</p>
+            <div class="code-block">
+                navigatorKey.currentState?.pushNamedAndRemoveUntil('/login', (route) => false);
+            </div>
+        </section>
+
+        <section>
+            <h2>Test Results</h2>
+            <ul>
+                <li><strong>Scenario:</strong> Login as Tony Stark (null email) and navigate to Settings.</li>
+                <li><strong>Result:</strong> Screen loads successfully with "Tony Stark" as name and empty email field. No crash.</li>
+                <li><strong>Scenario:</strong> Click "Reset App & Logout" on any error screen.</li>
+                <li><strong>Result:</strong> App immediately clears session and redirects to the Login screen.</li>
+            </ul>
+        </section>
+
+        <div class="nav-links">
+            <a href="../budolecosystem_docs_2026-01-06_v225/index.html">← Previous (v225)</a>
+            <a href="../../documentation/index.html">Main Index</a>
+            <span>Next (v227) →</span>
+        </div>
+    </div>
+</body>
+</html>

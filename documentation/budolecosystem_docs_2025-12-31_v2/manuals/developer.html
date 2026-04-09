@@ -1,0 +1,92 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Developer Manual - budolPay Ecosystem</title>
+    <style>
+        body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; line-height: 1.6; color: #333; max-width: 1000px; margin: 0 auto; padding: 40px 20px; background-color: #f8fafc; }
+        .container { background: #fff; padding: 40px; border-radius: 8px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); }
+        h1, h2, h3 { color: #1e293b; }
+        h1 { border-bottom: 3px solid #3b82f6; padding-bottom: 10px; }
+        h2 { border-bottom: 1px solid #e2e8f0; padding-bottom: 5px; margin-top: 40px; }
+        .section { margin-bottom: 30px; }
+        code { background: #f1f5f9; padding: 2px 4px; border-radius: 4px; font-family: monospace; }
+        pre { background: #1e293b; color: #f8fafc; padding: 15px; border-radius: 6px; overflow-x: auto; }
+        .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
+        .card { border: 1px solid #e2e8f0; padding: 20px; border-radius: 8px; background: #fdfdfd; }
+        .badge { background: #3b82f6; color: white; padding: 2px 8px; border-radius: 12px; font-size: 0.8em; vertical-align: middle; }
+        .risk-high { color: #dc2626; font-weight: bold; }
+        .risk-med { color: #d97706; font-weight: bold; }
+        table { width: 100%; border-collapse: collapse; margin: 20px 0; }
+        th, td { border: 1px solid #e2e8f0; padding: 12px; text-align: left; }
+        th { background: #f1f5f9; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <nav><a href="../index.html">&larr; Back to Version Index</a></nav>
+        <h1>Developer Manual <span class="badge">v2.0</span></h1>
+
+        <div class="section">
+            <h2>Purpose & Explanation</h2>
+            <p>The budolPay Ecosystem is a unified financial platform designed for high-concurrency transactions and multi-tenant application support. It provides a shared database layer and common security protocols for apps like budolPay, budolShap, and budolExpress.</p>
+        </div>
+
+        <div class="section">
+            <h2>Technical Details</h2>
+            <ul>
+                <li><strong>Architecture:</strong> Monorepo (npm Workspaces)</li>
+                <li><strong>Backend:</strong> Next.js 14 (App Router), Node.js Microservices</li>
+                <li><strong>Database:</strong> PostgreSQL with Prisma ORM</li>
+                <li><strong>Authentication:</strong> Shared SSO via JWT and API Keys</li>
+                <li><strong>Frontend:</strong> React 18, Tailwind CSS, Lucide Icons</li>
+            </ul>
+        </div>
+
+        <div class="section">
+            <h2>Dependencies</h2>
+            <table>
+                <tr><th>Category</th><th>Technology</th></tr>
+                <tr><td>ORM</td><td>Prisma 6.2.1</td></tr>
+                <li>Framework</li><td>Next.js 14.2.3</td></tr>
+                <li>Styling</li><td>Tailwind CSS 3.4.3</td></tr>
+                <li>Types</li><td>TypeScript 5.4.5</td></tr>
+            </table>
+        </div>
+
+        <div class="section">
+            <h2>Common Issues & Fixes</h2>
+            <div class="card">
+                <h3>1. Module Resolution Error (@budolpay/database)</h3>
+                <p><strong>Reason:</strong> Workspace packages not linked or transpiled.</p>
+                <p><strong>Fix:</strong> Run <code>npm install</code> at root and add <code>transpilePackages: ['@budolpay/database']</code> to <code>next.config.mjs</code>.</p>
+            </div>
+            <div class="card">
+                <h3>2. Missing Database Tables</h3>
+                <p><strong>Reason:</strong> Schema out of sync with local DB.</p>
+                <p><strong>Fix:</strong> Run <code>npx prisma db push</code> followed by <code>npx prisma db seed</code>.</p>
+            </div>
+        </div>
+
+        <div class="section">
+            <h2>Risks & Mitigations</h2>
+            <table>
+                <tr><th>Risk</th><th>Severity</th><th>Mitigation</th></tr>
+                <tr><td>Database Connection Leak</td><td class="risk-high">High</td><td>Use a global Prisma singleton pattern (lib/prisma.ts).</td></tr>
+                <tr><td>Schema Drift</td><td class="risk-med">Medium</td><td>Strict CI/CD checks for migration compatibility.</td></tr>
+                <tr><td>Sensitive Data Exposure</td><td class="risk-high">High</td><td>Use <code>isSecret</code> flag in SystemSettings and encrypted ENV variables.</td></tr>
+            </table>
+        </div>
+
+        <div class="section">
+            <h2>Developer Recommendations</h2>
+            <ul>
+                <li><strong>Type Safety:</strong> Always use <code>npx tsc --noEmit</code> before committing to catch JSX/TypeScript mismatches (e.g., colSpan numbers).</li>
+                <li><strong>Schema Changes:</strong> Use <code>prisma migrate dev</code> for local development to maintain a clean history.</li>
+                <li><strong>Service Isolation:</strong> Keep microservice logic independent; only share schemas through the <code>@budolpay/database</code> package.</li>
+            </ul>
+        </div>
+    </div>
+</body>
+</html>

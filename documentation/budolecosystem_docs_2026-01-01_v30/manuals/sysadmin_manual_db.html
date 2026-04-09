@@ -1,0 +1,74 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>System Admin Manual - Ecosystem Configuration (v30)</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <style>
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; line-height: 1.6; color: #333; }
+        .sidebar { background-color: #2c3e50; color: white; min-height: 100vh; padding: 20px; }
+        .sidebar a { color: #bdc3c7; text-decoration: none; }
+        .sidebar a:hover { color: white; }
+        .content { padding: 40px; }
+        .config-block { background-color: #f8f9fa; border: 1px solid #dee2e6; padding: 20px; border-radius: 8px; font-family: monospace; }
+        .status-up { color: #2ecc71; font-weight: bold; }
+    </style>
+</head>
+<body>
+    <div class="container-fluid">
+        <div class="row">
+            <nav class="col-md-3 col-lg-2 sidebar">
+                <h4>v30 SysAdmin</h4>
+                <ul class="nav flex-column mt-4">
+                    <li class="nav-item mb-2"><a href="#app-registration">App Registration</a></li>
+                    <li class="nav-item mb-2"><a href="#env-vars">Environment Variables</a></li>
+                    <li class="nav-item mb-2"><a href="#connectivity">LAN Connectivity</a></li>
+                </ul>
+            </nav>
+            <main class="col-md-9 col-lg-10 content">
+                <h1>System Admin Manual: Ecosystem Configuration</h1>
+                <p class="lead">Management guide for the budolID SSO service and budolShap integration.</p>
+
+                <div class="alert alert-success">
+                    <strong>Current Status:</strong> Ecosystem Online <span class="status-up">●</span>
+                </div>
+
+                <h2 id="app-registration" class="mt-4">Ecosystem App Registration</h2>
+                <p>Applications must be registered in the budolID database to use SSO features. The following entry is required for budolShap:</p>
+                <div class="config-block">
+                    <strong>Table:</strong> EcosystemApp<br>
+                    <strong>apiKey:</strong> bs_key_2025<br>
+                    <strong>redirectUri:</strong> http://192.168.1.24:3001/api/auth/sso/callback<br>
+                    <strong>name:</strong> budolShap
+                </div>
+                <p class="mt-2"><small>Note: Use <code>check_app.cjs</code> in the budolID directory to verify current registrations.</small></p>
+
+                <h2 id="env-vars" class="mt-4">Critical Environment Variables</h2>
+                
+                <h3>budolID (.env)</h3>
+                <div class="config-block">
+                    PORT=8000<br>
+                    JWT_SECRET=budolid-super-secret-key<br>
+                    DATABASE_URL=postgresql://...
+                </div>
+
+                <h3 class="mt-3">budolShap (.env.local)</h3>
+                <div class="config-block">
+                    NEXT_PUBLIC_SSO_URL=http://192.168.1.24:8000<br>
+                    NEXT_PUBLIC_APP_URL=http://192.168.1.24:3001<br>
+                    JWT_SECRET=your-super-secret-jwt-key...
+                </div>
+
+                <h2 id="connectivity" class="mt-4">LAN Connectivity Guide</h2>
+                <p>To allow other devices on your local network to access the apps:</p>
+                <ol>
+                    <li>Ensure budolID is listening on <code>0.0.0.0</code> (port 8000).</li>
+                    <li>Ensure budolShap is started with <code>next start -H 0.0.0.0</code> (port 3001).</li>
+                    <li>Update your <code>NEXT_PUBLIC_SSO_URL</code> and <code>NEXT_PUBLIC_APP_URL</code> to use your machine's LAN IP (e.g., <code>192.168.1.24</code>).</li>
+                </ol>
+            </main>
+        </div>
+    </div>
+</body>
+</html>

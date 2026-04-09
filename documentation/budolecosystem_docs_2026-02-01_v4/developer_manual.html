@@ -1,0 +1,63 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Developer Manual - budolEcosystem v2.1.1</title>
+    <style>
+        body { font-family: sans-serif; line-height: 1.6; color: #333; max-width: 1000px; margin: 0 auto; padding: 20px; }
+        pre { background: #1e293b; color: #f8fafc; padding: 15px; border-radius: 8px; overflow-x: auto; }
+        code { font-family: 'Courier New', Courier, monospace; }
+        .code-link { color: #f43f5e; text-decoration: none; font-weight: bold; }
+        .code-link:hover { text-decoration: underline; }
+        h1, h2, h3 { color: #2c3e50; }
+        .file-box { border: 1px solid #ddd; padding: 10px; margin: 10px 0; background: #fafafa; }
+    </style>
+</head>
+<body>
+    <a href="index.html">← Back to Index</a>
+    <h1>Developer Manual - SSO & Admin Provisioning</h1>
+
+    <section>
+        <h2>1. Purpose & Rationale</h2>
+        <p>To ensure seamless administrative access across the ecosystem, we've implemented auto-seeding for core application keys and provisioned primary admin accounts in the <code>budolID</code> identity provider.</p>
+    </section>
+
+    <section>
+        <h2>2. Technical Explanation</h2>
+        <h3>2.1 Auto-Seeding Logic</h3>
+        <p>The <code>budolID</code> service now verifies core ecosystem apps (budolPay, budolShap) on every startup. If the API keys are missing, it automatically creates them to prevent 403 errors in client applications.</p>
+        
+        <div class="file-box">
+            <strong>File Reference:</strong> <a class="code-link" href="file:///d:/IT%20Projects/budolEcosystem/budolID-0.1.0/index.js">budolID/index.js</a>
+            <pre><code>// Auto-seed core apps if missing
+const coreApps = [
+    { name: 'budolPay', apiKey: 'bp_key_2025', redirectUri: `http://${localIP}:3000/api/auth/callback` },
+    { name: 'budolShap', apiKey: 'bs_key_2025', redirectUri: `http://${localIP}:3001/api/auth/sso/callback` }
+];
+
+for (const app of coreApps) {
+    await prisma.ecosystemApp.upsert({
+        where: { apiKey: app.apiKey },
+        update: { redirectUri: app.redirectUri },
+        create: { ... }
+    });
+}</code></pre>
+        </div>
+    </section>
+
+    <section>
+        <h2>3. Admin Account Provisioning</h2>
+        <p>New administrative accounts were provisioned using <code>bcryptjs</code> for secure hashing.</p>
+        <ul>
+            <li><strong>Primary Admin:</strong> <code>reynaldomgalvez@gmail.com</code></li>
+            <li><strong>System Admin:</strong> <code>admin@budolpay.com</code></li>
+        </ul>
+        <p>Refer to the <a class="code-link" href="file:///d:/IT%20Projects/budolEcosystem/budolID-0.1.0/create-admins.js">provisioning script</a> for implementation details.</p>
+    </section>
+
+    <section>
+        <h2>4. Compliance & Security</h2>
+        <p>This implementation follows <strong>NPC (National Privacy Commission)</strong> guidelines for secure credential storage and <strong>Cybersecurity Law</strong> best practices for identity management.</p>
+    </section>
+</body>
+</html>

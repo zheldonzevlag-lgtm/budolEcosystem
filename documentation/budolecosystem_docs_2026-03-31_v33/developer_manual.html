@@ -1,0 +1,81 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Developer Manual - Budol Ecosystem v33</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Fira+Code:wght@400;500&display=swap" rel="stylesheet">
+    <style>
+        :root { --primary: #0052CC; --bg-sidebar: #F4F5F7; --text-main: #172B4D; --text-sub: #6B778C; --border: #DFE1E6; --bg-code: #F4F5F7; }
+        body { font-family: 'Inter', sans-serif; margin: 0; display: flex; color: var(--text-main); background: #FFFFFF; }
+        .sidebar { width: 280px; background: var(--bg-sidebar); height: 100vh; border-right: 1px solid var(--border); padding: 24px; position: fixed; }
+        .sidebar-nav { list-style: none; padding: 0; }
+        .sidebar-nav li { margin-bottom: 8px; }
+        .sidebar-nav a { text-decoration: none; color: var(--text-main); font-size: 15px; display: block; padding: 8px 12px; border-radius: 4px; transition: background 0.2s; }
+        .sidebar-nav a:hover, .sidebar-nav a.active { background: #EBECF0; color: var(--primary); }
+        .main-content { margin-left: 280px; padding: 48px 80px; width: 100%; max-width: 1000px; }
+        .code-block { background: var(--bg-code); font-family: 'Fira Code', monospace; padding: 20px; border-radius: 8px; font-size: 13px; line-height: 1.6; border: 1px solid var(--border); overflow-x: auto; margin: 16px 0; }
+        .code-link { color: var(--primary); font-family: 'Inter', sans-serif; text-decoration: none; font-weight: 600; font-size: 14px; display: inline-block; margin-top: 8px; }
+        .section { margin-bottom: 40px; }
+    </style>
+</head>
+<body>
+    <div class="sidebar">
+        <h2>v33 Documentation</h2>
+        <ul class="sidebar-nav">
+            <li><a href="index.html">Overview</a></li>
+            <li><a href="implementation_plan.html">Implementation Plan</a></li>
+            <li><a href="walkthrough.html">Walkthrough</a></li>
+            <li><a href="developer_manual.html" class="active">Developer Manual</a></li>
+            <li><a href="risk_register.html">Risk Register</a></li>
+            <li><a href="test_results.html">Test Results</a></li>
+        </ul>
+    </div>
+
+    <div class="main-content">
+        <h1>Developer Manual - Monorepo & Security Fixes</h1>
+        
+        <div class="section">
+            <h3>1. Vercel Monorepo Workspace Resolution</h3>
+            <p>To resolve the "Module not found" error for `@budolpay/audit` on Vercel, we explicitly configured the internal workspaces to point to their source files instead of pre-compiled `dist` folders, enabling Next.js to handle transpilation naturally.</p>
+            
+            <h4>Next.js Config Update</h4>
+            <div class="code-block">
+                transpilePackages: ['@budolpay/database', '@budolpay/audit', '@budolpay/security', '@budolpay/notifications'],
+            </div>
+            <a href="file:///d:/IT%20Projects/clone/budolEcosystem/budolpay-0.1.0/apps/admin/next.config.mjs" class="code-link">View File: next.config.mjs</a>
+
+            <h4>Workspace Package Mapping</h4>
+            <p>Updated individual package settings to export TypeScript source index directly:</p>
+            <div class="code-block">
+                "main": "src/index.ts",<br>
+                "types": "src/index.ts",
+            </div>
+            <a href="file:///d:/IT%20Projects/clone/budolEcosystem/budolpay-0.1.0/packages/audit/package.json" class="code-link">View File: audit/package.json</a>
+        </div>
+
+        <hr style="margin: 40px 0; border-top: 1px solid #eee;">
+
+        <div class="section">
+            <h3>2. Security Component Restoration (MathCaptcha)</h3>
+            <p>The **Shield Challenge** has been restored as an additional security layer for admin access, providing bot protection and adhering to the Budol Ecosystem Security Standard.</p>
+            
+            <h4>Shield Challenge Component</h4>
+            <div class="code-block">
+                export default function MathCaptcha({ onSolve, primaryColor }) { ... }
+            </div>
+            <a href="file:///d:/IT%20Projects/clone/budolEcosystem/budolpay-0.1.0/apps/admin/components/MathCaptcha.tsx" class="code-link">View File: MathCaptcha.tsx</a>
+
+            <h4>Login Page Integration</h4>
+            <div class="code-block">
+                {!isCaptchaSolved ? (<br>
+                &nbsp;&nbsp;&lt;MathCaptcha onSolve={() => setIsCaptchaSolved(true)} /&gt;<br>
+                ) : (<br>
+                &nbsp;&nbsp;&lt;form onSubmit={handleLogin} ... /&gt;<br>
+                )}
+            </div>
+            <a href="file:///d:/IT%20Projects/clone/budolEcosystem/budolpay-0.1.0/apps/admin/app/login/page.tsx" class="code-link">View File: app/login/page.tsx</a>
+        </div>
+    </div>
+</body>
+</html>

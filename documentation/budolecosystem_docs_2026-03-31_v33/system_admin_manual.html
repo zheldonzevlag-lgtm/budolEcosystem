@@ -1,0 +1,64 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>System Admin Manual - Budol Ecosystem v33</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        :root { --primary: #0052CC; --bg-sidebar: #F4F5F7; --text-main: #172B4D; --text-sub: #6B778C; --border: #DFE1E6; --bg-code: #F4F5F7; }
+        body { font-family: 'Inter', sans-serif; margin: 0; display: flex; color: var(--text-main); background: #FFFFFF; }
+        .sidebar { width: 280px; background: var(--bg-sidebar); height: 100vh; border-right: 1px solid var(--border); padding: 24px; position: fixed; }
+        .sidebar-nav { list-style: none; padding: 0; }
+        .sidebar-nav li { margin-bottom: 8px; }
+        .sidebar-nav a { text-decoration: none; color: var(--text-main); font-size: 15px; display: block; padding: 8px 12px; border-radius: 4px; transition: background 0.2s; }
+        .sidebar-nav a:hover, .sidebar-nav a.active { background: #EBECF0; color: var(--primary); }
+        .main-content { margin-left: 280px; padding: 48px 80px; width: 100%; max-width: 1000px; }
+        .code-block { background: var(--bg-code); font-family: monospace; padding: 20px; border-radius: 8px; font-size: 13px; line-height: 1.6; border: 1px solid var(--border); overflow-x: auto; margin: 16px 0; }
+    </style>
+</head>
+<body>
+    <div class="sidebar">
+        <h2>v33 Documentation</h2>
+        <ul class="sidebar-nav">
+            <li><a href="index.html">Overview</a></li>
+            <li><a href="implementation_plan.html">Implementation Plan</a></li>
+            <li><a href="walkthrough.html">Walkthrough</a></li>
+            <li><a href="developer_manual.html">Developer Manual</a></li>
+            <li><a href="system_admin_manual.html" class="active">System Admin Manual</a></li>
+            <li><a href="risk_register.html">Risk Register</a></li>
+            <li><a href="test_results.html">Test Results</a></li>
+        </ul>
+    </div>
+
+    <div class="main-content">
+        <h1>System Admin Manual - Build Deployment v33</h1>
+        
+        <div class="section">
+            <h3>1. Vercel Deployment Strategy</h3>
+            <p>Ensure the following environment variables are set in the Vercel Production Environment for correct internal workspace resolution and Prisma engine generation:</p>
+            <div class="code-block">
+                PRISMA_GENERATE_SKIP=true (if using remote generation)<br>
+                NEXT_PUBLIC_SSO_URL=https://budol-id-sso.onrender.com<br>
+                NEXT_PUBLIC_APP_URL=https://budolpay-admin.vercel.app
+            </div>
+        </div>
+
+        <div class="section">
+            <h3>2. Cache Management</h3>
+            <p>When deploying v33 changes, a <strong>Redeploy with Clean Cache</strong> is required in the Vercel dashboard. This forces the Webpack compiler to pick up the updated `package.json` mappings for the internal workspace packages (`@budolpay/*`).</p>
+            <ol>
+                <li>Navigate to Project Dashboard</li>
+                <li>Go to Deployments tab</li>
+                <li>Select the latest deployment</li>
+                <li>Click "Redeploy" and select "Redeploy with Clean Cache"</li>
+            </ol>
+        </div>
+
+        <div class="section">
+            <h3>3. Security Challenge Maintenance</h3>
+            <p>The MathCaptcha challenge is mandatory for production. If bot monitoring shows high fail rates, the challenge is working as expected. Ensure `apps/admin/components/MathCaptcha.tsx` is always present in the build artifacts.</p>
+        </div>
+    </div>
+</body>
+</html>

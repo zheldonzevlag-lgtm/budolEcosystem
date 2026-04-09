@@ -1,0 +1,138 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>System Admin Manual - v64</title>
+    <style>
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; line-height: 1.6; color: #333; max-width: 900px; margin: 0 auto; padding: 40px; background-color: #f8f9fa; }
+        .container { background: white; padding: 40px; border-radius: 12px; box-shadow: 0 4px 6px rgba(0,0,0,0.05); }
+        h1, h2, h3 { color: #F43F5E; }
+        code { background: #f1f1f1; padding: 2px 5px; border-radius: 4px; font-family: monospace; color: #e83e8c; }
+        pre { background: #2d2d2d; color: #f8f8f2; padding: 20px; border-radius: 8px; overflow-x: auto; margin: 15px 0; }
+        pre code { background: transparent; padding: 0; color: inherit; border-radius: 0; }
+        .config-table { width: 100%; border-collapse: collapse; margin: 20px 0; }
+        .config-table th, .config-table td { border: 1px solid #ddd; padding: 12px; text-align: left; }
+        .config-table th { background-color: #fef2f2; color: #F43F5E; }
+        .nav { margin-bottom: 30px; }
+        .nav a { color: #F43F5E; text-decoration: none; font-weight: bold; }
+        .warning { background: #fffbeb; border-left: 4px solid #f59e0b; padding: 15px; margin: 20px 0; }
+    </style>
+</head>
+<body>
+    <div class="nav">
+        <a href="../index.html">← Back to v64 Index</a>
+    </div>
+    <div class="container">
+        <h1>System Admin Manual - Infrastructure & Ports</h1>
+        
+        <section>
+            <h2>Ecosystem Port Configuration</h2>
+            <p>The budolPay Mobile app has been configured to connect to the existing ecosystem services without modifying their original ports. This ensures compatibility with other applications.</p>
+            
+            <table class="config-table">
+                <thead>
+                    <tr>
+                        <th>Service</th>
+                        <th>Port</th>
+                        <th>Endpoint Type</th>
+                        <th>Role in Mobile App</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td><strong>budolID</strong></td>
+                        <td>8000</td>
+                        <td>Auth API</td>
+                        <td>User Login / SSO</td>
+                    </tr>
+                    <tr>
+                        <td><strong>budolPay Gateway</strong></td>
+                        <td>8004</td>
+                        <td>Transaction API</td>
+                        <td>Payments & Wallet</td>
+                    </tr>
+                    <tr>
+                        <td><strong>budolPay Mobile</strong></td>
+                        <td>8081</td>
+                        <td>Web Preview</td>
+                        <td>Frontend Service</td>
+                    </tr>
+                </tbody>
+            </table>
+        </section>
+
+        <section>
+            <h2>How to Run the Application</h2>
+            <p>Depending on your environment, use one of the following methods to run the budolPay Mobile app:</p>
+            
+            <h3>1. Development Mode (Hot Reload)</h3>
+            <p>For active development with real-time updates:</p>
+            <pre><code>cd budolPayMobile
+flutter run -d chrome</code></pre>
+
+            <h3>2. Web Preview (Production Build)</h3>
+            <p>To run the app as it appears in the ecosystem preview:</p>
+            <ol>
+                <li><strong>Build the project:</strong>
+                    <pre><code>cd budolPayMobile
+flutter build web</code></pre>
+                </li>
+                <li><strong>Serve the build:</strong>
+                    <p>Use any static file server (e.g., <code>http-server</code>) to serve the <code>build/web</code> directory:</p>
+                    <pre><code>http-server build/web -p 8081</code></pre>
+                </li>
+            </ol>
+
+            <h3>3. Accessing the Preview</h3>
+            <p>Once the server is running, the app is accessible at:</p>
+            <div class="feature-card" style="background: #e0f2fe; border-left-color: #0ea5e9;">
+                <strong>URL:</strong> <a href="http://localhost:8081" target="_blank">http://localhost:8081</a>
+            </div>
+
+            <h3>4. Android Installation (Physical Device)</h3>
+            <p>To install and run the app on your connected Android phone:</p>
+            <ol>
+                <li><strong>Prerequisites:</strong>
+                    <ul>
+                        <li>Enable <strong>Developer Options</strong> and <strong>USB Debugging</strong> on your phone.</li>
+                        <li>Connect your phone via USB and ensure it is detected (run <code>flutter devices</code>).</li>
+                    </ul>
+                </li>
+                <li><strong>Run directly:</strong>
+                    <pre><code>cd budolPayMobile
+flutter run</code></pre>
+                </li>
+                <li><strong>Build APK for manual install:</strong>
+                    <pre><code>cd budolPayMobile
+flutter build apk --release</code></pre>
+                    <p>The installer will be located at: <code>build/app/outputs/flutter-apk/app-release.apk</code></p>
+                </li>
+            </ol>
+        </section>
+
+        <section>
+            <h2>Deployment & Build Process</h2>
+            <p>To update the mobile web preview, follow these steps:</p>
+            <ol>
+                <li>Navigate to <code>budolPayMobile</code> directory.</li>
+                <li>Run <code>flutter build web</code> to generate the <code>build/web</code> folder.</li>
+                <li>The preview server is automatically configured to serve this directory on port 8081.</li>
+            </ol>
+            <div class="warning">
+                <strong>Note:</strong> Do not use <code>--wasm</code> flag during build as the QR scanner package is currently incompatible with Wasm compilation.
+            </div>
+        </section>
+
+        <section>
+            <h2>Operational Runbook: Connection Issues</h2>
+            <p>If the mobile app cannot login or process payments:</p>
+            <ul>
+                <li><strong>Check budolID:</strong> Ensure the service on port 8000 is running (<code>npm start</code> in ecosystem root).</li>
+                <li><strong>Check Gateway:</strong> Ensure port 8004 is reachable.</li>
+                <li><strong>CORS Policy:</strong> Verify that the Gateway and ID services allow requests from <code>http://localhost:8081</code>.</li>
+            </ul>
+        </section>
+    </div>
+</body>
+</html>

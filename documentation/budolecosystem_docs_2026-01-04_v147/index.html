@@ -1,0 +1,134 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>v147: Ecosystem Admin Reset & Unified Identity Implementation</title>
+    <style>
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; line-height: 1.6; color: #333; max-width: 900px; margin: 0 auto; padding: 40px; background: #f9fafb; }
+        .nav-links { display: flex; justify-content: space-between; margin-bottom: 40px; }
+        .nav-links a { text-decoration: none; color: #3b82f6; font-weight: bold; }
+        .container { background: white; padding: 40px; border-radius: 12px; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.1); }
+        h1 { color: #1e293b; border-bottom: 2px solid #3b82f6; padding-bottom: 10px; }
+        h2 { color: #334155; margin-top: 30px; }
+        .status-badge { display: inline-block; padding: 4px 12px; border-radius: 20px; font-size: 0.875rem; font-weight: 600; background: #dcfce7; color: #166534; }
+        .code-block { background: #1e293b; color: #f8fafc; padding: 20px; border-radius: 8px; overflow-x: auto; font-family: 'Fira Code', monospace; position: relative; }
+        .credentials-box { background: #eff6ff; border-left: 4px solid #3b82f6; padding: 20px; margin: 20px 0; border-radius: 0 8px 8px 0; }
+        table { width: 100%; border-collapse: collapse; margin: 20px 0; }
+        th, td { text-align: left; padding: 12px; border-bottom: 1px solid #e2e8f0; }
+        th { background: #f8fafc; }
+    </style>
+</head>
+<body>
+    <div class="nav-links ecosystem-docs-top-nav">
+        <a href="../budolecosystem_docs_2026-01-04_v146/index.html">← Previous (v146)</a>
+        <a href="../index.html">Index</a>
+        <a href="../budolecosystem_docs_2026-01-04_v148/index.html">Next (v148) →</a>
+    </div>
+
+    <div class="nav-links">
+        <a href="../budolecosystem_docs_2026-01-04_v146/index.html">← Previous: v146 DNS Feasibility</a>
+        <a href="../../index.html">Index</a>
+        <span>Next: v148 (TBD) →</span>
+    </div>
+
+    <div class="container">
+        <span class="status-badge">Phase: Security & Identity</span>
+        <h1>Documentation v147: Ecosystem Admin Reset & Unified Identity Implementation</h1>
+        
+        <p>This implementation phase focused on restoring ecosystem-wide access by resetting the primary identity provider (budolID) and synchronizing a master administrative account across all microservices (budolShap and budolPay).</p>
+
+        <h2>1. Purpose</h2>
+        <p>To resolve login failures for administrative accounts by cleaning potentially corrupted database states and ensuring a consistent, high-privileged account exists with matching credentials across all isolated service databases.</p>
+
+        <div class="credentials-box">
+            <strong>Master Admin Credentials:</strong><br>
+            Email: <code>reynaldomgalvez@gmail.com</code><br>
+            Password: <code>tr@1t0r2026!</code><br>
+            <strong>Initial Balance: 20,000,000.00 PHP</strong>
+        </div>
+
+        <h2>2. Technical Details</h2>
+        <p>Independent reset scripts were developed and executed for each service to ensure database integrity and schema compatibility:</p>
+        
+        <table>
+            <thead>
+                <tr>
+                    <th>Service</th>
+                    <th>Script Location</th>
+                    <th>Actions Performed</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td><strong>budolID</strong></td>
+                    <td><code>budolID-0.1.0/prisma/reset-admin.js</code></td>
+                    <td>Cleaned sessions/users, created Admin, seeded SSO apps (budolPay/budolShap)</td>
+                </tr>
+                <tr>
+                    <td><strong>budolShap</strong></td>
+                    <td><code>budolshap-0.1.0/scripts/reset-admin.js</code></td>
+                    <td>Cleaned orders/products/stores, created Admin with ID consistency</td>
+                </tr>
+                <tr>
+                    <td><strong>budolPay</strong></td>
+                    <td><code>budolpay-0.1.0/scripts/reset-admin.js</code></td>
+                    <td>Cleaned ledgers/transactions, created Admin, initialized 20,000,000 PHP wallet</td>
+                </tr>
+            </tbody>
+        </table>
+
+        <h2>3. Issues & Fixes</h2>
+        <ul>
+            <li><strong>Issue:</strong> Login failures due to missing ecosystem app records in budolID.<br>
+                <strong>Fix:</strong> Re-seeded <code>ecosystemApp</code> table with correct <code>apiKey</code> and <code>apiSecret</code> values.</li>
+            <li><strong>Issue:</strong> Schema mismatch in budolShap (missing <code>passwordHash</code> vs <code>password</code>).<br>
+                <strong>Fix:</strong> Updated reset script to handle specific schema requirements for the Shop service.</li>
+            <li><strong>Issue:</strong> Database connection failures during reset.<br>
+                <strong>Fix:</strong> Manually injected <code>DATABASE_URL</code> environment variables to target local PostgreSQL instances correctly.</li>
+        </ul>
+
+        <h2>4. Verification Results</h2>
+        <p>A verification script (<code>scripts/verify-admin-login.js</code>) was executed against the running budolID service:</p>
+        <div class="code-block">
+            Testing login with new master admin...<br>
+            ✅ Login Successful!<br>
+            User: {<br>
+            &nbsp;&nbsp;id: '83a328d2-40cf-4752-940d-df1cb5749570',<br>
+            &nbsp;&nbsp;email: 'reynaldomgalvez@gmail.com',<br>
+            &nbsp;&nbsp;firstName: 'Jon',<br>
+            &nbsp;&nbsp;lastName: 'Galvez',<br>
+            &nbsp;&nbsp;role: 'ADMIN'<br>
+            }<br>
+            Token Length: 388
+        </div>
+
+        <h2>5. Risk & Mitigation</h2>
+        <table>
+            <thead>
+                <tr>
+                    <th>Risk</th>
+                    <th>Mitigation</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td>Data Loss</td>
+                    <td>This was a requested reset of local development environments. Production databases were not affected.</td>
+                </tr>
+                <tr>
+                    <td>Credential Leak</td>
+                    <td>Credentials are documented for local dev use only. Production secrets should be managed via Vercel Env Vars.</td>
+                </tr>
+            </tbody>
+        </table>
+
+        <h2>6. Recommendations for Future Enhancement</h2>
+        <ul>
+            <li><strong>Unified CLI Tool:</strong> Create a single command (e.g., <code>npm run ecosystem:reset</code>) that orchestrates all service resets automatically.</li>
+            <li><strong>ID Synchronization:</strong> Implement a mechanism to ensure UUIDs for the same user are identical across all microservices at creation time.</li>
+            <li><strong>Audit Logging:</strong> Add comprehensive logging for all SSO login attempts to debug future authentication failures more effectively.</li>
+        </ul>
+    </div>
+</body>
+</html>

@@ -1,0 +1,113 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Developer Manual - v348</title>
+    <style>
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; line-height: 1.6; color: #1e293b; max-width: 900px; margin: 0 auto; padding: 40px 20px; background: #fff; }
+        h1, h2, h3 { color: #0f172a; }
+        pre { background: #1e293b; color: #f8fafc; padding: 16px; border-radius: 8px; overflow-x: auto; font-size: 0.9rem; }
+        code { font-family: 'Fira Code', monospace; }
+        .file-link { color: #3b82f6; text-decoration: none; font-weight: bold; }
+        .section { margin-bottom: 40px; }
+    </style>
+</head>
+<body>
+    <h1>Developer Manual - v348</h1>
+    
+    <div class="section">
+        <h2>1. Phone Input Formatting</h2>
+        <p>A custom <code>TextInputFormatter</code> was implemented to automatically inject hyphens into the mobile number as the user types.</p>
+        <p><strong>File:</strong> <a href="file:///d:/IT Projects/budolEcosystem/budolPayMobile/lib/screens/login_screen.dart" class="file-link">login_screen.dart</a></p>
+        <pre><code>class PhoneInputFormatter extends TextInputFormatter {
+  @override
+  TextEditingValue formatEditUpdate(
+    TextEditingValue oldValue,
+    TextEditingValue newValue,
+  ) {
+    final text = newValue.text.replaceAll('-', '');
+    if (text.length > 11) return oldValue;
+
+    var newText = '';
+    for (var i = 0; i < text.length; i++) {
+      newText += text[i];
+      if ((i == 3 || i == 6) && i != text.length - 1) {
+        newText += '-';
+      }
+    }
+    // ... selection logic
+  }
+}</code></pre>
+    </div>
+
+    <div class="section">
+        <h2>2. Real-time Validation Logic</h2>
+        <p>The <code>_validatePhone</code> method checks the input against Philippine mobile number standards (11 digits, starting with '09').</p>
+        <pre><code>void _validatePhone(String value) {
+  final digits = value.replaceAll('-', '');
+  setState(() {
+    if (digits.isEmpty) {
+      _isPhoneValid = false;
+      _phoneError = null;
+    } else if (!digits.startsWith('09')) {
+      _isPhoneValid = false;
+      _phoneError = 'Must start with 09';
+    } else if (digits.length < 11) {
+      _isPhoneValid = false;
+      _phoneError = 'Enter 11 digits';
+    } else {
+      _isPhoneValid = true;
+      _phoneError = null;
+    }
+  });
+}</code></pre>
+    </div>
+
+    <div class="section">
+        <h2>3. UI Integration</h2>
+        <p>The <code>TextField</code> was updated to use <code>LucideIcons.phone</code> with a green color, and the "Continue" button's state is now reactive to <code>_isPhoneValid</code>.</p>
+        <p><strong>File:</strong> <a href="file:///d:/IT Projects/budolEcosystem/budolPayMobile/lib/screens/login_screen.dart" class="file-link">login_screen.dart</a></p>
+        <pre><code>TextField(
+  inputFormatters: [PhoneInputFormatter()],
+  onChanged: _validatePhone,
+  decoration: _inputDecoration(
+    'Mobile Number', 
+    LucideIcons.phone, 
+    iconColor: Colors.green,
+    errorText: _phoneError,
+  ),
+)</code></pre>
+    </div>
+
+    <div class="section">
+        <h2>4. Native Splash Integration</h2>
+        <p>To ensure a smooth transition and prevent white flashes during app initialization, <code>flutter_native_splash</code> was integrated. The splash screen is preserved until the <code>LoginScreen</code> or <code>HomeScreen</code> is fully initialized.</p>
+        <p><strong>File:</strong> <a href="file:///d:/IT Projects/budolEcosystem/budolPayMobile/lib/main.dart" class="file-link">main.dart</a></p>
+        <pre><code>void main() async {
+  WidgetsBinding widgetsBinding = WidgetsFlutterBinding.ensureInitialized();
+  FlutterNativeSplash.preserve(widgetsBinding: widgetsBinding);
+  // ...
+}</code></pre>
+        <p><strong>File:</strong> <a href="file:///d:/IT Projects/budolEcosystem/budolPayMobile/lib/screens/login_screen.dart" class="file-link">login_screen.dart</a></p>
+        <pre><code>@override
+void initState() {
+  super.initState();
+  FlutterNativeSplash.remove();
+  _checkBiometrics();
+}</code></pre>
+    </div>
+
+    <div class="section">
+        <h2>5. Compliance Verification</h2>
+        <ul>
+            <li><strong>NPC (Data Privacy):</strong> Mobile numbers are validated client-side to ensure only valid formats are transmitted. No sensitive data is logged.</li>
+            <li><strong>Cybersecurity Law:</strong> Input sanitization via <code>TextInputFormatter</code> prevents injection of non-numeric characters at the entry point.</li>
+        </ul>
+    </div>
+
+    <footer>
+        <p><a href="../index.html">← Back to v348 Index</a></p>
+    </footer>
+</body>
+</html>

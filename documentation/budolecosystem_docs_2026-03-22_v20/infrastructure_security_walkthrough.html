@@ -1,0 +1,89 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>v20 Infrastructure Security Walkthrough - Budol Ecosystem</title>
+    <style>
+        :root { --primary: #0052CC; --bg: #F4F5F7; --text: #172B4D; }
+        body { font-family: sans-serif; line-height: 1.6; color: var(--text); background: var(--bg); margin: 0; display: flex; }
+        .sidebar { width: 280px; background: #fff; border-right: 1px solid #dfe1e6; min-height: 100vh; padding: 20px; position: sticky; top: 0; }
+        .content { flex: 1; padding: 40px; max-width: 900px; background: #fff; margin: 20px; border-radius: 8px; box-shadow: 0 1px 3px rgba(0,0,0,0.1); }
+        h1, h2 { color: var(--primary); }
+        .step { margin-bottom: 30px; padding: 20px; border-left: 4px solid var(--primary); background: #f9f9f9; }
+        code { background: #f0f0f0; padding: 2px 5px; border-radius: 3px; font-family: monospace; }
+        pre { background: #272822; color: #f8f8f2; padding: 15px; border-radius: 5px; overflow-x: auto; }
+        .success { color: #00875a; font-weight: bold; }
+        .list-group { margin: 15px 0; }
+        .list-item { padding: 5px 0; border-bottom: 1px solid #eee; }
+    </style>
+</head>
+<body>
+    <div class="sidebar">
+        <h3>v20 Documentation</h3>
+        <ul>
+            <li><a href="index.html">Index</a></li>
+            <li><a href="infrastructure_security_walkthrough.html" style="font-weight:bold">Security Walkthrough</a></li>
+            <li><a href="developer_manual.html">Developer Manual</a></li>
+            <li><a href="system_admin_manual.html">System Admin Manual</a></li>
+            <li><a href="issues_fixes.html">Issues & Fixes</a></li>
+            <li><a href="test_results.html">Test Results</a></li>
+            <li><a href="task.html">Task Checklist</a></li>
+        </ul>
+        <hr>
+        <a href="../knowledgebase.html">Back to Knowledge Base</a>
+    </div>
+    <div class="content">
+        <h1>🔐 Infrastructure Security Walkthrough (v20)</h1>
+        <p>This walkthrough covers the critical updates made on March 22, 2026, to resolve production payment failures and harden ecosystem security.</p>
+
+        <div class="step">
+            <h2>Step 1: Prisma Schema & Code Synchronization</h2>
+            <p>Identified that the production database fallback was missing several tracking fields used in <code>checkoutService.js</code>, leading to Prisma validation errors.</p>
+            <ul>
+                <li><strong>Action</strong>: Added <code>metadata</code>, <code>expiresAt</code>, <code>sessionId</code>, <code>attemptCount</code>, <code>paymentId</code>, <code>paymentProvider</code>, and <code>expiredAt</code> fields to the <code>Checkout</code> model in <code>schema.prisma</code>.</li>
+                <li><strong>Result</strong>: The codebase now correctly tracks session expiration and payment IDs without crashing.</li>
+                <li><strong>Local Dev Protection</strong>: Preserved 100% by aligning the schema to match the working local logic.</li>
+            </ul>
+        </div>
+
+        <div class="step">
+            <h2>Step 2: Correcting the Payment Gateway URL</h2>
+            <p>Production traffic for BudolPay was previously pointing to the Admin frontend. Corrected this to use high-speed internal VPC routing.</p>
+            <div class="step-card">
+                <h3>🔄 Step 2: Master Service Discovery (v27)</h3>
+                <p>Synced every service from <code>start-ecosystem.js</code> to AWS! Added missing variables to reach **BudolID (Port 8000)** and **Transaction/Wallet/Auth services** internally.</p>
+                <ul>
+                    <li><code>BUDOL_ID_URL</code>: <code>http://budol-id.budol.internal:8000</code></li>
+                    <li><code>INTERNAL_WS_URL</code>: <code>http://budolpay-websocket.budol.internal:4000</code></li>
+                    <li><code>PAYMENT_GATEWAY_URL</code>: <code>http://budolpay-payment.budol.internal:8004/</code></li>
+                </ul>
+            </div>
+
+            <div class="step-card">
+                <h3>🛡️ Step 3: Secret Sync & JWT Audit</h3>
+                <p>Confirmed that 100% of production services now use the same <code>JWT_SECRET</code> ARN from AWS Secrets Manager—eliminating any <code>401 Unauthorized</code> caused by key mismatches.</p>
+            </div>
+            <p>These keys were synchronized across <code>budol-shap</code>, <code>budolpay-gateway</code>, and <code>budolid-sso</code> to ensure secure, authenticated communication.</p>
+        </div>
+
+        <div class="step">
+            <h2>Step 3: Ecosystem-Wide Secure API Keys</h2>
+            <p>Following NPC and Cybersecurity Law compliance, implemented high-entropy API keys across all services.</p>
+            <pre>
+BUDOLPAY_API_KEY: bp_prod_sec_7f9c... (64 chars)
+BUDOLID_API_KEY:  bi_prod_sec_4a5b... (64 chars)</pre>
+            <p>These keys were synchronized across <code>budol-shap</code>, <code>budolpay-gateway</code>, and <code>budolid-sso</code> to ensure secure, authenticated communication.</p>
+        </div>
+
+        <div class="step">
+            <h2>Step 4: Automated ECS Rollout (Revision 26)</h2>
+            <p>Deployed the final <code>v29</code> Docker image to the <code>budol-ecosystem-cluster</code>.</p>
+            <p class="success">✅ All services are now healthy and communicating securely.</p>
+        </div>
+        
+        <hr>
+        <p><em>Next: Review the <a href="issues_fixes.html">Issues & Fixes</a> for detailed debugging notes.</em></p>
+    </div>
+</body>
+</html>

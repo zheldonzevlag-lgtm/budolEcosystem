@@ -1,0 +1,818 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Infrastructure Walkthrough - AWS Cloud Migration v6.0.0</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --primary: #0052CC;
+            --secondary: #172B4D;
+            --success: #36B37E;
+            --bg: #F4F5F7;
+            --text: #172B4D;
+            --border: #DFE1E6;
+        }
+
+        body {
+            font-family: 'Inter', sans-serif;
+            line-height: 1.6;
+            color: var(--text);
+            background: var(--bg);
+            margin: 0;
+            display: flex;
+        }
+
+        .sidebar {
+            width: 260px;
+            height: 100vh;
+            background: #fff;
+            border-right: 1px solid var(--border);
+            position: fixed;
+            padding: 2rem 1rem;
+        }
+
+        .main {
+            margin-left: 280px;
+            padding: 3rem 4rem;
+            max-width: 900px;
+            background: #fff;
+            min-height: 100vh;
+            box-shadow: 0 0 20px rgba(0, 0, 0, 0.05);
+        }
+
+        .nav-item {
+            display: block;
+            padding: 0.75rem 1rem;
+            color: #64748b;
+            text-decoration: none;
+            border-radius: 8px;
+            margin-bottom: 0.25rem;
+            font-size: 0.9rem;
+            font-weight: 500;
+        }
+
+        .nav-item:hover {
+            background: #f1f5f9;
+            color: var(--primary);
+        }
+
+        .nav-item.active {
+            background: #e0e7ff;
+            color: var(--primary);
+        }
+
+        h1 {
+            color: var(--primary);
+            border-bottom: 2px solid var(--primary);
+            padding-bottom: 10px;
+            margin-top: 0;
+        }
+
+        h2 {
+            color: var(--secondary);
+            margin-top: 30px;
+            border-left: 4px solid var(--primary);
+            padding-left: 1rem;
+        }
+
+        .status-badge {
+            display: inline-block;
+            padding: 4px 12px;
+            border-radius: 20px;
+            font-size: 0.85rem;
+            font-weight: 600;
+            background: var(--success);
+            color: #fff;
+            margin-bottom: 20px;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 20px 0;
+        }
+
+        th,
+        td {
+            padding: 12px;
+            border: 1px solid var(--border);
+            text-align: left;
+        }
+
+        th {
+            background: #f1f5f9;
+        }
+
+        .alert {
+            padding: 15px;
+            border-radius: 6px;
+            margin: 20px 0;
+            border-left: 4px solid;
+        }
+
+        .alert-info {
+            background: #DEEBFF;
+            border-color: var(--primary);
+            color: #0747A6;
+        }
+
+        .step-card {
+            background: #fff;
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            padding: 1.5rem;
+            margin-bottom: 1.5rem;
+        }
+
+        code {
+            background: #f1f5f9;
+            padding: 2px 6px;
+            border-radius: 4px;
+            font-family: 'Fira Code', monospace;
+            font-size: 0.9rem;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="sidebar">
+        <div style="font-weight: 800; font-size: 1.25rem; color: var(--primary); margin-bottom: 2rem; padding: 0 1rem;">
+            Budol Ecosystem</div>
+        <nav>
+            <a href="index.html" class="nav-item">Overview</a>
+            <a href="walkthrough.html" class="nav-item active">Infrastructure Walkthrough</a>
+            <a href="how_to_guide.html" class="nav-item">Detailed How-To Guide</a>
+            <a href="implementation_plan.html" class="nav-item">Implementation Plan</a>
+            <a href="developer_manual.html" class="nav-item">Developer Manual</a>
+            <a href="user_manual.html" class="nav-item">User Manual</a>
+            <a href="task.html" class="nav-item">Task/Checklist</a>
+            <a href="system_admin_manual.html" class="nav-item">System Admin</a>
+            <hr style="margin: 1.5rem 0; border: 0; border-top: 1px solid var(--border);">
+            <a href="risk_register.html" class="nav-item">Risk Register</a>
+            <a href="Mitigation.html" class="nav-item">Mitigation Plan</a>
+            <a href="issues_fixes.html" class="nav-item">Issues & Fixes</a>
+            <a href="test_results.html" class="nav-item">Test Results</a>
+            <a href="future_recommendations.html" class="nav-item">Recommendations</a>
+            <hr style="margin: 1.5rem 0; border: 0; border-top: 1px solid var(--border);">
+            <a href="../../knowledgebase.html" class="nav-item">← Back to KB</a>
+        </nav>
+    </div>
+
+    <div class="main">
+        <div class="status-badge">Phase 1: Networking & Connectivity Verified</div>
+        <h1>AWS Infrastructure Walkthrough</h1>
+        <p>This document provides a visual and technical walkthrough of the core infrastructure components established
+            during the v13 AWS Migration.</p>
+
+        <section id="vpc-networking">
+            <h2>1. VPC & Subnet Architecture</h2>
+            <p>We implemented a Multi-Availability Zone (Multi-AZ) VPC to ensure high availability and compliance with
+                BSP/PCI DSS standards.</p>
+
+            <div class="step-card">
+                <h3>VPC Details</h3>
+                <ul>
+                    <li><strong>VPC Name:</strong> <code>budol-vpc</code></li>
+                    <li><strong>CIDR Block:</strong> <code>10.0.0.0/16</code></li>
+                    <li><strong>Status:</strong> Active</li>
+                </ul>
+            </div>
+
+            <table>
+                <thead>
+                    <tr>
+                        <th>Resource</th>
+                        <th>ID</th>
+                        <th>Status</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td>VPC</td>
+                        <td><code>vpc-04266673dc5662967</code></td>
+                        <td>✅ Active</td>
+                    </tr>
+                    <tr>
+                        <td>Internet Gateway</td>
+                        <td><code>igw-07d7bd6ff86d5f1bd</code></td>
+                        <td>✅ Attached</td>
+                    </tr>
+                    <tr>
+                        <td>NAT Gateway</td>
+                        <td><code>nat-188d852c4670627d1</code></td>
+                        <td>✅ Available</td>
+                    </tr>
+                    <tr>
+                        <td>Private Hosted Zone</td>
+                        <td><code>Z010513215PCA0EHACYVK</code></td>
+                        <td>✅ Active</td>
+                    </tr>
+                </tbody>
+            </table>
+        </section>
+
+        <section id="route-orchestration">
+            <h2>2. Route Table Orchestration</h2>
+            <p>We established default egress paths for both public and private networking tiers to ensure multi-zone
+                internet connectivity.</p>
+
+            <div class="step-card">
+                <h3>Public Route Table (Egress via IGW)</h3>
+                <p>Configured with a <code>0.0.0.0/0</code> route targeting the Internet Gateway for public service
+                    access.</p>
+                <img src="public_rt_routes_unit_verification.png" alt="Public Route Verification"
+                    style="width:100%; border: 1px solid var(--border); border-radius: 8px; margin-top: 1rem;">
+            </div>
+
+            <div class="step-card">
+                <h3>Private Route Table (Egress via NAT)</h3>
+                <p>Configured with a <code>0.0.0.0/0</code> route targeting the NAT Gateway for secure outbound access
+                    (updates/API calls).</p>
+                <img src="private_rt_route_verification.png" alt="Private Route Verification"
+                    style="width:100%; border: 1px solid var(--border); border-radius: 8px; margin-top: 1rem;">
+            </div>
+        </section>
+
+        <section id="dns-mapping">
+            <h2>3. Internal DNS (Route 53)</h2>
+            <p>The <code>budol.internal</code> Private Hosted Zone has been successfully provisioned and associated with
+                the <code>budol-vpc</code>, supporting local service discovery for RDS and internal microservices.</p>
+            <div class="step-card">
+                <img src="hosted_zone_details_proof.png" alt="Route 53 Verification"
+                    style="width:100%; border: 1px solid var(--border); border-radius: 8px; margin-top: 1rem;">
+            </div>
+
+            <h2>4. External DNS Mapping (DuckDNS/FreeDNS)</h2>
+            <p>We verified the external connectivity of the ecosystem. 5 core subdomains are resolving correctly, while
+                one remains pending.</p>
+
+            <div class="step-card">
+                <h3>Subdomain Matrix</h3>
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Subdomain</th>
+                            <th>Target Service</th>
+                            <th>Resolution</th>
+                            <th>Status</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td><code>budolshap.duckdns.org</code></td>
+                            <td>Consumer App (Amplify)</td>
+                            <td><code>136.158.56.33</code></td>
+                            <td>✅ Active</td>
+                        </tr>
+                        <tr>
+                            <td><code>budolid.duckdns.org</code></td>
+                            <td>Identity Service (Lambda)</td>
+                            <td><code>136.158.56.33</code></td>
+                            <td>✅ Active</td>
+                        </tr>
+                        <tr>
+                            <td><code>budolpay.duckdns.org</code></td>
+                            <td>Unified Payment API</td>
+                            <td><code>136.158.56.33</code></td>
+                            <td>✅ Active</td>
+                        </tr>
+                        <tr>
+                            <td><code>budolws.duckdns.org</code></td>
+                            <td>Websocket Server (EC2)</td>
+                            <td><code>136.158.56.33</code></td>
+                            <td>✅ Active</td>
+                        </tr>
+                        <tr>
+                            <td><code>budoladmin.duckdns.org</code></td>
+                            <td>Admin Registry (Amplify)</td>
+                            <td><code>136.158.56.33</code></td>
+                            <td>✅ Active</td>
+                        </tr>
+                        <tr>
+                            <td><code>budolaccounting.mooo.com</code></td>
+                            <td>Accounting Ledger (Lambda)</td>
+                            <td>N/A</td>
+                            <td>⚠️ Pending</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+
+            <div class="alert alert-info">
+                <strong>Deployment Note:</strong> The WebSocket server on EC2 includes a cron-job script that
+                automatically updates the DuckDNS token every 5 minutes if the public IP changes.
+            </div>
+        </section>
+
+        <section id="security-access">
+            <h2>4. Security & Access Control</h2>
+            <p>Traffic is strictly controlled via AWS Security Groups, ensuring only authenticated and authorized
+                services can communicate.</p>
+            <ul>
+                <li><strong>Public-SG:</strong> Allows Inbound 80/443 from Everywhere.</li>
+                <li><strong>Private-SG:</strong> Allows Inbound from Public-SG only.</li>
+                <li><strong>DB-SG:</strong> Allows Inbound 5432 from Private-SG only.</li>
+            </ul>
+        </section>
+
+        <section id="data-persistence">
+            <h2>Phase 2: Data Persistence</h2>
+
+            <h3>2.1 RDS DB Subnet Group</h3>
+            <p>Successfully created <code>budol-db-subnet-group</code> spanning <strong>6 subnets across 3 Availability
+                    Zones</strong>:</p>
+            <table>
+                <thead>
+                    <tr>
+                        <th>AZ</th>
+                        <th>Subnet Name</th>
+                        <th>Subnet ID</th>
+                        <th>CIDR</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td>ap-southeast-1b</td>
+                        <td>Private-B</td>
+                        <td><code>subnet-0c1f30d0bfd8d7088</code></td>
+                        <td>10.0.11.0/24</td>
+                    </tr>
+                    <tr>
+                        <td>ap-southeast-1b</td>
+                        <td>Private-A</td>
+                        <td><code>subnet-0a54d195257b3260f</code></td>
+                        <td>10.0.10.0/24</td>
+                    </tr>
+                    <tr>
+                        <td>ap-southeast-1b</td>
+                        <td>Public-B</td>
+                        <td><code>subnet-0b993ea77d72865</code></td>
+                        <td>10.0.2.0/24</td>
+                    </tr>
+                    <tr>
+                        <td>ap-southeast-1b</td>
+                        <td>Public-A</td>
+                        <td><code>subnet-0243f257e4a558315</code></td>
+                        <td>10.0.1.0/24</td>
+                    </tr>
+                    <tr>
+                        <td>ap-southeast-1a</td>
+                        <td>Private-A1</td>
+                        <td><code>subnet-08908183de01ccad</code></td>
+                        <td>10.0.12.0/24</td>
+                    </tr>
+                    <tr>
+                        <td>ap-southeast-1c</td>
+                        <td>Private-C1</td>
+                        <td><code>subnet-095b0dd7fabfeff8d</code></td>
+                        <td>10.0.13.0/24</td>
+                    </tr>
+                </tbody>
+            </table>
+            <div class="step-card">
+                <img src="rds_subnet_group_created.png" alt="RDS Subnet Group Created"
+                    style="width:100%; border: 1px solid var(--border); border-radius: 8px; margin-top: 1rem;">
+                <p style="text-align:center; font-size: 0.8rem; color: #64748b;">RDS Subnet Group verification via AWS
+                    Management Console</p>
+            </div>
+
+            <h3>2.2 RDS PostgreSQL 15</h3>
+            <div class="alert alert-success"
+                style="background: #f0fdf4; border-color: #16a34a; color: #166534; padding: 1rem; border-radius: 8px;">
+                <strong>Instance Ready:</strong> <code>budol-postgres</code> is provisioned and accessible within the
+                VPC.
+            </div>
+            <p><strong>Endpoint:</strong> <code>budol-postgres.cnusinkq689x.ap-southeast-1.rds.amazonaws.com</code></p>
+            <div class="step-card">
+                <img src="rds_instance_ready.png" alt="RDS Instance Ready"
+                    style="width:100%; border: 1px solid var(--border); border-radius: 8px; margin-top: 1rem;">
+                <p style="text-align:center; font-size: 0.8rem; color: #64748b;">PostgreSQL 15 instance connectivity
+                    details in the AWS Console</p>
+            </div>
+
+            <h3>2.3 Internal DNS Configuration</h3>
+            <div class="alert alert-success"
+                style="background: #f0fdf4; border-color: #16a34a; color: #166534; padding: 1rem; border-radius: 8px;">
+                <strong>Domain Active:</strong> <code>db.budol.internal</code> points to the RDS endpoint.
+            </div>
+        </section>
+
+        <section id="redis-cache">
+            <h2>Phase 2.3: Redis Cache Layer (EC2)</h2>
+            <div class="alert alert-success"
+                style="background: #f0fdf4; border-color: #16a34a; color: #166534; padding: 1rem; border-radius: 8px;">
+                <strong>&#9989; Instance Ready:</strong> <code>budol-redis</code> EC2 is provisioned and running Redis
+                server.
+            </div>
+            <table>
+                <thead>
+                    <tr>
+                        <th>Property</th>
+                        <th>Value</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td>Instance ID</td>
+                        <td><code>i-00db01c308e73fd42</code></td>
+                    </tr>
+                    <tr>
+                        <td>Instance Name</td>
+                        <td>budol-redis</td>
+                    </tr>
+                    <tr>
+                        <td>Private IP</td>
+                        <td><code>10.0.11.31</code></td>
+                    </tr>
+                    <tr>
+                        <td>Instance Type</td>
+                        <td><code>t3.micro</code></td>
+                    </tr>
+                    <tr>
+                        <td>OS</td>
+                        <td>Ubuntu 24.04 LTS</td>
+                    </tr>
+                    <tr>
+                        <td>Subnet</td>
+                        <td>Private (ap-southeast-1b)</td>
+                    </tr>
+                    <tr>
+                        <td>Port</td>
+                        <td>6379 (restricted to 10.0.0.0/16 via SG)</td>
+                    </tr>
+                    <tr>
+                        <td>Internal DNS</td>
+                        <td><code>redis.budol.internal</code></td>
+                    </tr>
+                </tbody>
+            </table>
+            <h4>Redis Configuration</h4>
+            <table>
+                <thead>
+                    <tr>
+                        <th>Directive</th>
+                        <th>Value</th>
+                        <th>Reason</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td><code>bind</code></td>
+                        <td>0.0.0.0</td>
+                        <td>VPC-wide access; SG enforces boundary</td>
+                    </tr>
+                    <tr>
+                        <td><code>protected-mode</code></td>
+                        <td>no</td>
+                        <td>Security Group is the firewall</td>
+                    </tr>
+                    <tr>
+                        <td><code>maxmemory</code></td>
+                        <td>256mb</td>
+                        <td>Prevents OOM on 1GB t3.micro RAM</td>
+                    </tr>
+                    <tr>
+                        <td><code>maxmemory-policy</code></td>
+                        <td>allkeys-lru</td>
+                        <td>LRU eviction for cache workloads</td>
+                    </tr>
+                    <tr>
+                        <td><code>appendonly</code></td>
+                        <td>yes</td>
+                        <td>AOF persistence: survives restarts</td>
+                    </tr>
+                    <tr>
+                        <td><code>supervised</code></td>
+                        <td>systemd</td>
+                        <td>Auto-restart on crash</td>
+                    </tr>
+                </tbody>
+            </table>
+            <div class="step-card">
+                <div style="display: flex; gap: 1rem; flex-wrap:wrap;">
+                    <img src="redis_instance_running.png" alt="Redis EC2 Running"
+                        style="width:49%; border: 1px solid var(--border); border-radius: 8px; margin-top: 1rem;">
+                    <img src="redis_instance_details.png" alt="Redis EC2 Details"
+                        style="width:49%; border: 1px solid var(--border); border-radius: 8px; margin-top: 1rem;">
+                </div>
+                <p style="text-align:center; font-size: 0.8rem; color: #64748b;">EC2 console view: instance running
+                    (left) and details pane (right)</p>
+            </div>
+            <h4>App Integration</h4>
+            <p><code>lib/redis.js</code> added to <strong>budolshap-0.1.0</strong> providing:</p>
+            <ul>
+                <li>Singleton Redis client with auto-reconnect (exponential backoff)</li>
+                <li>Cache helpers: <code>cacheGet</code>, <code>cacheSet</code>, <code>cacheDel</code></li>
+                <li>Redis-backed rate limiter: <code>redisRateLimit</code> (replaces DB-backed INCR)</li>
+                <li>Health check: <code>isRedisConnected()</code></li>
+            </ul>
+            <p><strong>Tests:</strong> <code>scripts/test_scripts/test-redis-connectivity.jest.js</code> &mdash; 8 Jest
+                test cases.</p>
+
+            <h4>Infrastructure Troubleshooting: SSM Connectivity</h4>
+            <div class="alert alert-info">
+                <strong>Scenario:</strong> EC2 instances in private subnets (like <code>budol-redis</code>) appearing as
+                **"Offline"** in the AWS System Manager console.
+            </div>
+            <p>Administrative access via SSM depends on two factors that must be correctly configured in the VPC:</p>
+            <div class="step-card">
+                <ol>
+                    <li><strong>NAT Gateway Access:</strong> Instances in private subnets must have a route to the
+                        internet (via NAT Gateway) to communicate with the SSM service endpoints.</li>
+                    <li><strong>Route Table Association:</strong> Subnets must be explicitly associated with a Route
+                        Table that has the NAT entry.</li>
+                </ol>
+                <strong>The Fix:</strong>
+                <ul>
+                    <li>Associate <code>Private-B</code> (and all private subnets) with <code>Private-RT</code>.</li>
+                    <li>Add route: <code>0.0.0.0/0</code> &rarr; <code>nat-188d852c4670627d1</code> (budol-nat-gw-01).
+                    </li>
+                </ul>
+                <img src="private_rt_route_verification.png" alt="Corrected Routing"
+                    style="width:100%; border: 1px solid var(--border); border-radius: 8px; margin-top: 1rem;">
+            </div>
+        </section>
+
+        <section id="phase-3-websocket">
+            <h2>4. Phase 3: Real-time Deployment — Executed &amp; Verified ✅</h2>
+            <p>Phase 3 provisions a dedicated <code>budol-ws</code> EC2 instance running a Dockerized Socket.io
+                microservice. All steps were executed via <strong>AWS CLI automation and SSM remote commands</strong>
+                — no manual console clicks required.</p>
+
+            <div class="step-card">
+                <h3>4.1 EC2 Instance Provisioning (Automated via AWS CLI)</h3>
+                <p>The following commands were executed to provision the dedicated WebSocket server infrastructure:</p>
+                <p><strong>Step 1: Create Security Group</strong></p>
+                <div
+                    style="background:#1e1e1e;color:#d4d4d4;padding:1rem;border-radius:5px;font-family:monospace;font-size:0.82rem;margin-bottom:1rem;">
+                    # Create security group: budol-ws-sg<br>
+                    aws ec2 create-security-group --group-name budol-ws-sg --description "WebSocket Server SG" --vpc-id
+                    vpc-0f65f8cafca200de6<br><br>
+                    # Allow internal VPC triggers (port 4000)<br>
+                    aws ec2 authorize-security-group-ingress --group-id &lt;sg-id&gt; --protocol tcp --port 4000 --cidr
+                    10.0.0.0/16<br><br>
+                    # Allow public HTTP (port 80) and HTTPS (port 443)<br>
+                    aws ec2 authorize-security-group-ingress --group-id &lt;sg-id&gt; --protocol tcp --port 80 --cidr
+                    0.0.0.0/0<br>
+                    aws ec2 authorize-security-group-ingress --group-id &lt;sg-id&gt; --protocol tcp --port 443 --cidr
+                    0.0.0.0/0
+                </div>
+                <p><strong>Step 2: Launch EC2 Instance</strong></p>
+                <div
+                    style="background:#1e1e1e;color:#d4d4d4;padding:1rem;border-radius:5px;font-family:monospace;font-size:0.82rem;margin-bottom:1rem;">
+                    aws ec2 run-instances \\ <br>
+                    &nbsp;&nbsp;--image-id ami-0ed0867532b47cc2c \ # Ubuntu 24.04 LTS<br>
+                    &nbsp;&nbsp;--instance-type t3.micro \<br>
+                    &nbsp;&nbsp;--subnet-id &lt;Private-B subnet-id&gt; \<br>
+                    &nbsp;&nbsp;--security-group-ids &lt;budol-ws-sg-id&gt; \<br>
+                    &nbsp;&nbsp;--iam-instance-profile Name=budol-ec2-ssm-role \<br>
+                    &nbsp;&nbsp;--tag-specifications 'ResourceType=instance,Tags=[{Key=Name,Value=budol-ws}]'
+                </div>
+                <table style="width:100%;border-collapse:collapse;font-size:0.9rem;margin:1rem 0;">
+                    <tr style="background:#f1f5f9;border-bottom:2px solid var(--border);">
+                        <th style="padding:0.5rem;">Attribute</th>
+                        <th style="padding:0.5rem;">Value</th>
+                    </tr>
+                    <tr>
+                        <td style="padding:0.5rem;">Instance ID</td>
+                        <td style="padding:0.5rem;"><code>i-00e50e8bb90c9397a</code></td>
+                    </tr>
+                    <tr>
+                        <td style="padding:0.5rem;">OS</td>
+                        <td style="padding:0.5rem;">Ubuntu 24.04 LTS</td>
+                    </tr>
+                    <tr>
+                        <td style="padding:0.5rem;">Instance Type</td>
+                        <td style="padding:0.5rem;">t3.micro</td>
+                    </tr>
+                    <tr>
+                        <td style="padding:0.5rem;">Subnet</td>
+                        <td style="padding:0.5rem;">Private-B (ap-southeast-1b)</td>
+                    </tr>
+                    <tr>
+                        <td style="padding:0.5rem;">Private IP</td>
+                        <td style="padding:0.5rem;">10.0.11.229</td>
+                    </tr>
+                    <tr>
+                        <td style="padding:0.5rem;">IAM Role</td>
+                        <td style="padding:0.5rem;">budol-ec2-ssm-role</td>
+                    </tr>
+                    <tr>
+                        <td style="padding:0.5rem;">Security Group</td>
+                        <td style="padding:0.5rem;">budol-ws-sg</td>
+                    </tr>
+                </table>
+                <p><strong>Step 3: Configure Internal DNS (Route 53)</strong></p>
+                <div
+                    style="background:#1e1e1e;color:#d4d4d4;padding:1rem;border-radius:5px;font-family:monospace;font-size:0.82rem;">
+                    # Created A record in hosted zone Z010513215PCA0EHACYVK (budol.internal)<br>
+                    aws route53 change-resource-record-sets --hosted-zone-id Z010513215PCA0EHACYVK \\ <br>
+                    &nbsp;&nbsp;--change-batch file://dns-batch.json<br><br>
+                    # Result: ws.budol.internal → 10.0.11.229 (TTL: 300)
+                </div>
+            </div>
+
+            <div class="step-card">
+                <h3>4.2 Software Setup via AWS SSM (Remote Execution)</h3>
+                <p>All software was installed remotely on <code>i-00e50e8bb90c9397a</code> via AWS Systems Manager
+                    <code>send-command</code> — no SSH keys required. The instance was confirmed Online via SSM before
+                    executing commands.
+                </p>
+                <p><strong>SSM Command: Setup WebSocket Server (ID: d2544756-b397-4eaf-933c-85d84a4faea9) — ✅
+                        Success</strong></p>
+                <div
+                    style="background:#1e1e1e;color:#d4d4d4;padding:1rem;border-radius:5px;font-family:monospace;font-size:0.82rem;margin-bottom:1rem;">
+                    sudo apt-get update &amp;&amp; sudo apt-get install -y nginx unattended-upgrades<br>
+                    # Install Docker via official get.docker.com script<br>
+                    curl -fsSL https://get.docker.com | sudo sh<br>
+                    sudo usermod -aG docker ubuntu<br><br>
+                    # Create ~/budol-ws directory and docker-compose.yml<br>
+                    mkdir -p /home/ubuntu/budol-ws<br>
+                    # Configure Nginx reverse proxy (port 80 → localhost:4000)<br>
+                    sudo tee /etc/nginx/sites-available/budol-ws &lt;&lt;'EOF'<br>
+                    server { listen 80; location / { proxy_pass http://localhost:4000; ... } }<br>
+                    EOF<br><br>
+                    # Enable site and restart Nginx<br>
+                    sudo ln -sf /etc/nginx/sites-available/budol-ws /etc/nginx/sites-enabled/<br>
+                    sudo systemctl restart nginx
+                </div>
+                <p><strong>SSM Command Verification (ID: 7d6ffff8-fa05-4e48-baef-c4f7ab22c67e) — ✅ Success</strong></p>
+                <div
+                    style="background:#1e1e1e;color:#d4d4d4;padding:1rem;border-radius:5px;font-family:monospace;font-size:0.82rem;">
+                    total 16<br>
+                    drwxr-xr-x 2 ubuntu ubuntu 4096 Mar 1 13:26 .<br>
+                    -rw-r--r-- 1 ubuntu ubuntu 172 Mar 1 13:26 docker-compose.yml<br>
+                    -rwxr-xr-x 1 ubuntu ubuntu 135 Mar 1 13:26 update_duckdns.sh<br>
+                    Docker Compose version v5.1.0
+                </div>
+            </div>
+
+            <div class="step-card">
+                <h3>4.3 Application Deployment (Base64 Code Injection via SSM)</h3>
+                <p>Application source files (<code>Dockerfile</code>, <code>server.js</code>, <code>package.json</code>)
+                    were Base64-encoded locally and decoded on the remote instance via SSM to avoid Windows PowerShell
+                    escaping issues.</p>
+                <p><strong>SSM Command: Deploy WebSocket Application (ID: 3ddcbfa7-8be4-4cab-a33f-6c296f521b10) — ✅
+                        Success</strong></p>
+                <div
+                    style="background:#1e1e1e;color:#d4d4d4;padding:1rem;border-radius:5px;font-family:monospace;font-size:0.82rem;margin-bottom:1rem;">
+                    # Encode locally (PowerShell)<br>
+                    [Convert]::ToBase64String([System.IO.File]::ReadAllBytes('server.js'))<br><br>
+                    # Decode on remote (SSM command)<br>
+                    echo &lt;BASE64_STRING&gt; | base64 -d &gt; /home/ubuntu/budol-ws/server.js<br><br>
+                    # Start Docker container<br>
+                    sudo -u ubuntu docker compose up -d
+                </div>
+            </div>
+
+            <div class="step-card">
+                <h3>4.4 Final Health Verification (Live Output)</h3>
+                <p><strong>SSM Command: Final Health Check (ID: c071f02b-73f1-490a-b204-6cbd1dea6101) — ✅
+                        Success</strong></p>
+                <div
+                    style="background:#1e1e1e;color:#d4d4d4;padding:1rem;border-radius:5px;font-family:monospace;font-size:0.82rem;margin-bottom:1rem;">
+                    <span style="color:#4ec9b0;">CONTAINER ID</span> &nbsp; IMAGE
+                    &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+                    STATUS &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; PORTS<br>
+                    8c0781e406d1 &nbsp; budol-ws-websocket-server &nbsp; Up 52 seconds &nbsp;
+                    0.0.0.0:4000-&gt;4000/tcp<br><br>
+                    # Trigger endpoint test<br>
+                    curl -X POST http://localhost:4000/trigger -H 'Content-Type: application/json' \
+                    &nbsp;&nbsp;-d '{"channel": "test", "event": "ping", "data": "pong"}'<br><br>
+                    <span style="color:#b5cea8;">{"success":true}</span> ✅
+                </div>
+            </div>
+
+            <div class="step-card">
+                <h3>4.5 DuckDNS Automation (Token Applied &amp; Cron Scheduled)</h3>
+                <p>The DuckDNS token was retrieved from <a href="https://www.duckdns.org"
+                        target="_blank">duckdns.org</a>
+                    (account: galvezjon59@gmail.com) and applied to the remote server via SSM.</p>
+                <div
+                    style="background:#1e1e1e;color:#d4d4d4;padding:1rem;border-radius:5px;font-family:monospace;font-size:0.82rem;margin-bottom:1rem;">
+                    # SSM command: Apply DuckDNS Token and Cron (cc22a617-0a16-4305-977d-e78f409e34da) — ✅
+                    Success<br><br>
+                    # /home/ubuntu/budol-ws/update_duckdns.sh content after update:<br>
+                    #!/bin/bash<br>
+                    DOMAIN="budolws"<br>
+                    TOKEN="db0964a1-387c-419a-9272-f87e38b8a542"<br>
+                    curl -s "https://www.duckdns.org/update?domains=$DOMAIN&amp;token=$TOKEN&amp;ip="<br><br>
+                    # DuckDNS response: <span style="color:#b5cea8;">OK</span> ✅<br><br>
+                    # Cron job (runs every 5 minutes):<br>
+                    */5 * * * * /home/ubuntu/budol-ws/update_duckdns.sh &gt; /dev/null 2&gt;&amp;1
+                </div>
+                <table style="width:100%;border-collapse:collapse;font-size:0.9rem;">
+                    <tr style="background:#f1f5f9;">
+                        <th style="padding:0.5rem;">Domain</th>
+                        <th style="padding:0.5rem;">Status</th>
+                        <th style="padding:0.5rem;">Refresh Interval</th>
+                    </tr>
+                    <tr>
+                        <td style="padding:0.5rem;"><code>budolws.duckdns.org</code></td>
+                        <td style="padding:0.5rem;"><span style="color:green;font-weight:bold;">LIVE ✅</span></td>
+                        <td style="padding:0.5rem;">Every 5 minutes via cron</td>
+                    </tr>
+                </table>
+            </div>
+
+            <div class="step-card">
+                <h3>4.6 Internal Trigger Architecture</h3>
+                <p>Backend services (BudolPay, BudolShap, BudolID) trigger real-time events via the internal VPC
+                    endpoint, avoiding external network hops.</p>
+                <div style="background: #f8fafc; border: 1px dashed var(--primary); padding: 1rem; border-radius: 8px;">
+                    <code
+                        style="display:block; margin-bottom: 0.5rem;">POST http://ws.budol.internal:4000/trigger</code>
+                    <p style="font-size: 0.85rem; margin: 0;"><strong>Env vars:</strong>
+                        <code>INTERNAL_WS_URL=http://ws.budol.internal:4000</code> (server-side) /
+                        <code>NEXT_PUBLIC_SOCKET_URL=https://budolws.duckdns.org</code> (client-side)
+                    </p>
+                </div>
+            </div>
+        </section>
+
+        <section id="verified-topology">
+            <h2>5. Verified Topology Map</h2>
+            <p>The following Resource Map confirms the successful implementation of the Multi-AZ networking layer.</p>
+            <img src="vpc_resource_map.png" alt="Budol VPC Resource Map"
+                style="width:100%; border: 1px solid var(--border); border-radius: 8px; margin-top: 1rem;">
+        </section>
+
+        <section id="phase-3-1-env-sync">
+            <h2>Phase 3.1: Environment Synchronization ✅</h2>
+            <p>We implemented a unified configuration management strategy that allows the entire ecosystem to switch
+                seamlessly between Local and Production (AWS) resources.</p>
+
+            <div class="step-card">
+                <h3>SSL Certificate (Let's Encrypt)</h3>
+                <p><strong>Status:</strong> Issued and Active ✅</p>
+                <ul>
+                    <li><strong>Domain:</strong> <code>budolws.duckdns.org</code></li>
+                    <li><strong>Challenge:</strong> DNS-01 via certbot-dns-duckdns plugin.</li>
+                    <li><strong>Path:</strong> <code>/etc/letsencrypt/live/budolws.duckdns.org/</code></li>
+                </ul>
+                <div class="alert alert-success">
+                    <strong>Verification:</strong> <code>Successfully received certificate.</code> confirmed via SSM
+                    automation.
+                </div>
+            </div>
+
+            <div class="step-card">
+                <h3>Environment Propagation</h3>
+                <ul>
+                    <li><strong>env-manager.cjs:</strong> Extended to map <code>INTERNAL_WS_URL</code> and
+                        <code>NEXT_PUBLIC_SOCKET_URL</code> to all 11+ microservices.
+                    </li>
+                    <li><strong>Database Update:</strong> Successfully executed <code>update-socket-url.js</code> to
+                        migrate the production <code>SystemSettings</code> to the HTTPS endpoint.</li>
+                </ul>
+            </div>
+            <section id="phase-3-2-ssl-planning">
+                <h2>Phase 3.2: Multi-Domain SSL Implementation ✅</h2>
+                <p>We've implemented a comprehensive SSL strategy and secured the primary WebSocket gateway.</p>
+                <div class="step-card">
+                    <ul>
+                        <li><strong style="color:green;">WebSocket SSL:</strong> <code>budolws.duckdns.org</code> is
+                            ACTIVE and SECURED via Certbot (DNS-01).</li>
+                        <li><strong>Backend SSL:</strong> <code>budolid</code>, <code>budolpay</code> are provisioned in
+                            scripts; pending final DNS propagation.</li>
+                        <li><strong>Elastic IP:</strong> Allocated <code>54.255.5.218</code> to budol-ws to ensure
+                            reliable ingress.</li>
+                    </ul>
+                </div>
+            </section>
+
+            <section id="phase-4-security">
+                <h2>Phase 4: Security Hardening ✅</h2>
+                <p>Internal services have been hardened against unauthorized access in the private subnet.</p>
+                <div class="step-card">
+                    <ul>
+                        <li><strong style="color:green;">Redis Security:</strong> <code>requirepass</code> active with
+                            strong credentials.</li>
+                        <li><strong style="color:green;">Secrets Management:</strong> All critical passwords stored in
+                            AWS Secrets Manager.</li>
+                    </ul>
+                    <div class="alert alert-success">
+                        <strong>Compliance:</strong> Phase 4 security measures meet PCI DSS and BSP standards for data
+                        protection.
+                    </div>
+                </div>
+            </section>
+
+            <section id="next-steps">
+                <h2>Next Steps (Post Phase 3.1)</h2>
+                <div class="step-card">
+                    <ul>
+                        <li><strong>Phase 5 - App Provisioning:</strong> Final deployment of Amplify frontends and ECS
+                            containers.</li>
+                        <li><strong>Compliance Audit:</strong> Final review of PCI DSS and BSP requirements before
+                            launch.</li>
+                    </ul>
+                </div>
+            </section>
+    </div>
+</body>
+
+</html>

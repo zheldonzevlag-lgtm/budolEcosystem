@@ -1,0 +1,86 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>System Admin Manual - v300</title>
+    <style>
+        body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; line-height: 1.6; color: #333; max-width: 1000px; margin: 0 auto; padding: 20px; background-color: #f4f7f6; }
+        .container { background: white; padding: 40px; border-radius: 8px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); }
+        h1 { color: #2c3e50; border-bottom: 2px solid #e67e22; padding-bottom: 10px; }
+        h2 { color: #2c3e50; margin-top: 30px; }
+        h3 { color: #e67e22; }
+        .step { background: #fffaf0; border-left: 5px solid #e67e22; padding: 15px; margin: 15px 0; }
+        .warning { background: #fff5f5; border-left: 5px solid #c53030; padding: 15px; margin: 15px 0; color: #c53030; font-weight: bold; }
+        table { width: 100%; border-collapse: collapse; margin: 20px 0; }
+        th, td { text-align: left; padding: 12px; border-bottom: 1px solid #eee; }
+        th { background: #f8f9fa; }
+    </style>
+</head>
+<body>
+    <div class="nav-links" style="margin-bottom: 20px;">
+        <a href="../index.html" style="text-decoration: none; color: #3498db;">← Back to Version Index</a>
+    </div>
+    <div class="container">
+        <h1>System Admin Manual - Version v300</h1>
+
+        <section>
+            <h2>Infrastructure Changes</h2>
+            <p>No direct infrastructure changes were required for this version. All modifications were implemented at the application and database level (Prisma/PostgreSQL).</p>
+        </section>
+
+        <section>
+            <h2>Role Assignment Procedures</h2>
+            <p>Admin users can now be managed via the <code>isAdmin</code> flag in the database. To elevate a user to Administrator status, the following fields must be set:</p>
+            <table>
+                <tr>
+                    <th>Field</th>
+                    <th>Value</th>
+                    <th>Reason</th>
+                </tr>
+                <tr>
+                    <td><code>isAdmin</code></td>
+                    <td><code>true</code></td>
+                    <td>Primary elevation flag.</td>
+                </tr>
+                <tr>
+                    <td><code>accountType</code></td>
+                    <td><code>ADMIN</code></td>
+                    <td>Legacy compatibility and UI grouping.</td>
+                </tr>
+                <tr>
+                    <td><code>role</code></td>
+                    <td><code>ADMIN</code></td>
+                    <td>RBAC permission mapping.</td>
+                </tr>
+                <tr>
+                    <td><code>permissions</code></td>
+                    <td>JSON array</td>
+                    <td>Explicit permission list (optional if role is ADMIN).</td>
+                </tr>
+            </table>
+
+            <div class="step">
+                <strong>Administrative Elevation Script:</strong> The script <code>update_admin.mjs</code> remains available in the root directory for secure elevation and password resets of administrative accounts.
+            </div>
+        </section>
+
+        <section>
+            <h2>Security Monitoring</h2>
+            <p>Admins should monitor the <code>Audit Logs</code> (once fully integrated) for any unauthorized access attempts to administrative endpoints. All 403 Forbidden responses are now logged on the server side with the attempted user ID.</p>
+        </section>
+
+        <section>
+            <h2>Rollback Procedures</h2>
+            <p>In the event of a system-wide access lockout:</p>
+            <ol>
+                <li>Revert changes to <code>lib/adminAccess.js</code> to restore reliance on hardcoded <code>ADMIN_EMAILS</code>.</li>
+                <li>Ensure the database backup from 2026-01-10 is available to restore the <code>User</code> table roles if necessary.</li>
+            </ol>
+            <div class="warning">
+                WARNING: Modifying <code>isAdmin</code> flags directly in production databases should only be done by authorized personnel.
+            </div>
+        </section>
+    </div>
+</body>
+</html>

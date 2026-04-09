@@ -1,0 +1,78 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Issues & Fixes - 2026-02-19 v1</title>
+    <style>
+        body { font-family: 'Segoe UI', sans-serif; padding: 20px; background-color: #f4f5f7; color: #172b4d; }
+        .container { max-width: 1200px; margin: 0 auto; background: white; padding: 40px; border-radius: 8px; box-shadow: 0 4px 8px rgba(0,0,0,0.1); }
+        h1, h2 { color: #0052cc; }
+        .issue-block { margin-bottom: 30px; border-bottom: 1px solid #eee; padding-bottom: 20px; }
+        .code-block { background: #f4f5f7; padding: 10px; border-radius: 4px; font-family: monospace; overflow-x: auto; }
+        a { color: #0052cc; text-decoration: none; }
+        a:hover { text-decoration: underline; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Issues & Fixes Log</h1>
+        <p><a href="index.html">Back to Index</a></p>
+
+        <div class="issue-block">
+            <h2>1. OTP Not Sending / Not Visible in Logs</h2>
+            <p><strong>Issue:</strong> OTPs were not being generated or logged, and SMS/Email delivery was failing silently.</p>
+            <p><strong>Root Cause:</strong> 
+                <ul>
+                    <li>Missing `notifications` package dependency in `auth-service`.</li>
+                    <li>Log redirection or suppression prevented debug logs from showing.</li>
+                </ul>
+            </p>
+            <p><strong>Fix:</strong>
+                <ul>
+                    <li>Added explicit dependency to `auth-service/package.json`.</li>
+                    <li>Added debug logging in `notifications/index.js` to print OTP to console for dev/test environments.</li>
+                </ul>
+            </p>
+        </div>
+
+        <div class="issue-block">
+            <h2>2. Prisma Query Engine EPERM Error</h2>
+            <p><strong>Issue:</strong> Database operations failed with `EPERM: operation not permitted` on `query_engine-windows.dll.node`.</p>
+            <p><strong>Root Cause:</strong> File locking by running Node.js processes prevented Prisma Client regeneration or access.</p>
+            <p><strong>Fix:</strong>
+                <ul>
+                    <li>Terminated all Node.js processes.</li>
+                    <li>Renamed `.prisma/client` to `.prisma/client_old` to bypass the locked file.</li>
+                    <li>Regenerated Prisma Client using `prisma generate`.</li>
+                    <li>Deleted the old locked directory.</li>
+                </ul>
+            </p>
+        </div>
+
+        <div class="issue-block">
+            <h2>3. Home Screen Name Masking & Toggle</h2>
+            <p><strong>Issue:</strong> User requested to toggle full name visibility (Eye icon). Initially, toggling showed `*****` because the API returned masked data. Subsequent UI refinements were needed for layout and privacy.</p>
+            <p><strong>Root Cause:</strong> `auth-service`'s `maskPII` function was applied to all responses. Long names caused UI overflow covering the eye icon.</p>
+            <p><strong>Fix:</strong>
+                <ul>
+                    <li>Modified `auth-service/index.js` to return unmasked `firstName` and `lastName` in authenticated responses.</li>
+                    <li>Updated `home_screen.dart` to include a visibility state (`_isNameVisible`) and a toggle icon.</li>
+                    <li><strong>Refinement:</strong> Changed display to show <strong>First Name Only</strong>.</li>
+                    <li><strong>Refinement:</strong> Reduced font size to 14sp and added `Flexible` widget to fix overflow issues.</li>
+                    <li><strong>Refinement:</strong> Changed masked characters to dots (`........`) and set default visibility to masked (false).</li>
+                    <li>Removed the exclamation mark from the welcome text.</li>
+                </ul>
+            </p>
+            <div class="code-block">
+                // auth-service/index.js change<br>
+                user: { <br>
+                    id: user.id, <br>
+                    phoneNumber: maskPII(user.phoneNumber), <br>
+                    firstName: user.firstName, // Unmasked<br>
+                    lastName: user.lastName    // Unmasked<br>
+                }
+            </div>
+        </div>
+    </div>
+</body>
+</html>

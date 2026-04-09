@@ -1,0 +1,97 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Developer Manual - v390</title>
+    <style>
+        :root {
+            --primary: #f43f5e;
+            --secondary: #0f172a;
+            --bg: #f8fafc;
+            --code-bg: #1e293b;
+        }
+        body { font-family: 'Segoe UI', sans-serif; line-height: 1.6; color: #334155; background: var(--bg); margin: 0; display: flex; }
+        .sidebar { width: 280px; background: var(--secondary); color: white; height: 100vh; position: fixed; padding: 20px; box-sizing: border-box; }
+        .sidebar a { color: #cbd5e1; text-decoration: none; display: block; padding: 10px; border-radius: 6px; }
+        .main-content { margin-left: 280px; padding: 40px; max-width: 1000px; }
+        pre { background: var(--code-bg); color: #e2e8f0; padding: 20px; border-radius: 8px; overflow-x: auto; }
+        code { font-family: 'Fira Code', monospace; }
+        .file-link { color: var(--primary); text-decoration: none; font-weight: bold; }
+        .file-link:hover { text-decoration: underline; }
+    </style>
+</head>
+<body>
+    <div class="sidebar">
+        <h2>Budol Ecosystem</h2>
+        <ul>
+            <li><a href="index.html">Overview</a></li>
+            <li><a href="developer_manual.html" style="background: var(--primary); color: white;">Developer Manual</a></li>
+            <li><a href="system_admin_manual.html">System Admin Manual</a></li>
+            <li><a href="user_manual.html">User Manual</a></li>
+            <li><a href="risk_register.html">Risk Register</a></li>
+            <li><a href="Mitigation.html">Mitigation Plan</a></li>
+            <li><a href="test_results.html">Test Results</a></li>
+            <li><a href="future_recommendations.html">Future Recommendations</a></li>
+        </ul>
+    </div>
+
+    <div class="main-content">
+        <h1>Developer Manual - v390</h1>
+        
+        <section>
+            <h2>Face Login Enablement Logic Refinement</h2>
+            <p>In version 390, we decoupled the face login availability from the device-wide biometric toggle. This was done to support users who have registered a custom face template via TFLite but might have disabled general biometrics in the app settings.</p>
+            
+            <h3>Key Changes in LoginScreen</h3>
+            <p>The <code>_checkBiometrics</code> method now explicitly checks for a stored face template:</p>
+            <pre><code>
+// [login_screen.dart](file:///d:/IT%20Projects/budolEcosystem/budolPayMobile/lib/screens/login_screen.dart#L55-L65)
+Future&lt;void&gt; _checkBiometrics() async {
+    final biometricService = context.read&lt;BiometricService&gt;();
+    final available = await biometricService.isAvailable();
+    final enabled = await biometricService.isEnabled();
+    final faceTemplate = await biometricService.getStoredFaceTemplate();
+    if (mounted) {
+      setState(() {
+        _isBiometricAvailable = available;
+        _isBiometricEnabled = enabled;
+        _hasFaceTemplate = faceTemplate != null;
+      });
+    }
+}
+            </code></pre>
+
+            <p>The <code>_handleFaceRecognitionLogin</code> method now allows entry if <code>_hasFaceTemplate</code> is true, even if <code>_isBiometricEnabled</code> is false:</p>
+            <pre><code>
+// [login_screen.dart](file:///d:/IT%20Projects/budolEcosystem/budolPayMobile/lib/screens/login_screen.dart#L104-L111)
+Future&lt;void&gt; _handleFaceRecognitionLogin() async {
+    final biometricService = context.read&lt;BiometricService&gt;();
+    final faceService = context.read&lt;FaceEmbeddingService&gt;();
+    
+    // If face is registered, we allow it even if general biometric toggle is off
+    if (!_isBiometricEnabled && !_hasFaceTemplate) {
+      _showError('Face login is not enabled. Please login with your PIN once to enable it.');
+      return;
+    }
+    ...
+}
+            </code></pre>
+        </section>
+
+        <section>
+            <h2>Version Synchronization</h2>
+            <p>The app version has been incremented to <code>1.2.87</code> across the ecosystem to reflect these logic changes.</p>
+            <ul>
+                <li><a class="file-link" href="file:///d:/IT%20Projects/budolEcosystem/budolPayMobile/pubspec.yaml">pubspec.yaml</a>: <code>version: 1.2.87+87</code></li>
+                <li><a class="file-link" href="file:///d:/IT%20Projects/budolEcosystem/budolPayMobile/lib/services/api_service.dart">api_service.dart</a>: <code>_appVersion = '1.2.87'</code></li>
+            </ul>
+        </section>
+
+        <section>
+            <h2>Testing</h2>
+            <p>A new test script <a class="file-link" href="file:///d:/IT%20Projects/budolEcosystem/scripts/test_scripts/test_face_login_v390.dart">test_face_login_v390.dart</a> was created to validate this behavior using manual mocks for <code>BiometricService</code> and <code>ApiService</code>.</p>
+        </section>
+    </div>
+</body>
+</html>

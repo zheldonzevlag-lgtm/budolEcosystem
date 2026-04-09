@@ -1,0 +1,106 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Developer Manual - Budol Ecosystem v2</title>
+    <style>
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; line-height: 1.6; margin: 0; padding: 20px; color: #333; }
+        h1, h2, h3 { color: #2c3e50; }
+        .container { max-width: 1200px; margin: 0 auto; }
+        .section { background: #fff; padding: 20px; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); margin-bottom: 20px; }
+        code { background: #f4f4f4; padding: 2px 5px; border-radius: 4px; font-family: 'Consolas', 'Monaco', monospace; color: #c7254e; }
+        pre { background: #282c34; color: #abb2bf; padding: 15px; border-radius: 5px; overflow-x: auto; }
+        .code-header { font-weight: bold; margin-bottom: 5px; color: #61dafb; }
+        a { color: #3498db; text-decoration: none; }
+        a:hover { text-decoration: underline; }
+        .back-link { display: inline-block; margin-bottom: 20px; font-weight: bold; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <a href="index.html" class="back-link">← Back to Index</a>
+        <h1>Developer Manual (v2)</h1>
+        <p><strong>Date:</strong> 2026-02-21</p>
+        <p><strong>Version:</strong> 2.0.0</p>
+
+        <div class="section">
+            <h2>1. Architecture & Data Contracts</h2>
+            <h3>1.1 Authentication & User Sync</h3>
+            <p>The authentication system has been enhanced to support seamless synchronization between the local BudolShap database and the central BudolID SSO service.</p>
+            <ul>
+                <li><strong>Strategy:</strong> Just-in-Time (JIT) Provisioning.</li>
+                <li><strong>Trigger Points:</strong> Login (Password/OTP), Session Validation (/auth/me), and Registration.</li>
+                <li><strong>Data Flow:</strong> When a user authenticates via BudolID but does not exist locally, the system fetches their profile from BudolID and creates a local `User` record with `accountType: 'BUYER'` and a placeholder password.</li>
+            </ul>
+        </div>
+
+        <div class="section">
+            <h2>2. Backend & API Implementation</h2>
+            
+            <h3>2.1 Image Handling & Compression</h3>
+            <p><strong>Purpose:</strong> To optimize storage and ensure reliability when Cloudinary uploads fail.</p>
+            <p><strong>Implementation:</strong></p>
+            <ul>
+                <li>Frontend: Images are compressed to WebP format (quality 0.8) using HTML5 Canvas before upload.</li>
+                <li>Backend: The `isValidImage` utility validates inputs. If Cloudinary fails, the base64 string is stored directly in the database (Postgres JSONB/Text) as a fallback.</li>
+            </ul>
+            
+            <div class="code-block">
+                <div class="code-header">lib/imageUtils.js</div>
+                <pre>
+export const isValidImage = (image) => {
+    if (!image || typeof image !== 'string') return false;
+    // Allow HTTP/HTTPS URLs
+    if (image.startsWith('http://') || image.startsWith('https://')) return true;
+    // Allow Base64 Data URIs
+    if (image.startsWith('data:image/')) return true;
+    // Allow Relative Paths
+    if (image.startsWith('/')) return true;
+    return false;
+};
+                </pre>
+                <p><a href="file:///d:/IT Projects/budolEcosystem/budolshap-0.1.0/lib/imageUtils.js">View File</a></p>
+            </div>
+
+            <h3>2.2 Auth Sync Implementation</h3>
+            <p><strong>File:</strong> <code>app/api/auth/me/route.js</code></p>
+            <p>Added logic to sync user if they exist in the session/token but not in the local database.</p>
+             <div class="code-block">
+                <div class="code-header">app/api/auth/me/route.js</div>
+                <pre>
+// ... inside GET handler
+if (!user) {
+    console.log(`[API/Me] User not found locally: ${userId}. Syncing...`);
+    const budolUserRaw = await getUserById(userId);
+    // ... create user logic
+}
+                </pre>
+                <p><a href="file:///d:/IT Projects/budolEcosystem/budolshap-0.1.0/app/api/auth/me/route.js">View File</a></p>
+            </div>
+        </div>
+
+        <div class="section">
+            <h2>3. Maintenance & Utilities</h2>
+            <h3>3.1 Database Bloat Monitoring</h3>
+            <p><strong>Script:</strong> <code>npm run db:check-bloat</code> (runs <code>scripts/check-db-bloat.cjs</code>)</p>
+            <p>Scans the `Product` table for images stored as base64 strings instead of URLs. It reports the count and total size of these images to help identify database bloat.</p>
+
+            <h3>3.2 Cloudinary Retry Mechanism</h3>
+            <p><strong>Script:</strong> <code>npm run db:retry-uploads</code> (runs <code>scripts/cloudinary-retry.cjs</code>)</p>
+            <p>A background job that finds products with base64 images and attempts to upload them to Cloudinary. If successful, it updates the product record with the new Cloudinary URL, reducing database size.</p>
+        </div>
+
+        <div class="section">
+            <h2>4. Dependencies</h2>
+            <ul>
+                <li><strong>Prisma ORM:</strong> Database access and schema management. Chosen for its type safety and ease of migration with Postgres.</li>
+                <li><strong>Cloudinary:</strong> Primary image storage. Chosen for its robust CDN and transformation capabilities.</li>
+                <li><strong>Next.js App Router:</strong> API routes and frontend pages. Chosen for its server-side rendering and unified full-stack capabilities.</li>
+                <li><strong>BudolID Client:</strong> Internal library for communicating with SSO. Essential for the ecosystem's centralized identity management.</li>
+                <li><strong>browser-image-compression:</strong> Client-side image compression. Chosen to reduce payload size before upload, improving user experience on mobile networks and reducing server load.</li>
+            </ul>
+        </div>
+    </div>
+</body>
+</html>

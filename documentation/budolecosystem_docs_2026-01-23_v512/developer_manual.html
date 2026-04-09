@@ -1,0 +1,67 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Developer Manual - v512</title>
+    <style>
+        body { font-family: Arial, sans-serif; line-height: 1.6; max-width: 1000px; margin: 0 auto; padding: 20px; background: #f0f2f5; }
+        .code-block { background: #1e1e1e; color: #d4d4d4; padding: 15px; border-radius: 5px; overflow-x: auto; font-family: 'Courier New', Courier, monospace; }
+        .link { color: #0052cc; text-decoration: none; font-weight: bold; }
+        .link:hover { text-decoration: underline; }
+        h1, h2, h3 { color: #172b4d; }
+    </style>
+</head>
+<body>
+    <h1>Developer Manual - v512</h1>
+    
+    <h2>Technical Overview</h2>
+    <p>This release focuses on data propagation and UI refinement for transaction history. We added store-related fields to the Transaction model and updated the mobile UI to display this information prominently.</p>
+
+    <h2>Database Changes</h2>
+    <p>The <code>Transaction</code> model in the Prisma schema was updated to include <code>storeId</code> and <code>storeName</code>.</p>
+    <div class="code-block">
+<pre>
+model Transaction {
+  // ...
+  storeId      String?
+  storeName    String?
+  // ...
+  @@index([storeId])
+}
+</pre>
+    </div>
+    <p>File: <a class="link" href="file:///d:/IT Projects/budolEcosystem/budolpay-0.1.0/packages/database/prisma/schema.prisma">schema.prisma</a></p>
+
+    <h2>Backend Implementation</h2>
+    <p>The <code>wallet-service</code> was updated to populate these new fields during the QR payment process.</p>
+    <div class="code-block">
+<pre>
+await prisma.transaction.update({
+    where: { id: transaction.id },
+    data: { 
+        senderId: userId,
+        status: 'COMPLETED',
+        completedAt: getLegacyManilaDate(),
+        storeId: qrData.storeId || null,
+        storeName: qrData.storeName || null
+    }
+});
+</pre>
+    </div>
+    <p>File: <a class="link" href="file:///d:/IT Projects/budolEcosystem/budolpay-0.1.0/services/wallet-service/index.js">wallet-service/index.js</a></p>
+
+    <h2>Frontend UI Updates</h2>
+    <p>The <code>TransactionDetailsScreen</code> now displays the <code>Store Name</code> and uses a standardized 12px font for better density.</p>
+    <div class="code-block">
+<pre>
+if (widget.transaction['storeName'] != null)
+  _buildDetailRow('Store Name', widget.transaction['storeName']),
+_buildDetailRow('Transaction ID', widget.transaction['id'] ?? 'N/A'),
+</pre>
+    </div>
+    <p>File: <a class="link" href="file:///d:/IT Projects/budolEcosystem/budolPayMobile/lib/screens/transaction_details_screen.dart">transaction_details_screen.dart</a></p>
+
+    <h2>Compliance</h2>
+    <p>Ensured that store names are handled securely and no sensitive merchant data is exposed beyond what is required for user transaction history (NPC Compliance).</p>
+</body>
+</html>

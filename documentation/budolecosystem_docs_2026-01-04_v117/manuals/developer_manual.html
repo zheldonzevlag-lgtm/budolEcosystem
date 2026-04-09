@@ -1,0 +1,79 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Developer Manual - BudolEcosystem v1.0.1</title>
+    <style>
+        body { font-family: system-ui, -apple-system, sans-serif; line-height: 1.6; max-width: 1000px; margin: 0 auto; padding: 2rem; color: #333; }
+        h1, h2, h3 { color: #1e293b; }
+        h1 { border-bottom: 2px solid #e2e8f0; padding-bottom: 1rem; }
+        code { background: #f1f5f9; padding: 0.2rem 0.4rem; border-radius: 4px; font-family: monospace; font-size: 0.9em; }
+        pre { background: #1e293b; color: #f8fafc; padding: 1rem; border-radius: 8px; overflow-x: auto; }
+        .warning { background: #fef2f2; border-left: 4px solid #ef4444; padding: 1rem; margin: 1rem 0; }
+        .success { background: #f0fdf4; border-left: 4px solid #22c55e; padding: 1rem; margin: 1rem 0; }
+        .back-link { display: inline-block; margin-bottom: 2rem; color: #2563eb; text-decoration: none; }
+        .back-link:hover { text-decoration: underline; }
+    </style>
+</head>
+<body>
+    <a href="../index.html" class="back-link">← Back to Index</a>
+
+    <h1>Developer Manual</h1>
+    <p><strong>Version:</strong> 1.0.1 (v63)<br><strong>Date:</strong> 2026-01-04</p>
+
+    <h2>1. BudolPay QR Integration Fixes</h2>
+    
+    <h3>Problem</h3>
+    <p>Users reported that selecting BudolPay redirected them to the orders page immediately without showing the QR code, or the QR code modal would appear but fail to update the payment status.</p>
+
+    <h3>Root Cause Analysis</h3>
+    <ul>
+        <li><strong>Redirect Logic:</strong> <code>OrderSummary.jsx</code> was correctly redirecting to <code>/payment/qr</code>, but if data was missing or invalid, <code>QRPaymentPage.jsx</code> would redirect back to <code>/orders</code>.</li>
+        <li><strong>ID Mismatch:</strong> <code>BudolPayAdapter</code> was using the internal <code>transaction.id</code> (UUID) as the <code>paymentIntentId</code>, but the Payment Gateway Service expects <code>referenceId</code> (starts with <code>JON-</code>) for status lookups.</li>
+        <li><strong>Polling Endpoint:</strong> <code>QRCodeModal.jsx</code> was hardcoded to poll <code>/api/paymongo/status</code>, which strictly checked for IDs starting with <code>INTENT-</code>, causing BudolPay status checks to fail.</li>
+    </ul>
+
+    <h3>Implementation Details</h3>
+
+    <h4>1. Adapter Update (<code>lib/payment/adapters/budolpay-adapter.js</code>)</h4>
+    <p>Modified the adapter to prioritize <code>referenceId</code> when returning the payment intent ID. This ensures consistency with the gateway's status endpoint.</p>
+    <pre><code>// Old
+const paymentIntentId = data.id || data.paymentIntentId || data.reference;
+
+// New
+const paymentIntentId = data.referenceId || data.id || data.paymentIntentId || data.reference;</code></pre>
+
+    <h4>2. Status API Enhancement (<code>app/api/paymongo/status/route.js</code>)</h4>
+    <p>Updated the status API to accept a <code>provider</code> query parameter and recognize BudolPay-specific ID prefixes (<code>JON-</code>).</p>
+    <pre><code>const provider = searchParams.get('provider');
+
+if (intent_id.startsWith('INTENT-') || 
+    intent_id.startsWith('JON-') || 
+    provider === 'budolpay' || 
+    provider === 'BUDOL_PAY') {
+    // Use BudolPay Adapter
+    // ...
+}</code></pre>
+
+    <h4>3. Frontend Polling Update (<code>components/payment/QRCodeModal.jsx</code>)</h4>
+    <p>Updated the polling logic to pass the <code>provider</code> parameter when the payment method is BudolPay.</p>
+    <pre><code>const providerParam = paymentMethod === 'BUDOL_PAY' ? '&provider=budolpay' : '';
+const response = await fetch(`/api/paymongo/status?intent_id=${paymentIntentId}${providerParam}`);</code></pre>
+
+    <h2>2. Mock Gateway Script Update</h2>
+    <p>Updated <code>scripts/mock-budolpay-gateway.cjs</code> to redirect to <code>/payment/return</code> instead of a generic orders page, ensuring the correct post-payment flow is triggered even in mock scenarios.</p>
+
+    <h2>3. Dependencies & Risks</h2>
+    <ul>
+        <li><strong>Risk:</strong> If the Payment Gateway Service changes its ID format (e.g., stops using <code>JON-</code>), the regex check in the status API might need updating.</li>
+        <li><strong>Mitigation:</strong> The <code>provider=budolpay</code> parameter serves as a robust fallback regardless of ID format.</li>
+    </ul>
+
+    <h2>4. Verification</h2>
+    <div class="success">
+        <p><strong>Test:</strong> <code>debug-adapter.mjs</code></p>
+        <p><strong>Result:</strong> Successfully retrieved <code>paymentIntentId</code> starting with <code>JON-</code> and generated valid QR data.</p>
+    </div>
+</body>
+</html>

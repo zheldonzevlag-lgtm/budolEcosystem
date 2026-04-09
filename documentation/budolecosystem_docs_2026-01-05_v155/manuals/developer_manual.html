@@ -1,0 +1,56 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Developer Manual - v155</title>
+    <style>
+        body { font-family: sans-serif; line-height: 1.6; max-width: 800px; margin: 0 auto; padding: 20px; color: #333; }
+        pre { background: #f4f4f4; padding: 15px; border-left: 5px solid #3498db; overflow-x: auto; }
+        code { font-family: monospace; color: #e74c3c; }
+        .nav { margin-bottom: 20px; }
+        h1, h2, h3 { color: #2c3e50; }
+        .box { border: 1px solid #ddd; padding: 15px; border-radius: 5px; margin: 10px 0; background: #fffaf0; }
+    </style>
+</head>
+<body>
+    <div class="nav"><a href="../index.html">← Back to v155 Index</a></div>
+    <h1>Developer Manual - Unified Commands & Real-time Sync</h1>
+
+    <h2>Purpose</h2>
+    <p>This update focuses on streamlining the development workflow by unifying service management and ensuring robust real-time synchronization between the mobile app and the admin dashboard.</p>
+
+    <h2>Technical Details</h2>
+    
+    <h3>1. Unified Root Commands</h3>
+    <p>Implemented <code>concurrently</code> in the root <code>package.json</code> to allow starting all core services and the admin dashboard with a single command.</p>
+    <pre><code>// Root package.json
+"scripts": {
+  "start": "concurrently \"npm run start -w api-gateway\" ...",
+  "dev": "concurrently -n \"GATEWAY,AUTH,WALLET,TX,ADMIN\" -c \"cyan,magenta,yellow,green,blue\" ..."
+}</code></pre>
+
+    <h3>2. Socket.io Admin Room Integration</h3>
+    <p>Enhanced the <strong>API Gateway</strong> to support a specialized <code>admin</code> room. Any socket connecting with the ID <code>admin</code> is automatically joined to this room to receive global transaction updates.</p>
+    <div class="box">
+        <strong>Implementation:</strong> <code>api-gateway/index.js</code> now handles <code>socket.join('admin')</code> and the <code>/internal/notify</code> endpoint supports an <code>isAdmin</code> flag to broadcast events to the admin room.
+    </div>
+
+    <h3>3. Real-time Transaction Recording</h3>
+    <p>The <strong>Transaction Service</strong> and <strong>Wallet Service</strong> now proactively notify the Admin via the Gateway whenever a transaction state changes (e.g., Cash In completion, Transfer success).</p>
+
+    <h2>Issues & Fixes</h2>
+    <ul>
+        <li><strong>Issue:</strong> Admin required manual refresh to see new transactions.</li>
+        <li><strong>Fix:</strong> Integrated Socket.io client in <code>apps/admin/app/transactions/page.tsx</code> to listen for <code>new_transaction</code> events and update the UI state in real-time.</li>
+    </ul>
+
+    <h2>Dependencies</h2>
+    <ul>
+        <li><code>concurrently</code>: Root dependency for multi-service management.</li>
+        <li><code>socket.io-client</code>: Added to Admin app for real-time monitoring.</li>
+    </ul>
+
+    <h2>Recommendations</h2>
+    <p>Move to a dedicated message broker (like Redis or RabbitMQ) for inter-service communication instead of direct HTTP calls for notifications as the ecosystem scales.</p>
+</body>
+</html>

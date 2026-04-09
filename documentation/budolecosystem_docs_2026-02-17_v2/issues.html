@@ -1,0 +1,65 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Issues - Budol Ecosystem Documentation</title>
+    <style>
+        body { font-family: Arial, sans-serif; line-height: 1.6; max-width: 800px; margin: 0 auto; padding: 20px; }
+        h1 { color: #333; border-bottom: 2px solid #333; padding-bottom: 10px; }
+        .issue-card { border: 1px solid #ddd; padding: 15px; margin-bottom: 20px; border-radius: 5px; }
+        .issue-card h3 { margin-top: 0; color: #cc0000; }
+        .severity-high { color: red; font-weight: bold; }
+    </style>
+</head>
+<body>
+    <h1>Known Issues</h1>
+    <p>This document tracks issues identified and addressed in this version.</p>
+
+    <div class="issue-card">
+        <h3>BUG-2026-02-17-01: Unpurchased Cart Items Deleted After Partial Payment</h3>
+        <p><strong>Severity:</strong> <span class="severity-high">High</span></p>
+        <p><strong>Description:</strong> When a user has multiple items in their cart and proceeds to checkout for only a subset of them (partial purchase), the remaining unpurchased items are incorrectly deleted from the cart after the order is placed.</p>
+        <p><strong>Impact:</strong> Poor user experience, lost sales, and user frustration as they have to re-add items to their cart.</p>
+        <p><strong>Reproduction Steps:</strong>
+            <ol>
+                <li>Add two different products (e.g., Product A and Product B) to the cart.</li>
+                <li>Select only Product A for checkout.</li>
+                <li>Complete the purchase (via COD or BudolPay).</li>
+                <li>Return to the cart page.</li>
+                <li>Observe that Product B is missing.</li>
+            </ol>
+        </p>
+        <p><strong>Root Cause:</strong>
+            <ul>
+                <li><strong>Synchronous Payments (COD):</strong> <code>OrderSummary.jsx</code> contained logic that unconditionally cleared the entire cart (both local Redux state and server-side database cart) upon successful order creation, regardless of whether it was a partial or full purchase.</li>
+                <li><strong>Asynchronous Payments (BudolPay):</strong> The webhook handler (<code>app/api/webhooks/budolpay/route.js</code>) contained logic to delete cart items based on <code>productId</code> only. This meant that if a user purchased one variation of a product, all other variations of the same product in the cart would be deleted because they share the same <code>productId</code>.</li>
+            </ul>
+        </p>
+    </div>
+
+    <div class="issue-card">
+        <h3>BUG-2026-02-17-02: Reoccurrence of Unpurchased Cart Items Deleted (PayMongo/GCash)</h3>
+        <p><strong>Severity:</strong> <span class="severity-high">High</span></p>
+        <p><strong>Description:</strong> After the initial fix for synchronous payments, users reported that the issue persisted when using PayMongo/GCash payment methods. Unpurchased items, specifically variations of purchased products, were still being deleted.</p>
+        <p><strong>Impact:</strong> Continued data loss for users paying via GCash/PayMongo.</p>
+        <p><strong>Reproduction Steps:</strong>
+            <ol>
+                <li>Add two variations of the same product (e.g., Size M and Size L) to the cart.</li>
+                <li>Checkout only Size M using GCash (via PayMongo).</li>
+                <li>Complete payment.</li>
+                <li>Observe that Size L is also removed from the cart.</li>
+            </ol>
+        </p>
+        <p><strong>Root Cause:</strong>
+            <ul>
+                <li>The PayMongo webhook handler (<code>app/api/webhooks/paymongo/route.js</code>) contained a redundant cart cleanup block.</li>
+                <li>This block deleted cart items using <code>productId</code> matching, ignoring <code>variationId</code>.</li>
+                <li>Consequently, purchasing any variation of a product triggered the deletion of ALL variations of that product from the cart.</li>
+            </ul>
+        </p>
+    </div>
+
+    <p><a href="index.html">Back to Index</a></p>
+</body>
+</html>

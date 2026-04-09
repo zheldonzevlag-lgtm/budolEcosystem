@@ -1,0 +1,56 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>System Admin Manual - v362</title>
+    <style>
+        body { font-family: 'Segoe UI', sans-serif; line-height: 1.6; max-width: 900px; margin: 0 auto; padding: 40px; background: #0F172A; color: #E2E8F0; }
+        .card { background: #1E293B; padding: 30px; border-radius: 12px; border: 1px solid #334155; margin-bottom: 24px; }
+        h1 { color: #F43F5E; }
+        h2 { color: #3B82F6; }
+        code { background: #0F172A; padding: 2px 6px; border-radius: 4px; color: #F43F5E; }
+    </style>
+</head>
+<body>
+    <div class="card">
+        <h1>System Admin Manual: Biometric Infrastructure</h1>
+        <p><strong>Version:</strong> v362</p>
+        <p><strong>Subject:</strong> Model deployment and backend synchronization for Face Recognition.</p>
+    </div>
+
+    <div class="card">
+        <h2>1. Model Deployment</h2>
+        <p>The Face Recognition system relies on the <code>facenet.tflite</code> model. Admins must ensure this file is present in the following location before building the mobile application:</p>
+        <pre><code>budolPayMobile/assets/models/facenet.tflite</code></pre>
+        <p>Failure to include this file will result in the <code>FaceEmbeddingService</code> failing to initialize.</p>
+    </div>
+
+    <div class="card">
+        <h2>2. Backend Configuration</h2>
+        <p>The backend <code>/verification/upload</code> endpoint must be prepared to handle the <code>faceTemplate</code> multipart field. This field contains a string of 128 comma-separated floating-point numbers.</p>
+        <h3>Database Schema Update</h3>
+        <p>Ensure the <code>user_verifications</code> table (or equivalent) has a column for <code>face_template</code> (TEXT or BLOB).</p>
+    </div>
+
+    <div class="card">
+        <h2>3. Troubleshooting</h2>
+        <ul>
+            <li><strong>Model Loading Error:</strong> Check <code>pubspec.yaml</code> for asset inclusion and verify file path.</li>
+            <li><strong>Low Similarity Scores:</strong> Ensure the user is in a well-lit environment. Verify that the model version on the client matches the expected version on the server.</li>
+        </ul>
+    </div>
+
+    <div class="card">
+        <h2>4. Phase 8: Dependencies & Software Choice Rationale</h2>
+        <p>The following libraries and technologies were chosen for the BudolPay Face Recognition system:</p>
+        <ul>
+            <li><strong>TFLite (tflite_flutter):</strong> Chosen for its high performance on mobile devices and small binary footprint. It allows us to run industry-standard models like FaceNet directly on the device.</li>
+            <li><strong>Google ML Kit (Face Detection):</strong> Selected for its robust and fast face detection and classification (blink/smile) capabilities, which are essential for liveness detection.</li>
+            <li><strong>FaceNet:</strong> Chosen as the base model for embedding generation due to its proven accuracy in face verification tasks and the availability of optimized TFLite versions.</li>
+            <li><strong>FlutterSecureStorage:</strong> Used for storing sensitive biometric metadata (templates) and PINs locally, leveraging hardware-backed keystores on both Android and iOS.</li>
+            <li><strong>Prisma & PostgreSQL:</strong> Used on the backend for reliable, structured storage of face templates, enabling future cross-device verification.</li>
+        </ul>
+        <p><strong>Rationale:</strong> This combination balances high security (liveness detection + local encryption) with a seamless user experience (fast on-device matching).</p>
+    </div>
+</body>
+</html>

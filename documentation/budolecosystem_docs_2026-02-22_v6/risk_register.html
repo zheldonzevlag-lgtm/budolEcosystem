@@ -1,0 +1,84 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Risk Register - Budol Ecosystem v6</title>
+    <style>
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; line-height: 1.6; color: #333; max-width: 1200px; margin: 0 auto; padding: 20px; }
+        h1, h2, h3 { color: #2c3e50; }
+        .risk-table { width: 100%; border-collapse: collapse; margin-bottom: 20px; }
+        .risk-table th, .risk-table td { border: 1px solid #ddd; padding: 10px; text-align: left; }
+        .risk-table th { background-color: #f2f2f2; }
+        .severity-high { background-color: #f8d7da; color: #721c24; }
+        .severity-medium { background-color: #fff3cd; color: #856404; }
+        .severity-low { background-color: #d4edda; color: #155724; }
+        .nav { background: #333; padding: 10px; border-radius: 5px; margin-bottom: 20px; }
+        .nav a { color: white; margin-right: 15px; text-decoration: none; }
+    </style>
+</head>
+<body>
+    <div class="nav">
+        <a href="index.html">Home</a>
+        <a href="developer_manual.html">Developer Manual</a>
+        <a href="system_admin_manual.html">SysAdmin Manual</a>
+        <a href="user_manual.html">User Manual</a>
+    </div>
+
+    <h1>Risk Register</h1>
+    <p>This document identifies potential risks associated with the implementation of phone number normalization and email login fallback.</p>
+
+    <table class="risk-table">
+        <thead>
+            <tr>
+                <th>Risk ID</th>
+                <th>Description</th>
+                <th>Likelihood</th>
+                <th>Impact</th>
+                <th>Severity</th>
+                <th>Status</th>
+                <th>Mitigation Strategy</th>
+            </tr>
+        </thead>
+        <tbody>
+            <tr>
+                <td>R-001</td>
+                <td><strong>BudolID Service Downtime:</strong> If BudolID is unavailable, email login fallback will fail, potentially locking out users with stale local passwords.</td>
+                <td>Low</td>
+                <td>High</td>
+                <td class="severity-high">High</td>
+                <td>Open</td>
+                <td>Implement caching of last successful BudolID validation or allow temporary grace login if recent activity exists. Monitor BudolID uptime.</td>
+            </tr>
+            <tr>
+                <td>R-002</td>
+                <td><strong>Incorrect Phone Normalization:</strong> Edge cases in phone number formats (e.g., landlines entered as mobile) might be incorrectly processed or rejected.</td>
+                <td>Medium</td>
+                <td>Medium</td>
+                <td class="severity-medium">Medium</td>
+                <td>Monitored</td>
+                <td>Comprehensive unit testing of <code>PhoneUtils</code> with various valid/invalid inputs. Log normalization failures for review.</td>
+            </tr>
+            <tr>
+                <td>R-003</td>
+                <td><strong>Data Inconsistency (Legacy Data):</strong> Existing user records with non-normalized phone numbers may cause lookup failures or duplicates.</td>
+                <td>High</td>
+                <td>Medium</td>
+                <td class="severity-medium">Medium</td>
+                <td>Active</td>
+                <td>Run a database migration script to normalize existing phone numbers. Update all lookup queries to handle both formats temporarily.</td>
+            </tr>
+            <tr>
+                <td>R-004</td>
+                <td><strong>Security - Brute Force on Fallback:</strong> Attackers might exploit the fallback mechanism to bypass rate limits on the primary authentication flow.</td>
+                <td>Low</td>
+                <td>High</td>
+                <td class="severity-high">High</td>
+                <td>Mitigated</td>
+                <td>Ensure rate limiting applies to the entire login route, regardless of the authentication path taken (local vs. BudolID).</td>
+            </tr>
+        </tbody>
+    </table>
+
+</body>
+</html>

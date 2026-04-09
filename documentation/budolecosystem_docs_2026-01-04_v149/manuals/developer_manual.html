@@ -1,0 +1,95 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Developer Manual - v149</title>
+    <style>
+        body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; line-height: 1.6; color: #333; max-width: 900px; margin: 0 auto; padding: 20px; }
+        h1, h2, h3 { color: #2c3e50; }
+        code { background: #f4f4f4; padding: 2px 5px; border-radius: 3px; font-family: monospace; }
+        pre { background: #f4f4f4; padding: 15px; border-radius: 5px; overflow-x: auto; border-left: 5px solid #3498db; }
+        .status-badge { display: inline-block; padding: 3px 10px; border-radius: 12px; font-size: 0.85em; font-weight: bold; }
+        .status-fixed { background: #d4edda; color: #155724; }
+        .section { margin-bottom: 30px; border-bottom: 1px solid #eee; padding-bottom: 20px; }
+    </style>
+</head>
+<body>
+    <h1>Developer Manual - Version 149</h1>
+    
+    <div class="section">
+        <h2>Purpose</h2>
+        <p>To resolve reported issues with wallet balance not updating on the Android app by enhancing the real-time connectivity layer (Socket.io) and providing robust fallbacks for network-restricted environments.</p>
+    </div>
+
+    <div class="section">
+        <h2>Technical Implementation Details</h2>
+        <h3>1. Mobile Socket.io Enhancements</h3>
+        <p>Modified <code>SocketService.dart</code> to allow <code>polling</code> as a fallback transport. This is critical for mobile devices on cellular networks or corporate Wi-Fi where pure WebSockets might be blocked.</p>
+        <pre>
+_socket = IO.io(baseUrl, IO.OptionBuilder()
+    .setTransports(['websocket', 'polling']) // Fallback enabled
+    .enableAutoConnect()
+    .setReconnectionAttempts(10)
+    .setReconnectionDelay(2000)
+    .build());
+        </pre>
+
+        <h3>2. Connection Monitoring</h3>
+        <p>Implemented connection event listeners to propagate connection status to the UI, allowing users and developers to diagnose connectivity issues in real-time.</p>
+        <pre>
+_socket!.onConnect((_) {
+    _isConnected = true;
+    _socket!.emit('join', userId);
+    notifyListeners();
+});
+        </pre>
+
+        <h3>3. UI Fallbacks</h3>
+        <p>Added a <code>RefreshIndicator</code> to the <code>HomeScreen</code> to allow manual balance fetching. This ensures users can still get their balance even if the real-time stream is temporarily interrupted.</p>
+    </div>
+
+    <div class="section">
+        <h2>Issues & Fixes</h2>
+        <ul>
+            <li><strong>Issue:</strong> Balance not updating in real-time on Android app.
+                <br><strong>Root Cause:</strong> WebSocket transport occasionally failing in mobile network environments without fallback to polling.
+                <br><strong>Fix:</strong> Enabled <code>polling</code> transport and increased reconnection attempts.
+            </li>
+            <li><strong>Issue:</strong> No visual feedback on connectivity.
+                <br><strong>Fix:</strong> Added a status indicator dot in the App Bar.
+            </li>
+        </ul>
+    </div>
+
+    <div class="section">
+        <h2>Dependencies</h2>
+        <ul>
+            <li><code>socket_io_client: ^3.0.0</code> (Flutter)</li>
+            <li><code>api-gateway</code> (Node.js/Socket.io Server)</li>
+            <li><code>wallet-service</code> (Node.js/Internal notification provider)</li>
+        </ul>
+    </div>
+
+    <div class="section">
+        <h2>Test Results</h2>
+        <ul>
+            <li><strong>WebSocket Handshake:</strong> <span class="status-badge status-fixed">PASSED</span> (Verified with test-websocket.js)</li>
+            <li><strong>Balance Update Event:</strong> <span class="status-badge status-fixed">PASSED</span> (Verified end-to-end flow)</li>
+            <li><strong>Polling Fallback:</strong> <span class="status-badge status-fixed">PASSED</span> (Verified by forcing polling transport)</li>
+        </ul>
+    </div>
+
+    <div class="section">
+        <h2>Recommendation for Future Enhancements</h2>
+        <ul>
+            <li>Implement push notifications (FCM) as a secondary real-time notification layer for when the app is in the background.</li>
+            <li>Add a "Network Diagnostic" screen in the app settings to test connectivity to all ecosystem services.</li>
+        </ul>
+    </div>
+
+    <div style="margin-top: 30px;">
+        <a href="../index.html">Back to Index</a>
+    </div>
+</body>
+</html>

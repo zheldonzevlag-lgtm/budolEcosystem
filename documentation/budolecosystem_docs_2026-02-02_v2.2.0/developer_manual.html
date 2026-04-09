@@ -1,0 +1,85 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>v2.2.0 Developer Manual - Budol Ecosystem</title>
+    <style>
+        :root { --primary: #0052CC; --bg: #F4F5F7; --text: #172B4D; --sidebar: #EBECF0; }
+        body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Oxygen, Ubuntu, "Helvetica Neue", sans-serif; background: var(--bg); color: var(--text); margin: 0; display: flex; }
+        .sidebar { width: 280px; background: var(--sidebar); height: 100vh; position: fixed; padding: 20px; border-right: 1px solid #DFE1E6; }
+        .content { margin-left: 320px; padding: 40px; max-width: 900px; }
+        .card { background: white; padding: 25px; border-radius: 8px; border: 1px solid #DFE1E6; margin-bottom: 20px; }
+        h1, h2, h3 { color: var(--primary); }
+        pre { background: #091E42; color: #EBECF0; padding: 15px; border-radius: 6px; overflow-x: auto; font-size: 13px; }
+        code { font-family: 'SFMono-Medium', 'SF Mono', Consolas, monospace; }
+        .file-link { color: var(--primary); font-weight: bold; text-decoration: none; }
+        .file-link:hover { text-decoration: underline; }
+    </style>
+</head>
+<body>
+    <div class="sidebar">
+        <h2>v2.2.0 Docs</h2>
+        <nav>
+            <a href="index.html" class="nav-link">Release Notes</a>
+            <a href="developer_manual.html" class="nav-link active">Developer Manual</a>
+            <a href="system_admin_manual.html" class="nav-link">System Admin Manual</a>
+            <a href="user_manual.html" class="nav-link">User Manual</a>
+            <a href="risk_register.html" class="nav-link">Risk Register</a>
+            <a href="Mitigation.html" class="nav-link">Mitigation Plan</a>
+            <a href="fixes.html" class="nav-link">Applied Fixes</a>
+            <a href="test_results.html" class="nav-link">Test Results</a>
+            <a href="future_recommendations.html" class="nav-link">Future Recommendations</a>
+            <hr>
+            <a href="../knowledgebase.html" class="nav-link">← Knowledge Base</a>
+        </nav>
+    </div>
+
+    <div class="content">
+        <h1>Developer Manual: Settings Grouping & Sidebar Submenus</h1>
+        
+        <div class="card">
+            <h2>Technical Rationale</h2>
+            <p>The transition from a flat settings table to a grouped interface was necessary to support the growing complexity of the Budol Ecosystem. By introducing a <code>group</code> field in the <code>SystemSetting</code> model, we can logically partition configurations without modifying the underlying database schema structure.</p>
+        </div>
+
+        <div class="card">
+            <h2>Data Model Changes</h2>
+            <p>The <code>SystemSetting</code> model in <a class="file-link" href="file:///d:/IT%20Projects/budolEcosystem/budolpay-0.1.0/packages/database/prisma/schema.prisma">schema.prisma</a> was utilized to its full potential by populating the <code>group</code> field:</p>
+            <pre><code>model SystemSetting {
+  id          String   @id @default(uuid())
+  key         String   @unique
+  value       String
+  group       String?  // Now used for UI partitioning
+  ...
+}</code></pre>
+        </div>
+
+        <div class="card">
+            <h2>Backend Implementation</h2>
+            <p>The settings page <a class="file-link" href="file:///d:/IT%20Projects/budolEcosystem/budolpay-0.1.0/apps/admin/app/settings/page.tsx">page.tsx</a> now performs a runtime grouping of all settings retrieved from the database:</p>
+            <pre><code>const groupedSettings = settings.reduce((acc, setting) => {
+  const group = setting.group || 'OTHER';
+  if (!acc[group]) acc[group] = [];
+  acc[group].push(setting);
+  return acc;
+}, {} as Record<string, typeof settings>);</code></pre>
+        </div>
+
+        <div class="card">
+            <h2>Sidebar Submenu Integration</h2>
+            <p>The <a class="file-link" href="file:///d:/IT%20Projects/budolEcosystem/budolpay-0.1.0/apps/admin/components/Sidebar.tsx">Sidebar.tsx</a> component was updated with a <code>hash</code> state listener to track anchor changes for active-state styling:</p>
+            <pre><code>useEffect(() => {
+  const handleHashChange = () => setHash(window.location.hash);
+  window.addEventListener('hashchange', handleHashChange);
+  return () => window.removeEventListener('hashchange', handleHashChange);
+}, []);</code></pre>
+        </div>
+
+        <div class="card">
+            <h2>Tests</h2>
+            <p>Tests were conducted by seeding new groups and verifying that the UI automatically generates the corresponding sections and that sidebar sub-links navigate correctly to the anchor IDs.</p>
+        </div>
+    </div>
+</body>
+</html>

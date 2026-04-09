@@ -1,0 +1,76 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>System Admin Manual - v188</title>
+    <style>
+        body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; line-height: 1.6; color: #333; max-width: 800px; margin: 0 auto; padding: 20px; }
+        h1, h2, h3 { color: #2c3e50; }
+        .section { background: #fdfdfd; padding: 20px; border: 1px solid #eee; border-radius: 8px; margin-bottom: 20px; }
+        .code-block { background: #2d3436; color: #dfe6e9; padding: 15px; border-radius: 5px; font-family: 'Courier New', Courier, monospace; overflow-x: auto; }
+        .alert { padding: 15px; border-radius: 5px; margin: 15px 0; border-left: 5px solid; }
+        .alert-info { background: #e3f2fd; border-color: #2196f3; color: #0d47a1; }
+        .alert-warning { background: #fff3e0; border-color: #ff9800; color: #e65100; }
+        .nav { margin-top: 40px; padding-top: 20px; border-top: 1px solid #eee; display: flex; justify-content: space-between; }
+    </style>
+</head>
+<body>
+    <a href="../index.html">← Back to Index</a>
+    <h1>System Admin Manual - v188</h1>
+    
+    <div class="section">
+        <h2>Deployment Procedures</h2>
+        <p>To synchronize environment variables and redeploy the ecosystem on Vercel:</p>
+        <ol>
+            <li>Ensure <code>.env.vercel</code> in <code>budolpay-0.1.0</code> contains the latest credentials.</li>
+            <li>Run the environment manager locally:
+                <div class="code-block">cd budolpay-0.1.0<br>npm run db:vercel</div>
+            </li>
+            <li>Run the Vercel synchronization script:
+                <div class="code-block">powershell -ExecutionPolicy Bypass -File "scripts/sync-vercel-envs.ps1"</div>
+            </li>
+            <li>Redeploy services (Note: Vercel has a 100-deployment daily limit):
+                <div class="code-block">cd services/[service-name]<br>vercel --prod --yes</div>
+            </li>
+        </ol>
+    </div>
+
+    <div class="section">
+        <h2>Infrastructure Changes</h2>
+        <h3>Database: Prisma Accelerate</h3>
+        <p>The system has transitioned to using Prisma Accelerate as the primary connection layer. This improves reliability and performance in serverless environments.</p>
+        <div class="alert alert-info">
+            <strong>DATABASE_URL format:</strong> <code>prisma+postgres://accelerate.prisma-data.net/?api_key=...</code>
+        </div>
+    </div>
+
+    <div class="section">
+        <h2>Operational Runbook</h2>
+        <h3>Issue: 500 Internal Server Error (Connectivity)</h3>
+        <p><strong>Diagnosis:</strong> Check if target URLs in API Gateway logs contain <code>\r\n</code> or are using old "friendly" domains.</p>
+        <p><strong>Fix:</strong> Run <code>sync-vercel-envs.ps1</code> and redeploy the API Gateway.</p>
+        
+        <h3>Issue: 401 Unauthorized (Vercel Protection)</h3>
+        <p><strong>Diagnosis:</strong> Inter-service communication is blocked by Vercel's deployment protection.</p>
+        <p><strong>Fix:</strong> Ensure <code>VERCEL_BYPASS_TOKEN</code> is set in all services and matches the one in API Gateway.</p>
+    </div>
+
+    <div class="section">
+        <h2>Environment Variables</h2>
+        <p>Key variables now required in all service deployments:</p>
+        <ul>
+            <li><code>DATABASE_URL</code>: Prisma Accelerate URL</li>
+            <li><code>JWT_SECRET</code>: Shared secret for token validation</li>
+            <li><code>VERCEL_BYPASS_TOKEN</code>: Shared secret for inter-service bypass</li>
+            <li><code>AUTH_SERVICE_URL</code>, <code>WALLET_SERVICE_URL</code>, etc.: Fully qualified HTTPS URLs of peer services.</li>
+        </ul>
+    </div>
+
+    <div class="nav">
+        <a href="../../budolecosystem_docs_2026-01-03_v101/manuals/sysadmin_manual.html">← Previous (v101)</a>
+        <span>v188</span>
+        <a href="#">Next (Coming Soon) →</a>
+    </div>
+</body>
+</html>

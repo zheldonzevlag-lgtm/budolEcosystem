@@ -1,0 +1,74 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Developer Manual v351</title>
+    <style>
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; line-height: 1.6; color: #333; max-width: 1000px; margin: 0 auto; padding: 20px; background-color: #f4f7f6; }
+        .section { background: white; padding: 2rem; border-radius: 8px; margin-bottom: 2rem; box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
+        h1, h2 { color: #0f172a; }
+        code { background: #1e293b; color: #e2e8f0; padding: 0.2rem 0.4rem; border-radius: 4px; font-family: 'Courier New', Courier, monospace; }
+        pre { background: #1e293b; color: #e2e8f0; padding: 1.5rem; border-radius: 8px; overflow-x: auto; }
+        .code-link { color: #f43f5e; text-decoration: none; font-weight: bold; }
+        .code-link:hover { text-decoration: underline; }
+    </style>
+</head>
+<body>
+    <div class="section">
+        <h1>Developer Manual - v351</h1>
+        <p>This version restores the Marketing Ads display flow and implements persistent tracking to ensure ads are shown appropriately.</p>
+        <ul>
+            <li>Updated <code>pubspec.yaml</code> and <code>api_service.dart</code> to version <code>1.2.57</code>.</li>
+            <li>Implemented persistent <code>hasSeenAds</code> flag in <code>ApiService</code>.</li>
+        </ul>
+    </div>
+
+    <div class="section">
+        <h2>Technical Changes</h2>
+        <h3>1. Ads Status Persistence</h3>
+        <p>Added <code>_hasSeenAdsKey</code> and associated getter/setter to <code>ApiService</code> to track whether the user has completed the marketing slide sequence.</p>
+        <p>Reference: <a class="code-link" href="file:///d:/IT Projects/budolEcosystem/budolPayMobile/lib/services/api_service.dart">api_service.dart</a></p>
+        <pre><code>// api_service.dart
+static const String _hasSeenAdsKey = 'budolpay_has_seen_ads';
+bool _hasSeenAds = false;
+bool get hasSeenAds => _hasSeenAds;
+
+Future<void> setHasSeenAds(bool value) async {
+  _hasSeenAds = value;
+  final prefs = await SharedPreferences.getInstance();
+  await prefs.setBool(_hasSeenAdsKey, value);
+  notifyListeners();
+}</code></pre>
+
+        <h3>2. Splash Screen Navigation Flow</h3>
+        <p>Updated <code>SplashScreen</code> to include <code>Routes.marketing</code> in the conditional navigation logic.</p>
+        <p>Reference: <a class="code-link" href="file:///d:/IT Projects/budolEcosystem/budolPayMobile/lib/screens/splash_screen.dart">splash_screen.dart</a></p>
+        <pre><code>// splash_screen.dart
+if (apiService.isAuthenticated) {
+  Navigator.pushReplacementNamed(context, Routes.home);
+} else if (!apiService.hasSeenAds) {
+  Navigator.pushReplacementNamed(context, Routes.marketing);
+} else {
+  Navigator.pushReplacementNamed(context, Routes.login);
+}</code></pre>
+
+        <h3>3. Marketing Screen Optimization</h3>
+        <p>Updated <code>MarketingAdsScreen</code> to trigger the persistent flag update when the user clicks "Proceed to App".</p>
+        <p>Reference: <a class="code-link" href="file:///d:/IT Projects/budolEcosystem/budolPayMobile/lib/screens/marketing_ads_screen.dart">marketing_ads_screen.dart</a></p>
+        <pre><code>// marketing_ads_screen.dart
+void _proceedToApp() async {
+  final apiService = context.read<ApiService>();
+  await apiService.setHasSeenAds(true);
+  // ... navigation logic
+}</code></pre>
+    </div>
+
+    <div class="section">
+        <h2>Risk Mitigation</h2>
+        <p><strong>Issue:</strong> Marketing Ads screen was bypassed, leading to loss of user engagement.</p>
+        <p><strong>Fix:</strong> Restored navigation flow and added persistent tracking.</p>
+        <p><strong>Compliance:</strong> User preferences for "seen" status are stored locally, adhering to NPC privacy standards for local data usage.</p>
+    </div>
+</body>
+</html>

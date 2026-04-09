@@ -1,0 +1,148 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>budolEcosystem Documentation - v214</title>
+    <style>
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; line-height: 1.6; color: #333; max-width: 1200px; margin: 0 auto; padding: 20px; background-color: #f4f7f6; }
+        header { background-color: #0F172A; color: white; padding: 20px; border-radius: 8px; margin-bottom: 20px; display: flex; justify-content: space-between; align-items: center; }
+        .nav-links { display: flex; gap: 15px; }
+        .nav-links a { color: #F43F5E; text-decoration: none; font-weight: bold; }
+        section { background: white; padding: 25px; border-radius: 8px; box-shadow: 0 2px 5px rgba(0,0,0,0.1); margin-bottom: 20px; }
+        h1, h2, h3 { color: #0F172A; }
+        code { background-color: #f0f0f0; padding: 2px 5px; border-radius: 4px; font-family: 'Courier New', Courier, monospace; }
+        pre { background-color: #1E293B; color: #e2e8f0; padding: 15px; border-radius: 8px; overflow-x: auto; }
+        .status-badge { display: inline-block; padding: 5px 12px; border-radius: 20px; font-size: 0.85em; font-weight: bold; text-transform: uppercase; }
+        .status-success { background-color: #dcfce7; color: #166534; }
+        .status-warning { background-color: #fef9c3; color: #854d0e; }
+        .status-error { background-color: #fee2e2; color: #991b1b; }
+        table { width: 100%; border-collapse: collapse; margin: 15px 0; }
+        th, td { text-align: left; padding: 12px; border-bottom: 1px solid #e2e8f0; }
+        th { background-color: #f8fafc; }
+    </style>
+</head>
+<body>
+    <div class="nav-links ecosystem-docs-top-nav">
+        <a href="../budolecosystem_docs_2026-01-08_v213/index.html">← Previous (v213)</a>
+        <a href="../index.html">Index</a>
+        <a href="../budolecosystem_docs_2026-01-08_v214/index.html">Next (v214) →</a>
+    </div>
+
+    <header>
+        <div>
+            <h1>budolEcosystem v214</h1>
+            <p>Ecosystem Stabilization & Full Test Validation</p>
+        </div>
+        <nav class="nav-links">
+            <a href="../budolecosystem_docs_2026-01-06_v213/index.html">← Previous (v213)</a>
+            <a href="../../index.html">Main Index</a>
+            <a href="../budolecosystem_docs_2026-01-06_v215/index.html">Next (v215) →</a>
+        </nav>
+    </header>
+
+    <section id="purpose">
+        <h2>Purpose</h2>
+        <p>This phase focused on stabilizing the mobile application codebase, fixing type mismatches and missing method definitions in the API service, and validating the entire authentication ecosystem through both backend E2E tests and mobile unit/widget tests.</p>
+    </section>
+
+    <section id="technical-details">
+        <h2>Technical Specification & Code Logic</h2>
+        
+        <h3>1. Mobile App: API Service & Screen Stabilization</h3>
+        <p><strong>Reason & Explanation:</strong> The transition to a GoTyme-aligned multi-step auth flow introduced type mismatches between the mobile client and the backend API. Screens were attempting to pass numeric values where the backend now expected structured JSON payloads.</p>
+        
+        <p><strong>Issues Identified:</strong></p>
+        <ul>
+            <li><code>argument_type_not_assignable</code>: Double passed instead of Map in <code>cashIn</code>.</li>
+            <li><code>undefined_named_parameter</code>: <code>provider</code> and <code>description</code> parameters were no longer defined as named arguments.</li>
+            <li>Illegal state changes during tests due to <code>ErrorWidget.builder</code> modification inside <code>build()</code>.</li>
+        </ul>
+
+        <p><strong>Fixes & Code Details:</strong></p>
+        <ul>
+            <li><strong>Method Signatures:</strong> Updated [api_service.dart](file:///d:/IT%20Projects/budolEcosystem/budolPayMobile/lib/services/api_service.dart) to use Map-based payloads:
+                <pre><code>Future&lt;Map&lt;String, dynamic&gt;&gt; cashIn(Map&lt;String, dynamic&gt; data) async { ... }</code></pre>
+            </li>
+            <li><strong>UI Alignment:</strong> Modified [cash_in_screen.dart](file:///d:/IT%20Projects/budolEcosystem/budolPayMobile/lib/screens/cash_in_screen.dart) and [send_money_screen.dart](file:///d:/IT%20Projects/budolEcosystem/budolPayMobile/lib/screens/send_money_screen.dart) to wrap values in Maps.</li>
+            <li><strong>Architecture:</strong> Moved global error handling in [main.dart](file:///d:/IT%20Projects/budolEcosystem/budolPayMobile/lib/main.dart) to <code>main()</code> to satisfy Flutter's testing constraints.</li>
+        </ul>
+
+        <h3>2. Test Suite Hardening</h3>
+        <p><strong>Reasoning:</strong> To ensure the "Full Test Validation" success metric, the backend tests needed to handle database constraints more gracefully during frequent re-runs.</p>
+        <ul>
+            <li><strong>Fix:</strong> Implemented recursive cleanup in [e2e-test-auth.js](file:///d:/IT%20Projects/budolEcosystem/budolpay-0.1.0/services/auth-service/e2e-test-auth.js) to delete child records (Wallets, Sessions) before the parent User record.</li>
+        </ul>
+    </section>
+
+    <section id="test-results">
+        <h2>End-to-End Test Results</h2>
+        <div style="display: flex; gap: 20px;">
+            <div style="flex: 1;">
+                <h3>Backend Auth Service</h3>
+                <div class="status-badge status-success">Passed (All 7 steps)</div>
+                <ul>
+                    <li>Health Check: Passed</li>
+                    <li>Registration: Success</li>
+                    <li>Untrusted Identification: Success (OTP)</li>
+                    <li>OTP Verification: Success</li>
+                    <li>Trusted Identification: Success (PIN)</li>
+                    <li>PIN Login: Success</li>
+                    <li>Biometric Flow: Success</li>
+                </ul>
+            </div>
+            <div style="flex: 1;">
+                <h3>Mobile Application</h3>
+                <div class="status-badge status-success">Passed (Analysis & Tests)</div>
+                <ul>
+                    <li>Static Analysis: No issues found</li>
+                    <li>Session Management: Passed</li>
+                    <li>Host Resolution: Passed</li>
+                    <li>UI Smoke Tests: Passed</li>
+                </ul>
+            </div>
+        </div>
+    </section>
+
+    <section id="risk-mitigation">
+        <h2>Risk & Mitigation</h2>
+        <table>
+            <tr>
+                <th>Risk</th>
+                <th>Mitigation</th>
+            </tr>
+            <tr>
+                <td>Test Data Interference</td>
+                <td>Implemented strict cleanup protocols in E2E tests to remove all traces of test users (Wallets, Sessions, Logs).</td>
+            </tr>
+            <tr>
+                <td>Environment Drift</td>
+                <td>Validated <code>setup-environment.ps1</code> to ensure correct database naming (<code>budolpay_db</code>) is consistent across all development environments.</td>
+            </tr>
+        </table>
+    </section>
+
+    <section id="dependencies">
+        <h2>Dependencies</h2>
+        <ul>
+            <li>Flutter SDK (3.27.0 or compatible)</li>
+            <li>Node.js (for backend services)</li>
+            <li>PostgreSQL (budolpay_db)</li>
+            <li>Prisma ORM (6.2.1)</li>
+        </ul>
+    </section>
+
+    <section id="recommendations">
+        <h2>Future Enhancements</h2>
+        <ul>
+            <li><strong>Biometric Integration:</strong> Fully implement the biometric login UI flow in the mobile app (backend support already validated).</li>
+            <li><strong>Real-time Transactions:</strong> Enhance <code>SocketService</code> to provide live transaction notifications.</li>
+            <li><strong>Security Hardening:</strong> Implement RSA-encrypted payloads for sensitive data like PINs and biometric challenges.</li>
+        </ul>
+    </section>
+
+    <footer>
+        <p>&copy; 2026 budolEcosystem Project. All rights reserved.</p>
+    </footer>
+</body>
+</html>

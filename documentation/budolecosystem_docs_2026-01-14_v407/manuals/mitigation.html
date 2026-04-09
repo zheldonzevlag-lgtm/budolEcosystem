@@ -1,0 +1,38 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Mitigation Strategy - v407</title>
+    <style>
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; line-height: 1.6; padding: 40px; background: #f4f7f6; color: #333; }
+        .mitigation-box { background: #E3FCEF; color: #006644; padding: 20px; border-radius: 8px; border: 1px solid #ABF5D1; margin-bottom: 20px; box-shadow: 0 2px 4px rgba(0,0,0,0.05); }
+        h2 { color: #0747A6; border-bottom: 2px solid #0747A6; padding-bottom: 10px; }
+        h3 { color: #006644; margin-top: 0; }
+        .tag { background: #006644; color: white; padding: 2px 8px; border-radius: 4px; font-size: 0.75rem; vertical-align: middle; margin-left: 10px; }
+    </style>
+</head>
+<body>
+    <header>
+        <a href="../index.html" style="text-decoration: none; color: #0747A6;">← Back to v407 Overview</a>
+        <h2>Mitigation Strategies (v407)</h2>
+    </header>
+
+    <div class="mitigation-box">
+        <h3>M-407-01: Device-Locked Audit Trails <span class="tag">IMPLEMENTED</span></h3>
+        <p><strong>Risk:</strong> Mobile login events being attributed to the correct user but wrong device.</p>
+        <p><strong>Mitigation:</strong> Every <code>MOBILE_LOGIN_PIN</code> and <code>MOBILE_LOGIN_BIOMETRIC</code> event now explicitly captures the <code>deviceId</code> from the request body. This ensures that forensic analysts can trace activity back to a specific physical handset.</p>
+    </div>
+
+    <div class="mitigation-box">
+        <h3>M-407-02: Non-Blocking Audit Persistence <span class="tag">IMPLEMENTED</span></h3>
+        <p><strong>Risk:</strong> High login volume causing latency in authentication responses due to synchronous audit logging.</p>
+        <p><strong>Mitigation:</strong> The <code>createAuditLog</code> calls in the auth-service are executed asynchronously. The login response is sent to the user immediately, while the audit log persistence happens in the background, ensuring zero impact on UX performance.</p>
+    </div>
+
+    <div class="mitigation-box">
+        <h3>M-407-03: Biometric Data Privacy Compliance <span class="tag">VERIFIED</span></h3>
+        <p><strong>Risk:</strong> Accidental logging of biometric templates or raw data in audit logs (Violation of NPC/GDPR).</p>
+        <p><strong>Mitigation:</strong> Auditing is strictly limited to the *fact* of authentication (success/failure) and the *method* used. No biometric features, face templates, or fingerprint hashes are permitted in the <code>AuditLog</code> metadata.</p>
+    </div>
+</body>
+</html>

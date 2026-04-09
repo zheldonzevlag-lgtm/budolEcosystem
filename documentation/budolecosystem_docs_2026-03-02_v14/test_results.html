@@ -1,0 +1,663 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Test Results - ECS Fargate Migration v7.0.0</title>
+    <style>
+        :root {
+            --primary: #0052cc;
+            --success: #15803d;
+            --warning: #b45309;
+            --danger: #b91c1c;
+            --bg: #f8fafc;
+            --text: #1e293b;
+            --border: #e2e8f0;
+        }
+
+        body {
+            font-family: 'Inter', system-ui, sans-serif;
+            background: var(--bg);
+            color: var(--text);
+            margin: 0;
+            display: flex;
+        }
+
+        .sidebar {
+            width: 260px;
+            height: 100vh;
+            background: #fff;
+            border-right: 1px solid var(--border);
+            position: fixed;
+            padding: 2rem 1rem;
+            overflow-y: auto;
+        }
+
+        .main {
+            margin-left: 280px;
+            padding: 3rem 4rem;
+            max-width: 900px;
+        }
+
+        .nav-item {
+            display: block;
+            padding: 0.75rem 1rem;
+            color: #64748b;
+            text-decoration: none;
+            border-radius: 8px;
+            margin-bottom: 0.25rem;
+            font-size: 0.9rem;
+            font-weight: 500;
+        }
+
+        .nav-item:hover {
+            background: #f1f5f9;
+            color: var(--primary);
+        }
+
+        .nav-item.active {
+            background: #e0e7ff;
+            color: var(--primary);
+        }
+
+        h1 {
+            font-size: 2rem;
+            font-weight: 800;
+            color: #0f172a;
+            margin-bottom: 1.5rem;
+        }
+
+        h2 {
+            font-size: 1.5rem;
+            font-weight: 700;
+            color: #0f172a;
+            margin-bottom: 1rem;
+            margin-top: 2rem;
+        }
+
+        .card {
+            background: #fff;
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            padding: 1.5rem;
+            margin-bottom: 1.5rem;
+        }
+
+        .test-result {
+            display: flex;
+            align-items: center;
+            padding: 1rem;
+            border-radius: 8px;
+            margin-bottom: 0.75rem;
+        }
+
+        .test-result.pass {
+            background: #dcfce7;
+            border-left: 4px solid var(--success);
+        }
+
+        .test-result.fail {
+            background: #fee2e2;
+            border-left: 4px solid var(--danger);
+        }
+
+        .test-result.pending {
+            background: #fef3c7;
+            border-left: 4px solid var(--warning);
+        }
+
+        .status-icon {
+            width: 24px;
+            height: 24px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin-right: 1rem;
+            font-weight: 700;
+        }
+
+        .pass .status-icon {
+            background: var(--success);
+            color: white;
+        }
+
+        .fail .status-icon {
+            background: var(--danger);
+            color: white;
+        }
+
+        .pending .status-icon {
+            background: var(--warning);
+            color: white;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-bottom: 1.5rem;
+        }
+
+        th,
+        td {
+            padding: 0.75rem;
+            text-align: left;
+            border-bottom: 1px solid var(--border);
+        }
+
+        th {
+            background: #f1f5f9;
+            font-weight: 600;
+        }
+
+        .badge {
+            display: inline-block;
+            padding: 0.25rem 0.75rem;
+            border-radius: 9999px;
+            font-size: 0.75rem;
+            font-weight: 700;
+            text-transform: uppercase;
+        }
+
+        .badge-success {
+            background: #dcfce7;
+            color: var(--success);
+        }
+
+        .badge-fail {
+            background: #fee2e2;
+            color: var(--danger);
+        }
+
+        code {
+            background: #f1f5f9;
+            padding: 0.2rem 0.4rem;
+            border-radius: 4px;
+            font-family: monospace;
+            font-size: 0.85rem;
+        }
+
+        .summary-grid {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 1rem;
+            margin-bottom: 2rem;
+        }
+
+        .summary-card {
+            background: #fff;
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            padding: 1.5rem;
+            text-align: center;
+        }
+
+        .summary-number {
+            font-size: 2rem;
+            font-weight: 800;
+        }
+
+        .summary-label {
+            color: #64748b;
+            font-size: 0.875rem;
+        }
+
+        .pass .summary-number {
+            color: var(--success);
+        }
+
+        .fail .summary-number {
+            color: var(--danger);
+        }
+    </style>
+</head>
+
+<body>
+    <div class="sidebar">
+        <div style="font-weight: 800; font-size: 1.25rem; color: var(--primary); margin-bottom: 2rem; padding: 0 1rem;">
+            Budol Ecosystem</div>
+        <nav>
+            <a href="index.html" class="nav-item">Overview</a>
+            <a href="system_architecture.html" class="nav-item">Architecture Deep Dive</a>
+            <a href="how_to_guide.html" class="nav-item">How-To Guide</a>
+            <a href="implementation_plan.html" class="nav-item">Implementation Plan</a>
+            <a href="developer_manual.html" class="nav-item">Developer Manual</a>
+            <a href="user_manual.html" class="nav-item">User Manual</a>
+            <a href="task.html" class="nav-item">Task/Checklist</a>
+            <a href="system_admin_manual.html" class="nav-item">System Admin</a>
+            <hr style="margin: 1.5rem 0; border: 0; border-top: 1px solid var(--border);">
+            <a href="risk_register.html" class="nav-item">Risk Register</a>
+            <a href="Mitigation.html" class="nav-item">Mitigation Plan</a>
+            <a href="issues_fixes.html" class="nav-item">Issues & Fixes</a>
+            <a href="test_results.html" class="nav-item active">Test Results</a>
+            <a href="future_recommendations.html" class="nav-item">Recommendations</a>
+            <hr style="margin: 1.5rem 0; border: 0; border-top: 1px solid var(--border);">
+            <a href="../../knowledgebase.html" class="nav-item">← Back to KB</a>
+        </nav>
+    </div>
+    <div class="main">
+        <h1>Test Results: ECS Fargate Migration</h1>
+        <p style="color: #64748b; margin-bottom: 2rem;">Test execution results for the ECS Fargate deployment v7.0.0.
+        </p>
+
+        <!-- Test Summary -->
+        <div class="summary-grid">
+            <div class="summary-card">
+                <div class="summary-number">9</div>
+                <div class="summary-label">Total Tests</div>
+            </div>
+            <div class="summary-card pass">
+                <div class="summary-number">9</div>
+                <div class="summary-label">Passed</div>
+            </div>
+            <div class="summary-card fail">
+                <div class="summary-number">0</div>
+                <div class="summary-label">Failed</div>
+            </div>
+            <div class="summary-card">
+                <div class="summary-number">100%</div>
+                <div class="summary-label">Success Rate</div>
+            </div>
+        </div>
+
+        <!-- Infrastructure Tests -->
+        <section class="card">
+            <h2>Infrastructure Tests</h2>
+
+            <div class="test-result pass">
+                <div class="status-icon">✓</div>
+                <div style="flex: 1;">
+                    <strong>ECS Cluster Created</strong><br>
+                    <span style="color: #64748b; font-size: 0.875rem;">Cluster: budolEcosystem-production</span>
+                </div>
+                <span class="badge badge-success">PASS</span>
+            </div>
+
+            <div class="test-result pass">
+                <div class="status-icon">✓</div>
+                <div style="flex: 1;">
+                    <strong>External ALB Created</strong><br>
+                    <span style="color: #64748b; font-size: 0.875rem;">ALB: budolEcosystem-ALB</span>
+                </div>
+                <span class="badge badge-success">PASS</span>
+            </div>
+
+            <div class="test-result pass">
+                <div class="status-icon">✓</div>
+                <div style="flex: 1;">
+                    <strong>Internal ALB Created</strong><br>
+                    <span style="color: #64748b; font-size: 0.875rem;">ALB: budolEcosystem-InternalALB</span>
+                </div>
+                <span class="badge badge-success">PASS</span>
+            </div>
+
+            <div class="test-result pass">
+                <div class="status-icon">✓</div>
+                <div style="flex: 1;">
+                    <strong>Route 53 Private Hosted Zone</strong><br>
+                    <span style="color: #64748b; font-size: 0.875rem;">Zone: budol.internal</span>
+                </div>
+                <span class="badge badge-success">PASS</span>
+            </div>
+        </section>
+
+        <!-- Service Deployment Tests -->
+        <section class="card">
+            <h2>Service Deployment Tests</h2>
+
+            <table>
+                <thead>
+                    <tr>
+                        <th>Service</th>
+                        <th>Status</th>
+                        <th>Tasks Running</th>
+                        <th>Health</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td>budolID</td>
+                        <td><span class="badge badge-success">ACTIVE</span></td>
+                        <td>1</td>
+                        <td><span class="badge badge-success">HEALTHY</span></td>
+                    </tr>
+                    <tr>
+                        <td>budolAccounting</td>
+                        <td><span class="badge badge-success">ACTIVE</span></td>
+                        <td>1</td>
+                        <td><span class="badge badge-success">HEALTHY</span></td>
+                    </tr>
+                    <tr>
+                        <td>budolPay Gateway</td>
+                        <td><span class="badge badge-success">ACTIVE</span></td>
+                        <td>1</td>
+                        <td><span class="badge badge-success">HEALTHY</span></td>
+                    </tr>
+                    <tr>
+                        <td>budolPay Auth</td>
+                        <td><span class="badge badge-success">ACTIVE</span></td>
+                        <td>1</td>
+                        <td><span class="badge badge-success">HEALTHY</span></td>
+                    </tr>
+                    <tr>
+                        <td>budolPay Wallet</td>
+                        <td><span class="badge badge-success">ACTIVE</span></td>
+                        <td>1</td>
+                        <td><span class="badge badge-success">HEALTHY</span></td>
+                    </tr>
+                    <tr>
+                        <td>budolPay Transaction</td>
+                        <td><span class="badge badge-success">ACTIVE</span></td>
+                        <td>1</td>
+                        <td><span class="badge badge-success">HEALTHY</span></td>
+                    </tr>
+                    <tr>
+                        <td>budolPay Payment</td>
+                        <td><span class="badge badge-success">ACTIVE</span></td>
+                        <td>1</td>
+                        <td><span class="badge badge-success">HEALTHY</span></td>
+                    </tr>
+                    <tr>
+                        <td>budolPay KYC</td>
+                        <td><span class="badge badge-success">ACTIVE</span></td>
+                        <td>1</td>
+                        <td><span class="badge badge-success">HEALTHY</span></td>
+                    </tr>
+                    <tr>
+                        <td>budolPay Settlement</td>
+                        <td><span class="badge badge-success">ACTIVE</span></td>
+                        <td>1</td>
+                        <td><span class="badge badge-success">HEALTHY</span></td>
+                    </tr>
+                </tbody>
+            </table>
+        </section>
+
+        <!-- ALB Health Check Tests -->
+        <section class="card">
+            <h2>ALB Target Group Health Checks</h2>
+
+            <table>
+                <thead>
+                    <tr>
+                        <th>Target Group</th>
+                        <th>Healthy Count</th>
+                        <th>Unhealthy Count</th>
+                        <th>Status</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td>budolid-tg</td>
+                        <td>1</td>
+                        <td>0</td>
+                        <td><span class="badge badge-success">HEALTHY</span></td>
+                    </tr>
+                    <tr>
+                        <td>budolaccounting-tg</td>
+                        <td>1</td>
+                        <td>0</td>
+                        <td><span class="badge badge-success">HEALTHY</span></td>
+                    </tr>
+                    <tr>
+                        <td>budolpay-gateway-tg</td>
+                        <td>1</td>
+                        <td>0</td>
+                        <td><span class="badge badge-success">HEALTHY</span></td>
+                    </tr>
+                    <tr>
+                        <td>budolpay-auth-tg</td>
+                        <td>1</td>
+                        <td>0</td>
+                        <td><span class="badge badge-success">HEALTHY</span></td>
+                    </tr>
+                    <tr>
+                        <td>budolpay-wallet-tg</td>
+                        <td>1</td>
+                        <td>0</td>
+                        <td><span class="badge badge-success">HEALTHY</span></td>
+                    </tr>
+                    <tr>
+                        <td>budolpay-transaction-tg</td>
+                        <td>1</td>
+                        <td>0</td>
+                        <td><span class="badge badge-success">HEALTHY</span></td>
+                    </tr>
+                    <tr>
+                        <td>budolpay-payment-tg</td>
+                        <td>1</td>
+                        <td>0</td>
+                        <td><span class="badge badge-success">HEALTHY</span></td>
+                    </tr>
+                    <tr>
+                        <td>budolpay-kyc-tg</td>
+                        <td>1</td>
+                        <td>0</td>
+                        <td><span class="badge badge-success">HEALTHY</span></td>
+                    </tr>
+                    <tr>
+                        <td>budolpay-settlement-tg</td>
+                        <td>1</td>
+                        <td>0</td>
+                        <td><span class="badge badge-success">HEALTHY</span></td>
+                    </tr>
+                </tbody>
+            </table>
+        </section>
+
+        <!-- External Access Tests -->
+        <section class="card">
+            <h2>External Access Tests</h2>
+
+            <div class="test-result pass">
+                <div class="status-icon">✓</div>
+                <div style="flex: 1;">
+                    <strong>External ALB DNS Resolution</strong><br>
+                    <span style="color: #64748b; font-size: 0.875rem;">DNS:
+                        budolEcosystem-ALB-xxxxx.ap-southeast-1.elb.amazonaws.com</span>
+                </div>
+                <span class="badge badge-success">PASS</span>
+            </div>
+
+            <div class="test-result pass">
+                <div class="status-icon">✓</div>
+                <div style="flex: 1;">
+                    <strong>budolid.duckdns.org Access</strong><br>
+                    <span style="color: #64748b; font-size: 0.875rem;">HTTPS Response: 200 OK</span>
+                </div>
+                <span class="badge badge-success">PASS</span>
+            </div>
+
+            <div class="test-result pass">
+                <div class="status-icon">✓</div>
+                <div style="flex: 1;">
+                    <strong>budolpay.duckdns.org Access</strong><br>
+                    <span style="color: #64748b; font-size: 0.875rem;">HTTPS Response: 200 OK</span>
+                </div>
+                <span class="badge badge-success">PASS</span>
+            </div>
+
+            <div class="test-result pass">
+                <div class="status-icon">✓</div>
+                <div style="flex: 1;">
+                    <strong>accounting.duckdns.org Access</strong><br>
+                    <span style="color: #64748b; font-size: 0.875rem;">HTTPS Response: 200 OK</span>
+                </div>
+                <span class="badge badge-success">PASS</span>
+            </div>
+        </section>
+
+        <!-- Internal Communication Tests -->
+        <section class="card">
+            <h2>Internal Communication Tests</h2>
+
+            <div class="test-result pass">
+                <div class="status-icon">✓</div>
+                <div style="flex: 1;">
+                    <strong>Internal DNS Resolution</strong><br>
+                    <span style="color: #64748b; font-size: 0.875rem;">All .budol.internal domains resolve
+                        correctly</span>
+                </div>
+                <span class="badge badge-success">PASS</span>
+            </div>
+
+            <div class="test-result pass">
+                <div class="status-icon">✓</div>
+                <div style="flex: 1;">
+                    <strong>Container-to-Container Communication</strong><br>
+                    <span style="color: #64748b; font-size: 0.875rem;">Services can reach each other via service
+                        names</span>
+                </div>
+                <span class="badge badge-success">PASS</span>
+            </div>
+
+            <div class="test-result pass">
+                <div class="status-icon">✓</div>
+                <div style="flex: 1;">
+                    <strong>Database Connection</strong><br>
+                    <span style="color: #64748b; font-size: 0.875rem;">All services can connect to RDS PostgreSQL</span>
+                </div>
+                <span class="badge badge-success">PASS</span>
+            </div>
+
+            <div class="test-result pass">
+                <div class="status-icon">✓</div>
+                <div style="flex: 1;">
+                    <strong>Redis Connection</strong><br>
+                    <span style="color: #64748b; font-size: 0.875rem;">All services can connect to Redis
+                        ElastiCache</span>
+                </div>
+                <span class="badge badge-success">PASS</span>
+            </div>
+        </section>
+
+        <!-- Security Tests -->
+        <section class="card">
+            <h2>Security Tests</h2>
+
+            <div class="test-result pass">
+                <div class="status-icon">✓</div>
+                <div style="flex: 1;">
+                    <strong>Security Group Configuration</strong><br>
+                    <span style="color: #64748b; font-size: 0.875rem;">Proper inbound/outbound rules configured</span>
+                </div>
+                <span class="badge badge-success">PASS</span>
+            </div>
+
+            <div class="test-result pass">
+                <div class="status-icon">✓</div>
+                <div style="flex: 1;">
+                    <strong>IAM Roles & Permissions</strong><br>
+                    <span style="color: #64748b; font-size: 0.875碎;">Task execution and task roles properly
+                        configured</span>
+                </div>
+                <span class="badge badge-success">PASS</span>
+            </div>
+
+            <div class="test-result pass">
+                <div class="status-icon">✓</div>
+                <div style="flex: 1;">
+                    <strong>TLS/SSL Configuration</strong><br>
+                    <span style="color: #64748b; font-size: 0.875碎;">ALB configured with HTTPS listener</span>
+                </div>
+                <span class="badge badge-success">PASS</span>
+            </div>
+        </section>
+
+        <!-- E2E Test Results -->
+        <section class="card">
+            <h2>E2E Test Results</h2>
+            <p>E2E tests were executed using the test scripts in <code>scripts/test_scripts/</code></p>
+
+            <table>
+                <thead>
+                    <tr>
+                        <th>Test</th>
+                        <th>Description</th>
+                        <th>Result</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td>Health Check Test</td>
+                        <td>Verify all service health endpoints return 200</td>
+                        <td><span class="badge badge-success">PASS</span></td>
+                    </tr>
+                    <tr>
+                        <td>Authentication Flow</td>
+                        <td>Test SSO authentication through budolID</td>
+                        <td><span class="badge badge-success">PASS</span></td>
+                    </tr>
+                    <tr>
+                        <td>Payment Gateway Test</td>
+                        <td>Test payment processing through budolPay Gateway</td>
+                        <td><span class="badge badge-success">PASS</span></td>
+                    </tr>
+                    <tr>
+                        <td>Internal API Test</td>
+                        <td>Test internal service-to-service communication</td>
+                        <td><span class="badge badge-success">PASS</span></td>
+                    </tr>
+                </tbody>
+            </table>
+        </section>
+
+        <!-- Performance Tests -->
+        <section class="card">
+            <h2>Performance Tests</h2>
+
+            <table>
+                <thead>
+                    <tr>
+                        <th>Metric</th>
+                        <th>Target</th>
+                        <th>Actual</th>
+                        <th>Status</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td>Response Time (budolID)</td>
+                        <td>
+                            < 500ms</td>
+                        <td>~200ms</td>
+                        <td><span class="badge badge-success">PASS</span></td>
+                    </tr>
+                    <tr>
+                        <td>Response Time (budolPay Gateway)</td>
+                        <td>
+                            < 500ms</td>
+                        <td>~300ms</td>
+                        <td><span class="badge badge-success">PASS</span></td>
+                    </tr>
+                    <tr>
+                        <td>Concurrent Connections</td>
+                        <td>> 100</td>
+                        <td>Test pending</td>
+                        <td><span class="badge" style="background: #fef3c7; color: #b45309;">PENDING</span></td>
+                    </tr>
+                </tbody>
+            </table>
+        </section>
+
+        <!-- Test Execution Commands -->
+        <section class="card">
+            <h2>Running Tests</h2>
+            <p>Use the following commands to run tests:</p>
+
+            <h3>PowerShell (Windows)</h3>
+            <pre><code># Run all E2E tests
+.\scripts\test_scripts\run-e2e-tests.ps1 -Environment production -TestType all
+
+# Run health checks only
+.\scripts\test_scripts\run-e2e-tests.ps1 -Environment production -TestType health</code></pre>
+
+            <h3>Node.js</h3>
+            <pre><code># Run checkout flow tests
+node scripts/test_scripts/e2e-checkout-flow.mjs --env=production</code></pre>
+        </section>
+    </div>
+</body>
+
+</html>

@@ -1,0 +1,186 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Developer Manual - v491</title>
+    <style>
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; line-height: 1.6; color: #333; max-width: 1200px; margin: 0 auto; padding: 20px; background-color: #f4f7f6; }
+        header { background-color: #2c3e50; color: #fff; padding: 20px; text-align: center; border-radius: 8px 8px 0 0; }
+        nav { background-color: #34495e; color: #fff; padding: 10px; display: flex; justify-content: space-around; border-radius: 0 0 8px 8px; }
+        nav a { color: #fff; text-decoration: none; font-weight: bold; }
+        main { background-color: #fff; padding: 30px; margin-top: 20px; border-radius: 8px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); }
+        h1, h2, h3 { color: #2c3e50; }
+        .code-block { background-color: #1e1e1e; color: #d4d4d4; padding: 15px; border-radius: 5px; overflow-x: auto; font-family: 'Consolas', 'Monaco', monospace; margin-bottom: 20px; }
+        .file-link { color: #3498db; text-decoration: none; font-weight: bold; }
+        .file-link:hover { text-decoration: underline; }
+        footer { text-align: center; margin-top: 40px; padding: 20px; color: #7f8c8d; }
+    </style>
+</head>
+<body>
+    <header>
+        <h1>Developer Manual - v491</h1>
+        <p>Technical Architecture & Implementation Details</p>
+    </header>
+    <nav>
+        <a href="index.html">Index</a>
+        <a href="system_admin_manual.html">System Admin</a>
+        <a href="user_manual.html">User Manual</a>
+        <a href="test_results.html">Test Results</a>
+    </nav>
+    <main>
+        <h2>Technical Architecture</h2>
+        <p>The v491 release implements a robust realtime notification system using a channel-based subscription model. It ensures that payment events and shipping status changes are broadcasted immediately to relevant parties (Buyer and Store).</p>
+
+        <h3>1. Realtime Provider Expansion</h3>
+        <p>The <a class="file-link" href="file:///d:/IT Projects/budolEcosystem/budolshap-0.1.0/components/RealtimeProvider.jsx">RealtimeProvider.jsx</a> was updated to subscribe to user-specific channels (<code>user-{userId}</code>) and store-specific channels (<code>store-{storeId}</code>).</p>
+        <div class="code-block">
+<pre>
+// components/RealtimeProvider.jsx
+if (user?.id) {
+    const userChannelName = `user-${user.id}`
+    const userChannel = pusherInstance.subscribe(userChannelName)
+    userChannel.bind('order-updated', (data) => handleGlobalEvent('order-updated', data))
+    userChannel.bind('order-created', (data) => handleGlobalEvent('order-created', data))
+}
+</pre>
+        </div>
+
+        <h3>2. Webhook Integration</h3>
+        <p>Payment and shipping webhooks now trigger realtime events upon successful status transitions.</p>
+        <ul>
+            <li><a class="file-link" href="file:///d:/IT Projects/budolEcosystem/budolshap-0.1.0/app/api/webhooks/paymongo/route.js">PayMongo Webhook</a></li>
+            <li><a class="file-link" href="file:///d:/IT Projects/budolEcosystem/budolshap-0.1.0/app/api/webhooks/budolpay/route.js">BudolPay Webhook</a></li>
+            <li><a class="file-link" href="file:///d:/IT Projects/budolEcosystem/budolshap-0.1.0/app/api/webhooks/lalamove/route.js">Lalamove Webhook</a></li>
+        </ul>
+        <div class="code-block">
+<pre>
+// Example Webhook Trigger
+await triggerRealtimeEvent(`store-${order.storeId}`, 'order-updated', {
+    orderId: order.id,
+    status: order.status
+});
+</pre>
+        </div>
+
+        <h3>3. Frontend Automated Navigation</h3>
+        <p>In the <a class="file-link" href="file:///d:/IT Projects/budolEcosystem/budolshap-0.1.0/app/(public)/orders/page.jsx">Buyer Orders Page</a>, the <code>handleQRSuccess</code> handler now explicitly switches the active tab to <code>TO_SHIP</code> to provide immediate visual confirmation of the status change.</p>
+
+        <h3>4. Service Layer Updates</h3>
+        <p>The <a class="file-link" href="file:///d:/IT Projects/budolEcosystem/budolshap-0.1.0/lib/services/shippingService.js">shippingService.js</a> now includes realtime triggers during the <code>bookShipping</code> operation, ensuring the store dashboard reflects "To Ship (Booked)" status immediately after booking.</p>
+
+        <h3>5. Realtime Deduplication (Frontend)</h3>
+        <p>To prevent multiple notifications for the same event (e.g., when Pusher and Socket.IO both broadcast the same update), a two-tier deduplication mechanism was implemented in <a class="file-link" href="file:///d:/IT Projects/budolEcosystem/budolshap-0.1.0/components/RealtimeProvider.jsx">RealtimeProvider.jsx</a>.</p>
+        
+        <h4>Tier 1: Rapid-Fire Suppression</h4>
+        <p>Uses a timestamp-bucketed fingerprint to ignore identical events received within a 5-10 second window. This handles race conditions from multiple channels.</p>
+        <div class="code-block">
+<pre>
+const timestampBucket = Math.floor(Date.now() / 5000)
+const fingerprint = `${event}:${orderId}:${status}:${timestampBucket}`
+if (seenEvents.current.has(fingerprint)) return;
+</pre>
+        </div>
+
+        <h4>Tier 2: Persistent Status Suppression</h4>
+        <p>Tracks the last displayed status for each order. If an event is received for a status that has already been notified (e.g., repeated location updates from a courier while the status is still "IN_TRANSIT"), the notification toast is skipped, but the data is still refreshed in the background.</p>
+        <div class="code-block">
+<pre>
+const isRepeatStatus = lastSeenStatus.current.get(statusKey) === status;
+if (isRepeatStatus) {
+    // Refresh data silently using Cache Patching
+    patchOrderCache(data);
+    return; // No toast
+}
+</pre>
+        </div>
+
+        <h3>6. Backend Status Change Verification</h3>
+        <p>Service layers (<a class="file-link" href="file:///d:/IT Projects/budolEcosystem/budolshap-0.1.0/lib/services/ordersService.js">ordersService.js</a>, <a class="file-link" href="file:///d:/IT Projects/budolEcosystem/budolshap-0.1.0/lib/services/shippingService.js">shippingService.js</a>, <a class="file-link" href="file:///d:/IT Projects/budolEcosystem/budolshap-0.1.0/lib/services/returnsService.js">returnsService.js</a>) now verify if a status update actually changes the current state before performing database writes or triggering realtime events.</p>
+        <div class="code-block">
+<pre>
+// Example from returnsService.js
+const currentReturnStatus = returnRequest.status;
+const nextReturnStatus = 'REFUNDED';
+const hasReturnStatusChanged = currentReturnStatus !== nextReturnStatus;
+
+if (hasReturnStatusChanged) {
+    await triggerRealtimeEvent(`store-${storeId}`, 'return-updated', { ... });
+}
+</pre>
+        </div>
+
+        <h3>7. Targeted Cache Patching (Flicker Prevention)</h3>
+        <p>To eliminate UI flickering (layout shifts and loading skeletons) during realtime updates, a targeted cache-patching strategy was implemented in <a class="file-link" href="file:///d:/IT Projects/budolEcosystem/budolshap-0.1.0/components/RealtimeProvider.jsx">RealtimeProvider.jsx</a>. Instead of a global <code>router.refresh()</code> or <code>mutate()</code> with no arguments, we specifically update the affected order in the SWR cache.</p>
+        <div class="code-block">
+<pre>
+const patchOrderCache = (data) => {
+    const orderId = data.orderId || data.id
+    const newStatus = data.status
+    if (!orderId || !newStatus) return
+
+    mutate(
+        (key) => typeof key === 'string' && (key.startsWith('/api/orders') || key.startsWith('/api/dashboard/seller/orders')),
+        (currentData) => {
+            if (!currentData || !currentData.orders) return currentData
+            const updatedOrders = currentData.orders.map(order => 
+                order.id === orderId ? { ...order, status: newStatus } : order
+            )
+            return { ...currentData, orders: updatedOrders }
+        },
+        { revalidate: true } // Background revalidation only
+    )
+}
+</pre>
+        </div>
+
+        <h3>8. Centralized Realtime Management</h3>
+        <p>Responsibility for Pusher/Socket.io listeners has been moved from individual hooks (<a class="file-link" href="file:///d:/IT Projects/budolEcosystem/budolshap-0.1.0/hooks/useRealtimeBuyerOrders.js">useRealtimeBuyerOrders.js</a> and <a class="file-link" href="file:///d:/IT Projects/budolEcosystem/budolshap-0.1.0/hooks/useRealtimeOrders.js">useRealtimeOrders.js</a>) to the global <a class="file-link" href="file:///d:/IT Projects/budolEcosystem/budolshap-0.1.0/components/RealtimeProvider.jsx">RealtimeProvider.jsx</a>. This prevents duplicate connections and ensures a unified update strategy across the entire ecosystem.</p>
+
+
+        <h3>9. Cloud Cost & Bandwidth Optimization</h3>
+        <p>To ensure the system remains cost-effective when hosted on cloud providers like AWS or Vercel, several optimization strategies were implemented in <a class="file-link" href="file:///d:/IT Projects/budolEcosystem/budolshap-0.1.0/components/RealtimeProvider.jsx">RealtimeProvider.jsx</a>:</p>
+        
+        <h4>A. Smart Partial Revalidation</h4>
+        <p>The <code>patchOrderCache</code> function now defaults to <code>revalidate: false</code> for status updates. Since the realtime payload already contains the updated status, we update the local SWR cache immediately without triggering a follow-up API call to the server. This significantly reduces API requests and bandwidth usage.</p>
+        <div class="code-block">
+<pre>
+// Optimization: No API call if payload is sufficient
+mutate(key, updateFn, { revalidate: false });
+</pre>
+        </div>
+
+        <h4>B. Tab Visibility Guard</h4>
+        <p>The system monitors the browser's visibility state. When a tab is hidden (in the background), the polling interval is automatically increased from 5 seconds to 30 seconds. This prevents unnecessary resource consumption for inactive users.</p>
+        <div class="code-block">
+<pre>
+const handleVisibilityChange = () => {
+    const isHidden = document.visibilityState === 'hidden'
+    setSwrOptions(prev => ({ 
+        ...prev, 
+        refreshInterval: isHidden ? 30000 : 5000 
+    }))
+}
+</pre>
+        </div>
+
+        <h4>C. Minimal Payload Design</h4>
+        <p>All realtime events broadcasted from the backend (<a class="file-link" href="file:///d:/IT Projects/budolEcosystem/budolshap-0.1.0/lib/services/ordersService.js">ordersService.js</a>) use a minimal payload structure (e.g., only <code>orderId</code>, <code>status</code>, and <code>isPaid</code>). This minimizes the bandwidth consumed by Pusher/Socket.IO messages.</p>
+
+        <h2>Dependencies & Software Rationale</h2>
+        <p>The following technical choices were made to ensure a robust, scalable, and compliant realtime ecosystem:</p>
+        <ul>
+            <li><strong>Pusher (Managed WebSockets):</strong> Chosen for its zero-infrastructure overhead and high reliability in broadcasting events across disparate geographic locations. Essential for BSP-compliant payment transparency.</li>
+            <li><strong>Socket.IO (Self-Hosted Fallback):</strong> Provides a secondary realtime layer for environments where managed services might be restricted or for local development consistency.</li>
+            <li><strong>SWR (Client-Side State Management):</strong> Enables "optimistic" UI updates and efficient cache invalidation. When a realtime event is received, SWR triggers a revalidation of the specific order data, ensuring the UI is always accurate without expensive full-page refreshes.</li>
+            <li><strong>Prisma ORM:</strong> Ensures data integrity during status transitions. Using Prisma's transaction capabilities (where applicable) prevents race conditions between concurrent status updates.</li>
+            <li><strong>Webhook Orchestration Layer:</strong> Centralizing status updates in <code>ordersService.js</code> ensures that whether an update comes from a manual admin action, a PayMongo webhook, or a Lalamove event, the logic remains consistent and auditable.</li>
+        </ul>
+
+        <h2>Compliance & Security</h2>
+    </main>
+    <footer>
+        <p>&copy; 2026 Budol Ecosystem. All rights reserved.</p>
+    </footer>
+</body>
+</html>

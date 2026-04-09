@@ -1,0 +1,145 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Test Results - Budol Ecosystem v3.4.0</title>
+    <style>
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; line-height: 1.6; color: #333; max-width: 900px; margin: 0 auto; padding: 20px; }
+        h1, h2 { color: #2c3e50; border-bottom: 2px solid #eee; padding-bottom: 10px; }
+        .test-pass { color: #27ae60; font-weight: bold; }
+        .test-fail { color: #c0392b; font-weight: bold; }
+        pre { background: #f4f4f4; padding: 15px; border-radius: 5px; overflow-x: auto; border-left: 5px solid #007bff; }
+        table { width: 100%; border-collapse: collapse; margin: 20px 0; }
+        th, td { border: 1px solid #ddd; padding: 12px; text-align: left; }
+        th { background-color: #f2f2f2; }
+        a { color: #007bff; text-decoration: none; }
+    </style>
+</head>
+<body>
+    <a href="index.html">← Back to Documentation Index</a>
+
+    <h1>Test Results (v3.4.0)</h1>
+    <p><strong>Test Date:</strong> 2026-02-16</p>
+    <p><strong>Scope:</strong> Cart Variation Support, Database Persistence, Order Processing</p>
+
+    <h2>Summary</h2>
+    <table>
+        <thead>
+            <tr>
+                <th>Test Suite</th>
+                <th>Total Tests</th>
+                <th>Passed</th>
+                <th>Failed</th>
+                <th>Status</th>
+            </tr>
+        </thead>
+        <tbody>
+            <tr>
+                <td>Cart Variations (Backend)</td>
+                <td>3</td>
+                <td>3</td>
+                <td>0</td>
+                <td class="test-pass">PASS</td>
+            </tr>
+            <tr>
+                <td>Database Persistence</td>
+                <td>3</td>
+                <td>3</td>
+                <td>0</td>
+                <td class="test-pass">PASS</td>
+            </tr>
+            <tr>
+                <td>API Key Reconstruction</td>
+                <td>3</td>
+                <td>3</td>
+                <td>0</td>
+                <td class="test-pass">PASS</td>
+            </tr>
+            <tr>
+                <td>Order Variation Management</td>
+                <td>2</td>
+                <td>2</td>
+                <td>0</td>
+                <td class="test-pass">PASS</td>
+            </tr>
+            <tr>
+                <td>Cart Persistence (Logout Sync)</td>
+                <td>1</td>
+                <td>1</td>
+                <td>0</td>
+                <td class="test-pass">PASS</td>
+            </tr>
+        </tbody>
+    </table>
+
+    <h2>Detailed Logs</h2>
+    
+    <h3>1. Cart Item Storage (Variation Split)</h3>
+    <p><strong>Objective:</strong> Verify that sending a composite key `productId_variationId` correctly splits into separate DB columns.</p>
+    <pre>
+Result: <span class="test-pass">PASS</span>
+    </pre>
+
+    <h3>2. Order Creation & Cart Cleanup</h3>
+    <p><strong>Objective:</strong> Verify that creating an order for a specific variation ONLY removes that variation from the cart, leaving other variations of the same product intact.</p>
+    <pre>
+Cart Items Before Order: 2 (VAR-A, VAR-B)
+Simulating Checkout for VAR-A...
+Deleted count: 1
+Cart Items After Order: [ '... - VAR-B' ]
+SUCCESS: Only VAR-A was removed. VAR-B remains.
+
+Result: <span class="test-pass">PASS</span>
+    </pre>
+
+    <h3>3. Order Cancellation & Restoration</h3>
+    <p><strong>Objective:</strong> Verify that cancelling an order restores the item with the correct `variationId` to the cart.</p>
+    <pre>
+Simulating Order Cancellation (Restore VAR-A)...
+Cart Items Final: [ '... - VAR-B', '... - VAR-A' ]
+SUCCESS: VAR-A restored correctly.
+
+Result: <span class="test-pass">PASS</span>
+    </pre>
+
+    <h3>4. Execution Log</h3>
+    <p>Output from `scripts/test_scripts/test_order_variations.mjs`:</p>
+    <pre>
+Loading .env from: D:\IT Projects\budolEcosystem\budolshap-0.1.0\.env
+Connecting to DB...
+🟢 Using Database (Local Development)
+Creating test user...
+Creating test store...
+Creating test product...
+Creating cart...
+Adding items to cart (VAR-A and VAR-B)...
+Cart Items Before Order: 2
+Simulating Checkout for VAR-A...
+Running Cleanup Logic...
+Deleted count: 1
+Cart Items After Order: [ 'cmlosshxt0003gpecfkacu49g - VAR-B' ]
+SUCCESS: Only VAR-A was removed. VAR-B remains.
+Simulating Order Cancellation (Restore VAR-A)...
+Cart Items Final: [
+  'cmlosshxt0003gpecfkacu49g - VAR-B',
+  'cmlosshxt0003gpecfkacu49g - VAR-A'
+]
+SUCCESS: VAR-A restored correctly.
+    </pre>
+
+    <h3>5. Cart Persistence (Logout Sync)</h3>
+    <p><strong>Objective:</strong> Verify that the cart data is correctly synced to the server and retrieved after a simulated logout/login cycle, ensuring no data loss due to race conditions.</p>
+    <pre>
+Result: <span class="test-pass">PASS</span>
+Log from `scripts/test_scripts/test_persistence.mjs`:
+Frontend Cart State: { prod1...: 2, prod2..._VARA: 3 }
+Simulating Logout Sync (PUT)...
+Sync completed.
+Simulating Login Fetch (GET)...
+Fetched Cart: { prod1...: 2, prod2..._VARA: 3 }
+SUCCESS: Cart persistence verified.
+    </pre>
+
+</body>
+</html>

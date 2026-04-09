@@ -1,0 +1,110 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>BudolEcosystem Documentation - v227</title>
+    <style>
+        :root {
+            --primary: #2c3e50;
+            --secondary: #34495e;
+            --accent: #e74c3c;
+            --success: #27ae60;
+            --warning: #f39c12;
+            --danger: #e74c3c;
+            --bg: #f4f7f6;
+            --text: #333;
+            --code-bg: #2d3436;
+            --code-text: #dfe6e9;
+        }
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; line-height: 1.6; color: var(--text); background: var(--bg); margin: 0; padding: 20px; }
+        .container { max-width: 1000px; margin: 0 auto; background: white; padding: 40px; border-radius: 8px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); }
+        h1, h2, h3 { color: var(--primary); border-bottom: 2px solid #eee; padding-bottom: 10px; }
+        .nav { margin-bottom: 30px; display: flex; justify-content: space-between; }
+        .nav a { color: var(--accent); text-decoration: none; font-weight: bold; }
+        .status-badge { display: inline-block; padding: 5px 12px; border-radius: 20px; font-size: 0.85em; font-weight: bold; color: white; margin-bottom: 20px; }
+        .status-success { background: var(--success); }
+        .code-block { background: var(--code-bg); color: var(--code-text); padding: 20px; border-radius: 8px; font-family: 'Courier New', Courier, monospace; overflow-x: auto; margin: 20px 0; font-size: 0.9em; }
+        .compliance-box { background: #fdf2f2; border-left: 5px solid var(--accent); padding: 20px; margin: 20px 0; border-radius: 4px; }
+    </style>
+</head>
+<body>
+    <div class="nav-links ecosystem-docs-top-nav">
+        <a href="../budolecosystem_docs_2026-01-08_v226/index.html">← Previous (v226)</a>
+        <a href="../index.html">Index</a>
+        <a href="../budolecosystem_docs_2026-01-08_v228/index.html">Next (v228) →</a>
+    </div>
+
+    <div class="container">
+        <div class="nav">
+            <a href="../index.html">← Back to Index</a>
+            <div>
+                <a href="../budolecosystem_docs_2026-01-08_v226/index.html">Previous (v226)</a> | 
+                <a href="../budolecosystem_docs_2026-01-08_v228/index.html">Next (v228)</a>
+            </div>
+        </div>
+
+        <h1>v227: Account Provisioning Protocols</h1>
+        <div class="status-badge status-success">Implementation Complete</div>
+        <p><strong>Date:</strong> 2026-01-08 | <strong>Compliance:</strong> PCI DSS Requirement 7 & 8, BSP Circular 808</p>
+
+        <h2>Purpose</h2>
+        <p>To implement a secure, administrative-only workflow for provisioning internal staff accounts. This protocol ensures that every staff identity in the <code>budolPay</code> ecosystem is formally authorized, categorized by department, and linked to a verifiable corporate identity.</p>
+
+        <h2>Technical Details</h2>
+        <h3>1. Provisioning Modal (Frontend)</h3>
+        <p>A specialized <code>ProvisionAccountModal</code> component was implemented to capture staff metadata (First/Last Name, Corporate Email, Role, Department). It includes real-time validation to ensure no public user can bypass the administrative gate.</p>
+        <div class="code-block">
+            // components/ProvisionAccountModal.tsx<br>
+            // Enforces role-based selection (STAFF/ADMIN)<br>
+            // Triggers PROVISION_ACCOUNT action to /api/employees
+        </div>
+
+        <h3>2. Backend Enforcement & Audit Logging</h3>
+        <p>The <code>/api/employees</code> endpoint was extended to handle the <code>PROVISION_ACCOUNT</code> action. It enforces database constraints (passwordHash, phoneNumber) with secure placeholders until the user completes their formal setup.</p>
+        <div class="code-block">
+            // api/employees/route.ts<br>
+            await prisma.user.create({<br>
+            &nbsp;&nbsp;data: {<br>
+            &nbsp;&nbsp;&nbsp;&nbsp;email, role, passwordHash: "PROVISIONED_PLACEHOLDER",<br>
+            &nbsp;&nbsp;&nbsp;&nbsp;kycStatus: 'VERIFIED', kycTier: 'FULLY_VERIFIED'<br>
+            &nbsp;&nbsp;}<br>
+            });<br>
+            // Logged as PROVISION_STAFF_ACCOUNT in AuditLog
+        </div>
+
+        <h2>Rationale & Compliance</h2>
+        <div class="compliance-box">
+            <ul>
+                <li><strong>Identity Segregation:</strong> Separates public user registration from internal staff onboarding (PCI DSS 7.1.2).</li>
+                <li><strong>Verification Baseline:</strong> Staff are created with "Pre-Verified" status but limited roles, ensuring they can only perform back-office tasks after MFA setup.</li>
+                <li><strong>Forensic Traceability:</strong> Records the identity of the Admin who authorized the account, meeting BSP Circular 808 standards for internal IT governance.</li>
+            </ul>
+        </div>
+
+        <h2>Issues & Fixes</h2>
+        <ul>
+            <li><strong>Issue:</strong> Database schema requires <code>passwordHash</code> and <code>phoneNumber</code> for all users, which aren't available during initial provisioning.</li>
+            <li><strong>Fix:</strong> Implemented "Provisioned Placeholders" (e.g., <code>+630000000000</code>). Future enhancement will include a "Setup Link" that expires after 24 hours to collect these fields from the employee.</li>
+            <li><strong>Issue:</strong> <code>AuditLog</code> model lacked a <code>resource</code> field.</li>
+            <li><strong>Fix:</strong> Refactored all audit logging to embed the <code>resource</code> identifier (e.g., <code>USER/uuid</code>) within the <code>metadata</code> JSON blob for better query flexibility.</li>
+        </ul>
+
+        <h2>Test Results</h2>
+        <p>Verified via <code>scripts/verify-provisioning.mjs</code>:</p>
+        <ul>
+            <li>✅ <strong>Constraint Validation:</strong> User creation succeeds with required placeholders.</li>
+            <li>✅ <strong>Audit Integrity:</strong> Log entry correctly captures the provisioned user's ID and the authorizing admin's ID.</li>
+            <li>✅ <strong>Cleanup:</strong> Verified that provisioned accounts can be securely managed or revoked.</li>
+        </ul>
+
+        <h2>Recommendations for Future Enhancement</h2>
+        <ul>
+            <li><strong>Magic Link Onboarding:</strong> Instead of placeholders, send a one-time-password (OTP) or Magic Link to the corporate email for the employee to set their own password and MFA.</li>
+            <li><strong>Departmental Scoping:</strong> Implement granular permissions based on the <code>department</code> field (e.g., Finance staff can view ledgers but not approve KYCs).</li>
+        </ul>
+
+        <p>Consolidated in <a href="../consolidated_recommendations.html">Consolidated Recommendations</a>.</p>
+    </div>
+</body>
+</html>

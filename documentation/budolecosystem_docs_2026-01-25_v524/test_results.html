@@ -1,0 +1,87 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Test Results - v524</title>
+    <style>
+        body { font-family: -apple-system, system-ui, sans-serif; line-height: 1.6; max-width: 1200px; margin: 0 auto; padding: 2rem; color: #333; }
+        header { background: #f8f9fa; padding: 2rem; border-radius: 8px; margin-bottom: 2rem; border-left: 5px solid #1abc9c; }
+        h1 { margin: 0; color: #2d3748; }
+        h2 { color: #16a085; border-bottom: 2px solid #e2e8f0; padding-bottom: 0.5rem; margin-top: 2rem; }
+        .test-case { background: #e8f8f5; padding: 1.5rem; border-radius: 8px; margin-bottom: 1rem; border: 1px solid #a3e4d7; }
+        .pass { color: #27ae60; font-weight: bold; }
+        .fail { color: #e74c3c; font-weight: bold; }
+        .nav-link { display: inline-block; margin-bottom: 1rem; color: #1abc9c; text-decoration: none; }
+        .nav-link:hover { text-decoration: underline; }
+    </style>
+</head>
+<body>
+    <a href="index.html" class="nav-link">← Back to Index</a>
+
+    <header>
+        <h1>🧪 Test Results - v524</h1>
+        <p>Verification results for implemented features and fixes</p>
+    </header>
+
+    <h2>Exclusion Logic Verification</h2>
+    <div class="test-case">
+        <h3>Test Case 1: Active List Exclusion</h3>
+        <p><strong>Scenario:</strong> Verify that orders with 'failed', 'expired', or 'cancelled' paymentStatus are excluded from the main "All" and "To Pay" tabs.</p>
+        <p><strong>Result:</strong> <span class="pass">PASS</span></p>
+        <p><strong>Log:</strong> <code>PASS: No failed/expired/cancelled orders in active list.</code></p>
+    </div>
+
+    <div class="test-case">
+        <h3>Test Case 2: Cancelled Tab Inclusion</h3>
+        <p><strong>Scenario:</strong> Verify that 'failed' and 'expired' orders are correctly routed to the "Cancelled" tab for user reference.</p>
+        <p><strong>Result:</strong> <span class="pass">PASS</span></p>
+        <p><strong>Log:</strong> <code>PASS: Failed and expired orders are correctly mapped to the Cancelled tab.</code></p>
+    </div>
+
+    <div class="test-case">
+        <h3>Test T-524-003: COD Order Persistence</h3>
+        <p><strong>Scenario:</strong> Place a COD order and wait 31 minutes.</p>
+        <p><strong>Expected:</strong> Order remains visible in the list because COD is exempt from the 30-minute grace period rule.</p>
+        <p><strong>Result:</strong> <span class="pass">PASS</span></p>
+    </div>
+
+    <div class="test-case">
+        <h3>Test T-524-004: Real-time Update on Payment Success</h3>
+        <p><strong>Scenario:</strong> Open "My Orders" list while paying in another tab.</p>
+        <p><strong>Expected:</strong> Order status updates from "Pending" to "Paid" automatically without refresh.</p>
+        <p><strong>Result:</strong> <span class="pass">PASS</span></p>
+    </div>
+
+    <h2>2. Regression Testing</h2>
+    <div class="test-case">
+        <h3>Test T-524-005: Store Dashboard Visibility</h3>
+        <p><strong>Scenario:</strong> Check if hidden orders are still visible to Store Owners in their dashboard.</p>
+        <p><strong>Expected:</strong> Store owners should see all orders (including cancelled/failed) for their own store for record-keeping.</p>
+        <p><strong>Result:</strong> <span class="pass">PASS</span> (Exclusion only applies to Buyer views by default)</p>
+    </div>
+
+    <h2>3. Mobile UI Verification</h2>
+    <div class="test-case">
+        <h3>Test T-524-006: Static Analysis (Flutter Analyze)</h3>
+        <p><strong>Scenario:</strong> Run <code>flutter analyze</code> on budolPayMobile project.</p>
+        <p><strong>Result:</strong> <span class="pass">PASS</span></p>
+        <p><strong>Log:</strong> <code>No issues found! (ran in 8.4s)</code></p>
+    </div>
+
+    <div class="test-case">
+        <h3>Test T-524-007: Screen Transition Flow</h3>
+        <p><strong>Scenario:</strong> Simulate QR Scan -> Confirm -> Success.</p>
+        <p><strong>Expected:</strong> Screen transitions from Scanner -> PaymentStatusScreen (Verifying) -> PaymentStatusScreen (Success) with transaction details.</p>
+        <p><strong>Result:</strong> <span class="pass">PASS</span></p>
+    </div>
+
+    <div class="test-case">
+        <h3>Test T-524-008: Transaction Breakdown Accuracy</h3>
+        <p><strong>Scenario:</strong> Verify fields in PaymentStatusScreen success card after payment.</p>
+        <p><strong>Expected:</strong> Order ID, Amount, Status, Paid To, and Date/Time match the transaction data returned by the backend.</p>
+        <p><strong>Result:</strong> <span class="pass">PASS</span></p>
+        <p><strong>Verification:</strong> Confirmed <code>/process-qr</code> returns all required fields in the <code>transaction</code> object.</p>
+    </div>
+</body>
+</html>

@@ -1,0 +1,72 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>v503 - Dependencies & Software Rationale</title>
+    <style>
+        body { font-family: 'Inter', sans-serif; line-height: 1.6; color: #333; max-width: 800px; margin: 0 auto; padding: 20px; background: #f4f7f6; }
+        .container { background: white; padding: 40px; border-radius: 8px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); }
+        h1 { color: #0052cc; border-bottom: 2px solid #0052cc; padding-bottom: 10px; }
+        h2 { color: #172b4d; margin-top: 30px; }
+        .dependency-item { margin-bottom: 20px; padding: 15px; border-left: 4px solid #0052cc; background: #f0f4ff; }
+        .dependency-name { font-weight: bold; font-size: 1.1em; color: #0052cc; }
+        .rationale { margin-top: 10px; font-style: italic; color: #5e6c84; }
+        .nav-links { margin-top: 40px; display: flex; justify-content: space-between; border-top: 1px solid #ddd; padding-top: 20px; }
+        .nav-links a { color: #0052cc; text-decoration: none; font-weight: bold; }
+        .nav-links a:hover { text-decoration: underline; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>v503 - Dependencies & Software Rationale</h1>
+        
+        <p>This document outlines the software choices and dependencies implemented in version 503 to support Dynamic Page-Specific Search and Real-time Sync Integrity.</p>
+
+        <div class="dependency-item">
+            <div class="dependency-name">React Context API</div>
+            <div class="rationale">
+                <strong>Why:</strong> Chosen for global search state management.
+                <br><strong>Rationale:</strong> Since the search query needs to be accessible by the Navbar (input) and various page components (consumers), a global state was necessary. Context API provides a lightweight, built-in solution without the complexity or bundle size increase of Redux or Zustand.
+            </div>
+        </div>
+
+        <div class="dependency-item">
+            <div class="dependency-name">Prisma ORM (insensitive filtering)</div>
+            <div class="rationale">
+                <strong>Why:</strong> Backend database querying.
+                <br><strong>Rationale:</strong> Prisma's <code>mode: 'insensitive'</code> for <code>contains</code> filters allowed us to implement case-agnostic search directly at the database level. This is significantly more performant than fetching all records and filtering in JavaScript.
+            </div>
+        </div>
+
+        <div class="dependency-item">
+            <div class="dependency-name">Next.js usePathname Hook</div>
+            <div class="rationale">
+                <strong>Why:</strong> Dynamic placeholder and search reset.
+                <br><strong>Rationale:</strong> By utilizing <code>usePathname</code> within the <code>SearchProvider</code>, we can automatically detect navigation events, reset the search query, and update the navbar placeholder to match the current page context (e.g., "Search orders..." vs "Search users...").
+            </div>
+        </div>
+
+        <div class="dependency-item">
+            <div class="dependency-name">SWR (Stale-While-Revalidate)</div>
+            <div class="rationale">
+                <strong>Why:</strong> Data fetching and cache mutation.
+                <br><strong>Rationale:</strong> SWR's <code>mutate</code> function is used to trigger instant UI updates when real-time events are received. By aligning the search query with the SWR cache key, we ensure that real-time updates respect the current search filters.
+            </div>
+        </div>
+
+        <div class="dependency-item">
+            <div class="dependency-name">Pusher Channels</div>
+            <div class="rationale">
+                <strong>Why:</strong> Real-time event broadcasting.
+                <br><strong>Rationale:</strong> Pusher provides a managed WebSocket infrastructure that handles connection scaling and fallback mechanisms. In v503, we ensured that Pusher events are prioritized over SWR polling to minimize latency.
+            </div>
+        </div>
+
+        <div class="nav-links">
+            <a href="index.html">← Back to Index</a>
+            <a href="../knowledgebase.html">Knowledgebase →</a>
+        </div>
+    </div>
+</body>
+</html>

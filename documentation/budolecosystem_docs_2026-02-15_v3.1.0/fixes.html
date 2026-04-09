@@ -1,0 +1,83 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Budol Ecosystem v3.1.0 - Fixes</title>
+    <style>
+        body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; line-height: 1.6; color: #172b4d; margin: 0; display: flex; }
+        .sidebar { width: 260px; height: 100vh; background: #f4f5f7; border-right: 1px solid #dfe1e6; position: fixed; padding: 20px; box-sizing: border-box; }
+        .main-content { margin-left: 260px; padding: 40px; max-width: 900px; }
+        header { margin-bottom: 32px; border-bottom: 1px solid #dfe1e6; padding-bottom: 24px; }
+        .fix-item { margin-bottom: 32px; padding: 20px; border: 1px solid #dfe1e6; border-radius: 8px; background: #fff; border-left: 5px solid #36b37e; }
+        .fix-item h3 { margin-top: 0; color: #006644; }
+        pre { background: #091E42; color: #FFFFFF; padding: 16px; border-radius: 4px; overflow-x: auto; }
+        .nav-links { margin-top: 20px; }
+        .nav-links a { display: block; padding: 8px 12px; color: #42526e; text-decoration: none; border-radius: 4px; }
+        .nav-links a:hover { background: #ebecf0; }
+        .nav-links a.active { background: #deebff; color: #0052cc; font-weight: 600; }
+    </style>
+</head>
+<body>
+    <div class="sidebar">
+        <h2>v3.1.0 Fixes</h2>
+        <nav class="nav-links">
+            <a href="index.html">Dashboard</a>
+            <a href="fixes.html" class="active">Fixes</a>
+            <a href="issues.html">Issues</a>
+            <hr>
+            <a href="../knowledgebase.html">Back to Knowledgebase</a>
+        </nav>
+    </div>
+    <div class="main-content">
+        <header>
+            <h1>Implemented Fixes & Improvements</h1>
+            <p>Details of technical resolutions for identified issues in v3.1.0.</p>
+        </header>
+
+        <div class="fix-item">
+            <h3>F-310-1: Restored Login Method Toggle</h3>
+            <p><strong>Issue:</strong> Missing UI element to switch between Mobile and Email login.</p>
+            <p><strong>Resolution:</strong> Implemented <code>_buildMethodToggle</code> widget in <code>login_screen.dart</code>. This widget uses a <code>Container</code> with two <code>GestureDetector</code> elements to provide an explicit, Lazada-style toggle.</p>
+            <p><strong>File:</strong> <a href="file:///d:/IT Projects/budolEcosystem/budolPayMobile/lib/screens/login_screen.dart">login_screen.dart</a></p>
+        </div>
+
+        <div class="fix-item">
+            <h3>F-310-2: Dynamic Password Field for Email Login</h3>
+            <p><strong>Issue:</strong> Email login required a password field which was absent in the mobile implementation.</p>
+            <p><strong>Resolution:</strong> Added conditional rendering in <code>_buildPhoneStep</code> to display a <code>TextField</code> for password when <code>_loginMethod == LoginMethod.email</code>.</p>
+            <pre><code>if (_loginMethod == LoginMethod.email) ...[
+  const SizedBox(height: 16),
+  TextField(
+    controller: _passwordController,
+    obscureText: _obscurePassword,
+    // ... decoration ...
+  ),
+]</code></pre>
+        </div>
+
+        <div class="fix-item">
+            <h3>F-310-3: Backend Integration for Email Auth</h3>
+            <p><strong>Issue:</strong> Mobile backend lacked a dedicated route for direct Email/Password authentication.</p>
+            <p><strong>Resolution:</strong> Implemented <code>identifyEmail</code> in <code>api_service.dart</code> which maps to the <code>/login</code> endpoint, handling JSON serialization and session persistence.</p>
+            <p><strong>File:</strong> <a href="file:///d:/IT Projects/budolEcosystem/budolPayMobile/lib/services/api_service.dart">api_service.dart</a></p>
+        </div>
+
+        <div class="fix-item">
+            <h3>F-310-4: State Collision Prevention</h3>
+            <p><strong>Issue:</strong> Switching between methods could leave stale validation errors or input values.</p>
+            <p><strong>Resolution:</strong> Updated the toggle handler to clear controllers and reset validation states upon switching.</p>
+            <pre><code>void _setLoginMethod(LoginMethod method) {
+  setState(() {
+    _loginMethod = method;
+    _phoneController.clear();
+    _emailController.clear();
+    _passwordController.clear();
+    _identifierError = null;
+    _emailError = null;
+    _passwordError = null;
+  });
+}</code></pre>
+        </div>
+    </div>
+</body>
+</html>

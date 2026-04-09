@@ -1,0 +1,146 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>budolEcosystem Documentation v137: Intelligent Ecosystem Runner</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
+        body { font-family: 'Inter', sans-serif; }
+        .nav-links a { color: #3b82f6; text-decoration: none; margin-right: 15px; font-size: 0.9rem; }
+        .nav-links a:hover { text-decoration: underline; }
+        .status-badge { padding: 4px 12px; border-radius: 9999px; font-size: 0.75rem; font-weight: 600; }
+        .status-success { background: #dcfce7; color: #166534; }
+        .code-block { background: #1e293b; color: #f8fafc; padding: 1rem; border-radius: 0.5rem; overflow-x: auto; font-family: 'Fira Code', monospace; font-size: 0.85rem; }
+    </style>
+</head>
+<body class="bg-slate-50 text-slate-900 leading-relaxed">
+    <div class="nav-links ecosystem-docs-top-nav">
+        <a href="../budolecosystem_docs_2026-01-04_v136/index.html">← Previous (v136)</a>
+        <a href="../index.html">Index</a>
+        <a href="../budolecosystem_docs_2026-01-04_v138/index.html">Next (v138) →</a>
+    </div>
+
+    <div class="max-w-4xl mx-auto px-6 py-12">
+        <!-- Navigation -->
+        <div class="nav-links mb-8 flex items-center justify-between">
+            <div>
+                <a href="../budolecosystem_docs_2026-01-04_v136/index.html">← Previous (v136: Network Discovery)</a>
+                <a href="../index.html">Main Index</a>
+                <a href="../budolecosystem_docs_2026-01-04_v138/index.html">Next (v138: Smart Network) →</a>
+            </div>
+            <span class="text-slate-400 text-sm">v137 | 2026-01-04</span>
+        </div>
+
+        <header class="mb-12">
+            <h1 class="text-4xl font-extrabold text-slate-900 mb-4">Intelligent Ecosystem Runner</h1>
+            <p class="text-xl text-slate-600">Unified pre-flight validation and full service integration for the budolEcosystem Central Runner.</p>
+        </header>
+
+        <!-- Purpose & Overview -->
+        <section class="mb-12 bg-white rounded-2xl p-8 shadow-sm border border-slate-200">
+            <h2 class="text-2xl font-bold mb-4 flex items-center">
+                <i class="fas fa-bullseye text-blue-600 mr-3"></i> Purpose
+            </h2>
+            <p class="text-slate-700 mb-4">
+                The primary goal of this update was to make the <code>npm start</code> command (Central Ecosystem Runner) "intelligent" by ensuring it validates the environment before launching any services. This prevents the common developer error of accidentally connecting to a production database while running in a local development environment.
+            </p>
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div class="p-4 bg-blue-50 rounded-xl border border-blue-100">
+                    <h3 class="font-bold text-blue-800 text-sm mb-2 uppercase">Safety First</h3>
+                    <p class="text-xs text-blue-700 leading-relaxed">Automated checks ensure local code never touches production data without explicit intent.</p>
+                </div>
+                <div class="p-4 bg-emerald-50 rounded-xl border border-emerald-100">
+                    <h3 class="font-bold text-emerald-800 text-sm mb-2 uppercase">Full Integration</h3>
+                    <p class="text-xs text-emerald-700 leading-relaxed">Includes the new <code>budolAccounting</code> service in the core ecosystem startup sequence.</p>
+                </div>
+            </div>
+        </section>
+
+        <!-- Technical Implementation -->
+        <section class="mb-12">
+            <h2 class="text-2xl font-bold mb-6">Technical Implementation Details</h2>
+            
+            <div class="space-y-6">
+                <!-- Change 1 -->
+                <div class="bg-white rounded-xl p-6 shadow-sm border border-slate-200">
+                    <h3 class="font-bold text-lg mb-2">1. Unified Environment Validator</h3>
+                    <p class="text-slate-600 mb-4 text-sm">Converted <code>scripts/env-validator.js</code> to CommonJS to support the root ecosystem runner and individual services.</p>
+                    <div class="code-block">
+                        module.exports = {<br>
+                        &nbsp;&nbsp;validateEnvironment: (appId) => {<br>
+                        &nbsp;&nbsp;&nbsp;&nbsp;// Detects production DB keywords in local dev mode<br>
+                        &nbsp;&nbsp;&nbsp;&nbsp;// Returns false if safety check fails<br>
+                        &nbsp;&nbsp;}<br>
+                        };
+                    </div>
+                </div>
+
+                <!-- Change 2 -->
+                <div class="bg-white rounded-xl p-6 shadow-sm border border-slate-200">
+                    <h3 class="font-bold text-lg mb-2">2. Pre-flight Check Logic</h3>
+                    <p class="text-slate-600 mb-4 text-sm">The runner now scans each app's <code>.env</code> file before starting to verify database connection strings.</p>
+                    <ul class="list-disc list-inside text-sm text-slate-700 space-y-2 ml-2">
+                        <li>Extracts <code>DATABASE_URL</code> from app-specific environment files.</li>
+                        <li>Triggers a 5-second warning delay if safety violations are found.</li>
+                        <li>Continues with high-visibility warnings to alert the developer.</li>
+                    </ul>
+                </div>
+
+                <!-- Change 3 -->
+                <div class="bg-white rounded-xl p-6 shadow-sm border border-slate-200">
+                    <h3 class="font-bold text-lg mb-2">3. Service Expansion</h3>
+                    <p class="text-slate-600 mb-4 text-sm">Added <code>budolAccounting</code> to the <code>apps</code> registry and injected its URL into the global environment.</p>
+                    <div class="code-block text-xs">
+                        {<br>
+                        &nbsp;&nbsp;name: 'budolAccounting',<br>
+                        &nbsp;&nbsp;cwd: path.join(__dirname, 'budolAccounting-0.1.0'),<br>
+                        &nbsp;&nbsp;command: 'npm',<br>
+                        &nbsp;&nbsp;args: ['run', 'start'],<br>
+                        &nbsp;&nbsp;port: 8005<br>
+                        }
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Verification -->
+        <section class="mb-12 bg-white rounded-2xl p-8 shadow-sm border border-slate-200">
+            <h2 class="text-2xl font-bold mb-4 flex items-center">
+                <i class="fas fa-check-circle text-emerald-600 mr-3"></i> Verification & Results
+            </h2>
+            <div class="space-y-4">
+                <div class="flex items-start">
+                    <div class="mt-1 mr-3"><i class="fas fa-check text-emerald-500"></i></div>
+                    <div>
+                        <p class="font-semibold text-sm">Local Start Success</p>
+                        <p class="text-xs text-slate-500 leading-relaxed">Verified that <code>npm start</code> successfully launches all 8 services simultaneously on detected local IP.</p>
+                    </div>
+                </div>
+                <div class="flex items-start">
+                    <div class="mt-1 mr-3"><i class="fas fa-check text-emerald-500"></i></div>
+                    <div>
+                        <p class="font-semibold text-sm">Safety Barrier Test</p>
+                        <p class="text-xs text-slate-500 leading-relaxed">Manually injected a production DB URL into a local <code>.env</code>; runner correctly identified the risk and displayed a high-visibility error message.</p>
+                    </div>
+                </div>
+                <div class="flex items-start">
+                    <div class="mt-1 mr-3"><i class="fas fa-check text-emerald-500"></i></div>
+                    <div>
+                        <p class="font-semibold text-sm">Accounting Integration</p>
+                        <p class="text-xs text-slate-500 leading-relaxed">Confirmed <code>ACCOUNTING_SERVICE_URL</code> is available to all spawned apps.</p>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Footer -->
+        <footer class="text-center text-slate-400 text-sm border-t border-slate-200 pt-8">
+            <p>budolEcosystem Implementation Plan - Phase: Ecosystem Optimization</p>
+            <p class="mt-2">Documentation Version: 2026-01-04_v137</p>
+        </footer>
+    </div>
+</body>
+</html>

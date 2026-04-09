@@ -1,0 +1,94 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>BudolEcosystem - v21 Developer Manual</title>
+    <style>
+        body { font-family: 'Inter', system-ui, -apple-system, sans-serif; background-color: #f6f9fc; color: #172b4d; line-height: 1.6; }
+        .sidebar { position: fixed; left: 0; top: 0; width: 250px; height: 100%; background: #0747a6; color: white; padding: 20px; box-sizing: border-box; }
+        .main-content { margin-left: 270px; padding: 40px; background: white; min-height: 100vh; }
+        .card { border: 1px solid #dfe1e6; border-radius: 8px; padding: 20px; margin-bottom: 20px; }
+        .tag { background: #e6effc; color: #0052cc; padding: 4px 8px; border-radius: 4px; font-size: 0.85em; font-weight: 600; }
+        .port-tag { background: #fff0b3; color: #172b4d; padding: 2px 6px; border-radius: 4px; font-family: monospace; }
+        h1 { color: #0052cc; margin-bottom: 30px; }
+        h2 { color: #253858; border-bottom: 1px solid #ebecf0; padding-bottom: 10px; margin-top: 40px; }
+        pre { background: #091e42; color: #ebecf0; padding: 15px; border-radius: 5px; overflow-x: auto; }
+        code { font-family: 'SFMono-Regular', Consolas, 'Liberation Mono', Menlo, monospace; }
+        table { width: 100%; border-collapse: collapse; margin-top: 20px; }
+        th, td { text-align: left; padding: 12px; border-bottom: 1px solid #dfe1e6; }
+        th { background: #f4f5f7; }
+        a { color: #0052cc; text-decoration: none; }
+        .sidebar a { color: #fff; opacity: 0.8; display: block; padding: 8px 0; border-bottom: 1px solid rgba(255,255,255,0.1); }
+        .sidebar a:hover { opacity: 1; text-decoration: underline; }
+    </style>
+</head>
+<body>
+    <div class="sidebar">
+        <h3>Budol Docs v21</h3>
+        <a href="index.html">📋 Overview</a>
+        <a href="audit_log.html">🛡️ Audit Log</a>
+        <a href="developer_manual.html">👨‍💻 Dev Manual</a>
+        <a href="system_admin_manual.html">⚙️ SysAdmin</a>
+        <a href="risk_register.html">⚠️ Risk Register</a>
+        <a href="../../knowledgebase.html" style="margin-top: 30px; background: rgba(255,255,255,0.1); padding: 10px;">📂 Knowledgebase</a>
+    </div>
+
+    <div class="main-content">
+        <h1>👨‍💻 v21 Developer Manual: 13-Service Mirror</h1>
+        <p>This manual defines the technical architecture of the <strong>Budol Ecosystem v21</strong>, which achieves 100% parity with the local development environment.</p>
+
+        <section class="card">
+            <h2>🌍 Service Discovery Registry (Cloud Map)</h2>
+            <p>All services utilize AWS Cloud Map for internal communication. Using internal DNS avoids hardcoded IPs and handles service scaling automatically.</p>
+            <table>
+                <thead>
+                    <tr>
+                        <th>Service</th>
+                        <th>Internal Endpoint</th>
+                        <th>External Port</th>
+                        <th>Purpose</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr><td><b>BudolID</b></td><td><code>http://budol-id.budol.internal:8000</code></td><td>8000</td><td>SSO / Auth Provider</td></tr>
+                    <tr><td><b>BudolAuth</b></td><td><code>http://budol-auth.budol.internal:8001</code></td><td>8001</td><td>Session Management</td></tr>
+                    <tr><td><b>BudolShap</b></td><td><code>http://budol-shap.budol.internal:3001</code></td><td>443 (ALB)</td><td>Main Marketplace App</td></tr>
+                    <tr><td><b>BudolPay Gateway</b></td><td><code>http://budolpay-gateway.budol.internal:8080</code></td><td>8080</td><td>Core Payment API</td></tr>
+                    <tr><td><b>BudolPay Admin</b></td><td><code>http://budolpay-admin.budol.internal:3000</code></td><td>3000</td><td>Admin Control Panel</td></tr>
+                    <tr><td><b>Accounting</b></td><td><code>http://budol-accounting.budol.internal:8005</code></td><td>8005</td><td>Logistics / Fee Calculator</td></tr>
+                    <tr><td><b>Payment Bridge</b></td><td><code>http://budol-pay.budol.internal:8004</code></td><td>8004</td><td>Bridge to Paymongo / GCash</td></tr>
+                    <tr><td><b>Wallet</b></td><td><code>http://budolpay-wallet.budol.internal:8002</code></td><td>8002</td><td>User Balances</td></tr>
+                    <tr><td><b>Transaction</b></td><td><code>http://budolpay-transaction.budol.internal:8003</code></td><td>8003</td><td>Ledger Tracking</td></tr>
+                    <tr><td><b>WebSocket</b></td><td><code>http://budolpay-websocket.budol.internal:4000</code></td><td>4000</td><td>Real-time Notifications</td></tr>
+                </tbody>
+            </table>
+        </section>
+
+        <section class="card">
+            <h2>🔧 Sync Workflow (The Warp Sync)</h2>
+            <p>To keep production in sync with local dev, we use the <code>budol_v21_master_sync.py</code> tool. This script ensures that any changes to your local environment variables or ports are immediately reflected in the AWS ECS Task Definitions.</p>
+            <pre><code># Execution command:
+python budol_v21_master_sync.py
+
+# Logic:
+1. Register local .json tasks to AWS ECR/ECS
+2. Extract working Networking (SG/Subnets) from budol-id-service
+3. Create/Update services in the 'budol-ecosystem-cluster'</code></pre>
+        </section>
+
+        <section class="card">
+            <h2>📦 Deployment Links</h2>
+            <ul>
+                <li><strong>Accounting Service</strong>: <a href="file:///d:/IT%20Projects/clone/budolEcosystem/budol-accounting-task.json">budol-accounting-task.json</a></li>
+                <li><strong>Payment Service</strong>: <a href="file:///d:/IT%20Projects/clone/budolEcosystem/budolpay-payment-task.json">budolpay-payment-task.json</a></li>
+                <li><strong>KYC Service</strong>: <a href="file:///d:/IT%20Projects/clone/budolEcosystem/budolpay-kyc-task.json">budolpay-kyc-task.json</a></li>
+            </ul>
+        </section>
+
+        <footer style="margin-top: 50px; color: #6b778c; font-size: 0.8em;">
+            &copy; 2026 BudolPay Ecosystem | Compliance Verified: NPC, BIR, BSP
+        </footer>
+    </div>
+</body>
+</html>

@@ -1,0 +1,76 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SysAdmin Manual - RBAC Management v301</title>
+    <style>
+        body { font-family: 'Segoe UI', sans-serif; line-height: 1.6; color: #333; background: #f4f7f6; margin: 0; padding: 0; }
+        .container { max-width: 900px; margin: 40px auto; background: white; padding: 40px; border-radius: 12px; box-shadow: 0 4px 15px rgba(0,0,0,0.1); }
+        h1 { color: #2c3e50; border-bottom: 2px solid #3498db; padding-bottom: 10px; }
+        h2 { color: #2c3e50; margin-top: 30px; }
+        .alert { padding: 15px; background: #fff3cd; border: 1px solid #ffeeba; border-radius: 8px; color: #856404; margin-bottom: 20px; }
+        .nav-links { margin-bottom: 20px; }
+        .nav-links a { color: #3498db; text-decoration: none; font-weight: bold; }
+        pre { background: #f8f9fa; padding: 15px; border-radius: 8px; overflow-x: auto; border: 1px solid #ddd; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="nav-links">
+            <a href="../index.html">← Back to v301 Index</a>
+        </div>
+        <h1>SysAdmin Manual: RBAC & User Access Management</h1>
+        
+        <div class="alert">
+            <strong>Warning:</strong> RBAC changes affect system-wide security. Always perform a backup of the <code>User</code> table before running synchronization scripts.
+        </div>
+
+        <h2>Managing User Roles</h2>
+        <p>Administrators can manage user roles through the Admin Dashboard under <strong>Settings > RBAC & Permissions</strong>.</p>
+
+        <h3>1. Reviewing Access Policies</h3>
+        <p>Use the <strong>Permissions Matrix</strong> to visualize what each role (ADMIN, SELLER, etc.) can do. This matrix is the authoritative guide for access control in the ecosystem.</p>
+
+        <h3>2. Synchronizing User Roles</h3>
+        <p>If you notice users have incorrect access levels or if <code>lib/rbac.js</code> has been updated with new permissions, use the <strong>Sync All Users</strong> button in the Permissions Matrix UI. This will:</p>
+        <ul>
+            <li>Update <code>role</code> and <code>permissions</code> fields based on <code>accountType</code>.</li>
+            <li>Ensure <code>isAdmin</code> flags are correctly synchronized with the database.</li>
+            <li>Enforce the "Least Privilege" principle across all accounts.</li>
+        </ul>
+
+        <h3>3. Manual CLI Synchronization</h3>
+        <p>In cases where the UI is inaccessible, you can run the synchronization script manually via Node.js:</p>
+        <pre><code>node sync_rbac_roles.mjs</code></pre>
+
+        <h2>Elevating Admin Users</h2>
+        <p>To promote a standard user to an Admin, use the provided <code>update_admin.mjs</code> script. This script ensures that all necessary flags (<code>isAdmin</code>, <code>accountType</code>, <code>role</code>, <code>permissions</code>) are set correctly and optionally resets the password.</p>
+        <pre><code>node update_admin.mjs</code></pre>
+        <p>Follow the on-screen prompts to enter the user's email and desired password.</p>
+
+        <h2>Database Service Troubleshooting (No Docker)</h2>
+        <p>If the application reports "Can't reach database server at localhost:5432", it is likely that the PostgreSQL Windows service is stopped.</p>
+        
+        <h3>Checking Service Status</h3>
+        <p>Run the following command in an administrative PowerShell terminal:</p>
+        <pre><code>Get-Service -Name *postgresql*</code></pre>
+
+        <h3>Starting the Service</h3>
+        <p>If the status is <code>Stopped</code>, start it with:</p>
+        <pre><code>Start-Service -Name "postgresql-x64-18"</code></pre>
+
+        <div class="alert">
+            <strong>Note:</strong> If you are using a different version of PostgreSQL, the service name may vary (e.g., <code>postgresql-x64-16</code>). Adjust the command accordingly.
+        </div>
+
+        <h2>Compliance Auditing</h2>
+        <p>The system is designed to meet PCI DSS v4.0 Requirement 7. SysAdmins should periodically:</p>
+        <ul>
+            <li>Review the list of Admin users for accuracy.</li>
+            <li>Verify that no "orphan" accounts have administrative privileges.</li>
+            <li>Check audit logs for any unauthorized role modifications.</li>
+        </ul>
+    </div>
+</body>
+</html>

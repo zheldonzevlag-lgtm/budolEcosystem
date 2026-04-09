@@ -1,0 +1,76 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>System Admin Manual - v3.1.68</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --primary: #0052CC;
+            --secondary: #172B4D;
+            --bg-sidebar: #F4F5F7;
+            --bg-main: #FFFFFF;
+            --text-main: #172B4D;
+            --text-subtle: #6B778C;
+            --border: #DFE1E6;
+            --sidebar-width: 280px;
+        }
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: 'Inter', sans-serif; display: flex; min-height: 100vh; color: var(--text-main); background: var(--bg-main); }
+        .sidebar { width: var(--sidebar-width); background: var(--bg-sidebar); border-right: 1px solid var(--border); height: 100vh; position: sticky; top: 0; display: flex; flex-direction: column; }
+        .sidebar-header { padding: 24px; border-bottom: 1px solid var(--border); }
+        .sidebar-header h2 { font-size: 1.2rem; color: var(--primary); }
+        .sidebar-nav { padding: 16px; flex-grow: 1; overflow-y: auto; }
+        .nav-item { display: block; padding: 8px 12px; border-radius: 4px; text-decoration: none; color: var(--text-main); font-size: 0.9rem; margin-bottom: 2px; }
+        .nav-item:hover { background: #EBECF0; }
+        .nav-item.active { background: #DEEBFF; color: var(--primary); font-weight: 600; }
+        .main-content { flex-grow: 1; padding: 40px 60px; max-width: 1000px; }
+        .header { margin-bottom: 40px; }
+        .header h1 { font-size: 2.5rem; color: var(--secondary); }
+        .section { margin-bottom: 48px; }
+        .section h2 { font-size: 1.5rem; margin-bottom: 20px; color: var(--secondary); border-bottom: 2px solid var(--border); padding-bottom: 8px; }
+        .config-table { width: 100%; border-collapse: collapse; margin-bottom: 24px; }
+        .config-table th, .config-table td { padding: 12px; border: 1px solid var(--border); text-align: left; }
+        .config-table th { background: #F4F5F7; font-weight: 600; }
+        .code { font-family: monospace; background: #F4F5F7; padding: 2px 6px; border-radius: 4px; }
+    </style>
+</head>
+<body>
+    <div class="sidebar">
+        <div class="sidebar-header"><h2>System Admin</h2></div>
+        <div class="sidebar-nav">
+            <a href="index.html" class="nav-item">← Release Overview</a>
+            <a href="#env-vars" class="nav-item">Environment Variables</a>
+            <a href="#deployment" class="nav-item">Deployment Steps</a>
+            <a href="#maintenance" class="nav-item">Maintenance</a>
+        </div>
+    </div>
+    <div class="main-content">
+        <header class="header"><h1>System Administration Manual</h1></header>
+        <section id="env-vars" class="section">
+            <h2>Environment Configuration</h2>
+            <p>The following environment variables must be correctly configured in <code>auth-service/.env</code>:</p>
+            <table class="config-table">
+                <tr><th>Variable</th><th>Description</th><th>Required Value</th></tr>
+                <tr><td><span class="code">NODE_ENV</span></td><td>Environment mode</td><td><span class="code">production</span>, <span class="code">development</span>, or <span class="code">test</span></td></tr>
+                <tr><td><span class="code">LOCAL_IP</span></td><td>Local IP for dev detection</td><td>System IP (e.g., <span class="code">127.0.0.1</span>)</td></tr>
+                <tr><td><span class="code">DATABASE_URL</span></td><td>Prisma connection string</td><td>Valid PostgreSQL URL</td></tr>
+            </table>
+        </section>
+        <section id="deployment" class="section">
+            <h2>Deployment Steps</h2>
+            <ol>
+                <li>Run <code>npm install</code> in the root directory.</li>
+                <li>Run <code>npx prisma generate</code> in <code>packages/database</code>.</li>
+                <li>Run <code>npm run build</code> in <code>services/auth-service</code>.</li>
+                <li>Deploy the mobile app using the generated APK in <code>budolPayMobile/build/app/outputs/flutter-apk/app-release.apk</code>.</li>
+            </ol>
+        </section>
+        <section id="maintenance" class="section">
+            <h2>Maintenance</h2>
+            <p>Monitor logs for <code>[AuthService]</code> and <code>[Notification]</code> prefixes to verify OTP delivery. Ensure the <code>otpUpdatedAt</code> field in the <code>User</code> table is being updated to enforce rate limiting.</p>
+        </section>
+    </div>
+</body>
+</html>

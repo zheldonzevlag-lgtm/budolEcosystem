@@ -1,0 +1,106 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Mobile App Distribution Strategy (Flutter) - v158</title>
+    <style>
+        body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; line-height: 1.6; color: #333; max-width: 1000px; margin: 0 auto; padding: 20px; background-color: #f4f7f6; }
+        .container { background: #fff; padding: 30px; border-radius: 8px; box-shadow: 0 2px 10px rgba(0,0,0,0.1); }
+        h1, h2, h3 { color: #2c3e50; border-bottom: 2px solid #ecf0f1; padding-bottom: 10px; }
+        .strategy-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin: 20px 0; }
+        .card { background: #fff; border: 1px solid #e0e0e0; border-radius: 8px; padding: 20px; border-top: 5px solid #f1c40f; }
+        .back-link { display: block; margin-top: 20px; text-decoration: none; color: #3498db; font-weight: bold; }
+        .recommendation { background: #fffcf0; border-left: 5px solid #f1c40f; padding: 20px; margin: 20px 0; border-radius: 0 8px 8px 0; }
+        table { width: 100%; border-collapse: collapse; margin: 20px 0; }
+        th, td { border: 1px solid #ddd; padding: 12px; text-align: left; }
+        th { background-color: #f8f9fa; }
+        .badge { background: #3498db; color: #fff; padding: 2px 8px; border-radius: 4px; font-size: 0.8em; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Mobile App Distribution Strategy <span class="version">v158</span></h1>
+        <p>Unlike web apps, Flutter mobile apps for iOS and Android are not "hosted" on a server. Instead, they are compiled into binaries and distributed through specific platforms. This manual outlines the strategy for the budolEcosystem mobile apps.</p>
+
+        <div class="strategy-grid">
+            <div class="card">
+                <h3>1. Production Distribution</h3>
+                <p>The final binaries (.ipa for iOS, .aab for Android) are "hosted" by the official app stores:</p>
+                <ul>
+                    <li><strong>Google Play Store:</strong> For Android devices.</li>
+                    <li><strong>Apple App Store:</strong> For iOS devices.</li>
+                </ul>
+                <p><small>Requires a one-time $25 fee for Google and a $99/year subscription for Apple.</small></p>
+            </div>
+            <div class="card">
+                <h3>2. Beta/Testing Distribution</h3>
+                <p>Before public release, apps are hosted on testing platforms for the internal team:</p>
+                <ul>
+                    <li><strong>Firebase App Distribution:</strong> Fastest way to get builds to Android/iOS testers.</li>
+                    <li><strong>TestFlight (Apple):</strong> Required for official iOS beta testing.</li>
+                </ul>
+            </div>
+        </div>
+
+        <h2>Technical Implementation: CI/CD Pipeline</h2>
+        <p>To automate the "hosting" of new versions, we recommend a CI/CD pipeline using <strong>GitHub Actions</strong> or <strong>Codemagic</strong>.</p>
+        <table>
+            <thead>
+                <tr>
+                    <th>Stage</th>
+                    <th>Tool</th>
+                    <th>Outcome</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td><strong>Build</strong></td>
+                    <td>GitHub Actions</td>
+                    <td>Compiles Flutter code into APK/IPA binaries.</td>
+                </tr>
+                <tr>
+                    <td><strong>Test</strong></td>
+                    <td>Flutter Test</td>
+                    <td>Runs unit and widget tests automatically.</td>
+                </tr>
+                <tr>
+                    <td><strong>Deploy (Beta)</strong></td>
+                    <td>Firebase App Distribution</td>
+                    <td>Testers receive an email with the new version instantly.</td>
+                </tr>
+                <tr>
+                    <td><strong>Deploy (Store)</strong></td>
+                    <td>Fastlane</td>
+                    <td>Automates the upload to App Store Connect and Play Console.</td>
+                </tr>
+            </tbody>
+        </table>
+
+        <div class="recommendation">
+            <h2>Recommendation for budolEcosystem</h2>
+            <p>For the budolEcosystem mobile apps, we recommend the following setup:</p>
+            <ol>
+                <li><strong>Backend Connection:</strong> The mobile apps should point to the <strong>Non-Serverless API Gateway</strong> (e.g., <code>https://api.budolpay.com</code>) hosted on our VPS. This ensures stable WebSocket connections for real-time transaction alerts in the app.</li>
+                <li><strong>CI/CD:</strong> Use <strong>GitHub Actions</strong> (since the code is already on GitHub). It's free for public repos and has a generous free tier for private ones.</li>
+                <li><strong>Instant Updates:</strong> Use <strong>Shorebird</strong>. Shorebird allows you to push small code fixes to your Flutter app <em>instantly</em> without waiting for App Store review.</li>
+                <li><strong>Hosting Assets:</strong> Any dynamic images or KYC documents uploaded from the mobile app should be hosted on <strong>AWS S3</strong> (as planned in our storage strategy).</li>
+            </ol>
+        </div>
+
+        <h2>Costing for Mobile Strategy</h2>
+        <ul>
+            <li><strong>Google Play Console:</strong> $25 (One-time).</li>
+            <li><strong>Apple Developer Program:</strong> $99 / year.</li>
+            <li><strong>Firebase App Distribution:</strong> Free.</li>
+            <li><strong>GitHub Actions:</strong> Free (within tier limits).</li>
+            <li><strong>Shorebird (Optional):</strong> Free tier available; paid for high volume.</li>
+        </ul>
+
+        <div class="back-links">
+            <a href="serverless_vs_non_serverless.html" class="back-link">← Back to Infrastructure Comparison</a>
+            <a href="../index.html" class="back-link">← Back to v158 Index</a>
+        </div>
+    </div>
+</body>
+</html>

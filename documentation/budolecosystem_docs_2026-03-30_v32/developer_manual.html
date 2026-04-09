@@ -1,0 +1,76 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Developer Manual - v32 Mobile Vercel Sync</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        :root { --primary: #0052CC; --bg-sidebar: #F4F5F7; --text-main: #172B4D; --text-sub: #6B778C; --border: #DFE1E6; }
+        body { font-family: 'Inter', sans-serif; margin: 0; display: flex; color: var(--text-main); }
+        .sidebar { width: 280px; background: var(--bg-sidebar); height: 100vh; border-right: 1px solid var(--border); padding: 24px; position: fixed; }
+        .sidebar-nav { list-style: none; padding: 0; }
+        .sidebar-nav a { text-decoration: none; color: var(--text-main); font-size: 15px; display: block; padding: 8px 12px; border-radius: 4px; }
+        .sidebar-nav a:hover, .sidebar-nav a.active { background: #EBECF0; color: var(--primary); }
+        .main-content { margin-left: 280px; padding: 48px 80px; width: 100%; max-width: 1000px; }
+        .code-block { background: #1E1E1E; color: #D4D4D4; padding: 16px; border-radius: 6px; overflow-x: auto; font-family: 'Consolas', monospace; font-size: 13px; line-height: 1.5; margin: 16px 0; }
+        .file-link { color: var(--primary); text-decoration: none; font-weight: 600; }
+        .file-link:hover { text-decoration: underline; }
+    </style>
+</head>
+<body>
+    <div class="sidebar">
+        <h2>v32 Docs</h2>
+        <ul class="sidebar-nav">
+            <li><a href="index.html">Overview</a></li>
+            <li><a href="implementation_plan.html">Implementation Plan</a></li>
+            <li><a href="walkthrough.html">Walkthrough</a></li>
+            <li><a href="developer_manual.html" class="active">Developer Manual</a></li>
+            <li><a href="risk_register.html">Risk Register</a></li>
+        </ul>
+        <hr style="border: 0; border-top: 1px solid var(--border); margin: 24px 0;">
+        <ul class="sidebar-nav">
+            <li><a href="../../knowledgebase.html">Back to Knowledge Base</a></li>
+        </ul>
+    </div>
+
+    <div class="main-content">
+        <h1>Developer Manual: Vercel API Bridges</h1>
+        
+        <section>
+            <h3>1. check-phone Endpoint</h3>
+            <p><strong>Path:</strong> <a class="file-link" href="file:///d:/IT Projects/clone/budolEcosystem/budolpay-0.1.0/apps/admin/app/api/auth/check-phone/route.ts">apps/admin/app/api/auth/check-phone/route.ts</a></p>
+            <p>This endpoint checks if a phone number exists in the database. It normalizes numbers from <code>+63</code> to <code>0</code> and vice versa to ensure compatibility with legacy records.</p>
+        </section>
+
+        <section>
+            <h3>2. login/mobile/identify Endpoint</h3>
+            <p><strong>Path:</strong> <a class="file-link" href="file:///d:/IT Projects/clone/budolEcosystem/budolpay-0.1.0/apps/admin/app/api/auth/login/mobile/identify/route.ts">apps/admin/app/api/auth/login/mobile/identify/route.ts</a></p>
+            <p>Handles the initial login step. Detects if the device is trusted. If not, triggers a dual-channel OTP (SMS/Email) via the <code>@budolpay/notifications</code> package.</p>
+        </section>
+
+        <section>
+            <h3>3. login/mobile/verify-pin Endpoint</h3>
+            <p><strong>Path:</strong> <a class="file-link" href="file:///d:/IT Projects/clone/budolEcosystem/budolpay-0.1.0/apps/admin/app/api/auth/login/mobile/verify-pin/route.ts">apps/admin/app/api/auth/login/mobile/verify-pin/route.ts</a></p>
+            <p>Authenticates the user using a 6-digit PIN. If successful, issues a 30-day JWT token and updates the <code>trustedDevices</code> list.</p>
+        </section>
+
+        <section>
+            <h3>4. login/mobile/setup-pin Endpoint</h3>
+            <p><strong>Path:</strong> <a class="file-link" href="file:///d:/IT Projects/clone/budolEcosystem/budolpay-0.1.0/apps/admin/app/api/auth/login/mobile/setup-pin/route.ts">apps/admin/app/api/auth/login/mobile/setup-pin/route.ts</a></p>
+            <p>Allows users to set up a new PIN after OTP verification. Hashes the PIN using <code>bcryptjs</code> with 10 salt rounds.</p>
+        </section>
+
+        <section style="margin-top: 40px;">
+            <h3>Dependency Requirements</h3>
+            <p>The <code>admin</code> app now requires the following dependencies for auth handling:</p>
+            <div class="code-block">
+"dependencies": {
+  "bcryptjs": "^3.0.3",
+  "jsonwebtoken": "^9.0.2"
+}
+            </div>
+        </section>
+    </div>
+</body>
+</html>

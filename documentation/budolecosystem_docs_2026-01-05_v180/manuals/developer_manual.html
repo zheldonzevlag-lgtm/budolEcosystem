@@ -1,0 +1,46 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Developer Manual - v180</title>
+    <style>
+        body { font-family: sans-serif; line-height: 1.5; padding: 40px; color: #333; }
+        h1 { color: #2563eb; }
+        .code-block { background: #f8fafc; border: 1px solid #e2e8f0; padding: 15px; border-radius: 5px; font-family: monospace; overflow-x: auto; }
+    </style>
+</head>
+<body>
+    <h1>Developer Manual: KYC Document Rendering Fix</h1>
+    
+    <h2>Problem Overview</h2>
+    <p>Prisma <code>Bytes</code> fields are serialized into JSON as objects with a <code>type: 'Buffer'</code> and a <code>data</code> array. Standard <code>img src</code> attributes cannot consume this format directly.</p>
+
+    <h2>Implementation Logic</h2>
+    <p>The <code>getDocUrl</code> helper function was rewritten to perform the following steps:</p>
+    <ol>
+        <li><strong>Extraction:</strong> Identifies the raw byte array from <code>blobData</code>.</li>
+        <li><strong>Conversion:</strong> Converts bytes to a binary string using <code>String.fromCharCode</code>.</li>
+        <li><strong>Encoding:</strong> Encodes the binary string to Base64 using <code>window.btoa</code>.</li>
+        <li><strong>Data URI Construction:</strong> Prepends <code>data:image/jpeg;base64,</code> to create a valid source for <code>&lt;img&gt;</code> tags.</li>
+    </ol>
+
+    <h2>Code Example</h2>
+    <div class="code-block">
+        <pre>const uint8Array = new Uint8Array(bytes);
+let binary = '';
+const chunkSize = 8192;
+for (let i = 0; i < uint8Array.length; i += chunkSize) {
+    const chunk = uint8Array.subarray(i, Math.min(i + chunkSize, uint8Array.length));
+    binary += String.fromCharCode.apply(null, Array.from(chunk));
+}
+return `data:image/jpeg;base64,${window.btoa(binary)}`;</pre>
+    </div>
+
+    <h2>Error Handling</h2>
+    <p>If conversion fails, a debug overlay is shown in the UI containing the <code>typeof</code> and <code>Object.keys</code> of the data, which assists in identifying unexpected data structures from the database.</p>
+
+    <div style="margin-top: 50px;">
+        <a href="../index.html">Back to Version Index</a>
+    </div>
+</body>
+</html>

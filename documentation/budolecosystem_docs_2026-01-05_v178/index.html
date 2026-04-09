@@ -1,0 +1,90 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>BudolEcosystem Documentation v178 - Admin Document Viewing Fix</title>
+    <style>
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; line-height: 1.6; color: #333; max-width: 1000px; margin: 0 auto; padding: 20px; background-color: #f4f7f6; }
+        header { background-color: #2c3e50; color: white; padding: 20px; text-align: center; border-radius: 8px 8px 0 0; }
+        .container { background-color: white; padding: 30px; border-radius: 0 0 8px 8px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); }
+        h2 { color: #2c3e50; border-bottom: 2px solid #3498db; padding-bottom: 10px; margin-top: 30px; }
+        .nav-links { display: flex; justify-content: space-between; margin-bottom: 20px; }
+        .nav-links a { text-decoration: none; color: #3498db; font-weight: bold; }
+        .status-badge { display: inline-block; padding: 5px 10px; border-radius: 4px; font-size: 0.9em; font-weight: bold; }
+        .status-success { background-color: #2ecc71; color: white; }
+        .code-block { background-color: #282c34; color: #abb2bf; padding: 15px; border-radius: 5px; overflow-x: auto; font-family: 'Consolas', monospace; }
+    </style>
+</head>
+<body>
+    <div class="nav-links ecosystem-docs-top-nav">
+        <a href="../budolecosystem_docs_2026-01-07_v177/index.html">← Previous (v177)</a>
+        <a href="../index.html">Index</a>
+        <a href="../budolecosystem_docs_2026-01-07_v178/index.html">Next (v178) →</a>
+    </div>
+
+    <header>
+        <h1>BudolEcosystem Documentation v178</h1>
+        <p>Admin Document Viewing Fix & Blob-to-Image Conversion</p>
+    </header>
+
+    <div class="container">
+        <div class="nav-links">
+            <a href="../budolecosystem_docs_2026-01-05_v177/index.html">← Previous (v177)</a>
+            <a href="../index.html">Main Index</a>
+                <a href="../budolecosystem_docs_2026-01-07_v178/index.html">Next (v178) →</a>
+            <span>Next (Latest) →</span>
+        </div>
+
+        <h2>Purpose</h2>
+        <p>This version documents the fix for the Admin User Verification screen, where KYC documents were previously shown as placeholders with "Stored as BYTEA" text. The update enables actual image rendering by converting database blob data into viewable base64 strings.</p>
+
+        <h2>Problem Analysis</h2>
+        <ul>
+            <li><strong>Issue:</strong> The Admin panel received document data from Prisma as <code>Bytes</code>, which serializes to a Buffer object in JSON.</li>
+            <li><strong>Constraint:</strong> Browsers cannot directly render Buffer objects as <code>&lt;img&gt;</code> sources.</li>
+            <li><strong>Impact:</strong> Admins could not review submitted IDs or selfies, blocking the KYC approval workflow.</li>
+        </ul>
+
+        <h2>Technical Implementation</h2>
+        <h3>1. Blob-to-URL Conversion Utility</h3>
+        <p>A new helper function <code>getDocUrl</code> was added to the Admin <code>UsersPage</code> component to handle both remote URLs and local database blobs:</p>
+        <div class="code-block">
+            const getDocUrl = (doc: any) => {<br>
+            &nbsp;&nbsp;if (doc.remoteUrl) return doc.remoteUrl;<br>
+            &nbsp;&nbsp;if (doc.blobData && doc.blobData.data) {<br>
+            &nbsp;&nbsp;&nbsp;&nbsp;const uint8Array = new Uint8Array(doc.blobData.data);<br>
+            &nbsp;&nbsp;&nbsp;&nbsp;let binary = '';<br>
+            &nbsp;&nbsp;&nbsp;&nbsp;for (let i = 0; i < uint8Array.byteLength; i++) {<br>
+            &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;binary += String.fromCharCode(uint8Array[i]);<br>
+            &nbsp;&nbsp;&nbsp;&nbsp;}<br>
+            &nbsp;&nbsp;&nbsp;&nbsp;return `data:image/jpeg;base64,${window.btoa(binary)}`;<br>
+            &nbsp;&nbsp;}<br>
+            &nbsp;&nbsp;return null;<br>
+            };
+        </div>
+
+        <h3>2. UI Rendering Logic</h3>
+        <p>The <code>VerificationDocument</code> modal was updated to conditionally render an <code>&lt;img&gt;</code> tag if <code>getDocUrl</code> returns a valid string, replacing the static placeholder.</p>
+
+        <h2>Verification Results</h2>
+        <ul>
+            <li><strong>Data Conversion:</strong> Successfully transforms Prisma <code>Buffer</code> objects to Base64.</li>
+            <li><strong>Image Display:</strong> Images are rendered correctly with <code>object-cover</code> styling and hover animations.</li>
+            <li><strong>Fallback:</strong> Maintains the previous placeholder UI if no image data is available.</li>
+        </ul>
+
+        <h2>Dependencies</h2>
+        <ul>
+            <li><strong>Prisma:</strong> Provides the <code>VerificationDocument</code> model with <code>blobData</code>.</li>
+            <li><strong>Lucide React:</strong> Used for icons in the fallback UI.</li>
+        </ul>
+
+        <h2>Future Enhancements</h2>
+        <ul>
+            <li><strong>Server-side Image Serving:</strong> Implement an API route to serve images directly (e.g., <code>/api/docs/[id]</code>) to reduce frontend memory usage for large datasets.</li>
+            <li><strong>Zoom/Lightbox:</strong> Add a fullscreen viewer for detailed document inspection.</li>
+        </ul>
+    </div>
+</body>
+</html>

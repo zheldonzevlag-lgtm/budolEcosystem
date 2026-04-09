@@ -1,0 +1,80 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>budolEcosystem Documentation v128</title>
+    <style>
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; line-height: 1.6; color: #333; max-width: 800px; margin: 0 auto; padding: 20px; }
+        header { background: #f43f5e; color: white; padding: 20px; border-radius: 8px; margin-bottom: 20px; }
+        .version-tag { background: #fff; color: #f43f5e; padding: 2px 8px; border-radius: 4px; font-weight: bold; }
+        section { background: white; padding: 20px; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); margin-bottom: 20px; }
+        h2 { color: #f43f5e; border-bottom: 2px solid #f43f5e; padding-bottom: 10px; }
+        code { background: #f4f4f4; padding: 2px 4px; border-radius: 4px; font-family: monospace; }
+        .nav-links { display: flex; justify-content: space-between; margin-top: 40px; }
+        .nav-links a { color: #f43f5e; text-decoration: none; font-weight: bold; }
+        .issue { color: #dc2626; font-weight: bold; }
+        .fix { color: #16a34a; font-weight: bold; }
+        ul { padding-left: 20px; }
+        li { margin-bottom: 10px; }
+    </style>
+</head>
+<body>
+    <div class="nav-links ecosystem-docs-top-nav">
+        <a href="../budolecosystem_docs_2026-01-04_v127/index.html">← Previous (v127)</a>
+        <a href="../index.html">Index</a>
+        <a href="../budolecosystem_docs_2026-01-04_v129/index.html">Next (v129) →</a>
+    </div>
+
+    <header>
+        <h1>budolEcosystem Documentation <span class="version-tag">v128</span></h1>
+        <p><strong>Date:</strong> 2026-01-04</p>
+        <p><strong>Focus:</strong> API Gateway Optimization & UI Refinement</p>
+    </header>
+
+    <section>
+        <h2>Purpose</h2>
+        <p>To resolve persistent 404/BadRequest errors in the API Gateway and fulfill user requests for Payment Summary UI improvements. This version also introduces session recovery mechanisms in the mobile app.</p>
+    </section>
+
+    <section>
+        <h2>Issues Addressed</h2>
+        <ul>
+            <li><span class="issue">API Gateway Proxy Failure:</span> The gateway was using <code>express.json()</code> before proxying, which consumed the request body stream, leading to <code>BadRequestError</code> or <code>404</code> on proxied routes (e.g., <code>/wallet/balance</code>).</li>
+            <li><span class="issue">UI Mismatch:</span> The Payment Summary screen prioritized "Store Name" over "Payment Method", which didn't align with user preference for transaction clarity.</li>
+            <li><span class="issue">Transient Session Loss:</span> Occasional "User session expired" errors despite valid tokens suggested a need for more robust session state recovery.</li>
+        </ul>
+    </section>
+
+    <section>
+        <h2>Technical Implementation</h2>
+        <ul>
+            <li><span class="fix">API Gateway (Refactoring):</span> Moved <code>app.use(express.json())</code> after the proxy middleware registrations in <code>api-gateway/index.js</code>. This ensures the raw request stream reaches the target services (Wallet, Auth, etc.) intact.</li>
+            <li><span class="fix">Mobile UI (qr_scanner_screen.dart):</span>
+                <ul>
+                    <li>Replaced the "Pay to [Store Name]" header with the "Payment Method" (e.g., budolPay Wallet).</li>
+                    <li>Demoted the Store Name to a subtitle: "Payment for [Merchant]".</li>
+                    <li>Updated iconography to reflect wallet-based payments.</li>
+                </ul>
+            </li>
+            <li><span class="fix">Session Recovery (ApiService):</span> Added a proactive <code>_loadSession()</code> call within <code>processPayment</code> as a failsafe if the in-memory <code>user</code> object is null but a token exists.</li>
+            <li><span class="fix">Testing:</span> Updated <code>payment_summary_test.dart</code> to validate the new UI hierarchy and ensures all 8 critical transaction data points are displayed correctly.</li>
+        </ul>
+    </section>
+
+    <section>
+        <h2>Test Results</h2>
+        <ul>
+            <li><strong>Unit Tests:</strong> <code>payment_summary_test.dart</code> PASSED (0.0:11).</li>
+            <li><strong>Gateway Connectivity:</strong> Verified that proxied routes no longer suffer from stream consumption issues.</li>
+            <li><strong>Build:</strong> Successfully built <code>budolPay 1.1.0.apk</code> with the fix for icon tree-shaking.</li>
+        </ul>
+    </section>
+
+    <div class="nav-links">
+        <a href="../budolecosystem_docs_2026-01-04_v127/index.html">← Previous (v127)</a>
+        <a href="../index.html">Index</a>
+        <span>Next (v129) →</span>
+    </div>
+</body>
+</html>

@@ -1,0 +1,78 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Walkthrough – Budol Ecosystem v25</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        :root{--primary:#0052CC;--secondary:#172B4D;--bg-sidebar:#F4F5F7;--border:#DFE1E6;--success:#00875A;}
+        body{font-family:'Inter',sans-serif;margin:0;display:flex;color:var(--secondary);line-height:1.6;background:#fff;}
+        .sidebar{width:280px;background:var(--bg-sidebar);height:100vh;position:sticky;top:0;border-right:1px solid var(--border);padding:20px;box-sizing:border-box;overflow-y:auto;}
+        .main-content{flex:1;padding:40px 60px;max-width:1100px;}
+        h1{color:var(--secondary);font-size:2rem;margin-top:0;}
+        h2{color:var(--primary);border-bottom:2px solid var(--border);padding-bottom:10px;margin-top:35px;}
+        h3{color:var(--secondary);}
+        .nav-link{display:block;padding:8px 10px;text-decoration:none;color:var(--secondary);border-radius:4px;font-weight:500;margin-bottom:2px;font-size:0.9rem;}
+        .nav-link:hover{background:#EBECF0;color:var(--primary);}
+        .nav-link.active{background:#E6EFFC;color:var(--primary);font-weight:600;}
+        .step{background:#F4F5F7;border-left:4px solid var(--primary);padding:16px 20px;border-radius:0 8px 8px 0;margin:16px 0;}
+        .step-num{font-weight:700;color:var(--primary);font-size:1.1rem;}
+        .badge{display:inline-block;padding:3px 10px;border-radius:12px;font-size:0.82rem;font-weight:600;}
+        .badge-stable{background:#E3FCEF;color:#006644;}
+    </style>
+</head>
+<body>
+<div class="sidebar">
+    <h3 style="color:var(--primary);margin-bottom:16px;">v25 Documentation</h3>
+    <a href="index.html" class="nav-link">Overview</a>
+    <a href="walkthrough.html" class="nav-link active">Walkthrough</a>
+    <a href="task.html" class="nav-link">Task Checklist</a>
+    <hr>
+    <a href="developer_manual.html" class="nav-link">Developer Manual</a>
+    <a href="system_admin_manual.html" class="nav-link">System Admin Manual</a>
+    <a href="user_manual.html" class="nav-link">User Manual</a>
+    <hr>
+    <a href="risk_register.html" class="nav-link">Risk Register</a>
+    <a href="Mitigation.html" class="nav-link">Mitigation Strategy</a>
+    <a href="issues%20%26%20fixes.html" class="nav-link">Issues &amp; Fixes</a>
+    <a href="test_results.html" class="nav-link">Test Verification</a>
+    <a href="future_recommendations.html" class="nav-link">Future Roadmap</a>
+    <hr>
+    <a href="../../knowledgebase.html" class="nav-link">Back to Knowledgebase</a>
+</div>
+<div class="main-content">
+    <h1>Walkthrough – v25 Release</h1>
+    <div style="margin-bottom:20px;"><span class="badge badge-stable">VERIFIED</span></div>
+
+    <h2>Phase 0: Problem Identification</h2>
+    <div class="step"><span class="step-num">Issue:</span> Phone numbers flagged as "ALREADY TAKEN" even when not in the database during Quick (Phone-Only) Registration. Standard Registration was unaffected.</div>
+
+    <h2>Phase 1: Root Cause Analysis</h2>
+    <div class="step"><span class="step-num">Finding:</span> Node.js 18+ resolves <code>localhost</code> to IPv6 <code>[::1]</code>, but <code>budolID</code> binds to IPv4 <code>0.0.0.0</code>. The connection was silently refused. The <code>/api/auth/check-phone</code> route returned HTTP 503. The frontend defaulted to <code>phoneExists = true</code> to prevent security bypasses, blocking registration.</div>
+
+    <h2>Phase 2: Backend Fixes (budolID &amp; budolPay)</h2>
+    <div class="step"><span class="step-num">Fix 1:</span> Added <code>isQuickReg</code> check in <code>budolID/index.js</code> to skip the password complexity regex for phone-only account creation flows.</div>
+    <div class="step"><span class="step-num">Fix 2:</span> Mirrored the same bypass in <code>budolpay/services/auth-service/index.js</code> for parity.</div>
+
+    <h2>Phase 3: API Route Fix (budolShap)</h2>
+    <div class="step"><span class="step-num">Fix 3:</span> Updated <code>app/api/auth/check-phone/route.js</code> and <code>lib/api/budolIdClient.js</code> to use:<br><code>BUDOL_ID_URL || NEXT_PUBLIC_SSO_URL || http://127.0.0.1:8000</code><br>This forces IPv4 locally and uses the production env var on Vercel.</div>
+    <div class="step"><span class="step-num">Fix 4:</span> Updated <code>app/api/auth/register/route.js</code> to pass <code>registrationType</code> through to the budolID client.</div>
+
+    <h2>Phase 4: Frontend Polish (budolShap)</h2>
+    <div class="step"><span class="step-num">Change:</span> Removed <strong>v25-DEBUG</strong> label from the "Create Account" button in <code>AuthForm.jsx</code>. The button now simply reads "Create Account".</div>
+
+    <h2>Phase 5: Shield Challenge (MathCaptcha)</h2>
+    <div class="step"><span class="step-num">Feature:</span> Added a math-based CAPTCHA gate before the registration form is revealed. This prevents bot registrations without requiring an external CAPTCHA service (BSP/Cybersecurity compliance).</div>
+
+    <h2>Phase 6: Deployment</h2>
+    <div class="step"><span class="step-num">Result:</span> <code>npm run build</code> ran successfully. Vercel deployment aliased to <strong>https://budolshap.vercel.app</strong> with Exit Code 0 ✅</div>
+
+    <hr style="margin-top:60px;">
+    <div style="display:flex;justify-content:space-between;">
+        <a href="index.html">← Overview</a>
+        <a href="task.html">Task Checklist →</a>
+    </div>
+</div>
+</body>
+</html>

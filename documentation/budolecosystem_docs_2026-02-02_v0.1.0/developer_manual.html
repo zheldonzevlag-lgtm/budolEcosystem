@@ -1,0 +1,120 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Developer Manual - Budol Ecosystem v0.1.0</title>
+    <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
+    <style>
+        :root { --sidebar-width: 280px; }
+        .sidebar { width: var(--sidebar-width); position: fixed; height: 100vh; background: #0747A6; color: white; }
+        .main-content { margin-left: var(--sidebar-width); padding: 40px; }
+        .sidebar-link { display: block; padding: 10px 20px; color: #DEEBFF; text-decoration: none; }
+        .sidebar-link:hover { background: rgba(255,255,255,0.1); }
+        .code-block { background: #1E1E1E; color: #D4D4D4; padding: 15px; border-radius: 5px; font-family: 'Courier New', Courier, monospace; margin: 10px 0; overflow-x: auto; font-size: 13px; }
+        .code-link { color: #0052CC; text-decoration: underline; cursor: pointer; }
+    </style>
+</head>
+<body class="bg-gray-50">
+    <div class="sidebar">
+        <div class="p-6">
+            <h1 class="text-xl font-bold">Budol Developer</h1>
+        </div>
+        <nav class="mt-4">
+            <a href="index.html" class="sidebar-link">Dashboard</a>
+            <a href="developer_manual.html" class="sidebar-link font-bold bg-white/10">Developer Manual</a>
+            <a href="test_results.html" class="sidebar-link">Test Results</a>
+        </nav>
+    </div>
+
+    <div class="main-content max-w-5xl">
+        <h2 class="text-3xl font-bold mb-6">Technical Architecture: Forensic Audit Trail</h2>
+        
+        <section class="mb-10">
+            <h3 class="text-xl font-bold mb-3 border-b pb-2">1. Data Model (Prisma)</h3>
+            <p class="text-sm text-gray-600 mb-4">The audit trail is built on a robust relational model designed for immutability and compliance.</p>
+            <div class="code-block">
+model AuditLog {
+  id        String   @id @default(uuid())
+  userId    String?
+  action    String
+  metadata  Json?    // Stores compliance tags (PCI DSS/BSP)
+  createdAt DateTime @default(now())
+  entity    String?
+  entityId  String?
+  ipAddress String?
+  user      User?    @relation(fields: [userId], references: [id])
+}
+            </div>
+            <p class="text-xs text-gray-500 mt-2">Source: <a href="file:///d:/IT Projects/budolEcosystem/budolpay-0.1.0/packages/database/prisma/schema.prisma" class="code-link">schema.prisma</a></p>
+        </section>
+
+        <section class="mb-10">
+            <h3 class="text-xl font-bold mb-3 border-b pb-2">2. Backend: Audit Log Creation</h3>
+            <p class="text-sm text-gray-600 mb-4">The <code>createAuditLog</code> helper in Auth Service ensures all security events are logged with IP addresses and compliance metadata.</p>
+            <div class="code-block">
+const createAuditLog = async (req, userId, action, metadata = {}, entity = 'Security') => {
+    const log = await prisma.auditLog.create({
+        data: {
+            userId, action, entity,
+            ipAddress: req.ip,
+            metadata: { ...metadata, compliance: { pci_dss: '10.2.2', bsp: 'Circular 808' } }
+        }
+    });
+    await notifyAdmin('AUDIT_LOG_CREATED', log);
+};
+            </div>
+            <p class="text-xs text-gray-500 mt-2">Source: <a href="file:///d:/IT Projects/budolEcosystem/budolpay-0.1.0/services/auth-service/index.js" class="code-link">auth-service/index.js</a></p>
+        </section>
+
+        <section class="mb-10">
+            <h3 class="text-xl font-bold mb-3 border-b pb-2">3. Real-time Broadcast (API Gateway)</h3>
+            <p class="text-sm text-gray-600 mb-4">The Gateway proxies internal notifications to Socket.io and Pusher channels for immediate UI updates.</p>
+            <div class="code-block">
+router.post('/internal/notify', async (req, res) => {
+    const { event, data, isAdmin } = req.body;
+    if (isAdmin) {
+        io.to('admin').emit(event, data);
+        if (pusher) pusher.trigger('admin', event, data);
+    }
+});
+            </div>
+            <p class="text-xs text-gray-500 mt-2">Source: <a href="file:///d:/IT Projects/budolEcosystem/budolpay-0.1.0/services/api-gateway/index.js" class="code-link">api-gateway/index.js</a></p>
+        </section>
+
+        <section class="mb-10">
+            <h3 class="text-xl font-bold mb-3 border-b pb-2">4. Frontend: Real-time Subscription</h3>
+            <p class="text-sm text-gray-600 mb-4">Admin pages use a singleton realtime service to listen for <code>AUDIT_LOG_CREATED</code> events.</p>
+            <div class="code-block">
+realtime.on("AUDIT_LOG_CREATED", (newLog) => {
+    setAuditLogs(prev => [newLog, ...prev.slice(0, 14)]);
+});
+            </div>
+            <p class="text-xs text-gray-500 mt-2">Source: <a href="file:///d:/IT Projects/budolEcosystem/budolpay-0.1.0/apps/admin/app/employees/page.tsx" class="code-link">employees/page.tsx</a></p>
+        </section>
+        <section class="mb-10">
+            <h3 class="text-xl font-bold mb-3 border-b pb-2">5. Manual Admin Account Setup</h3>
+            <p class="text-sm text-gray-600 mb-4">In scenarios requiring database resets, the primary admin account is re-established using an environment-driven provisioning script. This follows <strong>PCI DSS 8.2</strong> by ensuring no cleartext credentials are hardcoded in source control.</p>
+            <div class="code-block">
+// credentials are pulled from .env file
+const adminEmail = process.env.ADMIN_EMAIL;
+const adminPassword = process.env.ADMIN_PASSWORD;
+const hashedPassword = await bcrypt.hash(adminPassword, 10);
+
+await prisma.user.upsert({
+    where: { email: adminEmail },
+    update: { passwordHash: hashedPassword, role: 'ADMIN' },
+    create: {
+        email: adminEmail,
+        passwordHash: hashedPassword,
+        role: 'ADMIN',
+        phoneNumber: process.env.ADMIN_PHONE,
+        department: 'System Administration'
+    }
+});
+            </div>
+            <p class="text-xs text-gray-500 mt-2">Source: <a href="file:///d:/IT Projects/budolEcosystem/scripts/test_scripts/budolPay/create-admin-account.js" class="code-link">create-admin-account.js</a></p>
+        </section>
+    </div>
+</body>
+</html>

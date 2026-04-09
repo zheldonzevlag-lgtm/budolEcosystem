@@ -1,0 +1,408 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>System Architecture Deep Dive - Budol Ecosystem v6.0.0</title>
+    <style>
+        :root {
+            --primary: #0052cc;
+            --secondary: #172b4d;
+            --bg: #f8fafc;
+            --text: #1e293b;
+            --border: #dfe1e6;
+            --card-bg: #ffffff;
+            --code-bg: #f4f5f7;
+        }
+
+        body {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+            background: var(--bg);
+            color: var(--text);
+            margin: 0;
+            display: flex;
+            line-height: 1.6;
+        }
+
+        .sidebar {
+            width: 260px;
+            height: 100vh;
+            background: #fff;
+            border-right: 1px solid var(--border);
+            position: fixed;
+            padding: 2rem 1rem;
+            overflow-y: auto;
+        }
+
+        .main {
+            margin-left: 280px;
+            padding: 3rem 4rem;
+            max-width: 1000px;
+            width: 100%;
+        }
+
+        .nav-item {
+            display: block;
+            padding: 0.75rem 1rem;
+            color: #64748b;
+            text-decoration: none;
+            border-radius: 8px;
+            margin-bottom: 0.25rem;
+            font-size: 0.9rem;
+            font-weight: 500;
+        }
+
+        .nav-item:hover {
+            background: #f1f5f9;
+            color: var(--primary);
+        }
+
+        .nav-item.active {
+            background: #e0e7ff;
+            color: var(--primary);
+        }
+
+        h1,
+        h2,
+        h3 {
+            color: #0f172a;
+            margin-top: 2rem;
+        }
+
+        h1 {
+            font-size: 2.5rem;
+            margin-bottom: 1rem;
+            border-bottom: 2px solid var(--primary);
+            padding-bottom: 0.5rem;
+        }
+
+        h2 {
+            font-size: 1.75rem;
+            border-left: 4px solid var(--primary);
+            padding-left: 1rem;
+            margin-bottom: 1rem;
+        }
+
+        h3 {
+            font-size: 1.25rem;
+            color: var(--primary);
+        }
+
+        .card {
+            background: var(--card-bg);
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            padding: 1.5rem;
+            margin-bottom: 2rem;
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+        }
+
+        code {
+            background: var(--code-bg);
+            padding: 0.2rem 0.4rem;
+            border-radius: 4px;
+            font-family: 'Fira Code', monospace;
+            font-size: 0.9em;
+        }
+
+        pre {
+            background: #282c34;
+            color: #abb2bf;
+            padding: 1.5rem;
+            border-radius: 8px;
+            overflow-x: auto;
+            font-family: 'Fira Code', monospace;
+            line-height: 1.4;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 1.5rem 0;
+            background: #fff;
+        }
+
+        th,
+        td {
+            text-align: left;
+            padding: 0.75rem 1rem;
+            border: 1px solid var(--border);
+        }
+
+        th {
+            background: #f1f5f9;
+            font-weight: 600;
+        }
+
+        .mermaid {
+            background: white;
+            padding: 1rem;
+            border-radius: 8px;
+            margin: 1rem 0;
+            text-align: center;
+        }
+
+        .badge {
+            display: inline-block;
+            padding: 0.25rem 0.75rem;
+            border-radius: 9999px;
+            font-size: 0.75rem;
+            font-weight: 700;
+            text-transform: uppercase;
+            background: #e0e7ff;
+            color: var(--primary);
+            margin-bottom: 1rem;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="sidebar">
+        <div style="font-weight: 800; font-size: 1.25rem; color: var(--primary); margin-bottom: 2rem; padding: 0 1rem;">
+            Budol Ecosystem</div>
+        <nav>
+            <a href="index.html" class="nav-item">Overview</a>
+            <a href="system_architecture.html" class="nav-item active">Architecture Deep Dive</a>
+            <a href="walkthrough.html" class="nav-item">Infrastructure Walkthrough</a>
+            <a href="implementation_plan.html" class="nav-item">Implementation Plan</a>
+            <a href="developer_manual.html" class="nav-item">Developer Manual</a>
+            <a href="user_manual.html" class="nav-item">User Manual</a>
+            <a href="task.html" class="nav-item">Task/Checklist</a>
+            <a href="system_admin_manual.html" class="nav-item">System Admin</a>
+            <hr style="margin: 1.5rem 0; border: 0; border-top: 1px solid var(--border);">
+            <a href="risk_register.html" class="nav-item">Risk Register</a>
+            <a href="Mitigation.html" class="nav-item">Mitigation Plan</a>
+            <a href="issues_fixes.html" class="nav-item">Issues & Fixes</a>
+            <a href="test_results.html" class="nav-item">Test Results</a>
+            <a href="future_recommendations.html" class="nav-item">Recommendations</a>
+            <hr style="margin: 1.5rem 0; border: 0; border-top: 1px solid var(--border);">
+            <a href="../../knowledgebase.html" class="nav-item">← Back to KB</a>
+        </nav>
+    </div>
+
+    <div class="main">
+        <header>
+            <span class="badge">Technical Reference</span>
+            <h1>System Architecture Deep Dive</h1>
+            <p style="color: #64748b; font-size: 1.125rem;">Comprehensive analysis of microservices, data models, and
+                service choreography.</p>
+        </header>
+
+        <section class="card">
+            <h2>Executive Summary</h2>
+            <p>The BudolEcosystem is a high-performance, microservices-driven financial ecosystem designed for secure QR
+                payments and centralized accounting. It utilizes a hybrid deployment model:</p>
+            <ul>
+                <li><strong>Static Frontends:</strong> AWS Amplify (Managed SSL, CI/CD)</li>
+                <li><strong>Containerized Microservices:</strong> AWS ECS Fargate (Scalable, Secure VPC)</li>
+                <li><strong>Real-time Gateway:</strong> Dedicated WebSocket Server (wss:// via Nginx)</li>
+            </ul>
+        </section>
+
+        <section class="card">
+            <h2>1. Architectural Components</h2>
+            <h3>Frontends (The "Outer" Layer)</h3>
+            <table>
+                <thead>
+                    <tr>
+                        <th>Component</th>
+                        <th>Technology</th>
+                        <th>Target</th>
+                        <th>Local Port</th>
+                        <th>Purpose</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td><strong>BudolShap</strong></td>
+                        <td>Next.js</td>
+                        <td>Amplify</td>
+                        <td>3001</td>
+                        <td>Marketplace frontend & seller dashboard.</td>
+                    </tr>
+                    <tr>
+                        <td><strong>BudolAdmin</strong></td>
+                        <td>Next.js</td>
+                        <td>Amplify</td>
+                        <td>3000</td>
+                        <td>System-wide administrative controls (Monorepo).</td>
+                    </tr>
+                    <tr>
+                        <td><strong>BudolPay Mobile (Web)</strong></td>
+                        <td>Flutter Web</td>
+                        <td>Amplify</td>
+                        <td>9000</td>
+                        <td>Web-based mobile payment experience.</td>
+                    </tr>
+                </tbody>
+            </table>
+
+            <h3>API Gateway & Microservices (The "Core" Layer)</h3>
+            <p>All external requests enter through <code>api-gateway</code> (Port 8080) which handles RBAC, logging, and
+                routing.</p>
+            <table>
+                <thead>
+                    <tr>
+                        <th>Route</th>
+                        <th>Target Service</th>
+                        <th>Local Port</th>
+                        <th>Description</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td><code>/id</code></td>
+                        <td>budolID (SSO)</td>
+                        <td>8000</td>
+                        <td>Identity, Authentication & SSO Management.</td>
+                    </tr>
+                    <tr>
+                        <td><code>/auth</code></td>
+                        <td>Auth Service</td>
+                        <td>8001</td>
+                        <td>JWT creation and validation.</td>
+                    </tr>
+                    <tr>
+                        <td><code>/wallet</code></td>
+                        <td>Wallet Service</td>
+                        <td>8002</td>
+                        <td>Balance checks and deduction.</td>
+                    </tr>
+                    <tr>
+                        <td><code>/transactions</code></td>
+                        <td>TX Service</td>
+                        <td>8003</td>
+                        <td>Immutable history and auditing.</td>
+                    </tr>
+                    <tr>
+                        <td><code>/payments</code></td>
+                        <td>Payment Gateway</td>
+                        <td>8004</td>
+                        <td>Bridge to external providers.</td>
+                    </tr>
+                    <tr>
+                        <td><code>/accounting</code></td>
+                        <td>Accounting Service</td>
+                        <td>8005</td>
+                        <td>Centralized Double-Entry Ledger.</td>
+                    </tr>
+                    <tr>
+                        <td><code>/verification</code></td>
+                        <td>KYC Service</td>
+                        <td>8006</td>
+                        <td>User identity verification (KYC).</td>
+                    </tr>
+                    <tr>
+                        <td><code>/settlement</code></td>
+                        <td>Settlement Service</td>
+                        <td>8007</td>
+                        <td>P2P and Merchant settlement.</td>
+                    </tr>
+                    <tr>
+                        <td><code>/trigger</code></td>
+                        <td>Socket.io (WS)</td>
+                        <td>4000</td>
+                        <td>Real-time notification engine.</td>
+                    </tr>
+                </tbody>
+            </table>
+        </section>
+
+        <section class="card">
+            <h2>2. Data Architecture</h2>
+            <p>The BudolEcosystem utilizes a distributed data strategy with focused schemas for each core domain.</p>
+
+            <h3>2.1. Identity & SSO (<code>budolID</code>)</h3>
+            <ul>
+                <li><strong>User</strong>: Essential profile, credentials, and user roles.</li>
+                <li><strong>EcosystemApp</strong>: Authorized applications (e.g., BudolShap, BudolAdmin).</li>
+                <li><strong>Session</strong>: Cross-application session state.</li>
+            </ul>
+
+            <h3>2.2. Financial Core (<code>budolpay</code>)</h3>
+            <ul>
+                <li><strong>User</strong>: Extended profile with KYC, biometrics, and security settings.</li>
+                <li><strong>Wallet</strong>: Real-time balance (Decimal 18,2) and currency (PHP).</li>
+                <li><strong>Transaction</strong>: Immutable records of Cash-In, Cash-Out, P2P, and Merchant payments.
+                </li>
+                <li><strong>Settlement</strong>: Batching merchant payments for periodic payouts.</li>
+                <li><strong>AuditLog</strong>: PCI DSS & BSP Circular 808 compliant forensic logs.</li>
+            </ul>
+
+            <h3>2.3. Unified Ledger (<code>budolAccounting</code>)</h3>
+            <ul>
+                <li><strong>ChartOfAccount</strong>: Standardized structure (Asset, Liability, Equity, Revenue,
+                    Expense).</li>
+                <li><strong>LedgerEntry</strong>: Double-entry records mapped to business transactions.</li>
+            </ul>
+        </section>
+
+        <section class="card">
+            <h2>3. Service Interactions</h2>
+            <h3>3.1. Payment Flow (QR/Merchant)</h3>
+            <ol>
+                <li><strong>Mobile App</strong>: Initiates <code>/api/wallet/process-qr</code>.</li>
+                <li><strong>API Gateway</strong>: Verifies JWT, checks RBAC, and proxies to <strong>Wallet
+                        Service</strong>.</li>
+                <li><strong>Wallet Service</strong>:
+                    <ul>
+                        <li>Validates QR data and transaction status.</li>
+                        <li>Performs balance check and deduction from <code>Wallet</code>.</li>
+                        <li>Updates <code>Transaction</code> status to <code>COMPLETED</code>.</li>
+                        <li>Notifies real-time gateway for instant feedback.</li>
+                    </ul>
+                </li>
+                <li><strong>Gateway</strong>: Pushes <code>balance_update</code> and <code>transaction_update</code> to
+                    clients.</li>
+            </ol>
+        </section>
+
+        <section class="card">
+            <h2>4. Security & Compliance</h2>
+            <ul>
+                <li><strong>VPC Isolation</strong>: Databases restricted to internal VPC traffic.</li>
+                <li><strong>Encryption</strong>: 100% HTTPS/WSS coverage via Let's Encrypt and ACM.</li>
+                <li><strong>Auditability</strong>: Centralized forensic logging (PCI DSS 10.2.2).</li>
+                <li><strong>RBAC</strong>: Granular permission model enforced at the Gateway.</li>
+            </ul>
+        </section>
+
+        <section class="card">
+            <h2>5. Deployment Strategy (AWS)</h2>
+            <table>
+                <thead>
+                    <tr>
+                        <th>Component</th>
+                        <th>Service</th>
+                        <th>Reason</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td><strong>Frontends</strong></td>
+                        <td>AWS Amplify</td>
+                        <td>CI/CD, automatic SSL, CDN delivery.</td>
+                    </tr>
+                    <tr>
+                        <td><strong>Microservices</strong></td>
+                        <td>ECS Fargate</td>
+                        <td>Serverless container orchestration, VPC isolation.</td>
+                    </tr>
+                    <tr>
+                        <td><strong>Real-time</strong></td>
+                        <td>EC2 (BudolWS)</td>
+                        <td>Low-latency stateful connections (WSS).</td>
+                    </tr>
+                    <tr>
+                        <td><strong>Database</strong></td>
+                        <td>RDS (PostgreSQL)</td>
+                        <td>Managed backups, encryption at rest.</td>
+                    </tr>
+                </tbody>
+            </table>
+        </section>
+    </div>
+</body>
+
+</html>

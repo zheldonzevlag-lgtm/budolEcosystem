@@ -1,0 +1,112 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Issues & Fixes - 2026-02-21 v1</title>
+    <style>
+        body { font-family: 'Segoe UI', sans-serif; max-width: 1000px; margin: 0 auto; padding: 20px; }
+        .fix { background: #f0fdf4; border: 1px solid #bbf7d0; padding: 20px; border-radius: 8px; margin-bottom: 20px; }
+        .issue { background: #fef2f2; border: 1px solid #fecaca; padding: 20px; border-radius: 8px; margin-bottom: 20px; }
+        h3 { margin-top: 0; }
+    </style>
+</head>
+<body>
+    <h1>Issues & Fixes Log</h1>
+
+    <div class="fix">
+        <h3>FIX-20260221-01: Product Wizard Buttons Unresponsive</h3>
+        <p><strong>Issue:</strong> The "Publish Product" and "Save as Draft" buttons in the Add Product Wizard were clickable but performed no action or failed silently.</p>
+        <p><strong>Root Cause:</strong> 
+            <ul>
+                <li>The <code>storeId</code> was not being passed to the Wizard component.</li>
+                <li>The "Save as Draft" button had a placeholder function.</li>
+                <li>Missing validation allowed the form to attempt submission without a store context, leading to silent failures or errors.</li>
+            </ul>
+        </p>
+        <p><strong>Resolution:</strong>
+            <ul>
+                <li>Updated <code>AddProductWizard</code> to accept <code>storeId</code>.</li>
+                <li>Implemented <code>handleSaveDraft</code> using <code>localStorage</code>.</li>
+                <li>Added <code>useEffect</code> to restore drafts on mount.</li>
+                <li>Ensured <code>StickyFooter</code> receives the correct handler functions.</li>
+            </ul>
+        </p>
+    </div>
+
+    <div class="fix">
+        <h3>FIX-20260221-02: Knowledgebase Version History Missing</h3>
+        <p><strong>Issue:</strong> The Knowledgebase sidebar was missing previous version links.</p>
+        <p><strong>Resolution:</strong> Created and ran a reconstruction script <code>reconstruct_kb.py</code> to parse <code>index.html</code> and restore the sidebar navigation.</p>
+    </div>
+    <div class="fix">
+        <h3>FIX-20260221-03: AddProductWizard Syntax Error</h3>
+        <p><strong>Issue:</strong> Build error "x 'import', and 'export' cannot be used outside of module code" in <code>AddProductWizard.jsx</code>.</p>
+        <p><strong>Root Cause:</strong> A misplaced <code>import { useEffect } from 'react';</code> statement was found inside the component function body, along with a redundant <code>useState</code> block.</p>
+        <p><strong>Resolution:</strong> Removed the misplaced import and redundant code. Verified <code>useEffect</code> is correctly imported at the top level.</p>
+    </div>
+    <div class="fix">
+        <h3>FIX-20260221-04: DragDropImageUpload Unique Key Prop Error</h3>
+        <p><strong>Issue:</strong> "Each child in a list should have a unique 'key' prop" error when rendering the image upload component.</p>
+        <p><strong>Root Cause:</strong> <code>AddProductWizard</code> was passing raw image strings (URLs) from <code>initialData</code> or saved drafts to <code>DragDropImageUpload</code>, which expects objects with unique <code>id</code> properties for sorting.</p>
+        <p><strong>Resolution:</strong> Implemented a <code>normalizeImages</code> helper function in <code>AddProductWizard.jsx</code> to automatically convert image strings into objects with generated unique IDs before initializing the form or loading drafts.</p>
+    </div>
+    <div class="fix">
+        <h3>FIX-20260221-05: VariationMatrixManager Infinite Update Loop</h3>
+        <p><strong>Issue:</strong> "Maximum update depth exceeded" error when using the Variation Matrix Manager in Add Product Wizard.</p>
+        <p><strong>Root Cause:</strong> Circular dependency between parent component updates and child component state synchronization. 
+        <ol>
+            <li><code>VariationMatrixManager</code> updates internal state and calls <code>onUpdate</code>.</li>
+            <li>Parent (<code>AddProductWizard</code>) updates its form state and re-renders.</li>
+            <li>Parent passes new state back to <code>VariationMatrixManager</code> as <code>initialData</code> prop.</li>
+            <li><code>VariationMatrixManager</code>'s <code>useEffect</code> detects prop change and calls <code>setState</code> to sync.</li>
+            <li>This triggers a re-render and another update cycle, causing an infinite loop.</li>
+        </ol>
+        </p>
+        <p><strong>Resolution:</strong> Implemented a <code>useRef</code>-based <code>isSelfUpdate</code> flag in <code>VariationMatrixManager.jsx</code>. When an update originates from the component itself, the flag is set to true. The synchronization <code>useEffect</code> checks this flag and skips the state update if it was self-initiated, breaking the loop while still allowing updates from external sources (like loading a draft).</p>
+    </div>
+    <div class="fix">
+        <h3>FIX-20260221-06: DragDropImageUpload Unique Key Prop Error</h3>
+        <p><strong>Issue:</strong> "Each child in a list should have a unique 'key' prop" error prevents product images from showing in the Add/Edit Product Wizard.</p>
+        <p><strong>Root Cause:</strong> The <code>DragDropImageUpload</code> component received image objects that were either missing <code>id</code> properties or had duplicate IDs (potentially from raw API data or inconsistent state updates). This caused React to fail rendering the list and dnd-kit to malfunction.</p>
+        <p><strong>Resolution:</strong> 
+        <ul>
+            <li>Updated <code>DragDropImageUpload.jsx</code> to internally normalize the <code>images</code> prop using <code>useMemo</code>.</li>
+            <li>Added fallback logic to generate stable IDs (<code>fallback-id-{index}</code>) if an image lacks an ID.</li>
+            <li>Ensured <code>SortableContext</code> and the rendering loop use these normalized IDs to maintain consistency for drag-and-drop operations.</li>
+            <li>Added debug logs in <code>AddProductWizard.jsx</code> to trace data flow.</li>
+        </ul>
+        </p>
+    </div>
+    <div class="fix">
+        <h3>FIX-20260221-07: Product Image Persistence and Display</h3>
+        <p><strong>Issue:</strong> Product images were not showing in the "Edit Product" wizard or the product list, and a 404 error occurred after saving a product.</p>
+        <p><strong>Root Cause:</strong>
+        <ul>
+            <li><strong>404 Error:</strong> <code>AddProductWizard.jsx</code> redirected to <code>/store/products</code>, which does not exist. The correct path is <code>/store/manage-product</code>.</li>
+            <li><strong>Image Saving:</strong> The API (<code>api/products/route.js</code> and <code>[id]/route.js</code>) used <code>isValidImage</code> filter which rejected image objects (<code>{id, url}</code>), discarding them during save.</li>
+            <li><strong>Image Display:</strong> <code>manage-product/page.jsx</code> expected image strings in the <code>src</code> attribute, causing render errors when objects were present.</li>
+        </ul>
+        </p>
+        <p><strong>Resolution:</strong>
+        <ul>
+            <li>Updated <code>AddProductWizard.jsx</code> to redirect to <code>/store/manage-product</code>.</li>
+            <li>Modified <code>lib/imageUtils.js</code> to allow image objects with valid URLs in <code>isValidImage</code>.</li>
+            <li>Updated <code>AddProductWizard.jsx</code>'s <code>uploadImage</code> to handle and return image objects, preserving IDs.</li>
+            <li>Updated <code>manage-product/page.jsx</code> to correctly extract URLs from image objects for display.</li>
+        </ul>
+        </p>
+    </div>
+    <div class="fix">
+        <h3>FIX-20260221-08: Shipping and Condition Data Persistence</h3>
+        <p><strong>Issue:</strong> Shipping dimensions (Weight, Length, Width, Height) and other product details (Condition, Pre-Order status) were not being saved or updated, resulting in values reverting to 0 or default.</p>
+        <p><strong>Root Cause:</strong> The API endpoints (<code>api/products/route.js</code> and <code>api/products/[productId]/route.js</code>) were not extracting or updating these specific fields from the request body, causing them to be ignored during CREATE and UPDATE operations.</p>
+        <p><strong>Resolution:</strong>
+        <ul>
+            <li>Updated <code>POST</code> handler in <code>api/products/route.js</code> to include <code>weight</code>, <code>length</code>, <code>width</code>, <code>height</code>, <code>condition</code>, and <code>preOrder</code> in the creation logic.</li>
+            <li>Updated <code>PUT</code> handler in <code>api/products/[productId]/route.js</code> to include these fields in the update logic.</li>
+            <li>Added <code>preOrder</code> field to <code>Product</code> model in <code>prisma/schema.prisma</code> to resolve "Unknown argument" error.</li>
+        </ul>
+        </p>
+    </div>
+</body>
+</html>

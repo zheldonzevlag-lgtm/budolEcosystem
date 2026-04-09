@@ -1,0 +1,526 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Issues & Fixes - ECS Fargate Migration v7.0.0</title>
+    <style>
+        :root {
+            --primary: #0052cc;
+            --text: #172b4d;
+            --bg: #f8fafc;
+            --border: #dfe1e6;
+            --danger: #b91c1c;
+            --success: #15803d;
+            --warning: #b45309;
+        }
+
+        body {
+            font-family: 'Inter', sans-serif;
+            background: var(--bg);
+            color: var(--text);
+            margin: 0;
+            display: flex;
+        }
+
+        .sidebar {
+            width: 260px;
+            height: 100vh;
+            background: #fff;
+            border-right: 1px solid var(--border);
+            position: fixed;
+            padding: 2rem 1rem;
+            overflow-y: auto;
+        }
+
+        .main {
+            margin-left: 280px;
+            padding: 3rem 4rem;
+            max-width: 900px;
+        }
+
+        .nav-item {
+            display: block;
+            padding: 0.75rem 1rem;
+            color: #64748b;
+            text-decoration: none;
+            border-radius: 8px;
+            margin-bottom: 0.25rem;
+            font-size: 0.9rem;
+        }
+
+        .nav-item:hover {
+            background: #f1f5f9;
+            color: var(--primary);
+        }
+
+        .nav-item.active {
+            background: #e0e7ff;
+            color: var(--primary);
+        }
+
+        .issue-card {
+            background: #fff;
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            padding: 1.5rem;
+            margin-bottom: 2rem;
+            border-left: 5px solid var(--danger);
+        }
+
+        .fix-card {
+            background: #fff;
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            padding: 1.5rem;
+            margin-bottom: 2rem;
+            border-left: 5px solid var(--success);
+        }
+
+        .fix-box {
+            background: #f1f5f9;
+            padding: 1rem;
+            border-radius: 8px;
+            margin-top: 1rem;
+            border: 1px solid var(--border);
+        }
+
+        .warning-card {
+            background: #fff;
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            padding: 1.5rem;
+            margin-bottom: 2rem;
+            border-left: 5px solid var(--warning);
+        }
+
+        h1 {
+            font-size: 2rem;
+            font-weight: 800;
+            color: #0f172a;
+            margin-bottom: 1.5rem;
+        }
+
+        h2 {
+            font-size: 1.5rem;
+            font-weight: 700;
+            color: #0f172a;
+            margin-bottom: 1rem;
+            margin-top: 2rem;
+        }
+
+        h3 {
+            font-size: 1.125rem;
+            font-weight: 600;
+            color: #334155;
+            margin-bottom: 0.75rem;
+            margin-top: 0;
+        }
+
+        h4 {
+            margin-top: 0;
+            color: var(--danger);
+        }
+
+        code {
+            background: #f1f5f9;
+            padding: 0.2rem 0.4rem;
+            border-radius: 4px;
+            font-family: monospace;
+            font-size: 0.85rem;
+        }
+
+        pre {
+            background: #1e293b;
+            color: #e2e8f0;
+            padding: 1rem;
+            border-radius: 8px;
+            overflow-x: auto;
+            font-size: 0.85rem;
+        }
+
+        ul,
+        ol {
+            padding-left: 1.5rem;
+        }
+
+        li {
+            margin-bottom: 0.5rem;
+        }
+
+        .phase {
+            background: #f1f5f9;
+            padding: 0.25rem 0.75rem;
+            border-radius: 4px;
+            font-size: 0.7rem;
+            font-weight: 700;
+            text-transform: uppercase;
+            color: var(--primary);
+            margin-right: 0.5rem;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="sidebar">
+        <div style="font-weight: 800; font-size: 1.25rem; color: var(--primary); margin-bottom: 2rem; padding: 0 1rem;">
+            Budol Ecosystem</div>
+        <nav>
+            <a href="index.html" class="nav-item">Overview</a>
+            <a href="system_architecture.html" class="nav-item">Architecture Deep Dive</a>
+            <a href="how_to_guide.html" class="nav-item">How-To Guide</a>
+            <a href="implementation_plan.html" class="nav-item">Implementation Plan</a>
+            <a href="developer_manual.html" class="nav-item">Developer Manual</a>
+            <a href="user_manual.html" class="nav-item">User Manual</a>
+            <a href="task.html" class="nav-item">Task/Checklist</a>
+            <a href="system_admin_manual.html" class="nav-item">System Admin</a>
+            <hr style="margin: 1.5rem 0; border: 0; border-top: 1px solid var(--border);">
+            <a href="risk_register.html" class="nav-item">Risk Register</a>
+            <a href="Mitigation.html" class="nav-item">Mitigation Plan</a>
+            <a href="issues_fixes.html" class="nav-item active">Issues & Fixes</a>
+            <a href="test_results.html" class="nav-item">Test Results</a>
+            <a href="future_recommendations.html" class="nav-item">Recommendations</a>
+            <hr style="margin: 1.5rem 0; border: 0; border-top: 1px solid var(--border);">
+            <a href="../../knowledgebase.html" class="nav-item">← Back to KB</a>
+        </nav>
+    </div>
+    <div class="main">
+        <h1>Issues & Fixes Log</h1>
+        <p style="color: #64748b; margin-bottom: 2rem;">This document chronicles all issues encountered during the ECS
+            Fargate migration and their resolutions.</p>
+
+        <!-- Issue 1: Previous Infrastructure Issues (from v6) -->
+        <div class="issue-card">
+            <h4>Issue #001: Lack of Domain Name (v6)</h4>
+            <p><span class="phase">Phase 1</span> <strong>Date:</strong> Pre-v7.0.0</p>
+            <p><strong>Description:</strong> Production environment lacked a professional domain name for external
+                access, causing cross-origin issues between local dev and cloud APIs.</p>
+            <div class="fix-box">
+                <strong>Fix:</strong> Implemented a 6-subdomain <strong>DuckDNS</strong> strategy. Mapped all
+                microservices to specific subdomains (budolshap, budolid, budolpay, etc.) ensuring stable external
+                access at zero cost.
+            </div>
+        </div>
+
+        <div class="issue-card">
+            <h4>Issue #002: Inter-service Communication Overhead (v6)</h4>
+            <p><span class="phase">Phase 1</span> <strong>Date:</strong> Pre-v7.0.0</p>
+            <p><strong>Description:</strong> Services were attempting to communicate via public URLs, increasing latency
+                and cost.</p>
+            <div class="fix-box">
+                <strong>Fix:</strong> Configured <strong>Route 53 Private Hosted Zones</strong> with
+                <code>.internal</code> aliases. Services now communicate securely within the VPC over private IPs.
+            </div>
+        </div>
+
+        <div class="issue-card">
+            <h4>Issue #003: SSM Agent "Offline" on Private EC2 (v6)</h4>
+            <p><span class="phase">Phase 2</span> <strong>Date:</strong> Pre-v7.0.0</p>
+            <p><strong>Description:</strong> The <code>budol-redis</code> instance was provisioned in a private subnet
+                and appeared as "Offline" in AWS Systems Manager, preventing administrative access.</p>
+            <div class="fix-box">
+                <strong>Fix:</strong> Corrected VPC Routing. The private subnets were not associated with the
+                <strong>Private Route Table</strong>.
+                <ol>
+                    <li>Associated Private Subnets with a dedicated Route Table.</li>
+                    <li>Added a route for <code>0.0.0.0/0</code> targeting the <strong>NAT Gateway</strong>.</li>
+                </ol>
+                This allowed the SSM agent to communicate with the AWS Systems Manager service endpoints securely.
+            </div>
+        </div>
+
+        <div class="issue-card">
+            <h4>Issue #004: Invalid AMI ID for Ubuntu 24.04 Launch (v6)</h4>
+            <p><span class="phase">Phase 3</span> <strong>Date:</strong> Pre-v7.0.0</p>
+            <p><strong>Description:</strong> Initial EC2 launch for <code>budol-ws</code> failed with
+                <code>InvalidAMIID.NotFound</code> error because a hardcoded AMI ID was used that was either expired or
+                not available in <code>ap-southeast-1</code>.</p>
+            <div class="fix-box">
+                <strong>Fix:</strong> Queried AWS SSM Parameter Store to get the latest valid Ubuntu 24.04 LTS AMI ID
+                dynamically for the target region:
+                <br><code>aws ssm get-parameters-by-path --path /aws/service/canonical/ubuntu/server/24.04/stable/current/amd64/hvm/ebs-gp3/ami-id</code>
+                <br>Result: AMI ID <code>ami-0ed0867532b47cc2c</code> was used for successful launch.
+            </div>
+        </div>
+
+        <!-- ECS-Specific Issues -->
+        <h2>ECS Fargate Migration Issues</h2>
+
+        <div class="issue-card">
+            <h4>Issue #005: ECR Repository Creation Permissions</h4>
+            <p><span class="phase">Phase 2</span> <strong>Date:</strong> v7.0.0</p>
+            <p><strong>Description:</strong> Attempting to create ECR repositories failed with
+                <code>AccessDeniedException</code> when the IAM user didn't have <code>ecr:CreateRepository</code>
+                permissions.</p>
+            <div class="fix-box">
+                <strong>Fix:</strong> Added the following IAM permissions to the deployment user:
+                <pre><code>{
+  "Version": "2012-10-17",
+  "Statement": [
+    {
+      "Effect": "Allow",
+      "Action": [
+        "ecr:CreateRepository",
+        "ecr:DeleteRepository",
+        "ecr:DescribeRepositories",
+        "ecr:PutLifecyclePolicy"
+      ],
+      "Resource": "arn:aws:ecr:ap-southeast-1:*:repository/budolEcosystem/*"
+    }
+  ]
+}</code></pre>
+            </div>
+        </div>
+
+        <div class="issue-card">
+            <h4>Issue #006: Docker Build Failures - Missing Dependencies</h4>
+            <p><span class="phase">Phase 5</span> <strong>Date:</strong> v7.0.0</p>
+            <p><strong>Description:</strong> Docker build failed for some services with errors like
+                <code>cannot find module 'express'</code> because node_modules weren't being included in the image.</p>
+            <div class="fix-box">
+                <strong>Fix:</strong> Updated Dockerfile to use multi-stage builds:
+                <pre><code># Build stage
+FROM node:20-alpine AS builder
+WORKDIR /app
+COPY package*.json ./
+RUN npm ci --only=production
+COPY . .
+
+# Production stage
+FROM node:20-alpine
+WORKDIR /app
+COPY --from=builder /app/node_modules ./node_modules
+COPY --from=builder /app .
+CMD ["node", "server.js"]</code></pre>
+            </div>
+        </div>
+
+        <div class="issue-card">
+            <h4>Issue #007: ECS Task Definition - Missing IAM Role</h4>
+            <p><span class="phase">Phase 4</span> <strong>Date:</strong> v7.0.0</p>
+            <p><strong>Description:</strong> ECS tasks failed to start with error
+                <code>AccessDeniedException: The role 'ecsTaskExecutionRole' cannot be assumed</code>.</p>
+            <div class="fix-box">
+                <strong>Fix:</strong> Created the ECS Task Execution IAM role with the proper trust relationship:
+                <pre><code>{
+  "Version": "2012-10-17",
+  "Statement": [
+    {
+      "Effect": "Allow",
+      "Principal": {
+        "Service": "ecs-tasks.amazonaws.com"
+      },
+      "Action": "sts:AssumeRole"
+    }
+  ]
+}</code></pre>
+                And attached the <code>AmazonECSTaskExecutionRolePolicy</code> managed policy.
+            </div>
+        </div>
+
+        <div class="issue-card">
+            <h4>Issue #008: ALB Target Group Health Check Failures</h4>
+            <p><span class="phase">Phase 6</span> <strong>Date:</strong> v7.0.0</p>
+            <p><strong>Description:</strong> ECS tasks were showing as <code>unhealthy</code> in ALB target groups. The
+                health check was failing because the default path <code>/</code> didn't return 200 for some services.
+            </p>
+            <div class="fix-box">
+                <strong>Fix:</strong>
+                <ol>
+                    <li>Configured service-specific health check paths in the target group:</li>
+                    <ul>
+                        <li>budolID: <code>/api/health</code></li>
+                        <li>budolPay Gateway: <code>/health</code></li>
+                        <li>budolAccounting: <code>/health</code></li>
+                    </ul>
+                    <li>Added health check endpoints to each service that returns HTTP 200 with
+                        <code>{"status": "ok"}</code></li>
+                    <li>Increased health check interval to 30 seconds and timeout to 10 seconds</li>
+                </ol>
+            </div>
+        </div>
+
+        <div class="issue-card">
+            <h4>Issue #009: Container Networking - Services Can't Reach Each Other</h4>
+            <p><span class="phase">Phase 6</span> <strong>Date:</strong> v7.0.0</p>
+            <p><strong>Description:</strong> Inter-service communication was failing with <code>ECONNREFUSED</code>
+                errors. Containers couldn't resolve service names.</p>
+            <div class="fix-box">
+                <strong>Fix:</strong>
+                <ol>
+                    <li>Ensured all ECS services are in the same security group with inbound rules allowing all traffic
+                        on all ports</li>
+                    <li>Updated service URLs to use the ECS service discovery names (e.g.,
+                        <code>http://budolid:8000</code>)</li>
+                    <li>Added <code>awsvpc</code> network mode to task definitions for proper networking</li>
+                </ol>
+            </div>
+        </div>
+
+        <div class="issue-card">
+            <h4>Issue #010: Secrets Not Available in Container</h4>
+            <p><span class="phase">Phase 4</span> <strong>Date:</strong> v7.0.0</p>
+            <p><strong>Description:</strong> Environment variables for database passwords were showing as
+                <code>undefined</code> in running containers.</p>
+            <div class="fix-box">
+                <strong>Fix:</strong>
+                <ol>
+                    <li>Used AWS Secrets Manager instead of SSM Parameter Store for sensitive data</li>
+                    <li>Updated task definitions to use <code>secrets</code> instead of <code>environment</code> for
+                        sensitive values:</li>
+                </ol>
+                <pre><code>"secrets": [
+  {
+    "name": "DATABASE_PASSWORD",
+    "valueFrom": "arn:aws:secretsmanager:ap-southeast-1:123456789012:secret:/budolEcosystem/production/DATABASE_PASSWORD"
+  }
+]</code></pre>
+            </div>
+        </div>
+
+        <div class="issue-card">
+            <h4>Issue #011: Task Definition Revision Conflicts</h4>
+            <p><span class="phase">Phase 4</span> <strong>Date:</strong> v7.0.0</p>
+            <p><strong>Description:</strong> Registering new task definitions failed with
+                <code>ClientException: The container name 'budolid' is already in use</code>.</p>
+            <div class="fix-box">
+                <strong>Fix:</strong>
+                <ol>
+                    <li>Ensured each task definition uses a unique container name</li>
+                    <li>Used JSON file approach for task definitions instead of CLI to avoid naming conflicts</li>
+                    <li>Registered with <code>--cli-input-json</code> instead of individual parameters</li>
+                </ol>
+            </div>
+        </div>
+
+        <div class="issue-card">
+            <h4>Issue #012: Security Group Rules Too Restrictive</h4>
+            <p><span class="phase">Phase 3</span> <strong>Date:</strong> v7.0.0</p>
+            <p><strong>Description:</strong> ALB couldn't connect to ECS tasks because the security group only allowed
+                inbound from the ALB's security group, but the tasks were in a different security group.</p>
+            <div class="fix-box">
+                <strong>Fix:</strong>
+                <ol>
+                    <li>Created a dedicated security group for ECS tasks</li>
+                    <li>Added inbound rule allowing all traffic from ALB security group</li>
+                    <li>Added inbound rule allowing all traffic from VPC CIDR for internal communication</li>
+                </ol>
+            </div>
+        </div>
+
+        <div class="issue-card">
+            <h4>Issue #013: CloudFormation Stack Creation Timeout</h4>
+            <p><span class="phase">Phase 3</span> <strong>Date:</strong> v7.0.0</p>
+            <p><strong>Description:</strong> CloudFormation stack creation timed out while waiting for ALB to become
+                available.</p>
+            <div class="fix-box">
+                <strong>Fix:</strong>
+                <ol>
+                    <li>Increased stack creation timeout to 60 minutes</li>
+                    <li>Broke down CloudFormation template into smaller nested stacks</li>
+                    <li>Added <code>--timeout-in-minutes 60</code> to the deployment command</li>
+                </ol>
+            </div>
+        </div>
+
+        <div class="warning-card">
+            <h4>Issue #014: Cost Optimization - Fargate vs EC2</h4>
+            <p><span class="phase">Phase 3</span> <strong>Date:</strong> v7.0.0</p>
+            <p><strong>Description:</strong> Fargate tasks are running but costs may exceed Free Tier limits with
+                constant 9 running tasks.</p>
+            <div class="fix-box">
+                <strong>Mitigation:</strong>
+                <ol>
+                    <li>Set desired task count to 1 for each service (minimum)</li>
+                    <li>Configure auto-scaling to scale down to 0 during non-peak hours</li>
+                    <li>Consider using Spot instances with ECS EC2 launch type for cost savings</li>
+                    <li>Monitor AWS Cost Explorer for actual usage</li>
+                </ol>
+            </div>
+        </div>
+
+        <div class="issue-card">
+            <h4>Issue #015: Route 53 Private Zone DNS Resolution</h4>
+            <p><span class="phase">Phase 3</span> <strong>Date:</strong> v7.0.0</p>
+            <p><strong>Description:</strong> ECS containers couldn't resolve <code>.budol.internal</code> domain names.
+            </p>
+            <div class="fix-box">
+                <strong>Fix:</strong>
+                <ol>
+                    <li>Associated the Private Hosted Zone with the VPC</li>
+                    <li>Added <code>enableDnsHostnames</code> and <code>enableDnsSupport</code> VPC attributes</li>
+                    <li>Used <code>awsvpc</code> network mode which provides enhanced DNS resolution</li>
+                </ol>
+            </div>
+        </div>
+
+        <!-- Troubleshooting Guide -->
+        <h2>Troubleshooting Guide</h2>
+
+        <div class="fix-card">
+            <h3>Task Not Starting</h3>
+            <p><strong>Symptoms:</strong> ECS task stays in <code>PENDING</code> state or fails to start.</p>
+            <div class="fix-box">
+                <strong>Troubleshooting Steps:</strong>
+                <ol>
+                    <li>Check task definition for syntax errors:
+                        <code>aws ecs describe-task-definition --task-definition <family></code></li>
+                    <li>Verify image exists in ECR: <code>aws ecr describe-images --repository-name <repo></code></li>
+                    <li>Check CloudWatch logs for container errors</li>
+                    <li>Verify security group allows outbound to ECR</li>
+                    <li>Ensure task execution role has ECR pull permissions</li>
+                </ol>
+            </div>
+        </div>
+
+        <div class="fix-card">
+            <h3>Service Not Reaching Healthy State</h3>
+            <p><strong>Symptoms:</strong> Target group shows 0/0 healthy or unhealthy instances.</p>
+            <div class="fix-box">
+                <strong>Troubleshooting Steps:</strong>
+                <ol>
+                    <li>Check if task is running:
+                        <code>aws ecs list-tasks --cluster <cluster> --service-name <service></code></li>
+                    <li>Review CloudWatch logs for health check failures</li>
+                    <li>Verify health check path returns HTTP 200</li>
+                    <li>Check security group allows traffic from ALB</li>
+                    <li>Increase health check grace period period</li>
+                </ol>
+            </div>
+        </div>
+
+        <div class="fix-card">
+            <h3>Inter-Service Communication Failing</h3>
+            <p><strong>Symptoms:</strong> Services return <code>502 Bad Gateway</code> or <code>ECONNREFUSED</code>.</p>
+            <div class="fix-box">
+                <strong>Troubleshooting Steps:</strong>
+                <ol>
+                    <li>Verify target service is running:
+                        <code>aws ecs describe-services --cluster <cluster> --services <service></code></li>
+                    <li>Check security groups allow internal traffic</li>
+                    <li>Test DNS resolution from within container</li>
+                    <li>Verify correct service URLs in environment variables</li>
+                    <li>Check ALB listener rules are correctly configured</li>
+                </ol>
+            </div>
+        </div>
+
+        <div class="fix-card">
+            <h3>Image Pull Failures</h3>
+            <p><strong>Symptoms:</strong> Tasks fail with <code>CannotPullContainerError</code>.</p>
+            <div class="fix-box">
+                <strong>Troubleshooting Steps:</strong>
+                <ol>
+                    <li>Verify ECR repository exists and image tag exists</li>
+                    <li>Check VPC has gateway endpoint for ECR</li>
+                    <li>Ensure IAM role has <code>ecr:GetAuthorizationToken</code> and <code>ecr:BatchGetImage</code>
+                    </li>
+                    <li>Verify security group allows outbound HTTPS (443) to ECR endpoints</li>
+                </ol>
+            </div>
+        </div>
+    </div>
+</body>
+
+</html>

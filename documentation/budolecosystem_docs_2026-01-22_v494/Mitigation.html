@@ -1,0 +1,47 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Mitigation Strategy - v494</title>
+    <style>
+        body { font-family: sans-serif; line-height: 1.6; max-width: 900px; margin: 0 auto; padding: 40px; background: #f4f5f7; }
+        .card { background: white; padding: 30px; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
+        h1 { color: #0747a6; }
+        .mitigation-item { margin-bottom: 25px; border-left: 4px solid #00875a; padding-left: 20px; }
+        h3 { color: #00875a; margin-top: 0; }
+        .code-snippet { background: #f4f5f7; padding: 10px; border-radius: 4px; font-family: monospace; font-size: 0.9em; }
+    </style>
+</head>
+<body>
+    <div class="card">
+        <h1>🛡️ Mitigation Strategy <span style="font-size: 0.5em;">v494</span></h1>
+        
+        <div class="mitigation-item">
+            <h3>M-494-01: Realtime Event Deduplication</h3>
+            <p><strong>Risk:</strong> Duplicate notifications causing user confusion and UI flicker (R-494-03).</p>
+            <p><strong>Mitigation:</strong> Implementation of a two-tier deduplication logic in <code>RealtimeProvider.jsx</code>. It uses a 5-second window for the same event/data pair and a <code>lastSeenStatus</code> map to prevent duplicate toasts for the same status transition.</p>
+        </div>
+
+        <div class="mitigation-item">
+            <h3>M-494-02: Filter-Aware Cache Patching</h3>
+            <p><strong>Risk:</strong> Orders appearing in incorrect tabs after status change (Tab Desync).</p>
+            <p><strong>Mitigation:</strong> The <code>patchOrderCache</code> function now dynamically evaluates the URL parameters of cached SWR keys. If an order's new status no longer matches the <code>status</code> filter in the URL, it is explicitly removed from that cache entry, ensuring UI consistency without full page reloads.</p>
+        </div>
+
+        <div class="mitigation-item">
+            <h3>M-494-03: Universal Status Normalization</h3>
+            <p><strong>Risk:</strong> Inconsistent terminology between courier updates and user notifications.</p>
+            <p><strong>Mitigation:</strong> Integration with <code>statusMapper.js</code>'s <code>getStatusLabel</code> and <code>UNIVERSAL_STATUS</code>. All realtime notifications now pass through a normalization layer to ensure the user sees "To Ship" or "Delivered" regardless of the underlying technical status or courier-specific label.</p>
+        </div>
+
+        <div class="mitigation-item">
+            <h3>M-494-04: Visual Consistency Standard</h3>
+            <p><strong>Risk:</strong> UI fragmentation where system notifications look different from the brand's intended aesthetic (R-494-04).</p>
+            <p><strong>Mitigation:</strong> Established a "Notification Design Pattern" in <code>RealtimeProvider.jsx</code> that overrides default toast styles with a standard white-on-slate theme, ensuring all order status updates follow the professional "Image 2" specification.</p>
+        </div>
+
+        <hr>
+        <p><a href="index.html">← Back to Index</a></p>
+    </div>
+</body>
+</html>

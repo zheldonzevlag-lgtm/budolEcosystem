@@ -1,0 +1,46 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Developer Manual - v417</title>
+    <style>
+        body { font-family: sans-serif; line-height: 1.6; padding: 20px; background: #f4f7f6; }
+        .code-block { background: #1e1e1e; color: #d4d4d4; padding: 15px; border-radius: 8px; overflow-x: auto; font-family: 'Consolas', monospace; margin: 10px 0; }
+        .link { color: #0747A6; text-decoration: none; font-weight: bold; }
+        .card { background: white; padding: 20px; border-radius: 8px; margin-bottom: 20px; }
+    </style>
+</head>
+<body>
+    <h1>Developer Manual - Version 417</h1>
+    <div class="card">
+        <h2>Technical Explanation: Splash Synchronization</h2>
+        <p>The core fix involves ensuring that the <code>ApiService</code> background initialization (which fetches the fresh user profile) is awaited by the <code>SplashScreen</code> before it proceeds to the <code>HomeScreen</code>.</p>
+        
+        <h3>ApiService Changes</h3>
+        <p>A new <code>waitForFullInit()</code> method was added to allow awaiting the <code>_backgroundInitFuture</code>.</p>
+        <div class="code-block">
+<a class="link" href="file:///d:/IT Projects/budolEcosystem/budolPayMobile/lib/services/api_service.dart">api_service.dart</a>
+<pre>
+Future<void> waitForFullInit() async {
+  await _ensureInitialized();
+  if (_backgroundInitFuture != null) {
+    await _backgroundInitFuture;
+  }
+}
+</pre>
+        </div>
+
+        <h3>SplashScreen Changes</h3>
+        <p>The navigation logic now checks if the user is authenticated and waits for the full initialization if so.</p>
+        <div class="code-block">
+<a class="link" href="file:///d:/IT Projects/budolEcosystem/budolPayMobile/lib/screens/splash_screen.dart">splash_screen.dart</a>
+<pre>
+if (apiService.isAuthenticated) {
+  debugPrint('SplashScreen: Authenticated, waiting for full initialization...');
+  await apiService.waitForFullInit().timeout(const Duration(seconds: 5));
+}
+</pre>
+        </div>
+    </div>
+</body>
+</html>

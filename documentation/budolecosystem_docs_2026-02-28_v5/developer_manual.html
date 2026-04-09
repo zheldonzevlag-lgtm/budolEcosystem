@@ -1,0 +1,70 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Developer Manual - v5.3.5 | Budol Ecosystem</title>
+    <style>
+        body {
+            font-family: 'Inter', system-ui, -apple-system, sans-serif;
+            line-height: 1.6;
+            color: #1e293b;
+            max-width: 1000px;
+            margin: 0 auto;
+            padding: 40px 20px;
+            background-color: #f8fafc;
+        }
+
+        .card {
+            background: white;
+            padding: 24px;
+            border-radius: 12px;
+            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+            margin-bottom: 24px;
+        }
+
+        pre {
+            background: #1e293b;
+            color: #f8fafc;
+            padding: 16px;
+            border-radius: 8px;
+            overflow-x: auto;
+        }
+    </style>
+</head>
+
+<body>
+    <h1>Developer Manual (v5.3.5)</h1>
+
+    <div class="card">
+        <h2>Cache Invalidation Strategy</h2>
+        <p>The <code>CategorySelector</code> component is a client-side component that fetches data from a public API
+            route. To prevent stale data, we've implemented the following:</p>
+
+        <h3>1. Server-Side De-caching</h3>
+        <p>In <code>app/api/categories/route.js</code>:</p>
+        <pre><code>export const dynamic = 'force-dynamic'
+export const revalidate = 0</code></pre>
+
+        <h3>2. Client-Side Cache Busting</h3>
+        <p>In <code>CategorySelector.jsx</code>, the fetch call now includes headers and a timestamp to bypass browser
+            cache:</p>
+        <pre><code>const res = await fetch(`/api/categories?flat=true&t=${Date.now()}`, {
+    cache: 'no-store',
+    headers: {
+        'Cache-Control': 'no-cache'
+    }
+})</code></pre>
+    </div>
+
+    <div class="card">
+        <h2>Slug Pattern for Non-Unique Names</h2>
+        <p>Users reported "Socks" not being found despite existing in Admin. Our database analysis showed that if
+            "Socks" exists in multiple sub-paths (e.g., Men vs Women), the second entry's slug is automatically suffixed
+            with a timestamp. The <code>CategorySelector</code> searching functionality is name-based and slug-based, so
+            both remain findable.</p>
+    </div>
+</body>
+
+</html>

@@ -1,0 +1,83 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Developer Manual - Budol Ecosystem v1</title>
+    <style>
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; line-height: 1.6; color: #333; max-width: 1200px; margin: 0 auto; padding: 20px; background-color: #f4f7f6; }
+        header { background-color: #0052cc; color: white; padding: 20px; border-radius: 8px 8px 0 0; margin-bottom: 20px; }
+        .container { background-color: white; padding: 30px; border-radius: 0 0 8px 8px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); }
+        h1, h2, h3 { color: #0052cc; }
+        code { background-color: #282c34; color: #abb2bf; padding: 2px 5px; border-radius: 4px; font-family: 'Courier New', Courier, monospace; }
+        pre { background-color: #282c34; color: #abb2bf; padding: 15px; border-radius: 8px; overflow-x: auto; }
+        .code-link { color: #4db6ac; text-decoration: underline; cursor: pointer; }
+        .explanation { margin-bottom: 20px; }
+    </style>
+</head>
+<body>
+    <header>
+        <h1>Developer Manual</h1>
+        <div>Version: v1 | Release Date: 2026-02-02</div>
+    </header>
+    <div class="container">
+        <section>
+            <h2>Purpose & Rationale</h2>
+            <p>This document details the technical implementation of the administrative role elevation for the Budol Ecosystem. The rationale is to ensure that authorized administrators have consistent access across all integrated services (BudolPay, BudolID, BudolShap).</p>
+        </section>
+
+        <section>
+            <h2>Technical Explanation</h2>
+            <p>The role elevation involves updating the <code>role</code> column in the <code>User</code> table across multiple PostgreSQL databases. Due to the distributed nature of the ecosystem, synchronization is handled at the database level using raw SQL queries where Prisma schema synchronization is not yet fully propagated.</p>
+        </section>
+
+        <section>
+            <h2>Code References</h2>
+            
+            <div class="explanation">
+                <h3>Role Verification Test</h3>
+                <p>The following script verifies that the user <code>reynaldomgalvez@gmail.com</code> has the <code>ADMIN</code> role across all target databases.</p>
+                <pre><code><a class="code-link" href="file:///d:/IT Projects/budolEcosystem/budolpay-0.1.0/scripts/test_scripts/verify_admin_role.test.ts">verify_admin_role.test.ts</a>
+// Test logic using Prisma $queryRaw for cross-database verification
+test('User should have ADMIN role in budolpay database', async () => {
+    const users: any[] = await prisma.$queryRaw`
+      SELECT role FROM "User" WHERE email = ${testEmail}
+    `;
+    expect(users[0].role).toBe('ADMIN');
+});</code></pre>
+            </div>
+
+            <div class="explanation">
+                <h3>Database Promotion Script (BudolPay)</h3>
+                <p>This script updates the user role in the primary BudolPay database.</p>
+                <pre><code><a class="code-link" href="file:///d:/IT Projects/budolEcosystem/scripts/test_scripts/budolPay/promote_to_admin_v2.js">promote_to_admin_v2.js</a>
+const result = await prisma.$executeRaw`
+  UPDATE "User" SET role = 'ADMIN' WHERE email = ${email};
+`;</code></pre>
+            </div>
+
+            <div class="explanation">
+                <h3>Database Promotion Script (BudolID Schema)</h3>
+                <p>This script updates the user role in the BudolID schema within the shared database.</p>
+                <pre><code><a class="code-link" href="file:///d:/IT Projects/budolEcosystem/budolpay-0.1.0/packages/database/update-budolid-role.js">update-budolid-role.js</a>
+const result = await prisma.$executeRaw`
+  UPDATE "budolid"."User" SET role = 'ADMIN' WHERE email = ${email}
+`;</code></pre>
+            </div>
+        </section>
+
+        <section>
+            <h2>Dependencies</h2>
+            <ul>
+                <li><code>@prisma/client</code>: Database ORM</li>
+                <li><code>jest</code>: Testing framework</li>
+                <li><code>ts-jest</code>: TypeScript support for Jest</li>
+            </ul>
+        </section>
+
+        <nav>
+            <p><a href="index.html">Back to Index</a></p>
+        </nav>
+    </div>
+</body>
+</html>

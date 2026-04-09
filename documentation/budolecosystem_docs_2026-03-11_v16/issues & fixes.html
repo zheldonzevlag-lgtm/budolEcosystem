@@ -1,0 +1,152 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Issues &amp; Fixes - Budol Ecosystem v16</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        :root { --primary: #0052CC; --secondary: #172B4D; --bg-sidebar: #F4F5F7; --border: #DFE1E6; --sidebar-width: 280px; }
+        body { font-family: 'Inter', sans-serif; display: flex; color: #172B4D; margin: 0; }
+        .sidebar { width: var(--sidebar-width); background: var(--bg-sidebar); min-height: 100vh; position: sticky; top: 0; padding: 24px; border-right: 1px solid var(--border); overflow-y: auto; }
+        .nav-item { display: block; padding: 8px 12px; text-decoration: none; color: #172B4D; font-size: 0.9rem; border-radius: 4px; }
+        .nav-item:hover { background: #EBECF0; }
+        .nav-item.active { background: #DEEBFF; color: #0052CC; font-weight: 600; }
+        .main-content { flex-grow: 1; padding: 40px 60px; max-width: 1000px; }
+        .issue { background: #fff; border: 1px solid var(--border); border-left: 4px solid #DE350B; border-radius: 6px; padding: 20px 24px; margin-bottom: 24px; }
+        .issue-title { font-weight: 700; color: #DE350B; font-size: 1rem; margin-bottom: 8px; }
+        .issue-detail { font-size: 0.875rem; color: #5E6C84; margin-bottom: 12px; }
+        .fix { background: #f0fdf4; border: 1px solid #bbf7d0; border-left: 4px solid #36B37E; border-radius: 6px; padding: 12px 18px; margin-top: 12px; }
+        .fix-title { font-weight: 700; color: #006644; font-size: 0.875rem; margin-bottom: 6px; }
+        .fix-detail { font-size: 0.875rem; color: #3D8B6A; }
+        .tag { display: inline-block; font-size: 0.7rem; font-weight: 700; padding: 2px 8px; border-radius: 3px; text-transform: uppercase; background: #FFEBE6; color: #BF2600; margin-right: 6px; }
+        .tag.medium { background: #FFFAE6; color: #974F0C; }
+        .tag.low { background: #F4F5F7; color: #5E6C84; }
+        code { background: #091E42; color: #B3D4FF; padding: 1px 5px; border-radius: 3px; font-family: 'Courier New', monospace; font-size: 0.85em; }
+        h1 { font-size: 2.2rem; }
+        h2 { border-bottom: 2px solid var(--border); padding-bottom: 8px; margin-top: 32px; }
+    </style>
+</head>
+<body>
+    <div class="sidebar">
+        <h3>v16 Documentation</h3>
+        <a href="index.html" class="nav-item">Overview</a>
+        <a href="developer_manual.html" class="nav-item">Developer Manual</a>
+        <a href="user_manual.html" class="nav-item">User Manual</a>
+        <a href="system_admin_manual.html" class="nav-item">System Admin Manual</a>
+        <a href="risk_register.html" class="nav-item">Risk Register</a>
+        <a href="Mitigation.html" class="nav-item">Mitigation Plan</a>
+        <a href="issues & fixes.html" class="nav-item active">Issues &amp; Fixes</a>
+        <a href="test_results.html" class="nav-item">Test Results</a>
+        <a href="future_recommendations.html" class="nav-item">Future Recommendations</a>
+    </div>
+    <div class="main-content">
+        <h1>Issues &amp; Fixes Log — v16</h1>
+        <p>All issues encountered during the v16 development cycle, including root cause analysis and applied fixes.</p>
+
+        <h2>Critical Issues</h2>
+
+        <div class="issue">
+            <div class="issue-title"><span class="tag">Critical</span> Cannot Login — SSO Callback Missing User Fields</div>
+            <div class="issue-detail">
+                Users could not log in via BudolID SSO. The login route in <code>app/api/auth/login/route.js</code>
+                attempted to access <code>user.phoneNumber</code> and <code>user.metadata</code> but these fields
+                did not exist in the Prisma schema, causing a runtime crash.
+            </div>
+            <div class="fix">
+                <div class="fix-title">✅ Fix Applied</div>
+                <div class="fix-detail">
+                    Added <code>phoneNumber String? @unique</code> and <code>metadata Json?</code> to the
+                    <code>User</code> model in <code>budolshap-0.1.0/prisma/schema.prisma</code>.
+                    Ran <code>prisma migrate deploy</code> to apply changes to the database.
+                </div>
+            </div>
+        </div>
+
+        <div class="issue">
+            <div class="issue-title"><span class="tag">Critical</span> Failed to Fetch Settings from DB — prisma.systemSettings Typo</div>
+            <div class="issue-detail">
+                System settings were not loading. The code in <code>lib/settings.js</code> and <code>lib/realtime.js</code>
+                referenced <code>prisma.systemSettings</code> (plural) instead of the actual Prisma model name
+                <code>prisma.systemSetting</code> (singular). This caused an "Unknown model" runtime error.
+            </div>
+            <div class="fix">
+                <div class="fix-title">✅ Fix Applied</div>
+                <div class="fix-detail">
+                    Corrected all occurrences of <code>prisma.systemSettings</code> →
+                    <code>prisma.systemSetting</code> in
+                    <a href="file:///d:/IT%20Projects/clone/budolEcosystem/budolshap-0.1.0/lib/settings.js"><code>lib/settings.js</code></a>
+                    and
+                    <a href="file:///d:/IT%20Projects/clone/budolEcosystem/budolshap-0.1.0/lib/realtime.js"><code>lib/realtime.js</code></a>.
+                </div>
+            </div>
+        </div>
+
+        <div class="issue">
+            <div class="issue-title"><span class="tag">Critical</span> budolID Prisma Schema BOM Encoding Error</div>
+            <div class="issue-detail">
+                Running <code>npm run generate</code> in <code>budolID-0.1.0</code> failed with 3 validation errors.
+                The root cause was a UTF-8 BOM character (<code>﻿</code>) at the start of <code>prisma/schema.prisma</code>,
+                which the Prisma parser could not interpret. This prevented Prisma Client from being generated for BudolID.
+            </div>
+            <div class="fix">
+                <div class="fix-title">✅ Fix Applied</div>
+                <div class="fix-detail">
+                    Rewrote the file from scratch without BOM encoding. <code>prisma generate</code> now succeeds
+                    and emits a valid Prisma Client.
+                </div>
+            </div>
+        </div>
+
+        <div class="issue">
+            <div class="issue-title"><span class="tag">Critical</span> Docker Build Failed — exit code 1 on npm run build</div>
+            <div class="issue-detail">
+                The Docker image build for <code>budol-shap:v16</code> failed at the <code>npm run build</code> step
+                because <code>DATABASE_URL</code> was not set and Next.js tried to statically render pages that
+                directly called Prisma at the top level.
+            </div>
+            <div class="fix">
+                <div class="fix-title">✅ Fix Applied</div>
+                <div class="fix-detail">
+                    Passed a dummy <code>DATABASE_URL</code> build arg to allow compilation. All dynamic DB pages
+                    (dashboard, accounting, settings) were marked with <code>export const dynamic = 'force-dynamic'</code>
+                    so Next.js skips them during static generation. Docker image <code>budol-shap:v16</code> (467MB) built successfully.
+                </div>
+            </div>
+        </div>
+
+        <h2>Medium Issues</h2>
+
+        <div class="issue">
+            <div class="issue-title"><span class="tag medium">Medium</span> budolpay Admin Build Fails — @budolpay/audit Not in Dependencies</div>
+            <div class="issue-detail">
+                The <code>admin</code> app in <code>budolpay-0.1.0</code> imported <code>@budolpay/audit</code>
+                via the re-export in <code>lib/audit.ts</code>, but <code>@budolpay/audit</code> was missing
+                from the <code>apps/admin/package.json</code> dependencies, causing module resolution to fail.
+            </div>
+            <div class="fix">
+                <div class="fix-title">✅ Fix Applied</div>
+                <div class="fix-detail">
+                    Added <code>"@budolpay/audit": "*"</code> and <code>"@budolpay/security": "*"</code> to
+                    <code>apps/admin/package.json</code>. Also updated <code>next.config.mjs</code> to include
+                    both packages in <code>transpilePackages</code>.
+                </div>
+            </div>
+        </div>
+
+        <div class="issue">
+            <div class="issue-title"><span class="tag low">Low</span> Currency Symbol Showing $ Instead of ₱ on Some Pages</div>
+            <div class="issue-detail">
+                Some components used <code>process.env.NEXT_PUBLIC_CURRENCY_SYMBOL || '$'</code> as a fallback.
+                Without the environment variable set, the dollar sign was displayed.
+            </div>
+            <div class="fix">
+                <div class="fix-title">✅ Fix Applied</div>
+                <div class="fix-detail">
+                    Set <code>ARG NEXT_PUBLIC_CURRENCY_SYMBOL=₱</code> in <code>Dockerfile</code> as a build-time
+                    default. Components updated to use <code>|| '₱'</code> as fallback.
+                </div>
+            </div>
+        </div>
+    </div>
+</body>
+</html>

@@ -1,0 +1,105 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Developer Manual - v195</title>
+    <style>
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; line-height: 1.6; color: #333; max-width: 900px; margin: 0 auto; padding: 20px; background-color: #f4f7f6; }
+        .container { background-color: white; padding: 40px; border-radius: 8px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); }
+        h1, h2, h3 { color: #2c3e50; border-bottom: 2px solid #f59e0b; padding-bottom: 10px; }
+        code { background-color: #f1f1f1; padding: 2px 5px; border-radius: 4px; font-family: 'Courier New', Courier, monospace; }
+        pre { background-color: #2d3436; color: #dfe6e9; padding: 15px; border-radius: 8px; overflow-x: auto; }
+        .issue { background-color: #fff5f5; border-left: 5px solid #ff7675; padding: 15px; margin: 20px 0; }
+        .fix { background-color: #f0fff4; border-left: 5px solid #48bb78; padding: 15px; margin: 20px 0; }
+        .nav-links { margin-bottom: 20px; }
+        .nav-links a { color: #f59e0b; text-decoration: none; font-weight: bold; margin-right: 20px; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="nav-links">
+            <a href="../index.html">← Back to v195 Index</a>
+            <a href="../../index.html">Main Index</a>
+        </div>
+        <h1>Developer Manual: Wallet Service Scoping Fix</h1>
+        
+        <h2>Purpose</h2>
+        <p>This manual documents the technical resolution of the <code>ReferenceError: userId is not defined</code> in the Wallet Service, which caused identification failures in the mobile application.</p>
+
+        <h2>Problem Analysis</h2>
+        <div class="issue">
+            <h3>Issue: JavaScript Variable Scoping (Block Scoping)</h3>
+            <p>In the <code>getBalance</code> route of <code>wallet-service/index.js</code>, the <code>userId</code> variable was declared using <code>const</code> inside the <code>try</code> block. When an error occurred within the <code>try</code> block, the execution jumped to the <code>catch</code> block. Since <code>const</code> is block-scoped, <code>userId</code> was not available in the <code>catch</code> block, leading to a secondary <code>ReferenceError</code> when attempting to log the error.</p>
+        </div>
+
+        <h2>Technical Details</h2>
+        <h3>Affected File</h3>
+        <p><code>services/wallet-service/index.js</code></p>
+
+        <h3>Root Cause Code (v194 and earlier)</h3>
+        <pre><code>router.get('/balance/:userId', async (req, res) => {
+    try {
+        const { userId } = req.params; // Scoped only to the try block
+        let wallet = await prisma.wallet.findUnique({
+            where: { userId }
+        });
+        // ...
+    } catch (error) {
+        console.error(`[Wallet] Error in getBalance for user ${userId}:`, error); // ReferenceError: userId is not defined
+        res.status(500).json({ error: error.message });
+    }
+});</code></pre>
+
+        <h3>Implementation of Fix</h3>
+        <div class="fix">
+            <h3>The Solution</h3>
+            <p>The variable declaration was moved outside the <code>try</code> block to ensure it is accessible throughout the entire function scope, including the <code>catch</code> block.</p>
+        </div>
+        <pre><code>router.get('/balance/:userId', async (req, res) => {
+    const { userId } = req.params; // Now accessible in catch block
+    try {
+        let wallet = await prisma.wallet.findUnique({
+            where: { userId }
+        });
+        // ...
+    } catch (error) {
+        console.error(`[Wallet] Error in getBalance for user ${userId}:`, error);
+        res.status(500).json({ error: error.message });
+    }
+});</code></pre>
+
+        <h2>Audit & Verification</h2>
+        <ul>
+            <li><strong>Wallet Service Audit:</strong> All routes were checked for similar scoping issues. No other instances were found.</li>
+            <li><strong>Settlement Service Audit:</strong> Proactively audited <code>settlement-service/index.js</code>. No scoping issues identified.</li>
+            <li><strong>Syntax Verification:</strong> Ran <code>node -c</code> on the modified file to ensure no syntax errors were introduced.</li>
+            <li><strong>Functional Verification:</strong> Created a mock test script <code>test_fix.js</code> to simulate an error and verify that <code>userId</code> is correctly captured in the <code>catch</code> block.</li>
+        </ul>
+
+        <h2>Test Results</h2>
+        <pre><code>Starting try block for user: test_user_123
+Caught error in catch block for user: test_user_123
+Error message: Simulated database error
+SUCCESS: userId is accessible in the catch block.</code></pre>
+
+        <h2>Dependencies</h2>
+        <ul>
+            <li>Express.js (Route handling)</li>
+            <li>Prisma ORM (Database operations)</li>
+        </ul>
+
+        <h2>Risks & Mitigation</h2>
+        <p><strong>Risk:</strong> Similar scoping issues might exist in other microservices not yet audited.</p>
+        <p><strong>Mitigation:</strong> Establish a coding standard that mandates extracting request parameters at the top of route handlers before entering <code>try-catch</code> blocks.</p>
+
+        <h2>Recommendations for Future Enhancement</h2>
+        <p>Implement a centralized error handling middleware for Express that automatically captures request context (including params) to avoid redundant <code>try-catch</code> blocks in every route.</p>
+
+        <div style="margin-top: 40px; border-top: 1px solid #eee; padding-top: 20px;">
+            <p><strong>Previous Version:</strong> <a href="../../budolecosystem_docs_2026-01-08_v194/manuals/developer_manual.html">v194 Developer Manual</a></p>
+            <p><strong>Next Version:</strong> TBD</p>
+        </div>
+    </div>
+</body>
+</html>

@@ -1,0 +1,126 @@
+﻿<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Developer Manual - Payment Security (v1.0.0)</title>
+    <style>
+        body { font-family: -apple-system, sans-serif; line-height: 1.6; color: #172B4D; margin: 0; display: flex; }
+        .sidebar { width: 280px; background: #F4F5F7; border-right: 1px solid #DFE1E6; height: 100vh; position: fixed; padding: 20px; box-sizing: border-box; }
+        .main-content { margin-left: 280px; padding: 40px 60px; max-width: 900px; }
+        .code-block { background: #091E42; color: #fff; padding: 15px; border-radius: 5px; overflow-x: auto; margin: 20px 0; font-family: 'Courier New', Courier, monospace; }
+        .code-link { color: #0052CC; text-decoration: none; font-weight: bold; }
+        .code-link:hover { text-decoration: underline; }
+        h1, h2, h3 { color: #172B4D; }
+        .compliance-note { background: #E3FCEF; border-left: 5px solid #36B37E; padding: 15px; margin: 20px 0; }
+    </style>
+</head>
+<body>
+        <div class="sidebar">
+        <h2>Ecosystem</h2>
+        <ul>
+            <li><a href="../../knowledgebase.html">← Knowledge Base</a></li>
+        </ul>
+        <h2>Documentation</h2>
+        <ul>
+            <li><a href="index.html">Overview</a></li>
+            <li><a href="developer_manual.html" class="active">Developer Manual</a></li>
+            <li><a href="system_admin_manual.html">System Admin Manual</a></li>
+            <li><a href="user_manual.html">User Manual</a></li>
+        </ul>
+        <h2>Safety & Quality</h2>
+        <ul>
+            <li><a href="risk_register.html">Risk Register</a></li>
+            <li><a href="Mitigation.html">Mitigation Plan</a></li>
+            <li><a href="test_results.html">Test Results</a></li>
+        </ul>
+        <h2>Issue Tracking</h2>
+        <ul>
+            <li><a href="issues.html">Known Issues</a></li>
+            <li><a href="fixes.html">Fixes Applied</a></li>
+        </ul>
+        <h2>Roadmap</h2>
+        <ul>
+            <li><a href="future_recommendations.html">Future Recommendations</a></li>
+        </ul>
+        <h2>Versions</h2>
+        <ul>
+            <li><a href="../budolecosystem_docs_2026-02-09_v1.7.0/index.html">← Previous (v1.7.0)</a></li>
+            <li><span style="color: #6B778C; padding: 8px 12px; font-size: 14px;">Next (v1.8.1) →</span></li>
+        </ul>
+    </div>
+
+    <div class="main-content">
+        <h1>Technical Implementation Details</h1>
+        
+        <section id="validation">
+            <h2>1. Robust Input Validation</h2>
+            <p>To prevent financial errors and potential exploits, we implemented multi-layer validation for payment amounts. This ensures that only valid, positive numeric values (in centavos) are processed.</p>
+            
+            <h3>Backend Implementation</h3>
+            <p>In the Payment Gateway Service, we added strict parsing and checks for the <code>amount</code> field.</p>
+            <div class="code-block">
+// File: budolpay-0.1.0/services/payment-gateway-service/index.js
+const parsedAmount = parseFloat(amount);
+if (isNaN(parsedAmount) || parsedAmount <= 0) {
+    return res.status(400).json({ error: 'Invalid amount: must be a positive number' });
+}
+            </div>
+            <p><a href="file:///d:/IT Projects/budolEcosystem/budolpay-0.1.0/services/payment-gateway-service/index.js" class="code-link">View payment-gateway-service/index.js</a></p>
+
+            <h3>Frontend/Library Validation</h3>
+            <p>In BudolShap, we added validation at the initiation level to catch errors early.</p>
+            <div class="code-block">
+// File: budolshap-0.1.0/lib/services/paymentService.js
+const parsedAmount = parseInt(amount, 10);
+if (isNaN(parsedAmount) || parsedAmount <= 0) {
+    throw new Error('Valid amount (in centavos) is required');
+}
+            </div>
+            <p><a href="file:///d:/IT Projects/budolEcosystem/budolshap-0.1.0/lib/services/paymentService.js" class="code-link">View paymentService.js</a></p>
+        </section>
+
+        <section id="duplicates">
+            <h2>2. Duplicate Transaction Prevention</h2>
+            <p>Duplicate payments are a significant risk in e-commerce. We implemented a robust check using <code>orderId</code> stored in transaction metadata.</p>
+            <div class="code-block">
+// Robust metadata search for duplicate PENDING transactions
+const orderIdSearch = `"orderId":"${metadata.orderId}"`;
+const altOrderIdSearch = `"orderId": "${metadata.orderId}"`;
+const existingPending = await prisma.transaction.findFirst({
+    where: {
+        status: 'PENDING',
+        type: 'MERCHANT_PAYMENT',
+        OR: [
+            { metadata: { contains: orderIdSearch } },
+            { metadata: { contains: altOrderIdSearch } }
+        ]
+    }
+});
+            </div>
+            <p><a href="file:///d:/IT Projects/budolEcosystem/budolpay-0.1.0/services/payment-gateway-service/index.js" class="code-link">View payment-gateway-service/index.js</a></p>
+        </section>
+
+        <section id="qr-security">
+            <h2>3. QR Payment Integrity</h2>
+            <p>During QR processing in the Wallet Service, we now verify that the requested payment amount matches the original transaction intent created by the gateway.</p>
+            <div class="code-block">
+// Verify amount consistency in wallet-service
+if (parseFloat(transaction.amount) !== amountToPay) {
+    return res.status(400).json({ error: 'Amount mismatch: QR amount does not match original transaction' });
+}
+            </div>
+            <p><a href="file:///d:/IT Projects/budolEcosystem/budolpay-0.1.0/services/wallet-service/index.js" class="code-link">View wallet-service/index.js</a></p>
+        </section>
+
+        <div class="compliance-note">
+            <h3>Compliance Verification</h3>
+            <p>These changes satisfy <strong>BSP Circular 808 Section 5</strong> (Transaction Integrity) and <strong>PCI DSS Requirement 6.4.1</strong> (Input Validation).</p>
+        </div>
+
+        <footer>
+            <a href="index.html">Back to Overview</a>
+        </footer>
+    </div>
+</body>
+</html>
+

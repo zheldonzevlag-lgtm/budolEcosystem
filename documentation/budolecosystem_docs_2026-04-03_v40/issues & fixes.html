@@ -1,0 +1,47 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Issues & Fixes - KYC Stabilization v40</title>
+    <style>
+        body { font-family: 'Segoe UI', system-ui, sans-serif; line-height: 1.6; color: #333; padding: 40px; }
+        .issue { background: #fff5f5; border-left: 5px solid #fc8181; padding: 20px; margin-bottom: 20px; }
+        .fix { background: #f0fff4; border-left: 5px solid #68d391; padding: 20px; margin-bottom: 20px; }
+        h1 { border-bottom: 2px solid #eee; padding-bottom: 15px; }
+        .label { font-weight: bold; text-transform: uppercase; font-size: 0.8em; margin-bottom: 5px; display: block; }
+    </style>
+</head>
+<body>
+    <h1>Issues & Fixes Log (v40)</h1>
+
+    <div class="issue">
+        <span class="label" style="color: #c53030;">Issue: 404 Upload Error</span>
+        <p>Mobile app requests were hitting the Next.js admin app root which lacked the <code>/api/verification</code> endpoint, resulting in a 404.</p>
+    </div>
+    <div class="fix">
+        <span class="label" style="color: #2f855a;">Fix: Server-Side Proxy</span>
+        <p>Created a Next.js catch-all API route at <code>apps/admin/app/api/verification/[...path]</code> to proxy all traffic to the verification microservice.</p>
+    </div>
+
+    <div class="issue">
+        <span class="label" style="color: #c53030;">Issue: Prisma Client P1001</span>
+        <p>Prisma could not initialize the engine in serverless environment due to missing cache or incorrect direct driver settings.</p>
+    </div>
+    <div class="fix">
+        <span class="label" style="color: #2f855a;">Fix: Engine Caching & Version Sync</span>
+        <p>Aligned Prisma to <code>v5.14.0</code> and added <code>PRISMA_ENGINES_CACHE_DIR=/tmp/prisma_cache</code> to the Vercel build script.</p>
+    </div>
+
+    <div class="issue">
+        <span class="label" style="color: #c53030;">Issue: VerificationDocument Table Not Found</span>
+        <p>Prisma defaulted to <code>public</code> schema, while data resided in the <code>budolpay</code> schema.</p>
+    </div>
+    <div class="fix">
+        <span class="label" style="color: #2f855a;">Fix: Schema Isolation Logic</span>
+        <p>Updated application code to force <code>schema=budolpay</code> parameter in the connection string at client instantiation.</p>
+    </div>
+
+    <p><a href="index.html">&larr; Back to Index</a></p>
+</body>
+</html>

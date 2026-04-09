@@ -1,0 +1,87 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Developer Manual - Budol Ecosystem v482</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <style>
+        :root { --budol-primary: #2563eb; }
+        body { font-family: 'Segoe UI', sans-serif; background: #f8fafc; }
+        .sidebar { background: #1e293b; color: white; min-height: 100vh; padding: 2rem 1rem; position: sticky; top: 0; }
+        .sidebar a { color: #cbd5e1; text-decoration: none; display: block; padding: 0.75rem 1rem; border-radius: 0.5rem; }
+        .sidebar a:hover { background: #334155; color: white; }
+        .code-block { background: #1e1e1e; color: #d4d4d4; padding: 1.5rem; border-radius: 0.5rem; font-family: 'Consolas', monospace; margin: 1rem 0; overflow-x: auto; }
+        .main-content { padding: 3rem; }
+        .file-link { color: var(--budol-primary); font-weight: 600; text-decoration: none; }
+        .file-link:hover { text-decoration: underline; }
+    </style>
+</head>
+<body>
+    <div class="container-fluid">
+        <div class="row">
+            <div class="col-md-2 sidebar">
+                <h4>BudolDocs</h4>
+                <nav>
+                    <a href="index.html">🏠 Overview</a>
+                    <a href="developer_manual.html" class="bg-primary text-white">💻 Developer Manual</a>
+                    <a href="system_admin_manual.html">⚙️ System Admin</a>
+                    <a href="user_manual.html">👤 User Manual</a>
+                </nav>
+            </div>
+            <div class="col-md-10 main-content">
+                <h1>Developer Manual - v482</h1>
+                <p class="lead">Implementing Balance Masking on Home Screen.</p>
+
+                <section id="implementation" class="mt-5">
+                    <h3>Implementation Details</h3>
+                    <p>The account balance is now masked by default using a boolean state variable <code>_isBalanceVisible</code>. An <code>IconButton</code> with dynamic icons (<code>visibility</code> / <code>visibility_off</code>) allows the user to toggle this state.</p>
+                    
+                    <h5>Key Code Reference:</h5>
+                    <p>Modified <a class="file-link" href="file:///d:/IT Projects/budolEcosystem/budolPayMobile/lib/screens/home_screen.dart">home_screen.dart</a> to include the masking logic.</p>
+                    
+                    <div class="code-block">
+// State variable
+bool _isBalanceVisible = false;
+
+// UI Implementation
+Row(
+  crossAxisAlignment: CrossAxisAlignment.center,
+  children: [
+    Text(
+      _isBalanceVisible ? _balance : '₱ ••••••',
+      style: const TextStyle(
+        color: Colors.white,
+        fontSize: 36,
+        fontWeight: FontWeight.bold,
+      ),
+    ),
+    const SizedBox(width: 8),
+    IconButton(
+      constraints: const BoxConstraints(),
+      padding: EdgeInsets.zero,
+      iconSize: 20,
+      icon: Icon(
+        _isBalanceVisible ? Icons.visibility : Icons.visibility_off,
+        color: Colors.white70,
+      ),
+      onPressed: () {
+        setState(() {
+          _isBalanceVisible = !_isBalanceVisible;
+        });
+      },
+    ),
+  ],
+)
+                    </div>
+                </section>
+
+                <section id="ux-rationale" class="mt-5">
+                    <h3>UX Rationale</h3>
+                    <p>Following fintech best practices (e.g., GCash, Maya), hiding sensitive financial information by default reduces the risk of visual hacking in public places. The eye icon is placed immediately after the amount for intuitive access.</p>
+                </section>
+            </div>
+        </div>
+    </div>
+</body>
+</html>

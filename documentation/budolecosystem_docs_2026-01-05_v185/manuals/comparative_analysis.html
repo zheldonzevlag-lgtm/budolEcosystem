@@ -1,0 +1,112 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Comparative Analysis - BudolPay vs GCash</title>
+    <style>
+        :root { --primary: #2563eb; --bg: #f8fafc; --text: #1e293b; --border: #e2e8f0; }
+        body { font-family: system-ui, sans-serif; line-height: 1.6; color: var(--text); background: var(--bg); margin: 0; padding: 40px; }
+        .container { max-width: 900px; margin: 0 auto; background: white; padding: 40px; border-radius: 12px; border: 1px solid var(--border); }
+        h1 { color: var(--primary); border-bottom: 2px solid var(--bg); padding-bottom: 10px; }
+        h2 { margin-top: 30px; color: #0f172a; }
+        table { width: 100%; border-collapse: collapse; margin: 20px 0; }
+        th, td { border: 1px solid var(--border); padding: 12px; text-align: left; }
+        th { background: #f1f5f9; }
+        .diff { background: #fff7ed; border-left: 4px solid #f97316; padding: 10px; margin: 10px 0; font-size: 0.9rem; }
+        .back-link { display: inline-block; margin-bottom: 20px; text-decoration: none; color: var(--primary); font-weight: 500; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <a href="../index.html" class="back-link">&larr; Back to v185 Index</a>
+        <h1>Comparative Analysis: BudolPay vs GCash KYC</h1>
+        
+        <h2>1. User Journey Comparison</h2>
+        <table>
+            <thead>
+                <tr>
+                    <th>Stage</th>
+                    <th>GCash Flow</th>
+                    <th>BudolPay (Current)</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td><strong>Entry</strong></td>
+                    <td>Basic Account (OTP only)</td>
+                    <td>Basic Account (Email/Phone)</td>
+                </tr>
+                <tr>
+                    <td><strong>Trigger</strong></td>
+                    <td>Gated by Features (Send, GSave, etc.)</td>
+                    <td>Manual Opt-in via Settings</td>
+                </tr>
+                <tr>
+                    <td><strong>Process</strong></td>
+                    <td>ID Capture -> Selfie (Liveness) -> Personal Details</td>
+                    <td>Personal Details -> ID Capture -> Selfie (Face Match)</td>
+                </tr>
+                <tr>
+                    <td><strong>Verification</strong></td>
+                    <td>Automated + Vendor (Real-time)</td>
+                    <td>ML Kit (On-device) + Admin Review</td>
+                </tr>
+            </tbody>
+        </table>
+
+        <h2>2. Technical Architecture Alignment</h2>
+        <div class="diff">
+            <strong>Key Difference:</strong> GCash uses a "KYC SDK/Module" that acts as a gatekeeper. BudolPay currently relies on UI-level suggestions which are not strictly enforced as feature blocks.
+        </div>
+        
+        <h3>Current Architecture (BudolPay)</h3>
+        <ul>
+            <li>Mobile app captures data -> Sends to API Gateway.</li>
+            <li>Backend updates <code>KYCStatus</code>.</li>
+            <li>Admin Panel reviews <code>VerificationDocument</code>.</li>
+        </ul>
+
+        <h3>Target Architecture (GCash-Inspired)</h3>
+        <ul>
+            <li><strong>KYC Gating Module:</strong> A middleware in the mobile app that checks <code>kycLevel</code> before navigation to sensitive features.</li>
+            <li><strong>Tiered Leveling:</strong> Explicitly mapping <code>kycStatus</code> to <code>kycLevel</code> (BASIC, FULLY_VERIFIED, PLUS).</li>
+            <li><strong>Liveness Check:</strong> Upgrading from simple selfie capture to active liveness detection (blink/smile) to match GCash standards.</li>
+        </ul>
+
+        <h2>3. Feature Gating Strategy</h2>
+        <p>Following GCash's lead, BudolPay will implement the following gating logic:</p>
+        <table>
+            <thead>
+                <tr>
+                    <th>Feature</th>
+                    <th>Required Level</th>
+                    <th>Trigger Message</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td>Receive Money</td>
+                    <td>BASIC</td>
+                    <td>-</td>
+                </tr>
+                <tr>
+                    <td>Send Money (P2P)</td>
+                    <td>FULLY VERIFIED</td>
+                    <td>"Get Fully Verified to start sending money to friends."</td>
+                </tr>
+                <tr>
+                    <td>Cash Out / Bank Transfer</td>
+                    <td>FULLY VERIFIED</td>
+                    <td>"KYC is required for financial withdrawals."</td>
+                </tr>
+                <tr>
+                    <td>Investment / Savings</td>
+                    <td>PLUS</td>
+                    <td>"Unlock BudolInvest by completing enhanced verification."</td>
+                </tr>
+            </tbody>
+        </table>
+    </div>
+</body>
+</html>

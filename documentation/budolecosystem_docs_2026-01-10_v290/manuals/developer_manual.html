@@ -1,0 +1,105 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Developer Manual Update - v290</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Fira+Code:wght@400;500&display=swap');
+        body { font-family: 'Inter', sans-serif; }
+        code { font-family: 'Fira Code', monospace; }
+    </style>
+</head>
+<body class="bg-slate-50 min-h-screen py-12 px-4">
+    <div class="max-w-4xl mx-auto">
+        <nav class="flex items-center justify-between mb-12">
+            <a href="../index.html" class="flex items-center text-slate-500 hover:text-indigo-600 transition-colors">
+                <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7 7-7"></path></svg>
+                Back to v290 Index
+            </a>
+            <div class="flex items-center gap-3">
+                <span class="px-3 py-1 bg-blue-50 text-blue-700 rounded-full text-xs font-semibold border border-blue-100">Developer</span>
+                <span class="text-slate-400">|</span>
+                <span class="text-slate-500 text-sm">v290</span>
+            </div>
+        </nav>
+
+        <article class="bg-white rounded-3xl shadow-sm border border-slate-200 overflow-hidden">
+            <div class="p-8 md:p-12">
+                <h1 class="text-3xl font-bold text-slate-900 mb-6">JWT Synchronization & SSO Fix</h1>
+                
+                <section class="mb-10">
+                    <h2 class="text-xl font-semibold text-slate-800 mb-4 border-l-4 border-blue-500 pl-4">Purpose</h2>
+                    <p class="text-slate-600 leading-relaxed">
+                        To resolve the persistent "Session Expired" loop in <strong>budolShap</strong>. This issue was identified as a <code>signature verification failed</code> error caused by inconsistent <code>JWT_SECRET</code> values between the signing service (budolID) and the verifying service (budolShap).
+                    </p>
+                </section>
+
+                <section class="mb-10">
+                    <h2 class="text-xl font-semibold text-slate-800 mb-4 border-l-4 border-blue-500 pl-4">Technical Details</h2>
+                    <div class="space-y-4">
+                        <div class="bg-slate-50 rounded-2xl p-6 border border-slate-100">
+                            <h3 class="text-sm font-bold text-slate-500 uppercase tracking-wider mb-3">Root Cause Analysis</h3>
+                            <ul class="list-disc list-inside text-slate-600 space-y-2 text-sm">
+                                <li><strong>budolID</strong> was signing tokens with <code>"budolid-super-secret-key"</code> (fallback).</li>
+                                <li><strong>budolShap</strong> was verifying tokens with <code>"GJ7Lxn0/kdV/KuZJ5xJ7Ip0RvMerrGW5n0gf44mfHgc="</code>.</li>
+                                <li>The mismatch caused an <code>invalid signature</code> error in <code>jsonwebtoken</code> and <code>jose</code>.</li>
+                            </ul>
+                        </div>
+                        
+                        <div class="bg-blue-50 rounded-2xl p-6 border border-blue-100">
+                            <h3 class="text-sm font-bold text-blue-500 uppercase tracking-wider mb-3">Fix Implementation</h3>
+                            <p class="text-slate-700 text-sm mb-4">Aligned all <code>JWT_SECRET</code> definitions and hardcoded fallbacks to the standardized Base64 secret:</p>
+                            <code class="block bg-slate-900 text-slate-300 p-4 rounded-xl text-xs overflow-x-auto">
+                                GJ7Lxn0/kdV/KuZJ5xJ7Ip0RvMerrGW5n0gf44mfHgc=
+                            </code>
+                        </div>
+                    </div>
+                </section>
+
+                <section class="mb-10">
+                    <h2 class="text-xl font-semibold text-slate-800 mb-4 border-l-4 border-blue-500 pl-4">Test Results</h2>
+                    <div class="bg-slate-900 rounded-2xl p-6 border border-slate-800 shadow-inner">
+                        <div class="flex items-center gap-2 mb-4">
+                            <div class="w-2 h-2 bg-green-500 rounded-full animate-pulse"></div>
+                            <span class="text-xs font-mono text-green-500 font-bold uppercase tracking-widest">E2E SSO Validation: PASSED</span>
+                        </div>
+                        <pre class="text-indigo-300 text-xs font-mono leading-relaxed overflow-x-auto">
+[Verification] User found: 09484099388@budolpay.local
+[Step 1] budolID signing token... SUCCESS
+[Step 2] budolShap/budolPay verifying token... SUCCESS
+[Result] Verification integrity check: PASSED
+[Status] JWT Synchronization confirmed across all 4 critical services.</pre>
+                    </div>
+                </section>
+
+                <section class="mb-10">
+                    <h2 class="text-xl font-semibold text-slate-800 mb-4 border-l-4 border-blue-500 pl-4">Impact Analysis</h2>
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div class="p-4 bg-green-50 rounded-xl border border-green-100">
+                            <p class="text-xs font-bold text-green-600 uppercase mb-1">Resolved</p>
+                            <p class="text-slate-600 text-sm italic">SSO Login Loop fixed. Users can now maintain active sessions across services.</p>
+                        </div>
+                        <div class="p-4 bg-amber-50 rounded-xl border border-amber-100">
+                            <p class="text-xs font-bold text-amber-600 uppercase mb-1">Risk</p>
+                            <p class="text-slate-600 text-sm italic">Existing sessions signed with the old secret will be invalidated, forcing a one-time re-login.</p>
+                        </div>
+                    </div>
+                </section>
+
+                <section>
+                    <h2 class="text-xl font-semibold text-slate-800 mb-4 border-l-4 border-blue-500 pl-4">Future Enhancement</h2>
+                    <p class="text-slate-600 text-sm">
+                        Implement a centralized Secret Management Service (e.g., HashiCorp Vault) to manage environment variables dynamically and prevent future drift between microservices.
+                    </p>
+                </section>
+            </div>
+            <div class="bg-slate-50 px-8 py-6 border-t border-slate-100 flex justify-between items-center">
+                <span class="text-slate-400 text-xs">Internal Technical Documentation</span>
+                <span class="text-indigo-600 text-xs font-bold uppercase tracking-widest">Confidential</span>
+            </div>
+        </article>
+    </div>
+</body>
+</html>

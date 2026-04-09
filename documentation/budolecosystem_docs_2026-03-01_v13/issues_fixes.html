@@ -1,0 +1,210 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Issues & Fixes - Budol Ecosystem v6.0.0</title>
+    <style>
+        :root {
+            --primary: #0052cc;
+            --text: #172b4d;
+            --bg: #f8fafc;
+            --border: #dfe1e6;
+            --danger: #b91c1c;
+        }
+
+        body {
+            font-family: 'Inter', sans-serif;
+            background: var(--bg);
+            color: var(--text);
+            margin: 0;
+            display: flex;
+        }
+
+        .sidebar {
+            width: 260px;
+            height: 100vh;
+            background: #fff;
+            border-right: 1px solid var(--border);
+            position: fixed;
+            padding: 2rem 1rem;
+        }
+
+        .main {
+            margin-left: 280px;
+            padding: 3rem 4rem;
+            max-width: 900px;
+        }
+
+        .nav-item {
+            display: block;
+            padding: 0.75rem 1rem;
+            color: #64748b;
+            text-decoration: none;
+            border-radius: 8px;
+            margin-bottom: 0.25rem;
+            font-size: 0.9rem;
+        }
+
+        .nav-item:hover {
+            background: #f1f5f9;
+            color: var(--primary);
+        }
+
+        .issue-card {
+            background: #fff;
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            padding: 1.5rem;
+            margin-bottom: 2rem;
+            border-left: 5px solid var(--danger);
+        }
+
+        .fix-box {
+            background: #f1f5f9;
+            padding: 1rem;
+            border-radius: 8px;
+            margin-top: 1rem;
+            border: 1px solid var(--border);
+        }
+
+        h4 {
+            margin-top: 0;
+            color: var(--danger);
+        }
+    </style>
+</head>
+
+<body>
+    <div class="sidebar">
+        <div style="font-weight: 800; font-size: 1.25rem; color: var(--primary); margin-bottom: 2rem; padding: 0 1rem;">
+            Budol Ecosystem</div>
+        <nav>
+            <a href="index.html" class="nav-item">Overview</a>
+            <a href="walkthrough.html" class="nav-item">Infrastructure Walkthrough</a>
+            <a href="how_to_guide.html" class="nav-item">Detailed How-To Guide</a>
+            <a href="implementation_plan.html" class="nav-item">Implementation Plan</a>
+            <a href="developer_manual.html" class="nav-item">Developer Manual</a>
+            <a href="user_manual.html" class="nav-item">User Manual</a>
+            <a href="task.html" class="nav-item">Task/Checklist</a>
+            <a href="system_admin_manual.html" class="nav-item">System Admin</a>
+            <hr style="margin: 1.5rem 0; border: 0; border-top: 1px solid var(--border);">
+            <a href="risk_register.html" class="nav-item">Risk Register</a>
+            <a href="Mitigation.html" class="nav-item">Mitigation Plan</a>
+            <a href="issues_fixes.html" class="nav-item active">Issues & Fixes</a>
+            <a href="test_results.html" class="nav-item">Test Results</a>
+            <a href="future_recommendations.html" class="nav-item">Recommendations</a>
+            <hr style="margin: 1.5rem 0; border: 0; border-top: 1px solid var(--border);">
+            <a href="../../knowledgebase.html" class="nav-item">← Back to KB</a>
+        </nav>
+    </div>
+    <div class="main">
+        <h1>Issues & Fixes Log</h1>
+
+        <div class="issue-card">
+            <h4>Issue #001: Lack of Domain Name</h4>
+            <p><strong>Description:</strong> Production environment lacked a professional domain name for external
+                access, causing cross-origin issues between local dev and cloud APIs.</p>
+            <div class="fix-box">
+                <strong>Fix:</strong> Implemented a 6-subdomain <strong>DuckDNS</strong> strategy. Mapped all
+                microservices to specific subdomains (budolshap, budolid, budolpay, etc.) ensuring stable external
+                access at zero cost.
+            </div>
+        </div>
+
+        <div class="issue-card">
+            <h4>Issue #002: Inter-service Communication Overhead</h4>
+            <p><strong>Description:</strong> Services were attempting to communicate via public URLs, increasing latency
+                and cost.</p>
+            <div class="fix-box">
+                <strong>Fix:</strong> Configured <strong>Route 53 Private Hosted Zones</strong> with
+                <code>.internal</code> aliases. Services now communicate securely within the VPC over private IPs.
+            </div>
+        </div>
+
+        <div class="issue-card">
+            <h4>Issue #003: SSM Agent "Offline" on Private EC2</h4>
+            <p><strong>Description:</strong> The <code>budol-redis</code> instance was provisioned in a private subnet
+                and appeared as "Offline" in AWS Systems Manager, preventing administrative access.</p>
+            <div class="fix-box">
+                <strong>Fix:</strong> Corrected VPC Routing. The private subnets were not associated with the **Private
+                Route Table**.
+                1. Associated Private Subnets with a dedicated Route Table.
+                2. Added a route for <code>0.0.0.0/0</code> targeting the **NAT Gateway**.
+                This allowed the SSM agent to communicate with the AWS Systems Manager service endpoints securely.
+            </div>
+        </div>
+        <div class="issue-card">
+            <h4>Issue #004: Invalid AMI ID for Ubuntu 24.04 Launch</h4>
+            <p><strong>Phase:</strong> Phase 3 — EC2 Provisioning</p>
+            <p><strong>Description:</strong> Initial EC2 launch for <code>budol-ws</code> failed with
+                <code>InvalidAMIID.NotFound</code> error because a hardcoded AMI ID was used that was either expired or
+                not available in <code>ap-southeast-1</code>.
+            </p>
+            <div class="fix-box">
+                <strong>Fix:</strong> Queried AWS SSM Parameter Store to get the latest valid Ubuntu 24.04 LTS AMI ID
+                dynamically for the target region:
+                <br><code>aws ssm get-parameters-by-path --path /aws/service/canonical/ubuntu/server/24.04/stable/current/amd64/hvm/ebs-gp3/ami-id</code>
+                <br>Result: AMI ID <code>ami-0ed0867532b47cc2c</code> was used for successful launch.
+            </div>
+        </div>
+
+        <div class="issue-card">
+            <h4>Issue #005: Windows PowerShell Shell-Escaping in SSM send-command</h4>
+            <p><strong>Phase:</strong> Phase 3 — Application Deployment</p>
+            <p><strong>Description:</strong> Attempting to pass multi-line bash scripts (containing single quotes,
+                double
+                quotes, and heredocs) via <code>--parameters</code> in PowerShell caused persistent
+                <code>CommandNotFoundException</code> and malformed shell script errors on the EC2 instance.
+            </p>
+            <div class="fix-box">
+                <strong>Fix:</strong> Adopted a two-step strategy:
+                <ol>
+                    <li>Write the SSM command payload to a local JSON file (<code>ssm-input.json</code>) using
+                        <code>write_to_file</code>.
+                    </li>
+                    <li>Reference it via <code>--cli-input-json file://ssm-input.json</code> to completely bypass
+                        PowerShell's argument parsing.</li>
+                </ol>
+                For injecting file content, source files were Base64-encoded locally using
+                <code>[Convert]::ToBase64String([System.IO.File]::ReadAllBytes(...))</code> and decoded on the remote
+                via <code>echo BASE64 | base64 -d > target.file</code>.
+            </div>
+        </div>
+
+        <div class="issue-card">
+            <h4>Issue #006: SSM Agent "Offline" for budol-ws Instance on Initial Launch</h4>
+            <p><strong>Phase:</strong> Phase 3 — Software Setup</p>
+            <p><strong>Description:</strong> After the EC2 instance was launched, attempting to send SSM commands
+                resulted in <code>InvalidInstanceId</code> as the SSM agent had not yet fully initialized and registered
+                with the Systems Manager service.</p>
+            <div class="fix-box">
+                <strong>Fix:</strong> Added a polling wait loop using:
+                <br><code>aws ssm describe-instance-information --filters Key=InstanceIds,Values=INSTANCE_ID</code>
+                <br>Waited until the instance appeared with <code>PingStatus: Online</code> before sending commands.
+                Typically requires 2-4 minutes after launch for the SSM agent to register.
+            </div>
+        </div>
+
+        <div class="issue-card">
+            <h4>Issue #007: DuckDNS Token Placeholder Not Replaced After Deployment</h4>
+            <p><strong>Phase:</strong> Phase 3 — DuckDNS Automation</p>
+            <p><strong>Description:</strong> The <code>setup_websocket_ec2.sh</code> script creates
+                <code>update_duckdns.sh</code> with a hardcoded <code>YOUR_DUCKDNS_TOKEN_HERE</code> placeholder.
+                After the initial deployment, the placeholder was not replaced, causing DuckDNS updates to silently
+                fail with an auth error.
+            </p>
+            <div class="fix-box">
+                <strong>Fix:</strong> Retrieved the actual DuckDNS token from
+                <a href="https://www.duckdns.org" target="_blank">duckdns.org</a> (account: galvezjon59@gmail.com,
+                token appears on the dashboard after login). Applied the token remotely via SSM:
+                <br><code>cat &lt;&lt;'EOF' &gt; update_duckdns.sh ... TOKEN="db0964a1-387c-419a-9272-f87e38b8a542" ... EOF</code>
+                <br>Immediately ran the script — DuckDNS responded with <code>OK</code>, confirming successful IP
+                update. Cron job is now active and runs every 5 minutes.
+            </div>
+        </div>
+    </div>
+</body>
+
+</html>

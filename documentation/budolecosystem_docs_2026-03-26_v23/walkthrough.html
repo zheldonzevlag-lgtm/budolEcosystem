@@ -1,0 +1,91 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>v23 Walkthrough: Vercel Production Restoration - Budol Ecosystem</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --primary: #0052CC;
+            --secondary: #172B4D;
+            --bg-sidebar: #F4F5F7;
+            --bg-main: #FFFFFF;
+            --text-main: #172B4D;
+            --border: #DFE1E6;
+            --success: #00875A;
+        }
+        body { font-family: 'Inter', sans-serif; margin: 0; display: flex; color: var(--text-main); line-height: 1.6; }
+        .sidebar { width: 280px; background: var(--bg-sidebar); height: 100vh; position: sticky; top: 0; border-right: 1px solid var(--border); padding: 20px; box-sizing: border-box; }
+        .main-content { flex: 1; padding: 40px 60px; max-width: 1100px; }
+        h1 { color: var(--secondary); font-size: 2.5rem; margin-top: 0; }
+        h2 { color: var(--primary); border-bottom: 2px solid var(--border); padding-bottom: 10px; margin-top: 30px; }
+        .nav-link { display: block; padding: 10px; text-decoration: none; color: var(--text-main); border-radius: 4px; font-weight: 500; }
+        .nav-link:hover { background: #EBECF0; color: var(--primary); }
+        .nav-link.active { background: #E6EFFC; color: var(--primary); }
+        .code-block { background: #091E420F; padding: 15px; border-radius: 6px; font-family: 'Courier New', Courier, monospace; overflow-x: auto; margin: 15px 0; }
+        .image-container { border: 1px solid var(--border); border-radius: 8px; overflow: hidden; margin: 20px 0; }
+        .image-container img { width: 100%; display: block; }
+        .caption { background: var(--bg-sidebar); padding: 8px 15px; font-size: 0.85rem; color: #6b778c; }
+    </style>
+</head>
+<body>
+    <div class="sidebar">
+        <h3 style="color: var(--primary);">v23 Documentation</h3>
+        <a href="index.html" class="nav-link">Overview</a>
+        <a href="walkthrough.html" class="nav-link active">Walkthrough</a>
+        <a href="task.html" class="nav-link">Task Checklist</a>
+        <a href="developer_manual.html" class="nav-link">Developer Manual</a>
+        <a href="system_admin_manual.html" class="nav-link">System Admin Manual</a>
+        <a href="user_manual.html" class="nav-link">User Manual</a>
+        <hr>
+        <a href="risk_register.html" class="nav-link">Risk Register</a>
+        <a href="Mitigation.html" class="nav-link">Mitigation</a>
+        <a href="issues%20&%20fixes.html" class="nav-link">Issues & Fixes</a>
+        <a href="test_results.html" class="nav-link">Test Results</a>
+        <a href="future_recommendations.html" class="nav-link">Future Recommendations</a>
+        <hr>
+        <a href="../../knowledgebase.html" class="nav-link">Back to KB</a>
+    </div>
+    <div class="main-content">
+        <h1>Technical Walkthrough: Production Data Recovery</h1>
+        
+        <h2>1. Initial Situation</h2>
+        <p>The BudolShap storefront on Vercel was displaying "0 products" and user logins were failing with 500 errors. Investigation revealed that while the Vercel Postgres instance was running, it lacked the production data stored in the local <code>PGDMP</code> backups.</p>
+
+        <h2>2. Data Conversion & Schema Isolation</h2>
+        <p>PostgreSQL <code>PGDMP</code> (Custom Format) backups were converted to plain-text SQL to allow for manual editing and compatibility with Vercel's proxy connection limits.</p>
+        <div class="code-block">
+            pg_restore -f budolID.sql_txt G:\IT\database-backup\budolid.PGDMP
+        </div>
+        <p>Since Vercel Postgres does not allow <code>CREATE DATABASE</code>, we implemented <strong>Schema Isolation</strong>, mapping each local database to a Postgres Schema: <code>budolid</code>, <code>budolpay</code>, and <code>budolaccounting</code>.</p>
+
+        <h2>3. Manual Data Synchronization</h2>
+        <p>Monolithic <code>psql</code> restoration timed out due to Vercel's 10s connection proxy limit. A custom Node.js sync script (<code>manual-data-sync.js</code>) was developed to parse <code>COPY</code> blocks and perform row-by-row <code>INSERT ... ON CONFLICT</code> operations.</p>
+        <ul>
+            <li><strong>Restored</strong>: 97 Categories</li>
+            <li><strong>Restored</strong>: 14 Products (Smart Watch, Electronics, etc.)</li>
+            <li><strong>Restored</strong>: 6 User accounts in <code>public</code></li>
+            <li><strong>Restored</strong>: 2 User accounts in <code>budolid</code></li>
+        </ul>
+
+        <h2>4. Environment Variable Synchronization</h2>
+        <p>Critical environment variables were added to Vercel Production to point services to their respective schemas:</p>
+        <ul>
+            <li><code>BUDOLID_DATABASE_URL</code>: ...?schema=budolid</li>
+            <li><code>BUDOLPAY_DATABASE_URL</code>: ...?schema=budolpay</li>
+            <li><code>BUDOLACCOUNTING_DATABASE_URL</code>: ...?schema=budolaccounting</li>
+            <li><code>JWT_SECRET</code>: Restored for auth stability</li>
+        </ul>
+
+        <h2>5. Verification</h2>
+        <p>The application was redeployed to apply the environment variables and clear API caches. Browser verification confirms that products are now live.</p>
+
+        <div class="image-container">
+            <div class="caption">Live storefront at https://budolshap.vercel.app/shop showing 13+ restorted products.</div>
+        </div>
+
+        <p>Next Steps: Monitor transaction logs for any cross-schema foreign key constraints.</p>
+    </div>
+</body>
+</html>

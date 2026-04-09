@@ -1,0 +1,63 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Implementation Plan - v30: Security Data Isolation</title>
+    <style>
+        body { font-family: -apple-system, sans-serif; line-height: 1.6; color: #172b4d; max-width: 900px; margin: 40px auto; padding: 0 20px; }
+        h1, h2, h3 { color: #0052cc; }
+        .alert { padding: 15px; border-radius: 4px; margin: 20px 0; border-left: 5px solid; }
+        .alert-important { background: #fff7e6; border-color: #ff9900; }
+        pre { background: #f4f5f7; padding: 15px; border-radius: 4px; overflow-x: auto; }
+        code { font-family: 'SFMono-Medium', 'SF Mono', 'Segoe UI Mono', 'Roboto Mono', monospace; background: #ebecf0; padding: 2px 4px; border-radius: 3px; }
+        .task-list { list-style: none; padding: 0; }
+        .task-list li { margin-bottom: 5px; }
+        .status-done { color: #00875a; font-weight: bold; }
+        .status-in-progress { color: #0052cc; font-weight: bold; }
+        .status-todo { color: #6b778c; }
+        .sidebar-link { display: inline-block; margin-top: 20px; text-decoration: none; color: #0052cc; font-weight: 600; }
+    </style>
+</head>
+<body>
+    <a href="../knowledgebase.html" class="sidebar-link">← Back to Knowledge Base</a>
+    <h1>Implementation Plan - v30: Security Data Isolation</h1>
+    <p><strong>Goal:</strong> Migrate local Socket.io service to Render.com (Production) and update the ecosystem to support seamless real-time provider switching.</p>
+
+    <div class="alert alert-important">
+        <strong>User Review Required:</strong> 
+        <br>1. <strong>Multi-Layer Fallback:</strong> Triggers will now chain through Socket.io → Pusher → Polling to ensure high availability on the Render Free Tier.
+        <br>2. <strong>Environment Isolation:</strong> These changes target <strong>Production</strong>. Local development settings remain unchanged and operational.
+    </div>
+
+    <h2>Proposed Changes</h2>
+    <h3>[Component] websocket-server</h3>
+    <ul>
+        <li><code>server.js</code>: Implement <code>SIGTERM</code> handlers for graceful shutdown and dynamic <code>PORT</code> support.</li>
+        <li><code>render.yaml</code>: [NEW] Blueprint for automated Render.com deployment.</li>
+    </ul>
+
+    <h3>[Component] budolshap & budolpay-admin</h3>
+    <ul>
+        <li><code>lib/realtime.js</code> / <code>lib/settings.ts</code>: Update real-time trigger endpoints to point to the production WebSocket URL.</li>
+        <li>Environment Variables: Configure <code>REALTIME_SOCKETIO_URL</code> for production.</li>
+    </ul>
+
+    <h2>Phase-based Implementation</h2>
+    <ul class="task-list">
+        <li><span class="status-done">[x]</span> Phase 0 – Baseline & Risk Analysis</li>
+        <li><span class="status-in-progress">[/]</span> Phase 1 – Architecture & Data Contracts</li>
+        <li><span class="status-todo">[ ]</span> Phase 2 – Backend & API Implementation</li>
+        <li><span class="status-todo">[ ]</span> Phase 3 – Frontend / App Implementation</li>
+        <li><span class="status-todo">[ ]</span> Phase 4 – Integration & Security</li>
+    </ul>
+
+    <h2>Verification Plan</h2>
+    <ul>
+        <li><strong>Automated Tests:</strong> <code>npm test</code> in <code>websocket-server</code>.</li>
+        <li><strong>Manual Verification:</strong> Connect Admin UI, check socket status in developer console, trigger order update, verify real-time notification.</li>
+    </ul>
+    
+    <p><em>Version: v30-stable-release | 2026-03-29</em></p>
+</body>
+</html>

@@ -1,0 +1,89 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Developer Manual - 2026-01-25 v1</title>
+    <style>
+        :root {
+            --primary: #0052CC;
+            --secondary: #172B4D;
+            --bg: #F4F5F7;
+            --text: #172B4D;
+            --code-bg: #1E1E1E;
+            --code-text: #D4D4D4;
+        }
+        body { font-family: -apple-system, sans-serif; margin: 0; display: flex; background: var(--bg); color: var(--text); }
+        .sidebar { width: 280px; background: white; height: 100vh; position: fixed; border-right: 1px solid #DFE1E6; padding: 2rem 1rem; box-sizing: border-box; }
+        .content { margin-left: 280px; padding: 3rem; max-width: 1000px; width: 100%; }
+        .card { background: white; padding: 2rem; border-radius: 8px; box-shadow: 0 1px 3px rgba(0,0,0,0.12); margin-bottom: 2rem; }
+        pre { background: var(--code-bg); color: var(--code-text); padding: 1.5rem; border-radius: 6px; overflow-x: auto; font-family: 'Consolas', 'Monaco', monospace; font-size: 0.9rem; }
+        code { font-family: 'Consolas', monospace; background: #EBECF0; padding: 2px 4px; border-radius: 3px; }
+        .file-link { color: var(--primary); text-decoration: none; font-weight: bold; }
+        .file-link:hover { text-decoration: underline; }
+        h1, h2, h3 { color: var(--secondary); }
+    </style>
+</head>
+<body>
+    <div class="sidebar">
+        <h2>Budol Docs</h2>
+        <ul>
+            <li><a href="index.html">Back to Home</a></li>
+            <li><strong>Developer Manual</strong></li>
+        </ul>
+    </div>
+    <div class="content">
+        <h1>Developer Manual - Unified Payment UI</h1>
+        
+        <div class="card">
+            <h2>Overview</h2>
+            <p>This implementation unifies the post-payment flow for <strong>budolPay</strong> with existing providers like PayMongo (GCash, Maya). Key changes include provider-specific status polling and redirection to the shared <code>/payment/return</code> page.</p>
+        </div>
+
+        <div class="card">
+            <h3>1. Status API Enhancement</h3>
+            <p>File: <a class="file-link" href="file:///d:/IT Projects/budolEcosystem/budolShap-0.1.0/app/api/paymongo/status/route.js">app/api/paymongo/status/route.js</a></p>
+            <p>The status API now supports an explicit <code>provider</code> parameter. When <code>provider=budolpay</code> is passed, it routes the status check through the <code>budolPayAdapter</code> and translates the internal <code>COMPLETED</code> status to the standard <code>succeeded</code> status used by the frontend.</p>
+            <pre>
+if (intent_id.startsWith('INTENT-') || intent_id.startsWith('JON-') || provider === 'budolpay') {
+    const budolPayAdapter = paymentService.adapters['budolpay'];
+    const statusData = await budolPayAdapter.getPaymentIntent(intent_id);
+    const status = statusData.status === 'COMPLETED' ? 'succeeded' : statusData.status;
+    return NextResponse.json({ status });
+}
+            </pre>
+        </div>
+
+        <div class="card">
+            <h3>2. Unified Return Page Polling</h3>
+            <p>File: <a class="file-link" href="file:///d:/IT Projects/budolEcosystem/budolShap-0.1.0/app/payment/return/page.jsx">app/payment/return/page.jsx</a></p>
+            <p>The return page now captures the <code>provider</code> from URL search parameters and passes it to the <code>pollStatus</code> function, ensuring accurate verification for budolPay orders.</p>
+            <pre>
+const providerParam = provider ? `&provider=${provider}` : '';
+const resp = await fetch(`/api/paymongo/status?intent_id=${id}${providerParam}`);
+            </pre>
+        </div>
+
+        <div class="card">
+            <h3>3. QR Modal Redirection</h3>
+            <p>File: <a class="file-link" href="file:///d:/IT Projects/budolEcosystem/budolShap-0.1.0/components/OrderSummary.jsx">components/OrderSummary.jsx</a></p>
+            <p>Instead of a simple toast and redirect to <code>/orders</code>, the success handler now redirects to the unified return page to show the "Payment Successful" UI.</p>
+            <pre>
+const handleQRSuccess = () => {
+    const provider = (qrData?.paymentMethod === 'BUDOL_PAY') ? 'budolpay' : 'paymongo';
+    router.push(`/payment/return?payment_intent_id=${intentId}&orderId=${orderId}&provider=${provider}`);
+};
+            </pre>
+        </div>
+
+        <div class="card">
+            <h2>Compliance Notes</h2>
+            <ul>
+                <li><strong>PCI DSS:</strong> No sensitive card data is stored. All transactions are handled via secure payment adapters.</li>
+                <li><strong>Cybersecurity Law:</strong> Polling logic is rate-limited and includes max-retry logic to prevent resource exhaustion.</li>
+            </ul>
+        </div>
+    </div>
+</body>
+</html>

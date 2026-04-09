@@ -1,0 +1,93 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Developer Manual - v212</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
+        body { font-family: 'Inter', sans-serif; }
+    </style>
+</head>
+<body class="bg-slate-50 text-slate-900">
+    <nav class="bg-white border-b border-slate-200 sticky top-0 z-50">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="flex justify-between h-16">
+                <div class="flex items-center">
+                    <a href="../index.html" class="text-2xl font-bold text-indigo-600">budolEcosystem Docs</a>
+                    <span class="ml-4 px-2.5 py-0.5 rounded-full text-xs font-medium bg-indigo-100 text-indigo-800">Developer Manual</span>
+                </div>
+                <div class="flex items-center">
+                    <a href="../index.html" class="text-sm font-medium text-slate-500 hover:text-slate-700">Back to Index</a>
+                </div>
+            </div>
+        </div>
+    </nav>
+
+    <main class="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
+        <article class="prose prose-slate lg:prose-lg max-w-none">
+            <h1 class="text-3xl font-bold mb-8">Registration Endpoint Implementation</h1>
+
+            <section class="mb-12">
+                <h2 class="text-2xl font-bold mb-4">Purpose</h2>
+                <p>The purpose of this update is to restore the universal registration flow within the budolEcosystem. By implementing a centralized <code>/auth/register</code> endpoint in <code>budolID</code>, we ensure that all client applications (like <code>budolShap</code> and <code>budolPay</code>) can register users in a single identity database, facilitating seamless SSO across the ecosystem.</p>
+            </section>
+
+            <section class="mb-12">
+                <h2 class="text-2xl font-bold mb-4">Technical Details</h2>
+                <h3 class="text-xl font-bold mb-2">Endpoint Specification</h3>
+                <p><strong>Route:</strong> <code>POST /auth/register</code></p>
+                <p><strong>Request Body:</strong></p>
+                <pre class="bg-slate-100 p-4 rounded-lg"><code>{
+  "email": "user@example.com",
+  "password": "securepassword",
+  "firstName": "John",
+  "lastName": "Doe",
+  "phoneNumber": "09123456789",
+  "registrationIp": "127.0.0.1",
+  "deviceFingerprint": "browser-fingerprint-hash"
+}</code></pre>
+
+                <h3 class="text-xl font-bold mb-2">Code Logic</h3>
+                <p>The implementation uses <code>bcryptjs</code> for secure password hashing and <code>Prisma</code> for database operations. It includes a check for existing users to prevent duplicate registrations.</p>
+                <pre class="bg-slate-100 p-4 rounded-lg"><code>// Create user in budolID database
+const user = await prisma.user.create({
+    data: {
+        email,
+        passwordHash,
+        firstName,
+        lastName,
+        phoneNumber,
+        role: 'USER'
+    }
+});</code></pre>
+            </section>
+
+            <section class="mb-12">
+                <h2 class="text-2xl font-bold mb-4">Test Results</h2>
+                <p>The endpoint was verified using <code>Invoke-RestMethod</code>. Successful registration returns a 201 Created status with the user ID and fraud analysis flags.</p>
+                <div class="bg-green-50 border-l-4 border-green-400 p-4 mb-4">
+                    <p class="text-green-700"><strong>Status:</strong> Success</p>
+                    <p class="text-green-700"><strong>Response:</strong> <code>{ "message": "User registered successfully", "userId": "...", "fraudAnalysis": { "risk": "LOW" } }</code></p>
+                </div>
+            </section>
+
+            <section class="mb-12">
+                <h2 class="text-2xl font-bold mb-4">Dependencies</h2>
+                <ul>
+                    <li><code>express</code>: Web framework</li>
+                    <li><code>bcryptjs</code>: Password hashing</li>
+                    <li><code>@prisma/client</code>: Database ORM</li>
+                </ul>
+            </section>
+        </article>
+    </main>
+
+    <footer class="bg-slate-900 text-slate-400 py-12">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
+            <p>&copy; 2026 budolEcosystem. Documentation v212.</p>
+        </div>
+    </footer>
+</body>
+</html>

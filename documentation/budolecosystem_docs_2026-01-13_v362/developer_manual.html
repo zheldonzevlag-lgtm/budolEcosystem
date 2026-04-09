@@ -1,0 +1,88 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Developer Manual - v362</title>
+    <style>
+        body { font-family: 'Segoe UI', sans-serif; line-height: 1.6; max-width: 900px; margin: 0 auto; padding: 40px; background: #0F172A; color: #E2E8F0; }
+        .card { background: #1E293B; padding: 30px; border-radius: 12px; border: 1px solid #334155; margin-bottom: 24px; }
+        h1 { color: #F43F5E; }
+        h2 { color: #3B82F6; }
+        h3 { color: #10B981; }
+        pre { background: #0F172A; padding: 15px; border-radius: 8px; border: 1px solid #334155; overflow-x: auto; color: #F8FAFC; }
+        code { color: #F43F5E; }
+        a { color: #3B82F6; }
+    </style>
+</head>
+<body>
+    <div class="card">
+        <h1>Developer Manual: Face Recognition Implementation</h1>
+        <p><strong>Version:</strong> v362</p>
+        <p><strong>Purpose:</strong> Technical guide for the full end-to-end implementation of the Face Recognition system (Phases 1-4).</p>
+    </div>
+
+    <div class="card">
+        <h2>1. Architecture Overview</h2>
+        <p>The system uses a hybrid approach for biometric security:</p>
+        <ul>
+            <li><strong>Liveness Detection:</strong> On-device ML Kit (Blink/Smile detection) to prevent spoofing.</li>
+            <li><strong>Face Embedding:</strong> FaceNet TFLite model generates a 128-dimension mathematical template.</li>
+            <li><strong>Backend Storage:</strong> Templates are stored in PostgreSQL via Prisma for server-side verification and cross-device synchronization.</li>
+            <li><strong>Biometric Login:</strong> Local storage of templates for fast, secure authentication without repeated server calls.</li>
+        </ul>
+        
+        <h3>Data Flow</h3>
+        <ol>
+            <li><strong>Enrollment (KYC):</strong> Captured face is converted to embedding and sent to backend.</li>
+            <li><strong>Storage:</strong> Backend updates <code>User</code> and <code>VerificationDocument</code> models.</li>
+            <li><strong>Local Link:</strong> On successful login, the app offers to "Register Face Login", storing the template in <code>FlutterSecureStorage</code>.</li>
+            <li><strong>Verification (Login):</strong> Captured selfie is compared locally against the stored template using Cosine Similarity.</li>
+        </ol>
+    </div>
+
+    <div class="card">
+        <h2>2. Code References</h2>
+        <h3>Mobile Application</h3>
+        <ul>
+            <li><strong>Embedding Service:</strong> <a href="file:///d:/IT Projects/budolEcosystem/budolPayMobile/lib/services/face_embedding_service.dart">face_embedding_service.dart</a> - Core logic for FaceNet inference and similarity calculation.</li>
+            <li><strong>Biometric Service:</strong> <a href="file:///d:/IT Projects/budolEcosystem/budolPayMobile/lib/services/biometric_service.dart">biometric_service.dart</a> - Secure storage for PIN and face templates.</li>
+            <li><strong>KYC Integration:</strong> <a href="file:///d:/IT Projects/budolEcosystem/budolPayMobile/lib/screens/kyc_verification_screen.dart">kyc_verification_screen.dart</a> - Captures enrollment template during verification.</li>
+            <li><strong>Login Integration:</strong> <a href="file:///d:/IT Projects/budolEcosystem/budolPayMobile/lib/screens/login_screen.dart">login_screen.dart</a> - Implements face login and face registration flow.</li>
+        </ul>
+
+        <h3>Backend Services</h3>
+        <ul>
+            <li><strong>Prisma Schema:</strong> <a href="file:///d:/IT Projects/budolEcosystem/budolpay-0.1.0/packages/database/prisma/schema.prisma">schema.prisma</a> - Added <code>faceTemplate</code> to User and VerificationDocument models.</li>
+            <li><strong>Verification Service:</strong> <a href="file:///d:/IT Projects/budolEcosystem/budolpay-0.1.0/services/verification-service/index.js">index.js</a> - Processes face template uploads and updates user KYC status.</li>
+        </ul>
+
+        <h3>Example: Cosine Similarity Calculation</h3>
+        <pre><code>// In face_embedding_service.dart
+double compare(List&lt;double&gt; emb1, List&lt;double&gt; emb2) {
+  double dotProduct = 0.0;
+  double normA = 0.0;
+  double normB = 0.0;
+  for (int i = 0; i &lt; emb1.length; i++) {
+    dotProduct += emb1[i] * emb2[i];
+    normA += pow(emb1[i], 2);
+    normB += pow(emb2[i], 2);
+  }
+  return dotProduct / (sqrt(normA) * sqrt(normB));
+}</code></pre>
+    </div>
+
+    <div class="card">
+        <h2>3. Dependencies</h2>
+        <ul>
+            <li><code>tflite_flutter: ^0.10.0</code> - Core ML execution engine.</li>
+            <li><code>image: ^4.1.3</code> - Image manipulation for preprocessing.</li>
+            <li><code>google_mlkit_face_detection: ^0.11.0</code> - Required for face detection and liveness.</li>
+        </ul>
+    </div>
+
+    <div class="card">
+        <h2>4. Compliance</h2>
+        <p><strong>NPC / GDPR:</strong> We store only mathematical embeddings, never raw facial images for matching purposes. This adheres to privacy-by-design principles.</p>
+    </div>
+</body>
+</html>

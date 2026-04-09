@@ -1,0 +1,229 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Developer Manual - AWS Cloud Migration v6.0.0</title>
+    <style>
+        :root {
+            --primary: #0052cc;
+            --secondary: #172b4d;
+            --code-bg: #f4f5f7;
+            --border: #dfe1e6;
+        }
+
+        body {
+            font-family: 'Inter', sans-serif;
+            line-height: 1.6;
+            color: var(--secondary);
+            margin: 0;
+            display: flex;
+        }
+
+        .sidebar {
+            width: 260px;
+            height: 100vh;
+            background: #fff;
+            border-right: 1px solid var(--border);
+            position: fixed;
+            padding: 2rem 1rem;
+        }
+
+        .main {
+            margin-left: 280px;
+            padding: 3rem 4rem;
+            max-width: 900px;
+        }
+
+        .nav-item {
+            display: block;
+            padding: 0.75rem 1rem;
+            color: #64748b;
+            text-decoration: none;
+            border-radius: 8px;
+            margin-bottom: 0.25rem;
+            font-size: 0.9rem;
+        }
+
+        .nav-item:hover {
+            background: #f1f5f9;
+            color: var(--primary);
+        }
+
+        .nav-item.active {
+            background: #e0e7ff;
+            color: var(--primary);
+        }
+
+        code {
+            background: var(--code-bg);
+            padding: 0.2rem 0.4rem;
+            border-radius: 4px;
+            font-family: monospace;
+        }
+
+        pre {
+            background: var(--code-bg);
+            padding: 1.5rem;
+            border-radius: 8px;
+            overflow-x: auto;
+            border: 1px solid var(--border);
+        }
+
+        .section {
+            margin-bottom: 3rem;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="sidebar">
+        <div style="font-weight: 800; font-size: 1.25rem; color: var(--primary); margin-bottom: 2rem; padding: 0 1rem;">
+            Budol Ecosystem</div>
+        <nav>
+            <a href="index.html" class="nav-item">Overview</a>
+            <a href="system_architecture.html" class="nav-item">Architecture Deep Dive</a>
+            <a href="walkthrough.html" class="nav-item">Infrastructure Walkthrough</a>
+            <a href="how_to_guide.html" class="nav-item">Detailed How-To Guide</a>
+            <a href="implementation_plan.html" class="nav-item">Implementation Plan</a>
+            <a href="developer_manual.html" class="nav-item active">Developer Manual</a>
+            <a href="user_manual.html" class="nav-item">User Manual</a>
+            <a href="task.html" class="nav-item">Task/Checklist</a>
+            <a href="system_admin_manual.html" class="nav-item">System Admin</a>
+            <hr style="margin: 1.5rem 0; border: 0; border-top: 1px solid var(--border);">
+            <a href="risk_register.html" class="nav-item">Risk Register</a>
+            <a href="Mitigation.html" class="nav-item">Mitigation Plan</a>
+            <a href="issues_fixes.html" class="nav-item">Issues & Fixes</a>
+            <a href="test_results.html" class="nav-item">Test Results</a>
+            <a href="future_recommendations.html" class="nav-item">Recommendations</a>
+            <hr style="margin: 1.5rem 0; border: 0; border-top: 1px solid var(--border);">
+            <a href="../../knowledgebase.html" class="nav-item">← Back to KB</a>
+        </nav>
+    </div>
+    <div class="main">
+        <h1>Developer Manual: AWS Integration</h1>
+        <section class="section">
+            <h2>S3 Storage Integration</h2>
+            <p>We use the <code>@aws-sdk/client-s3</code> package to interact with AWS S3. The
+                <code>lib/cloudinary.js</code> has been deprecated in favor of a centralized S3 utility.
+            </p>
+            <h3>Configuration</h3>
+            <pre><code>const s3Client = new S3Client({
+    region: process.env.AWS_REGION,
+    credentials: {
+        accessKeyId: process.env.AWS_ACCESS_KEY_ID,
+        secretAccessKey: process.env.AWS_SECRET_ACCESS_KEY
+    }
+});</code></pre>
+        </section>
+
+        <section class="section">
+            <h2>Lambda Background Removal</h2>
+            <p>The background removal process is handled by a Python Lambda function. Developers should not run
+                background removal locally to save resources.</p>
+            <h3>Lambda Interface</h3>
+            <p>Trigger: <code>S3:ObjectCreated:*</code> on <code>uploads/raw/</code></p>
+            <p>Destination: <code>uploads/processed/</code></p>
+        </section>
+
+        <section class="section">
+            <h2>Real-time Layer (Socket.io)</h2>
+            <p>The WebSocket server acts as a real-time event broadcaster. Services trigger events via HTTP POST to the
+                <code>/trigger</code> endpoint, which then emits the event to clients subscribed to specific channels.
+            </p>
+
+            <h3>Trigger API</h3>
+            <p>To trigger an event from a backend service, send a JSON POST request to the internal microservice.
+                <strong>Always use the <code>triggerRealtimeEvent</code> helper</strong> to ensure compatibility with
+                both Local and AWS environments.
+            </p>
+            <pre><code>POST http://ws.budol.internal:4000/trigger
+Content-Type: application/json
+
+{
+    "channel": "order-123",
+    "event": "status-updated",
+    "data": { "status": "DELIVERED" }
+}</code></pre>
+            <p><strong>Environment Variables:</strong></p>
+            <ul>
+                <li><code>INTERNAL_WS_URL</code>: Set to <code>http://ws.budol.internal:4000</code> in production to
+                    bypass external proxies for backend-to-backend calls.</li>
+                <li><code>NEXT_PUBLIC_SOCKET_URL</code>: Set to <code>https://budolws.duckdns.org</code> for client-side
+                    connections.</li>
+            </ul>
+
+            <h3>Client Subscription</h3>
+            <p>Clients should connect to <code>https://budolws.duckdns.org</code> and use the <code>subscribe</code>
+                event to join a room.</p>
+            <pre><code>const socket = io('https://budolws.duckdns.org');
+socket.emit('subscribe', 'order-123');
+
+socket.on('status-updated', (data) => {
+    console.log('Order update:', data);
+});</code></pre>
+        </section>
+
+        <section class="section">
+            <h2>Internal Service Integration</h2>
+            <p>To ensure smooth communication between services (e.g., BudolPay -> BudolID), use internal DNS aliases.
+            </p>
+            <h3>Service Connectivity Matrix</h3>
+            <table style="width:100%; border-collapse: collapse; margin-top: 1rem;">
+                <tr style="border-bottom: 1px solid var(--border); background: var(--code-bg);">
+                    <th style="padding:0.5rem; text-align:left;">Target Service</th>
+                    <th style="padding:0.5rem; text-align:left;">Internal DNS</th>
+                    <th style="padding:0.5rem; text-align:left;">Port</th>
+                </tr>
+                <tr>
+                    <td style="padding:0.5rem;">Database (RDS)</td>
+                    <td style="padding:0.5rem;"><code>db.budol.internal</code></td>
+                    <td style="padding:0.5rem;">5432</td>
+                </tr>
+                <tr>
+                    <td style="padding:0.5rem;">Redis Cache</td>
+                    <td style="padding:0.5rem;"><code>redis.budol.internal</code></td>
+                    <td style="padding:0.5rem;">6379</td>
+                </tr>
+                <tr>
+                    <td style="padding:0.5rem;">Websocket (WS)</td>
+                    <td style="padding:0.5rem;"><code>ws.budol.internal</code></td>
+                    <td style="padding:0.5rem;">4000</td>
+                </tr>
+            </table>
+        </section>
+
+        <section class="section">
+            <h2>Prisma & DB Deployment</h2>
+            <p>Deploy schema changes without downtime using <code>prisma migrate deploy</code>. This command applies
+                pending migrations without reset.</p>
+            <pre><code># Inside application container
+npx prisma migrate deploy</code></pre>
+            <p><strong>Warning:</strong> Always ensure the <code>DATABASE_URL</code> includes the schema name (e.g.,
+                <code>?schema=budolpay</code>) to maintain logical isolation on the shared RDS instance.
+            </p>
+        </section>
+
+        <section class="section">
+            <h2>Local Development</h2>
+            <p>Even with cloud services, developers should continue using <code>.env.local</code> for credentials. Never
+                commit <code>.env</code> files containing AWS Secret Keys.</p>
+
+            <h3>Local SSL (Optional)</h3>
+            <p>If you need to test HTTPS features locally (e.g., secure cookies), we recommend using
+                <code>mkcert</code>:
+            </p>
+            <pre><code># Install mkcert (Windows/Choco)
+choco install mkcert
+mkcert -install
+
+# Generate certs for localhost
+mkcert localhost 127.0.0.1 ::1</code></pre>
+            <p>Update <code>env-manager.cjs</code> or your <code>.env.local</code> to use <code>https://</code> if
+                active.</p>
+        </section>
+    </div>
+</body>
+
+</html>

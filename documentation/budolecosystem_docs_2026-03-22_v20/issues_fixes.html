@@ -1,0 +1,79 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>v20 Issues & Fixes - Budol Ecosystem</title>
+    <style>
+        :root { --primary: #0052CC; --bg: #F4F5F7; --text: #172B4D; }
+        body { font-family: sans-serif; line-height: 1.6; color: var(--text); background: var(--bg); margin: 0; display: flex; }
+        .sidebar { width: 280px; background: #fff; border-right: 1px solid #dfe1e6; min-height: 100vh; padding: 20px; position: sticky; top: 0; }
+        .content { flex: 1; padding: 40px; }
+        .issue-card { background: #fff; border-radius: 8px; padding: 25px; margin-bottom: 25px; border-left: 5px solid #E34935; box-shadow: 0 1px 3px rgba(0,0,0,0.1); }
+        .fix { border-left-color: #00875A; }
+        code { background: #f0f0f0; padding: 2px 5px; border-radius: 3px; font-family: monospace; }
+        span.tag { padding: 3px 8px; border-radius: 12px; font-size: 0.8rem; font-weight: bold; text-transform: uppercase; margin-right: 10px; }
+        .tag.critical { background: #FFEBE6; color: #DE350B; }
+        .tag.resolved { background: #E3FCEF; color: #006644; }
+    </style>
+</head>
+<body>
+    <div class="sidebar">
+        <h3>v20 Documentation</h3>
+        <ul>
+            <li><a href="index.html">Index</a></li>
+            <li><a href="infrastructure_security_walkthrough.html">Security Walkthrough</a></li>
+            <li><a href="issues_fixes.html" style="font-weight:bold">Issues & Fixes</a></li>
+            <li><a href="task.html">Task Checklist</a></li>
+        </ul>
+        <hr>
+        <a href="../knowledgebase.html">Back to Knowledge Base</a>
+    </div>
+    <div class="content">
+        <h1>🛠️ Issues & Fixes (v20)</h1>
+
+        <div class="issue-card">
+            <span class="tag critical">Critical</span>
+            <h2>Issue 1: Production 500 & 401 (Hardcoded LocalHost)</h2>
+            <p><strong>Symptom:</strong> "Fetch Failed" and "Unauthorized" logs in production. App appeared to miss SSO login.</p>
+            <p><strong>Root Cause:</strong> Found multiple files (e.g., <code>api/auth/check-phone</code>) have fallback logic pointing to <code>http://localhost:8000</code>. This is valid locally but fails inside AWS Fargate containers.</p>
+            <div class="fix">
+                <h3>✅ Fix:</h3>
+                <p>Added <code>BUDOL_ID_URL</code> point to <code>http://budol-id.budol.internal:8000</code> in Task Revision 27. Syncing all internal routes to match the local 13-service wiring.</p>
+            </div>
+        </div>
+
+        <div class="issue-card">
+            <span class="tag critical">Critical</span>
+            <h2>Issue 2: Missing SystemSetting Table in RDS</h2>
+            <p><strong>Symptom:</strong> <code>PrismaClientKnownRequestError: P2021</code> (Table does not exist) in logs.</p>
+            <p><strong>Root Cause:</strong> The <code>public.SystemSetting</code> table was missing from your production RDS instance despite code utilizing it.</p>
+            <div class="fix">
+                <h3>✅ Fix:</h3>
+                <p>Triggered automated schema sync via <code>prisma db push</code> on the production RDS instance.</p>
+            </div>
+        </div>
+
+        <div class="issue-card">
+            <span class="tag critical">Critical</span>
+            <h2>Issue 2: BudolPay Payment Integration Failure</h2>
+            <p><strong>Symptom:</strong> "Fetch Failed" error on checkout client-side with status 500.</p>
+            <p><strong>Root Cause:</strong> Server-side call to BudolPay was hitting the Admin frontend instead of the API gateway. Additionally, it was trying to call external DuckDNS urls which are unreliable inside the AWS private VPC (Loopback restriction).</p>
+            <div class="fix">
+                <h3>✅ Fix:</h3>
+                <p>Modified <code>PAYMENT_GATEWAY_URL</code> to use AWS Internal Service Discovery: <code>http://budolpay-payment.budol.internal:8004/</code>. Verified sub-millisecond connectivity.</p>
+            </div>
+        </div>
+
+        <div class="issue-card">
+            <span class="tag resolved">Resolved</span>
+            <h2>Issue 3: Simple API Key Deprecation</h2>
+            <p><strong>Symptom:</strong> Use of simple placeholder keys like <code>bp_key_2025</code> posed security risks.</p>
+            <div class="fix">
+                <h3>✅ Fix:</h3>
+                <p>Generated and rolled out 64-character high-entropy secure keys across 100% of production services.</p>
+            </div>
+        </div>
+    </div>
+</body>
+</html>

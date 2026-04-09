@@ -1,0 +1,51 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Mitigation Strategies - Budol Ecosystem</title>
+    <style>
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; line-height: 1.6; margin: 0; padding: 0; color: #333; }
+        .container { max-width: 1200px; margin: 0 auto; padding: 20px; }
+        header { background: #27ae60; color: #fff; padding: 20px 0; text-align: center; }
+        nav { background: #34495e; padding: 10px 0; text-align: center; }
+        nav a { color: #fff; text-decoration: none; margin: 0 15px; font-weight: bold; }
+        .card { background: #f9f9f9; border: 1px solid #ddd; padding: 20px; margin-bottom: 20px; border-radius: 5px; }
+        h3 { color: #27ae60; }
+    </style>
+</head>
+<body>
+    <header>
+        <div class="container">
+            <h1>Mitigation Strategies</h1>
+            <p>Version: 2026-02-17_v1</p>
+        </div>
+    </header>
+    <nav>
+        <a href="index.html">Home</a>
+        <a href="risk_register.html">Risk Register</a>
+        <a href="Mitigation.html">Mitigations</a>
+    </nav>
+    <div class="container">
+        <div class="card">
+            <h2>Strategies</h2>
+            
+            <h3>M-001: Transactional Integrity for Escrow</h3>
+            <p><strong>Addresses Risk:</strong> R-001 (Escrow Lock Failure)</p>
+            <p><strong>Strategy:</strong> All return operations (Approve, Refund, Reject) are wrapped in <code>prisma.$transaction</code>. This ensures that status updates and fund unlock/transfer happen atomically. If one fails, the entire operation rolls back.</p>
+
+            <h3>M-002: Cryptographic Hashing for Audit Logs</h3>
+            <p><strong>Addresses Risk:</strong> R-002 (Audit Log Tampering)</p>
+            <p><strong>Strategy:</strong> Implemented SHA-256 hashing of critical audit log fields (User ID, Action, Entity ID, Timestamp, Metadata). The hash is stored in the metadata. Any alteration to the log entry will result in a hash mismatch during verification.</p>
+
+            <h3>M-003: Robust Cart Cleanup Logic</h3>
+            <p><strong>Addresses Risk:</strong> R-003 (Cart Persistence)</p>
+            <p><strong>Strategy:</strong> Enhanced <code>ordersService.js</code> to handle products without variations explicitly by forcing <code>variationId: null</code>. Added logging to trace cleanup operations.</p>
+
+            <h3>M-004: Strict Authorization Checks</h3>
+            <p><strong>Addresses Risk:</strong> R-004 (Unauthorized Return Response)</p>
+            <p><strong>Strategy:</strong> In <code>returnsService.js</code>, every function (e.g., <code>buyerRespondToProposal</code>, <code>respondToReturn</code>) begins with a strict check verifying that the <code>userId</code> matches the Order's User (for buyers) or the Store's Owner (for sellers).</p>
+        </div>
+    </div>
+</body>
+</html>

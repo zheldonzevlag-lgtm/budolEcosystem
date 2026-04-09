@@ -1,0 +1,74 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Developer Manual - BudolEcosystem v5.0.5</title>
+    <style>
+        body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; line-height: 1.6; color: #333; max-width: 1000px; margin: 0 auto; padding: 20px; background: #f4f7f9; }
+        .container { background: white; padding: 40px; border-radius: 8px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); }
+        h1, h2, h3 { color: #2c3e50; }
+        pre { background: #282c34; color: #abb2bf; padding: 15px; border-radius: 5px; overflow-x: auto; }
+        code { font-family: "Cascadia Code", "Fira Code", monospace; }
+        .badge { display: inline-block; padding: 2px 8px; border-radius: 4px; font-size: 0.8em; font-weight: bold; text-transform: uppercase; margin-right: 5px; }
+        .badge-fix { background: #e74c3c; color: white; }
+        .badge-feature { background: #3498db; color: white; }
+        .task-list { background: #f9f9f9; border-left: 5px solid #3498db; padding: 15px; margin: 20px 0; }
+        .task-item { margin-bottom: 5px; }
+        .task-completed { text-decoration: line-through; color: #7f8c8d; }
+        .link-code { color: #3498db; text-decoration: none; font-weight: bold; }
+        .link-code:hover { text-decoration: underline; }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <h1>Developer Manual - BudolEcosystem v5.0.5</h1>
+    <p><strong>Release Date:</strong> 2026-03-02</p>
+    <p><strong>Status:</strong> <span class="badge badge-fix">Schema Deep Dive & Fix</span></p>
+
+    <div class="task-list">
+        <h3>v5.0.5 Bug Fixes Task List</h3>
+        <div class="task-item task-completed">✔ Deep dive into database schemas (public vs budolpay) to verify Transaction table structure</div>
+        <div class="task-item task-completed">✔ Re-apply schema=budolpay to all budolPay .env files (Fixing regressions)</div>
+        <div class="task-item task-completed">✔ Corrected Checkout model field usage (moved failedAt, paidAt to metadata JSON)</div>
+    </div>
+
+    <h2>Purpose</h2>
+    <p>This release provides a definitive fix for the persistent database schema conflicts and model validation errors by logically isolating budolPay data and aligning the service layer with the existing schema.</p>
+
+    <h2>Database Deep Dive Results</h2>
+    
+    <h3>1. Transaction Table Discrepancy</h3>
+    <p>A deep dive revealed that the <code>Transaction</code> table exists in both <code>public</code> (budolShap) and <code>budolpay</code> schemas but with different structures:</p>
+    <ul>
+        <li><strong>public.Transaction:</strong> Lacks the <code>status</code> column. Used for internal wallet logging.</li>
+        <li><strong>budolpay.Transaction:</strong> Contains the <code>status</code> column. Used for payment gateway operations.</li>
+    </ul>
+    <p>The error occurred because budolPay services were defaulting to the <code>public</code> schema.</p>
+
+    <h3>2. Checkout Table Alignment</h3>
+    <p>The <code>Checkout</code> table in the <code>public</code> schema does not contain <code>failedAt</code>, <code>paidAt</code>, or <code>expiredAt</code> columns. Prisma validation errors were triggered by attempts to update these non-existent fields.</p>
+
+    <h2>Technical Fixes</h2>
+    
+    <h3>1. Schema Isolation Re-enforcement</h3>
+    <p>Re-applied the <code>?schema=budolpay</code> suffix to the <code>DATABASE_URL</code> in all budolPay microservices. This ensures they correctly target the <code>budolpay.Transaction</code> table.</p>
+    <p><strong>Affected Files:</strong> All <code>.env</code> files in <code>budolpay-0.1.0/services/*</code> and <code>budolpay-0.1.0/packages/database/</code>.</p>
+
+    <h3>2. Metadata Mapping for Timestamps</h3>
+    <p>In <code>checkoutService.js</code>, application-specific timestamps (<code>failedAt</code>, <code>paidAt</code>, <code>expiredAt</code>) and failure reasons are now correctly mapped to the <code>metadata</code> JSON field instead of direct column updates.</p>
+    <p><strong>File:</strong> <a class="link-code" href="file:///d:/IT Projects/budolEcosystem/budolshap-0.1.0/lib/services/checkoutService.js">lib/services/checkoutService.js</a></p>
+
+    <h2>Compliance & Risk</h2>
+    <p><strong>Compliance:</strong> BSP Circular No. 808 - Financial Transaction Audit integrity is maintained through schema-level isolation.</p>
+    <p><strong>Risk:</strong> Minimal. Services must be restarted to pick up the updated ENV configurations.</p>
+
+    <div style="margin-top: 40px; border-top: 1px solid #eee; padding-top: 20px;">
+        <a href="index.html" class="link-code">← Back to Index</a> | 
+        <a href="../knowledgebase.html" class="link-code">Knowledge Base</a>
+    </div>
+</div>
+
+</body>
+</html>

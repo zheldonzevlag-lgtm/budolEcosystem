@@ -1,0 +1,64 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Developer Manual - SSO Restoration (v31)</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <style>
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; line-height: 1.6; color: #333; }
+        .sidebar { background-color: #f8f9fa; min-height: 100vh; padding: 20px; border-right: 1px solid #dee2e6; }
+        .content { padding: 40px; }
+        pre { background-color: #f4f4f4; padding: 15px; border-radius: 5px; border-left: 5px solid #007bff; overflow-x: auto; }
+        code { color: #d63384; }
+        .badge-dev { background-color: #0d6efd; color: white; padding: 3px 8px; border-radius: 4px; font-size: 0.8rem; }
+    </style>
+</head>
+<body>
+    <div class="container-fluid">
+        <div class="row">
+            <nav class="col-md-3 col-lg-2 sidebar">
+                <h4>v31 Documentation</h4>
+                <ul class="nav flex-column">
+                    <li class="nav-item"><a class="nav-link" href="../index.html">← Back to v31 Index</a></li>
+                    <li class="nav-item"><a class="nav-link" href="#implementation">Implementation</a></li>
+                    <li class="nav-item"><a class="nav-link" href="#impact">Impact Analysis</a></li>
+                </ul>
+            </nav>
+            <main class="col-md-9 col-lg-10 content">
+                <h1>Developer Manual: SSO Login Button Restoration</h1>
+                <p class="lead">Technical details for restoring the ecosystem-wide Single Sign-On (SSO) entry point in budolShap.</p>
+
+                <div class="alert alert-primary">
+                    <strong>Version:</strong> 2026-01-01_v31<br>
+                    <strong>Focus:</strong> Restoring the "Login with budolID" button and ensuring LAN connectivity.
+                </div>
+
+                <h2 id="implementation" class="mt-4">Implementation Details</h2>
+                <p>The "Login with budolID" button was restored and repositioned within the <code>AuthForm</code> component. This change ensures that the ecosystem-wide login option is prominently displayed and remains visible even on smaller viewports or within constrained modal windows.</p>
+                
+                <h3 class="mt-3">Key Changes in AuthForm.jsx</h3>
+                <ul>
+                    <li><strong>Repositioning:</strong> Moved the SSO section <em>above</em> the primary "Sign In" button. This prevents it from being pushed out of view in long forms.</li>
+                    <li><strong>Visual Hierarchy:</strong> Added a "Quick Access" separator to clearly distinguish between local login and ecosystem login.</li>
+                    <li><strong>Dynamic Hostname Resolution:</strong> Improved the <code>href</code> attribute to use <code>window.location.hostname</code> when <code>process.env.NEXT_PUBLIC_SSO_URL</code> is missing, ensuring LAN compatibility.</li>
+                    <li><strong>UI Enhancements:</strong> Increased the size of the "B" icon (<code>w-5 h-5</code>) and improved typography for better accessibility.</li>
+                </ul>
+
+                <pre><code>// Location: budolshap-0.1.0/components/auth/AuthForm.jsx
+
+&lt;a
+    href={`${process.env.NEXT_PUBLIC_SSO_URL || `http://${typeof window !== 'undefined' ? window.location.hostname : 'localhost'}:8000`}/login?apiKey=${process.env.NEXT_PUBLIC_BUDOLID_API_KEY || 'bs_key_2025'}`}
+    className="..."
+&gt;
+    &lt;div className="w-5 h-5 bg-indigo-600 rounded flex items-center justify-center text-[10px] text-white font-bold"&gt;B&lt;/div&gt;
+    &lt;span&gt;Login with budolID&lt;/span&gt;
+&lt;/a&gt;</code></pre>
+
+                <h2 id="impact" class="mt-4">Impact Analysis</h2>
+                <p>The changes re-establish the primary entry point for the budolEcosystem SSO flow within the budolShap application, affecting both the login modal and the standalone login page.</p>
+            </main>
+        </div>
+    </div>
+</body>
+</html>

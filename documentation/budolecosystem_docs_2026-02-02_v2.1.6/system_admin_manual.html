@@ -1,0 +1,45 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>System Admin Manual - v2.1.6</title>
+    <style>
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; line-height: 1.6; color: #333; max-width: 900px; margin: 0 auto; padding: 20px; background-color: #f4f7f6; }
+        h1, h2, h3 { color: #2c3e50; }
+        .section { background: white; padding: 20px; border-radius: 8px; margin-bottom: 20px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
+        .alert { padding: 15px; border-radius: 5px; margin-bottom: 20px; }
+        .alert-warning { background-color: #fff3cd; color: #856404; border: 1px solid #ffeeba; }
+        .code { background: #eee; padding: 10px; border-radius: 4px; font-family: monospace; }
+    </style>
+</head>
+<body>
+    <h1>⚙️ System Admin Manual - v2.1.6</h1>
+
+    <div class="section">
+        <h2>Managing Admin Access</h2>
+        <p>With the implementation of SSPR, administrators no longer need to manually update the database if a password is forgotten. However, certain security parameters should be monitored.</p>
+    </div>
+
+    <div class="section">
+        <h2>Monitoring SSPR Activity</h2>
+        <p>SSPR attempts are logged in the <strong>budolID</strong> service logs. Admins should monitor for:</p>
+        <ul>
+            <li>Frequent <code>POST /auth/forgot-password</code> requests for the same email (Potential enumeration/harassment).</li>
+            <li>Repeated <code>POST /auth/verify-otp</code> failures (Potential brute force).</li>
+        </ul>
+    </div>
+
+    <div class="section">
+        <h2>Configuring OTP Expiration</h2>
+        <p>Currently, the OTP expiration is hardcoded to <strong>5 minutes</strong> in <span class="code">budolID/index.js</span>. To change this, locate the <code>otpExpires</code> calculation:</p>
+        <div class="code">const otpExpires = new Date(Date.now() + 5 * 60 * 1000);</div>
+    </div>
+
+    <div class="alert alert-warning">
+        <strong>Security Note:</strong> Always ensure the <code>JWT_SECRET</code> in the <code>.env</code> file of budolID is kept secure, as it is used to sign session tokens after a successful password reset login.
+    </div>
+
+    <p><a href="index.html">Back to Index</a></p>
+</body>
+</html>

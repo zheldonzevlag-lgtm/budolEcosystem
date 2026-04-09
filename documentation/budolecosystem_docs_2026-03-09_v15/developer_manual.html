@@ -1,0 +1,85 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Developer Manual - Budol Ecosystem Phase 4</title>
+    <style>
+        :root { --primary: #0052CC; --secondary: #172B4D; --bg: #F4F5F7; --text: #172B4D; --code-bg: #272822; }
+        body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, 'Fira Sans', 'Droid Sans', 'Helvetica Neue', sans-serif; margin: 0; display: flex; color: var(--text); }
+        .sidebar { width: 260px; background: var(--secondary); color: #fff; height: 100vh; position: fixed; padding: 20px; box-sizing: border-box; }
+        .sidebar a { display: block; color: #EBECF0; text-decoration: none; padding: 10px 0; font-size: 0.9rem; border-bottom: 1px solid #344563; }
+        .main-content { margin-left: 260px; padding: 40px; width: 100%; box-sizing: border-box; }
+        .header { border-bottom: 2px solid var(--primary); padding-bottom: 20px; margin-bottom: 30px; }
+        h1, h2 { color: var(--primary); }
+        .code-block { background: var(--code-bg); color: #f8f8f2; padding: 20px; border-radius: 8px; margin: 20px 0; position: relative; }
+        .code-header { position: absolute; top: 0; right: 0; background: #444; color: #fff; padding: 2px 10px; font-size: 0.7rem; border-top-right-radius: 8px; }
+        pre { margin: 0; font-family: 'Consolas', 'Monaco', 'Courier New', monospace; line-height: 1.5; }
+        .link { color: var(--primary); text-decoration: none; cursor: pointer; }
+        .link:hover { text-decoration: underline; }
+    </style>
+</head>
+<body>
+    <div class="sidebar">
+        <h2>Budol Ecosystem</h2>
+        <a href="index.html">← Back to Overview</a>
+        <a href="#https">HTTPS Configuration</a>
+        <a href="#secrets">Secrets Management</a>
+        <a href="#startup">Startup Fixes</a>
+        <a href="#db-init">DB Initialization</a>
+        <a href="#automation">Deployment Automation</a>
+    </div>
+    <div class="main-content">
+        <div class="header">
+            <h1>Developer Manual: Phase 4 Integration</h1>
+        </div>
+
+        <section id="https" class="section">
+            <h2>HTTPS & SSL Configuration</h2>
+            <p>All ecosystem traffic is now routed through Port 443 with SSL termination at the Application Load Balancer.</p>
+            <h3>Listener Rules</h3>
+            <p>Rules are based on Host Headers:</p>
+            <ul>
+                <li><code>budolshap.duckdns.org</code> -> <code>budolshap-tg</code></li>
+                <li><code>budolid.duckdns.org</code> -> <code>budolid-tg</code></li>
+                <li><code>budolpay.duckdns.org</code> -> <code>budolpay-tg</code></li>
+            </ul>
+        </section>
+
+        <section id="secrets" class="section">
+            <h2>Secrets Management</h2>
+            <p>ECS Tasks retrieve sensitive data directly from AWS Secrets Manager. Note that <b>Full ARNs</b> are now used in task definitions to ensure reliable resolution across regions.</p>
+            <div class="code-block">
+                <div class="code-header">JSON - Task Definition Snippet</div>
+                <pre><code>"secrets": [
+  {
+    "name": "DATABASE_URL",
+    "valueFrom": "arn:aws:secretsmanager:ap-southeast-1:194442925745:secret:budol/db-url-NxLd8V"
+  },
+  {
+    "name": "JWT_SECRET",
+    "valueFrom": "arn:aws:secretsmanager:ap-southeast-1:194442925745:secret:budol/jwt-secret-RlaVaW"
+  }
+]</code></pre>
+            </div>
+            <p><a class="link" onclick="window.location.href='file:///d:/IT Projects/clone/budolEcosystem/shap_task_def.json'">View Full Task Definition (shap)</a></p>
+        </section>
+
+        <section id="startup" class="section">
+            <h2>Service Startup Fixes</h2>
+            <p>To address startup crashes in standalone environments:</p>
+            <ol>
+                <li><b>Redis Bypass:</b> Since internal Redis is not yet provisioned, <code>REDIS_URL</code> is set to <code>redis://127.0.0.1</code> to prevent connection timeouts during initialization.</li>
+                <li><b>Hostname Resolution:</b> <code>HOSTNAME</code> is set to <code>0.0.0.0</code> to allow Next.js and Node.js services to bind correctly without resolving AWS internal Task IDs.</li>
+                <li><b>Telemetry:</b> <code>NEXT_TELEMETRY_DISABLED=1</code> is set for performance and to avoid external DNS calls.</li>
+            </ol>
+        </section>
+
+        <section id="automation" class="section">
+            <h2>Deployment Automation Script</h2>
+            <p>A Python script was developed to automate task registration and service updates with consistent environment variables.</p>
+            <p><a class="link" onclick="window.location.href='file:///d:/IT Projects/clone/budolEcosystem/register_tasks.py'">View register_tasks.py</a></p>
+        </section>
+    </div>
+</body>
+</html>

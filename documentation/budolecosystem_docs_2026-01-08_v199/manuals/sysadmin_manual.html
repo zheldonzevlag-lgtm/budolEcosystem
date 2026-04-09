@@ -1,0 +1,28 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>System Admin Manual - v199</title>
+    <style>
+        body { font-family: sans-serif; line-height: 1.6; color: #333; max-width: 900px; margin: 0 auto; padding: 20px; }
+        .audit-cmd { background: #2c3e50; color: #ecf0f1; padding: 15px; border-radius: 5px; font-family: monospace; }
+    </style>
+</head>
+<body>
+    <h1>System Admin Manual Updates - v199</h1>
+
+    <h2>PIN Adoption Monitoring</h2>
+    <p>Admins can track how many users have successfully set up their PINs using the new flow:</p>
+    <div class="audit-cmd">
+        SELECT count(*) as "UsersWithoutPIN" <br>
+        FROM "User" <br>
+        WHERE "pinHash" IS NULL;
+    </div>
+
+    <h2>Security Considerations</h2>
+    <p>The <code>/setup-pin</code> endpoint is critical for account security. It should ideally only be called within a session that has just been verified via OTP. While the current implementation relies on the <code>userId</code>, future versions will require the temporary JWT issued during OTP verification to prevent unauthorized PIN resets.</p>
+
+    <h2>Database Integrity</h2>
+    <p>Ensure that the <code>pinHash</code> column in the <code>User</code> table allows nulls (which it does by default in the current Prisma schema) to support users who have registered but not yet completed PIN setup.</p>
+</body>
+</html>

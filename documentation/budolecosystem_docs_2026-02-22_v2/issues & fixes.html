@@ -1,0 +1,52 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Issues & Fixes - Budol Ecosystem v2</title>
+    <style>
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; line-height: 1.6; color: #333; max-width: 1200px; margin: 0 auto; padding: 20px; }
+        h1, h2, h3 { color: #2c3e50; }
+        .nav { background: #333; padding: 10px; border-radius: 5px; margin-bottom: 20px; }
+        .nav a { color: white; margin-right: 15px; text-decoration: none; }
+        .issue { background: #fff3cd; border: 1px solid #ffeeba; border-radius: 5px; padding: 15px; margin-bottom: 20px; }
+        .fix { background: #d4edda; border: 1px solid #c3e6cb; border-radius: 5px; padding: 15px; margin-bottom: 20px; }
+    </style>
+</head>
+<body>
+    <div class="nav">
+        <a href="index.html">Home</a>
+        <a href="developer_manual.html">Developer Manual</a>
+        <a href="system_admin_manual.html">SysAdmin Manual</a>
+        <a href="user_manual.html">User Manual</a>
+    </div>
+
+    <h1>Issues & Fixes</h1>
+    <p>This document tracks known issues and the fixes applied in version 2.0.0.</p>
+
+    <h2>1. Inconsistent Phone Number Format</h2>
+    <div class="issue">
+        <h3>Issue</h3>
+        <p><strong>Description:</strong> Users were able to register with varying phone number formats (e.g., <code>0917...</code>, <code>+639...</code>, <code>639...</code>), leading to lookup failures during login and profile updates.</p>
+        <p><strong>Impact:</strong> Failed logins, duplicate accounts, and failed notifications.</p>
+    </div>
+    <div class="fix">
+        <h3>Fix</h3>
+        <p><strong>Resolution:</strong> Implemented <code>PhoneUtils.normalizePhoneNumber</code> in the mobile app. All phone inputs are now converted to E.164 format (<code>+639xxxxxxxxx</code>) before API submission.</p>
+        <p><strong>Verification:</strong> Tested with various input formats; all correctly normalized.</p>
+    </div>
+
+    <h2>2. Email Login Failure (Local Password Sync)</h2>
+    <div class="issue">
+        <h3>Issue</h3>
+        <p><strong>Description:</strong> Users who registered or updated their password via BudolID (e.g., via OTP) could not log in to BudolShap using their email because the local password hash was missing or outdated.</p>
+        <p><strong>Impact:</strong> User lockout, frustration, increased support tickets.</p>
+    </div>
+    <div class="fix">
+        <h3>Fix</h3>
+        <p><strong>Resolution:</strong> Added a fallback mechanism in <code>/api/auth/login</code>. If local password verification fails, the system attempts to authenticate against BudolID. Upon success, the local password is updated to match.</p>
+        <p><strong>Verification:</strong> Confirmed login success for users with mismatched local passwords.</p>
+    </div>
+
+</body>
+</html>

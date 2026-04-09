@@ -1,0 +1,54 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SysAdmin Manual - KYC Compliance & Auditing</title>
+    <style>
+        :root { --primary: #2563eb; --bg: #f8fafc; --text: #1e293b; --border: #e2e8f0; }
+        body { font-family: system-ui, sans-serif; line-height: 1.6; color: var(--text); background: var(--bg); margin: 0; padding: 40px; }
+        .container { max-width: 800px; margin: 0 auto; background: white; padding: 40px; border-radius: 12px; border: 1px solid var(--border); }
+        h1 { color: var(--primary); border-bottom: 2px solid var(--bg); padding-bottom: 10px; }
+        h2 { margin-top: 30px; color: #0f172a; }
+        .alert { background: #fef2f2; border: 1px solid #fee2e2; padding: 15px; border-radius: 8px; color: #991b1b; margin: 20px 0; }
+        .back-link { display: inline-block; margin-bottom: 20px; text-decoration: none; color: var(--primary); font-weight: 500; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <a href="../index.html" class="back-link">&larr; Back to v185 Index</a>
+        <h1>SysAdmin Manual: KYC Compliance & Auditing</h1>
+        
+        <h2>1. Regulatory Context (BSP & AMLA)</h2>
+        <p>BudolPay's tiered KYC system is designed to meet Bangko Sentral ng Pilipinas (BSP) Circular 950 and the Anti-Money Laundering Act (AMLA) requirements for Electronic Money Issuers (EMI).</p>
+        
+        <div class="alert">
+            <strong>Critical:</strong> All "Fully Verified" accounts must have a valid government-issued ID and a real-time liveness photo stored for a minimum of 5 years after account closure.
+        </div>
+
+        <h2>2. Audit Trail Requirements</h2>
+        <p>Every change in <code>kycLevel</code> or <code>kycStatus</code> must be logged in the <code>AuditLog</code> table with the following metadata:</p>
+        <ul>
+            <li><code>reviewerId</code>: The ID of the admin who approved/rejected.</li>
+            <li><code>previousStatus</code> & <code>newStatus</code>.</li>
+            <li><code>reason</code>: For rejections (e.g., "Blurry ID").</li>
+            <li><code>timestamp</code>: Server-side generated.</li>
+        </ul>
+
+        <h2>3. Database Migration Steps</h2>
+        <p>Deploying the new tiered levels requires a schema update:</p>
+        <pre><code>-- Add KYCLevel enum and field
+CREATE TYPE "KYCLevel" AS ENUM ('BASIC', 'FULLY_VERIFIED', 'PLUS');
+ALTER TABLE "User" ADD COLUMN "kycLevel" "KYCLevel" DEFAULT 'BASIC';
+
+-- Initialize levels based on existing status
+UPDATE "User" SET "kycLevel" = 'FULLY_VERIFIED' WHERE "kycStatus" = 'VERIFIED';</code></pre>
+
+        <h2>4. Risk Management</h2>
+        <ul>
+            <li><strong>Risk:</strong> Unauthorized access to sensitive ID documents. <strong>Mitigation:</strong> Ensure the Admin panel uses role-based access control (RBAC) and documents are served via signed URLs or secure proxy.</li>
+            <li><strong>Risk:</strong> Fraudulent re-submission. <strong>Mitigation:</strong> Implement a cooldown period after a rejection and log all historical attempts.</li>
+        </ul>
+    </div>
+</body>
+</html>

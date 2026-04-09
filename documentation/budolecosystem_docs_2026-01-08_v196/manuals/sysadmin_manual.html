@@ -1,0 +1,44 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>System Admin Manual - v196</title>
+    <style>
+        body { font-family: sans-serif; line-height: 1.6; color: #333; max-width: 900px; margin: 0 auto; padding: 20px; }
+        .cmd { background: #2c3e50; color: #ecf0f1; padding: 10px; border-radius: 5px; font-family: monospace; }
+        .warning { background: #fff3cd; border: 1px solid #ffeeba; padding: 15px; border-radius: 5px; color: #856404; }
+    </style>
+</head>
+<body>
+    <h1>System Admin Manual Updates - v196</h1>
+
+    <h2>Infrastructure Changes</h2>
+    <p>No infrastructure changes were required. The fix was purely a software configuration correction.</p>
+
+    <h2>Deployment Procedures</h2>
+    <p>To apply the fix in a local environment:</p>
+    <ol>
+        <li>Pull the latest changes from the <code>main</code> branch.</li>
+        <li>Ensure no other service is manually running on port <code>8006</code>.</li>
+        <li>Start the service using the ecosystem runner:
+            <div class="cmd">npm run dev --prefix budolpay-0.1.0/services/verification-service</div>
+        </li>
+    </ol>
+
+    <h2>Operational Runbook</h2>
+    <h3>Handling Port Conflicts</h3>
+    <p>If you encounter <code>EADDRINUSE</code> errors on port 8006 despite this fix, use the following commands to identify and terminate the zombie process:</p>
+    
+    <p><strong>Windows:</strong></p>
+    <div class="cmd">netstat -ano | findstr :8006<br>taskkill /F /PID [PROCESS_ID]</div>
+
+    <p><strong>Linux/macOS:</strong></p>
+    <div class="cmd">lsof -i :8006<br>kill -9 [PROCESS_ID]</div>
+
+    <h2>Risk & Mitigation</h2>
+    <ul>
+        <li><strong>Risk:</strong> Service failing to start in production.</li>
+        <li><strong>Mitigation:</strong> The <code>!process.env.VERCEL</code> check ensures that on Vercel (Production), the <code>app.listen</code> is skipped, allowing the Vercel handler to manage the request lifecycle correctly.</li>
+    </ul>
+</body>
+</html>

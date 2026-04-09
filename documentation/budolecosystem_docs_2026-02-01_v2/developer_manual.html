@@ -1,0 +1,133 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Comparative Analysis: Budol vs Shopee Phone Login</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --primary: #0052CC;
+            --secondary: #FF4D2D; /* Shopee Orange */
+            --bg-main: #FFFFFF;
+            --text-main: #091E42;
+            --border: #DFE1E6;
+        }
+        body { font-family: 'Inter', sans-serif; line-height: 1.6; color: var(--text-main); max-width: 1000px; margin: 0 auto; padding: 40px; }
+        h1 { font-size: 2.2rem; border-bottom: 2px solid var(--primary); padding-bottom: 10px; }
+        h2 { font-size: 1.5rem; margin-top: 30px; border-bottom: 1px solid var(--border); padding-bottom: 5px; }
+        .nav-links { margin-bottom: 20px; font-size: 0.9rem; }
+        .nav-links a { color: var(--primary); text-decoration: none; margin-right: 15px; }
+        table { width: 100%; border-collapse: collapse; margin: 20px 0; }
+        th, td { border: 1px solid var(--border); padding: 12px; text-align: left; }
+        th { background: #F4F5F7; }
+        .pro { color: #006644; font-weight: bold; }
+        .con { color: #BF2600; font-weight: bold; }
+        .shopee-color { color: var(--secondary); font-weight: bold; }
+        .budol-color { color: var(--primary); font-weight: bold; }
+    </style>
+</head>
+<body>
+    <div class="nav-links">
+        <a href="../knowledgebase.html">← Back to Knowledgebase</a>
+        <a href="../budolecosystem_docs_2026-02-01_v1/index.html">← Previous Version (v1.3.58)</a>
+        <a href="index.html">Index</a>
+    </div>
+
+    <h1>Comparative Analysis: Phone Number Login</h1>
+    <p><strong>Date:</strong> 2026-02-01</p>
+    <p><strong>Version:</strong> v2.0.0 (Research & Planning)</p>
+
+    <h2>1. Purpose & Rationale</h2>
+    <p>To evaluate the user experience and security of phone number login flows between the <span class="budol-color">Budol Ecosystem</span> and <span class="shopee-color">Shopee</span>. The goal is to identify best practices for "Phone-First" authentication to improve conversion rates and simplify onboarding for the Philippine market.</p>
+
+    <h2>2. Comparative Analysis Table</h2>
+    <table>
+        <thead>
+            <tr>
+                <th>Feature</th>
+                <th><span class="shopee-color">Shopee</span> Process</th>
+                <th><span class="budol-color">Budol Ecosystem</span> (Current)</th>
+                <th>Recommendation</th>
+            </tr>
+        </thead>
+        <tbody>
+            <tr>
+                <td><strong>Primary Identifier</strong></td>
+                <td>Phone number is the primary key. Email is optional.</td>
+                <td>Dual-identifier (Email/Phone) are equal.</td>
+                <td>Adopt Phone-First for Mobile; maintain dual for Web.</td>
+            </tr>
+            <tr>
+                <td><strong>Onboarding Flow</strong></td>
+                <td>OTP-only registration. Password set later.</td>
+                <td>Full form registration (Name, Email, Phone, Password).</td>
+                <td>Implement "Quick Registration" (OTP + Name only).</td>
+            </tr>
+            <tr>
+                <td><strong>Login Verification</strong></td>
+                <td>OTP by default, can fallback to Password.</td>
+                <td>Password by default, OTP for new devices.</td>
+                <td>Allow OTP-only login as a secondary option.</td>
+            </tr>
+            <tr>
+                <td><strong>Real-time Validation</strong></td>
+                <td>Checks existence after inputting number.</td>
+                <td>Debounced uniqueness check (v1.3.58).</td>
+                <td>Current Budol logic is on par with Shopee.</td>
+            </tr>
+            <tr>
+                <td><strong>Account Linking</strong></td>
+                <td>Seamless linking with Google/Facebook via phone.</td>
+                <td>Manual linking via profile settings.</td>
+                <td>Automate linking if phone/email matches SSO provider.</td>
+            </tr>
+        </tbody>
+    </table>
+
+    <h2>3. Technical Explanation (Shopee Flow)</h2>
+    <p>Shopee uses a <strong>Stateless OTP-First</strong> approach. When a user enters a phone number:</p>
+    <ol>
+        <li>Backend checks if user exists.</li>
+        <li>If YES: Send OTP -> Verify -> Issue JWT.</li>
+        <li>If NO: Redirect to "Quick Register" -> Send OTP -> Verify -> Create User -> Issue JWT.</li>
+    </ol>
+
+    <h2>4. Implementation Plan for Budol</h2>
+    <div style="background: #F4F5F7; padding: 20px; border-radius: 6px; border-left: 5px solid var(--primary);">
+        <h3>Phase 1: Quick Registration (Mobile)</h3>
+        <ul>
+            <li>Modify <code>registration_screen.dart</code> to support "Quick" mode.</li>
+            <li>Input: Phone Number + Display Name.</li>
+            <li>Action: Send OTP via <code>auth-service</code>.</li>
+            <li>Post-Verification: Create temporary password/profile.</li>
+        </ul>
+        <h3>Phase 2: OTP-First Login</h3>
+        <ul>
+            <li>Update <code>login_screen.dart</code> to offer "Login via OTP" button.</li>
+            <li>Backend: New <code>/auth/otp-login</code> endpoint in <code>auth-service</code>.</li>
+        </ul>
+        <h3>Phase 3: Ecosystem-wide Sync</h3>
+        <ul>
+            <li>Ensure <code>budolID</code>, <code>budolPay</code>, and <code>budolShap</code> all recognize the same Quick-Register profile.</li>
+        </ul>
+    </div>
+
+    <h2>5. Risks & Mitigations</h2>
+    <table>
+        <tr>
+            <th>Risk</th>
+            <th>Mitigation</th>
+        </tr>
+        <tr>
+            <td class="con">Account Takeover (SIM Swapping)</td>
+            <td>Require PIN or Biometrics for financial transactions (BudolPay).</td>
+        </tr>
+        <tr>
+            <td class="con">OTP Cost/Spam</td>
+            <td>Implement strict rate limiting and Firebase App Check for Mobile.</td>
+        </tr>
+    </table>
+
+</body>
+</html>

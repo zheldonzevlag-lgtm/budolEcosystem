@@ -1,0 +1,123 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Non-Serverless Infrastructure Strategy - v158</title>
+    <style>
+        body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; line-height: 1.6; color: #333; max-width: 1000px; margin: 0 auto; padding: 20px; background-color: #f4f7f6; }
+        .container { background: #fff; padding: 30px; border-radius: 8px; box-shadow: 0 2px 10px rgba(0,0,0,0.1); }
+        h1, h2, h3 { color: #2c3e50; border-bottom: 2px solid #ecf0f1; padding-bottom: 10px; }
+        .benefit-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin: 20px 0; }
+        .benefit-card { background: #fff; border: 1px solid #e0e0e0; border-radius: 8px; padding: 20px; border-left: 5px solid #27ae60; }
+        .back-link { display: block; margin-top: 20px; text-decoration: none; color: #3498db; font-weight: bold; }
+        table { width: 100%; border-collapse: collapse; margin: 20px 0; }
+        th, td { border: 1px solid #ddd; padding: 12px; text-align: left; }
+        th { background-color: #f8f9fa; }
+        .code-block { background: #2d3436; color: #dfe6e9; padding: 15px; border-radius: 6px; font-family: monospace; overflow-x: auto; margin: 10px 0; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Non-Serverless Infrastructure Strategy <span class="version">v158</span></h1>
+        <p>This document outlines the alternative "Always-On" hosting strategy for the budolEcosystem. While serverless (Vercel/Lambda) is great for scaling, a persistent server approach provides superior stability for real-time financial applications.</p>
+
+        <div class="section">
+            <h2>Why Choose Non-Serverless?</h2>
+            <div class="benefit-grid">
+                <div class="benefit-card">
+                    <h3>1. Native Socket.io Support</h3>
+                    <p>Unlike Vercel, a persistent server (EC2/VPS) keeps the Node.js process alive indefinitely. This allows for stable WebSocket connections without the need for complex workarounds or external providers.</p>
+                </div>
+                <div class="benefit-card">
+                    <h3>2. Zero "Cold Start" Latency</h3>
+                    <p>In serverless, the first request after a period of inactivity can take 2-5 seconds (cold start). A persistent server is always "warm," ensuring sub-100ms response times for every transaction.</p>
+                </div>
+                <div class="benefit-card">
+                    <h3>3. State Management</h3>
+                    <p>Persistent servers can maintain in-memory caches (like local Redis or internal JS maps) which are lost in serverless environments between function calls.</p>
+                </div>
+                <div class="benefit-card">
+                    <h3>4. Predictable Billing</h3>
+                    <p>Instead of paying per-request or per-millisecond, you pay a fixed monthly fee for the server (e.g., $5/mo for a VPS or EC2 instance), making budgeting much easier.</p>
+                </div>
+            </div>
+        </div>
+
+        <div class="section">
+            <h2>Proposed Non-Serverless Stack</h2>
+            <table>
+                <thead>
+                    <tr>
+                        <th>Component</th>
+                        <th>Technology</th>
+                        <th>Role</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td><strong>Compute</strong></td>
+                        <td>AWS EC2 / DigitalOcean Droplet</td>
+                        <td>Persistent Virtual Private Server (VPS).</td>
+                    </tr>
+                    <tr>
+                        <td><strong>Orchestration</strong></td>
+                        <td>Docker + Docker Compose</td>
+                        <td>Packaging all 11 microservices into containers.</td>
+                    </tr>
+                    <tr>
+                        <td><strong>Process Manager</strong></td>
+                        <td>PM2</td>
+                        <td>Keeping Node.js processes alive and auto-restarting on failure.</td>
+                    </tr>
+                    <tr>
+                        <td><strong>Reverse Proxy</strong></td>
+                        <td>Nginx</td>
+                        <td>Handling SSL (HTTPS), Load Balancing, and routing traffic to containers.</td>
+                    </tr>
+                    <tr>
+                        <td><strong>Database</strong></td>
+                        <td>Managed PostgreSQL</td>
+                        <td>Still recommended to use RDS for data durability.</td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+
+        <div class="section">
+            <h2>Implementation Path</h2>
+            <h3>1. Dockerization</h3>
+            <p>Each service in the ecosystem (Auth, Transaction, Wallet, etc.) will have its own <code>Dockerfile</code>. A master <code>docker-compose.yml</code> will launch all services simultaneously on the server.</p>
+            
+            <h3>2. Unified API Gateway</h3>
+            <p>The <code>api-gateway</code> will act as the single entry point, routing requests to internal containers using Docker's internal networking (faster than public HTTP calls).</p>
+
+            <h3>3. Nginx Configuration</h3>
+            <div class="code-block">
+# Example Nginx Routing to the Gateway
+server {
+    listen 443 ssl;
+    server_name api.budolpay.com;
+
+    location / {
+        proxy_pass http://localhost:8000; # Points to the Docker Gateway
+        proxy_http_version 1.1;
+        proxy_set_header Upgrade $http_upgrade;
+        proxy_set_header Connection "upgrade";
+    }
+}
+            </div>
+        </div>
+
+        <div class="section">
+            <h2>Recommendation</h2>
+            <p>If the user prefers <strong>simplicity and maximum reliability for Sockets</strong>, we recommend the <strong>Docker on EC2</strong> approach. It mirrors the local development environment (<code>start-ecosystem.js</code>) most closely, making debugging and deployment significantly easier than serverless refactoring.</p>
+        </div>
+
+        <div class="back-links" style="display: flex; gap: 20px;">
+            <a href="serverless_vs_non_serverless.html" class="back-link">View Serverless Comparison →</a>
+            <a href="../index.html" class="back-link">← Back to v158 Index</a>
+        </div>
+    </div>
+</body>
+</html>

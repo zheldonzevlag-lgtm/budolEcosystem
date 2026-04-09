@@ -1,0 +1,33 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Developer Manual - v374</title>
+    <style>
+        :root { --primary: #F43F5E; --bg: #0F172A; --card-bg: #1E293B; --text: #F8FAFC; }
+        body { font-family: sans-serif; background: var(--bg); color: var(--text); padding: 40px; }
+        pre { background: #000; padding: 15px; border-radius: 8px; overflow-x: auto; color: #10B981; }
+        .card { background: var(--card-bg); padding: 24px; border-radius: 12px; margin-bottom: 20px; }
+    </style>
+</head>
+<body>
+    <h1>Developer Manual - v374</h1>
+    <div class="card">
+        <h2>Fail-Safe Initialization Pattern</h2>
+        <p>The <code>FaceEmbeddingService</code> now implements a defensive health check before every inference operation.</p>
+        <pre>
+// Health Check Logic in generateEmbedding
+try {
+  _interpreter!.getInputTensors(); // Proactive check for native validity
+} catch (e) {
+  _isModelLoaded = false;
+  _interpreter = null;
+  await _initModel(); // Self-healing re-initialization
+}
+        </pre>
+        <h3>Synchronization Improvements</h3>
+        <p>The <code>_initModel</code> method now uses a <code>finally</code> block to reset the <code>_loadingCompleter</code>, ensuring that transient failures do not permanently block the service.</p>
+        <p><a href="file:///d:/IT Projects/budolEcosystem/budolPayMobile/lib/services/face_embedding_service.dart">Open face_embedding_service.dart</a></p>
+    </div>
+</body>
+</html>

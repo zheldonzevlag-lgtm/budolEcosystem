@@ -1,0 +1,123 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>budolEcosystem Documentation - v218</title>
+    <style>
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; line-height: 1.6; color: #333; max-width: 1200px; margin: 0 auto; padding: 20px; background-color: #f4f7f6; }
+        header { background-color: #0F172A; color: white; padding: 20px; border-radius: 8px; margin-bottom: 20px; display: flex; justify-content: space-between; align-items: center; }
+        .nav-links { display: flex; gap: 15px; }
+        .nav-links a { color: #F43F5E; text-decoration: none; font-weight: bold; }
+        section { background: white; padding: 25px; border-radius: 8px; box-shadow: 0 2px 5px rgba(0,0,0,0.1); margin-bottom: 20px; }
+        h1, h2, h3 { color: #0F172A; }
+        pre { background-color: #1E293B; color: #e2e8f0; padding: 15px; border-radius: 8px; overflow-x: auto; }
+        .status-badge { display: inline-block; padding: 5px 12px; border-radius: 20px; font-size: 0.85em; font-weight: bold; text-transform: uppercase; }
+        .status-success { background-color: #dcfce7; color: #166534; }
+        .status-error { background-color: #fee2e2; color: #991b1b; }
+        table { width: 100%; border-collapse: collapse; margin: 20px 0; }
+        th, td { text-align: left; padding: 12px; border-bottom: 1px solid #ddd; }
+        th { background-color: #f8fafc; }
+    </style>
+</head>
+<body>
+    <div class="nav-links ecosystem-docs-top-nav">
+        <a href="../budolecosystem_docs_2026-01-08_v217/index.html">← Previous (v217)</a>
+        <a href="../index.html">Index</a>
+        <a href="../budolecosystem_docs_2026-01-08_v218/index.html">Next (v218) →</a>
+    </div>
+
+    <header>
+        <div>
+            <h1>budolEcosystem v218</h1>
+            <p>Mobile App Navigation Fix & Build Release</p>
+        </div>
+        <nav class="nav-links">
+            <a href="../budolecosystem_docs_2026-01-06_v217/index.html">← Previous (v217)</a>
+            <a href="../../index.html">Main Index</a>
+                <a href="../budolecosystem_docs_2026-01-08_v218/index.html">Next (v218) →</a>
+            <span style="color: #64748b;">Next →</span>
+        </nav>
+    </header>
+
+    <section id="purpose">
+        <h2>Purpose</h2>
+        <p>This release addresses user-reported navigation issues in the mobile app and updates the API connection configuration to match the current local development environment. It also provides a fresh build (APK) for validation.</p>
+    </section>
+
+    <section id="technical-details">
+        <h2>Technical Specification & Fixes</h2>
+        
+        <h3>1. Route Configuration Fix</h3>
+        <p><strong>Issue:</strong> The "Register here" link in the Login screen was attempting to navigate to <code>/registration</code>, but the main application route was defined as <code>/register</code>, causing the link to be non-functional.</p>
+        <p><strong>Resolution:</strong> Updated <code>lib/main.dart</code> to align the route name with the screen's navigation logic.</p>
+        <pre><code>// lib/main.dart
+routes: {
+    '/home': (context) => const HomeScreen(),
+    '/login': (context) => const LoginScreen(),
+    '/registration': (context) => const RegistrationScreen(), // Fixed from /register
+},</code></pre>
+
+        <h3>2. API Host Configuration Update</h3>
+        <p><strong>Issue:</strong> The mobile app was hardcoded to connect to <code>192.168.1.24</code>, which did not match the current local machine IP (<code>192.168.1.3</code>), resulting in "No route to host" errors.</p>
+        <p><strong>Resolution:</strong> Updated <code>lib/services/api_service.dart</code> to use the correct default IP and ensured the build command explicitly defines the host.</p>
+        <pre><code>// lib/services/api_service.dart
+return const String.fromEnvironment(
+    'API_HOST',
+    defaultValue: '192.168.1.3',
+);</code></pre>
+    </section>
+
+    <section id="build-info">
+        <h2>Build Information</h2>
+        <table>
+            <tr>
+                <th>Artifact</th>
+                <th>Location</th>
+                <th>Build Command</th>
+            </tr>
+            <tr>
+                <td>Release APK</td>
+                <td><code>budolPayMobile/build/app/outputs/flutter-apk/app-release.apk</code></td>
+                <td><code>flutter build apk --release --dart-define=API_HOST=192.168.1.3</code></td>
+            </tr>
+        </table>
+    </section>
+
+    <section id="test-results">
+        <h2>Validation & Test Results</h2>
+        <div style="display: flex; gap: 20px;">
+            <div style="flex: 1;">
+                <h3>Static Analysis</h3>
+                <div class="status-badge status-success">Passed</div>
+                <ul>
+                    <li>Flutter Analyze: <span class="status-badge status-success">No issues</span></li>
+                </ul>
+            </div>
+            <div style="flex: 1;">
+                <h3>Navigation & Connectivity</h3>
+                <div class="status-badge status-success">Verified</div>
+                <ul>
+                    <li>Register Link: <span class="status-badge status-success">Functional</span></li>
+                    <li>API Connection: <span class="status-badge status-success">Host Reachable</span></li>
+                </ul>
+            </div>
+        </div>
+    </section>
+
+    <section id="risks">
+        <h2>Risks & Mitigations</h2>
+        <p><strong>Risk:</strong> Changing local IP addresses may break the build again in the future.</p>
+        <p><strong>Mitigation:</strong> Always verify the current local IP using <code>ipconfig</code> before building and use the <code>--dart-define</code> flag to override the default host during the build process.</p>
+    </section>
+
+    <section id="recommendations">
+        <h2>Recommendations for Future Enhancement</h2>
+        <ul>
+            <li><strong>Dynamic Host Discovery:</strong> Implement a mechanism for the mobile app to automatically discover the gateway host on the local network.</li>
+            <li><strong>Route Constants:</strong> Move all route strings to a central constants file to prevent future name mismatches.</li>
+            <li><strong>Build Automation:</strong> Integrate the build process into a CI/CD pipeline that automatically detects the environment and sets the correct API host.</li>
+        </ul>
+    </section>
+</body>
+</html>

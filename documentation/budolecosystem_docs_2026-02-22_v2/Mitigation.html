@@ -1,0 +1,62 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Mitigation Strategies - Budol Ecosystem v2</title>
+    <style>
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; line-height: 1.6; color: #333; max-width: 1200px; margin: 0 auto; padding: 20px; }
+        h1, h2, h3 { color: #2c3e50; }
+        .mitigation { background: #d1ecf1; color: #0c5460; border: 1px solid #bee5eb; padding: 15px; border-radius: 5px; margin-bottom: 20px; }
+        .nav { background: #333; padding: 10px; border-radius: 5px; margin-bottom: 20px; }
+        .nav a { color: white; margin-right: 15px; text-decoration: none; }
+    </style>
+</head>
+<body>
+    <div class="nav">
+        <a href="index.html">Home</a>
+        <a href="developer_manual.html">Developer Manual</a>
+        <a href="system_admin_manual.html">SysAdmin Manual</a>
+        <a href="user_manual.html">User Manual</a>
+    </div>
+
+    <h1>Mitigation Strategies</h1>
+    <p>This document details the strategies employed to mitigate identified risks.</p>
+
+    <h2>1. Data Inconsistency (R-001)</h2>
+    <div class="mitigation">
+        <h3>Mitigation Strategy: M-001</h3>
+        <p><strong>Approach:</strong></p>
+        <ul>
+            <li><strong>Immediate:</strong> Apply normalization logic on all new inputs (Login, Registration, Profile Update).</li>
+            <li><strong>Batch:</strong> Provide a SQL migration script to normalize existing database records during a maintenance window.</li>
+            <li><strong>Fallback:</strong> (Future) Implement flexible lookup that tries normalized and raw inputs if the initial lookup fails.</li>
+        </ul>
+        <p><strong>Status:</strong> Immediate mitigation implemented in v2.</p>
+    </div>
+
+    <h2>2. Authentication Service Dependency (R-002)</h2>
+    <div class="mitigation">
+        <h3>Mitigation Strategy: M-002</h3>
+        <p><strong>Approach:</strong></p>
+        <ul>
+            <li><strong>Local Caching:</strong> Successful BudolID logins update the local password hash. Subsequent logins will succeed locally even if BudolID is down.</li>
+            <li><strong>Retry Logic:</strong> Implement retries for transient network errors when contacting BudolID.</li>
+            <li><strong>Monitoring:</strong> Alert administrators if BudolID fallback failure rates spike.</li>
+        </ul>
+        <p><strong>Status:</strong> Local Caching implemented in v2.</p>
+    </div>
+
+    <h2>3. Security (Password Sync) (R-003)</h2>
+    <div class="mitigation">
+        <h3>Mitigation Strategy: M-003</h3>
+        <p><strong>Approach:</strong></p>
+        <ul>
+            <li><strong>Priority:</strong> Treat BudolID as the Single Source of Truth (SSOT) for authentication credentials.</li>
+            <li><strong>Verification:</strong> Only update local password if the BudolID verification succeeds. This ensures the new password is valid and current.</li>
+        </ul>
+        <p><strong>Status:</strong> Implemented in v2.</p>
+    </div>
+
+</body>
+</html>

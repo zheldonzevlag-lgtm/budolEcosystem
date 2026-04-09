@@ -1,0 +1,69 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>System Admin Manual - v407</title>
+    <style>
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; line-height: 1.6; padding: 40px; background: #f4f7f6; color: #333; }
+        .admin-note { background: #DEEBFF; color: #0747A6; padding: 15px; border-left: 5px solid #0747A6; border-radius: 4px; margin: 20px 0; }
+        h2, h3 { color: #0747A6; border-bottom: 2px solid #0747A6; padding-bottom: 10px; }
+        .config-table { width: 100%; border-collapse: collapse; margin: 20px 0; background: white; }
+        .config-table th, .config-table td { border: 1px solid #ddd; padding: 12px; text-align: left; }
+        .config-table th { background: #f4f5f7; }
+    </style>
+</head>
+<body>
+    <header>
+        <a href="../index.html" style="text-decoration: none; color: #0747A6;">← Back to v407 Overview</a>
+        <h2>System Admin Manual: Mobile Auth Auditing & Device Traceability</h2>
+    </header>
+
+    <h3>1. Monitoring Mobile Authentication</h3>
+    <p>Administrators can now track mobile-specific authentication events through the Forensic Audit Trail. These events are critical for identifying unauthorized device access or brute-force attempts on mobile PINs.</p>
+
+    <div class="admin-note">
+        <strong>New Audit Actions (v407):</strong>
+        <ul>
+            <li><code>MOBILE_LOGIN_PIN</code>: Recorded when a user successfully logs in via 6-digit PIN.</li>
+            <li><code>MOBILE_LOGIN_BIOMETRIC</code>: Recorded for successful Face Recognition or Fingerprint logins.</li>
+        </ul>
+    </div>
+
+    <h3>2. Investigating Device Activity</h3>
+    <p>Each mobile login entry in the audit log includes a <code>deviceId</code>. This ID is unique to the user's handset and should be used during forensic investigations to confirm if a transaction originated from a "Trusted Device".</p>
+    
+    <table class="config-table">
+        <thead>
+            <tr>
+                <th>Field</th>
+                <th>Description</th>
+                <th>Forensic Use Case</th>
+            </tr>
+        </thead>
+        <tbody>
+            <tr>
+                <td><code>deviceId</code></td>
+                <td>Unique hardware-linked identifier</td>
+                <td>Confirming "1 Device → 1 Account" policy compliance.</td>
+            </tr>
+            <tr>
+                <td><code>ipAddress</code></td>
+                <td>Network origin of the login request</td>
+                <td>Identifying geo-location anomalies or VPN usage.</td>
+            </tr>
+            <tr>
+                <td><code>method</code></td>
+                <td>PIN vs. BIOMETRIC</td>
+                <td>Analyzing which auth method is being targeted in credential stuffing attacks.</td>
+            </tr>
+        </tbody>
+    </table>
+
+    <h3>3. Compliance Reporting</h3>
+    <p>When generating reports for <strong>BSP</strong> or <strong>PCI DSS</strong> auditors, ensure you include the <code>MOBILE_LOGIN_*</code> actions. These provide evidence that the institution is monitoring all entry points into the payment ecosystem, including native mobile applications.</p>
+
+    <div class="admin-note">
+        <strong>Pro-Tip:</strong> Use the "Security" filter in the Admin Dashboard Audit View to quickly isolate these authentication events for daily review.
+    </div>
+</body>
+</html>

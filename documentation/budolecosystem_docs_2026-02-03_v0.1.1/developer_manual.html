@@ -1,0 +1,150 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Developer Manual - v0.1.1</title>
+    <style>
+        :root {
+            --primary: #0052cc;
+            --secondary: #0747a6;
+            --sidebar-bg: #f4f5f7;
+            --text-main: #172b4d;
+            --code-bg: #2d2d2d;
+            --code-text: #f8f8f2;
+        }
+        body { font-family: -apple-system, sans-serif; display: flex; margin: 0; color: var(--text-main); }
+        .sidebar { width: 260px; background: var(--sidebar-bg); padding: 20px; height: 100vh; position: fixed; border-right: 1px solid #dfe1e6; }
+        .sidebar a { display: block; padding: 8px; text-decoration: none; color: var(--text-main); margin-bottom: 5px; }
+        .sidebar a:hover { background: #ebecf0; color: var(--primary); border-radius: 4px; }
+        .main-content { margin-left: 260px; padding: 40px; max-width: 900px; flex-grow: 1; }
+        .code-block {
+            background: var(--code-bg);
+            color: var(--code-text);
+            padding: 15px;
+            border-radius: 6px;
+            overflow-x: auto;
+            font-family: 'Fira Code', monospace;
+            font-size: 13px;
+            margin: 15px 0;
+        }
+        .code-header {
+            display: flex;
+            justify-content: space-between;
+            border-bottom: 1px solid #444;
+            padding-bottom: 8px;
+            margin-bottom: 10px;
+            color: #888;
+        }
+        .file-link { color: #61dafb; text-decoration: none; font-weight: bold; }
+        .file-link:hover { text-decoration: underline; }
+    </style>
+</head>
+<body>
+    <div class="sidebar">
+        <h3>Budol Ecosystem v0.1.1</h3>
+        <a href="index.html">← Back to Overview</a>
+        <a href="developer_manual.html" style="font-weight: bold; color: var(--primary);">Developer Manual</a>
+        <a href="system_admin_manual.html">System Admin Manual</a>
+        <a href="test_results.html">Test Results</a>
+    </div>
+
+    <div class="main-content">
+        <h1>Developer Manual: Realtime System & Audit Logs</h1>
+        
+        <h2>1. Architecture Overview</h2>
+        <p>The realtime system now supports a provider-agnostic architecture (Pusher, Socket.io, SWR Polling) with dynamic configuration. The core components are:</p>
+        <ul>
+            <li><strong>Backend Trigger:</strong> <code>lib/realtime.js</code> handles event dispatching.</li>
+            <li><strong>Socket.io Server (API Gateway):</strong> The Socket.io server is hosted within the <strong>BudolPay API Gateway</strong> service. It manages active connections and channel-based room management for the <strong>entire Budol Ecosystem</strong>.</li>
+            <li><strong>API Gateway (Central Relay):</strong> Acts as the single Socket.io relay and handles <code>/internal/notify</code> for event triggering. All apps (BudolShap, BudolID, BudolPay Mobile) route their events through this central hub to ensure a unified real-time stream.</li>
+            <li><strong>Frontend Hook:</strong> <code>useRealtime.js</code> manages subscriptions and fallbacks.</li>
+        </ul>
+
+        <h2>2. Ecosystem-Wide Event Flow</h2>
+        <p>The Budol Ecosystem uses a hub-and-spoke model for real-time events:</p>
+        <ol>
+            <li><strong>Producer:</strong> Any microservice (e.g., BudolShap) triggers an event using <code>triggerRealtimeEvent</code>.</li>
+            <li><strong>Transport:</strong> The event is sent via an internal HTTP POST to the API Gateway's <code>/internal/notify</code> endpoint.</li>
+            <li><strong>Relay:</strong> The API Gateway receives the event and broadcasts it via Socket.io to the appropriate room.</li>
+            <li><strong>Consumer:</strong> Any connected client (Admin Dashboard, Mobile App, etc.) receives the update instantly.</li>
+        </ol>
+
+        <h2>3. Key Code Changes</h2>
+
+        <h3>Backend Event Trigger</h3>
+        <p>Standardized payload for Gateway compatibility. Added <code>isAdmin</code> flag for secure channel broadcasting.</p>
+        <div class="code-block">
+            <div class="code-header">
+                <span>File: lib/realtime.js</span>
+                <a href="file:///d:/IT Projects/budolEcosystem/budolshap-0.1.0/lib/realtime.js" class="file-link">Open File</a>
+            </div>
+            <pre>
+// Payload standardized for Gateway
+const payload = {
+    event,
+    data,
+    isAdmin: channel === 'admin'
+};
+
+if (channel.startsWith('user-')) {
+    payload.userId = channel.replace('user-', '');
+    payload.isAdmin = false;
+}
+
+await fetch(`${gatewayUrl}/internal/notify`, ...);
+            </pre>
+        </div>
+
+        <h3>API Gateway Socket Subscription</h3>
+        <p>Added explicit <code>subscribe</code> event handler to support client-side room joining.</p>
+        <div class="code-block">
+            <div class="code-header">
+                <span>File: services/api-gateway/index.js</span>
+                <a href="file:///d:/IT Projects/budolEcosystem/budolpay-0.1.0/services/api-gateway/index.js" class="file-link">Open File</a>
+            </div>
+            <pre>
+socket.on('subscribe', (channel) => {
+    if (channel === 'admin') {
+        socket.join('admin');
+        console.log(`[Socket] Client subscribed to admin channel`);
+    } else if (channel && channel.startsWith('user:')) {
+        socket.join(channel);
+    }
+});
+            </pre>
+        </div>
+
+        <h3>Frontend Realtime Hook</h3>
+        <p>Optimized <code>useRealtime</code> to prevent re-renders and handle connection errors gracefully.</p>
+        <div class="code-block">
+            <div class="code-header">
+                <span>File: hooks/useRealtime.js</span>
+                <a href="file:///d:/IT Projects/budolEcosystem/budolshap-0.1.0/hooks/useRealtime.js" class="file-link">Open File</a>
+            </div>
+            <pre>
+useEffect(() => {
+    if (provider === 'SOCKET_IO') {
+        socket = io(config.socketUrl, { ... });
+        
+        socket.on('connect', () => setIsConnected(true));
+        socket.on(event, (data) => {
+            if (onData) onData(data);
+        });
+        
+        // Explicit subscription required for rooms
+        socket.emit('subscribe', channel);
+    }
+}, [enabled, provider, config, channel, event, onData]);
+            </pre>
+        </div>
+
+        <h2>3. Adding New Realtime Events</h2>
+        <ol>
+            <li>Define the event constant in <code>lib/constants.js</code> (if applicable).</li>
+            <li>Call <code>triggerRealtimeEvent(channel, eventName, data)</code> in your backend logic.</li>
+            <li>Consume in frontend using <code>useRealtime(channel, eventName, callback)</code>.</li>
+        </ol>
+    </div>
+</body>
+</html>

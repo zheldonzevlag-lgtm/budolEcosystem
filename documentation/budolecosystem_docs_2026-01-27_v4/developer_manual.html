@@ -1,0 +1,71 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Developer Manual - v540</title>
+    <style>
+        body { font-family: sans-serif; line-height: 1.6; padding: 40px; color: #333; }
+        code { background: #f4f4f4; padding: 2px 5px; border-radius: 4px; font-family: monospace; }
+        pre { background: #2d2d2d; color: #ccc; padding: 15px; border-radius: 6px; overflow-x: auto; }
+        .file-link { color: #0052CC; text-decoration: none; font-weight: bold; }
+        .file-link:hover { text-decoration: underline; }
+        h1, h2, h3 { color: #0052CC; }
+    </style>
+</head>
+<body>
+    <h1>Developer Manual - v541</h1>
+    
+    <h2>Phase 8: Dependencies & Software Rationale</h2>
+    <div style="background: #eef2ff; padding: 20px; border-radius: 8px; border-left: 5px solid #0052cc; margin-bottom: 30px;">
+        <h3>Core Technologies</h3>
+        <ul>
+            <li><strong>Prisma ORM (v6.2.1):</strong> Chosen for its type-safe database access and automated migrations. It ensures that our complex relational data (Orders, Items, Payments) remains consistent across the ecosystem.</li>
+            <li><strong>Next.js (v14.2.3):</strong> Utilized for its robust server-side rendering (SSR) and API routes, enabling high-performance frontend delivery and seamless backend integration.</li>
+            <li><strong>SWR (Vercel):</strong> Selected for realtime data fetching. It handles caching, revalidation, and optimistic UI updates, ensuring users see the most up-to-date order statuses without manual refreshes.</li>
+            <li><strong>Pusher Channels:</strong> Implementation choice for ecosystem-wide realtime notifications. It provides low-latency websocket communication for instant order updates across mobile and web platforms.</li>
+        </ul>
+        <h3>Compliance Libraries</h3>
+        <ul>
+            <li><strong>dotenv:</strong> Ensures secure management of environment variables (API keys, database credentials), essential for NPC and PCI DSS compliance.</li>
+            <li><strong>jsonwebtoken:</strong> Powers our secure SSO (BudolID), providing stateless and verifiable authentication across microservices.</li>
+        </ul>
+    </div>
+
+    <h2>Technical Overview</h2>
+    <p>The core of the "Missing Orders" issue was located in the order retrieval logic within the <a class="file-link" href="file:///d:/IT Projects/budolEcosystem/budolshap-0.1.0/lib/services/ordersService.js">ordersService.js</a>. The service used a flag <code>excludeAbandonedPayments</code> which defaults to <code>true</code>.</p>
+
+    <h3>Root Cause Analysis</h3>
+    <p>In <code>ordersService.js</code>, the filter was structured to hide any non-COD order that was in <code>awaiting_payment</code> status for more than 30 minutes. This was intended to clean up the UI from abandoned carts but accidentally hid valid orders where the <code>paymentStatus</code> was not synchronized after a successful transaction.</p>
+
+    <h3>Phase 7: Monitoring & Audit</h3>
+    <p>To prevent future occurrences, we have implemented monitoring logs in the retrieval service:</p>
+    <pre><code>// Monitoring log added in v541
+console.log(`[Monitoring] Applying Abandoned Payment Filter. Threshold: ${thirtyMinutesAgo.toISOString()}`);</code></pre>
+    <p>These logs allow administrators to verify when the filtering logic is active and identify if legitimate orders are being caught in the exclusion criteria.</p>
+
+    <h3>Implementation Details</h3>
+    
+    <h4>1. Webhook Update</h4>
+    <p>Modified <a class="file-link" href="file:///d:/IT Projects/budolEcosystem/budolshap-0.1.0/app/api/webhooks/budolpay/route.js">budolpay/route.js</a> to ensure <code>paymentStatus</code> is set to <code>'paid'</code> when a payment is successful.</p>
+    <pre><code>await updateOrderStatus(orderId, 'processing', {
+    paymentStatus: 'paid',
+    isPaid: true
+});</code></pre>
+
+    <h4>2. Legacy Data Migration</h4>
+    <p>Created and executed <a class="file-link" href="file:///d:/IT Projects/budolEcosystem/scripts/test_scripts/budolShap/v2/fix-paid-orders-status.mjs">fix-paid-orders-status.mjs</a> to fix 30+ legacy orders that were hidden.</p>
+
+    <h4>3. Dependency Resolution</h4>
+    <p>Fixed monorepo imports in BudolPay services. Services now correctly reference <code>@budolpay/database</code> and <code>@budolpay/notifications</code> packages.</p>
+
+    <h2>Dependencies</h2>
+    <ul>
+        <li>Prisma ORM v6.2.1</li>
+        <li>Node.js v20+</li>
+        <li>Next.js v14.2.3</li>
+    </ul>
+
+    <h2>Compliance Verification</h2>
+    <p>All financial status changes are logged in the <code>AuditLog</code> table, compliant with <strong>PCI DSS 10.2.2</strong> and <strong>BSP Circular 808</strong>.</p>
+</body>
+</html>

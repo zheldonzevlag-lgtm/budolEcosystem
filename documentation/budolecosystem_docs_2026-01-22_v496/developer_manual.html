@@ -1,0 +1,169 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Budol Ecosystem - Developer Manual v496</title>
+    <style>
+        :root {
+            --primary: #0052CC;
+            --secondary: #172B4D;
+            --bg: #F4F5F7;
+            --sidebar: #FFFFFF;
+            --text: #172B4D;
+            --code-bg: #272822;
+            --code-text: #f8f8f2;
+        }
+        body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, "Helvetica Neue", sans-serif; background: var(--bg); color: var(--text); margin: 0; display: flex; }
+        .sidebar { width: 280px; background: var(--sidebar); border-right: 1px solid #DFE1E6; height: 100vh; position: fixed; padding: 20px; overflow-y: auto; }
+        .main-content { margin-left: 320px; padding: 40px; max-width: 900px; width: 100%; }
+        .sidebar h2 { font-size: 14px; text-transform: uppercase; color: #6B778C; margin-bottom: 10px; }
+        .sidebar ul { list-style: none; padding: 0; margin-bottom: 30px; }
+        .sidebar li { margin-bottom: 8px; }
+        .sidebar a { text-decoration: none; color: #42526E; font-size: 14px; display: block; padding: 8px 12px; border-radius: 4px; transition: all 0.2s; }
+        .sidebar a:hover { background: #EBECF0; color: var(--primary); }
+        .sidebar a.active { background: #DEEBFF; color: var(--primary); font-weight: 600; }
+        .card { background: white; border-radius: 8px; border: 1px solid #DFE1E6; padding: 24px; margin-bottom: 24px; box-shadow: 0 1px 3px rgba(0,0,0,0.1); }
+        h1 { font-size: 32px; margin-bottom: 8px; }
+        h2 { border-bottom: 2px solid var(--primary); padding-bottom: 8px; margin-top: 40px; }
+        pre { background: var(--code-bg); color: var(--code-text); padding: 16px; border-radius: 8px; overflow-x: auto; font-size: 13px; line-height: 1.5; }
+        code { font-family: 'SFMono-Regular', Consolas, 'Liberation Mono', Menlo, monospace; }
+        .file-link { color: var(--primary); text-decoration: none; font-weight: 500; }
+        .file-link:hover { text-decoration: underline; }
+    </style>
+</head>
+<body>
+    <div class="sidebar">
+        <h2>Documentation</h2>
+        <ul>
+            <li><a href="index.html">Overview</a></li>
+            <li><a href="developer_manual.html" class="active">Developer Manual</a></li>
+            <li><a href="system_admin_manual.html">System Admin Manual</a></li>
+            <li><a href="user_manual.html">User Manual</a></li>
+        </ul>
+        <h2>Safety & Risks</h2>
+        <ul>
+            <li><a href="risk_register.html">Risk Register</a></li>
+            <li><a href="Mitigation.html">Mitigation Plan</a></li>
+        </ul>
+        <hr>
+        <a href="../../knowledgebase.html">← Back to Knowledgebase</a>
+    </div>
+
+    <div class="main-content">
+        <h1>Developer Manual - v496</h1>
+        
+        <section id="session-fix">
+            <h2>1. Session Data Optimization</h2>
+            <p>The <code>/api/auth/me</code> endpoint was updated to include the user's store information in the initial session load. This is critical for the <code>RealtimeProvider</code> to correctly identify and subscribe to the store's private notification channel.</p>
+            
+            <p><strong>File:</strong> <a class="file-link" href="file:///d:/IT Projects/budolEcosystem/budolshap-0.1.0/app/api/auth/me/route.js">app/api/auth/me/route.js</a></p>
+            <pre><code>// Enhanced Prisma query to include store data
+const user = await prisma.user.findUnique({
+    where: { id: userId },
+    select: {
+        id: true,
+        // ... existing fields ...
+        store: {
+            select: {
+                id: true,
+                name: true,
+                username: true,
+                logo: true
+            }
+        }
+    }
+});</code></pre>
+        </section>
+
+        <section id="event-normalization">
+            <h2>2. Realtime Event Normalization</h2>
+            <p>To ensure consistent handling in the frontend <code>RealtimeProvider.jsx</code>, all order completion events have been normalized to <code>order-updated</code> with a status of <code>COMPLETED</code>.</p>
+            
+            <p><strong>File:</strong> <a class="file-link" href="file:///d:/IT Projects/budolEcosystem/budolshap-0.1.0/lib/services/ordersService.js">lib/services/ordersService.js</a></p>
+            <pre><code>// v496 Change: Unified event name to 'order-updated'
+await triggerRealtimeEvent(`store-${order.storeId}`, 'order-updated', {
+    orderId: order.id,
+    status: 'COMPLETED'
+});
+
+await triggerRealtimeEvent(`user-${order.userId}`, 'order-updated', {
+    orderId: order.id,
+    status: 'COMPLETED'
+});</code></pre>
+        </section>
+
+        <section id="realtime-listeners">
+            <h2>3. Frontend Listeners</h2>
+            <p>The <code>RealtimeProvider.jsx</code> automatically re-subscribes to channels when the <code>user</code> object changes, thanks to the dependency array in its primary <code>useEffect</code> hook.</p>
+            
+            <p><strong>File:</strong> <a class="file-link" href="file:///d:/IT Projects/budolEcosystem/budolshap-0.1.0/components/RealtimeProvider.jsx">components/RealtimeProvider.jsx</a></p>
+            <pre><code>useEffect(() => {
+    if (!user) return;
+
+    const pusherInstance = initPusher();
+    if (!pusherInstance) return;
+
+    // Store Channel Subscription (v496 fix: user.store.id is now available)
+    if (user?.store?.id) {
+        const channelName = `store-${user.store.id}`;
+        const storeChannel = pusherInstance.subscribe(channelName);
+        storeChannel.bind('order-updated', (data) => handleGlobalEvent('order-updated', data));
+    }
+    
+    // ... existing user channel subscription ...
+}, [user]);</code></pre>
+        </section>
+
+        <section id="data-contracts">
+            <h2>4. Data Contracts</h2>
+            <p>The <code>order-updated</code> event payload now consistently includes:</p>
+            <ul>
+                <li><strong>Event Normalization:</strong> Unified <code>order-updated</code> events are now triggered across all services (orders, returns, disputes) to ensure consistent cache patching in the frontend.</li>
+                <li><strong>Realtime Sync Logic:</strong> The <code>RealtimeProvider.jsx</code> now suppresses generic toasts for return-related status changes, prioritizing more specific notifications while ensuring the <code>patchOrderCache</code> logic always moves orders to the correct status tabs.</li>
+            </ul>
+        </section>
+
+        <section id="realtime-provider">
+            <h2>Realtime Sync Architecture</h2>
+            <p>The system uses a combination of SWR for data fetching and Pusher/Socket.io for realtime updates. To avoid UI flicker and ensure instant tab routing, we use a <strong>Cache Patching</strong> strategy.</p>
+            
+            <div class="code-block">
+<pre><code>// components/RealtimeProvider.jsx - Simplified Sync Logic
+const patchOrderCache = (data) => {
+    mutate(
+        (key) => key.startsWith('/api/orders'),
+        (current) => {
+            // Update status or remove from filtered list
+            return updatedData;
+        }
+    );
+};
+
+// handleGlobalEvent handles deduplication and toast prioritization
+if (event === 'order-updated') {
+    if (!isReturnStatus(data.status)) showToast(data);
+    patchOrderCache(data);
+}
+if (event === 'return-requested') {
+    showReturnToast(data);
+    patchOrderCache({ ...data, status: 'RETURN_REQUESTED' });
+}</code></pre>
+            </div>
+        </section>
+
+        <section id="returns-integration">
+            <h2>Returns & Refunds Integration</h2>
+            <p>Return requests trigger a complex state change. The following flow ensures the Seller UI stays in sync:</p>
+            <ol>
+                <li>Buyer creates return -> <code>returnsService.js</code> updates order status to <code>RETURN_REQUESTED</code>.</li>
+                <li>Backend triggers <code>return-requested</code> and <code>order-updated</code> events.</li>
+                <li>Frontend <code>RealtimeProvider</code> receives both.</li>
+                <li>Deduplication logic ensures only one informative toast is shown.</li>
+                <li><code>patchOrderCache</code> updates the local SWR store.</li>
+                <li><code>StoreOrders.jsx</code> re-filters and moves the order to the <strong>Return / Refund</strong> tab instantly.</li>
+            </ol>
+        </section>
+    </div>
+</body>
+</html>

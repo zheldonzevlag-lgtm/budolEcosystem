@@ -1,0 +1,107 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Developer Manual - v63</title>
+    <style>
+        body { font-family: Arial, sans-serif; line-height: 1.6; max-width: 1200px; margin: 0 auto; padding: 20px; }
+        h1, h2, h3 { color: #333; }
+        code { background: #f4f4f4; padding: 2px 5px; border-radius: 3px; }
+        pre { background: #f4f4f4; padding: 15px; border-radius: 5px; overflow-x: auto; }
+        .nav { margin-bottom: 20px; }
+        .nav a { margin-right: 15px; color: #0066cc; text-decoration: none; }
+        .nav a:hover { text-decoration: underline; }
+    </style>
+</head>
+<body>
+    <div class="nav">
+        <a href="../index.html">Back to Index</a>
+        <a href="../../budolecosystem_docs_2026-01-02_v62/index.html">Previous Version</a>
+    </div>
+
+    <h1>Developer Manual - BudolEcosystem v63</h1>
+    <p><strong>Date:</strong> 2026-01-03</p>
+    <p><strong>Version:</strong> v63</p>
+
+    <h2>1. BudolPay QR Payment Flow Fixes</h2>
+    
+    <h3>Purpose</h3>
+    <p>Resolved issue where BudolPay payments were redirecting to <code>/orders</code> instead of the dedicated QR page (<code>/payment/qr</code>), causing the QR code to be missed by the user.</p>
+
+    <h3>Technical Details</h3>
+    <ul>
+        <li>
+            <strong>File Modified:</strong> <code>lib/payment/adapters/budolpay-adapter.js</code>
+            <ul>
+                <li><strong>Fix:</strong> Updated to generate <code>qrCode</code> object directly within the adapter, using <code>api.qrserver.com</code> for generation.</li>
+                <li><strong>Fix:</strong> Corrected Gateway URL to point directly to <code>http://127.0.0.1:8004</code> to bypass API Gateway proxy issues on Windows.</li>
+                <li><strong>Fix:</strong> Ensured amount conversion from centavos to decimal is handled correctly.</li>
+            </ul>
+        </li>
+        <li>
+            <strong>File Modified:</strong> <code>scripts/mock-budolpay-gateway.cjs</code>
+            <ul>
+                <li><strong>Fix:</strong> Changed the hardcoded redirect from <code>/orders</code> to <code>/payment/return</code>.</li>
+                <li><strong>Rationale:</strong> The Mock Gateway was simulating a "Success" redirect that prematurely sent the user to the order list, skipping the QR code display. Now it redirects to the return handler, which (in a real scenario) would validate the payment. For QR flow, the adapter now returns the QR data <em>before</em> any redirect happens.</li>
+            </ul>
+        </li>
+        <li>
+            <strong>File Modified:</strong> <code>components/OrderSummary.jsx</code>
+            <ul>
+                <li><strong>Logic:</strong> Verified that the component prioritizes <code>qrCode</code> presence. If <code>qrCode</code> is returned by the adapter, it saves data to <code>localStorage</code> and redirects to <code>/payment/qr</code>.</li>
+            </ul>
+        </li>
+    </ul>
+
+    <h3>Code Example (Adapter)</h3>
+    <pre><code>// lib/payment/adapters/budolpay-adapter.js
+// Direct connection to service on port 8004
+this.gatewayUrl = 'http://127.0.0.1:8004';
+
+// QR Code Generation
+qrCode: {
+    imageUrl: `https://api.qrserver.com/v1/create-qr-code/?...`,
+    amount: amount,
+    label: 'budolPay'
+}</code></pre>
+
+    <h2>2. SMTP Authentication Fixes</h2>
+    
+    <h3>Purpose</h3>
+    <p>Addressed SMTP <code>535 5.7.8 BadCredentials</code> error preventing order confirmation emails.</p>
+
+    <h3>Technical Details</h3>
+    <ul>
+        <li>
+            <strong>File Modified:</strong> <code>lib/email.js</code>
+            <ul>
+                <li><strong>Fix:</strong> Added sanitization for <code>smtpPass</code> to remove spaces (<code>.replace(/\s+/g, '')</code>). This handles cases where App Passwords are copied with spaces.</li>
+                <li><strong>Fix:</strong> Enhanced error logging to distinguish between connection errors and authentication errors.</li>
+            </ul>
+        </li>
+        <li>
+            <strong>Tool Created:</strong> <code>check-settings.cjs</code>
+            <ul>
+                <li><strong>Purpose:</strong> Audits current System Settings in the database vs Environment Variables.</li>
+                <li><strong>Usage:</strong> <code>node check-settings.cjs</code></li>
+            </ul>
+        </li>
+    </ul>
+
+    <h2>3. API Gateway Debugging</h2>
+    
+    <h3>Issue</h3>
+    <p>API Gateway (port 8080) was returning <code>504 Gateway Timeout</code> when proxying to Payment Service (port 8004).</p>
+
+    <h3>Resolution</h3>
+    <p>Bypassed API Gateway in <code>budolpay-adapter.js</code> by connecting directly to <code>http://127.0.0.1:8004</code>. This ensures stability for local development on Windows.</p>
+
+    <h2>4. Recommendations</h2>
+    <ul>
+        <li>Ensure Payment Gateway Service (port 8004) is running. If it crashes, restart it manually or via <code>start-ecosystem.js</code>.</li>
+        <li>Update System Settings with a valid Gmail App Password if SMTP errors persist.</li>
+    </ul>
+
+</body>
+</html>

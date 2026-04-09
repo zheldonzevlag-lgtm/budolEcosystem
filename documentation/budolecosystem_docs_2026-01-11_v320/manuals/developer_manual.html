@@ -1,0 +1,114 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Developer Manual - v320 - Mobile App Build & Version Increment</title>
+    <style>
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; line-height: 1.6; color: #333; max-width: 900px; margin: 0 auto; padding: 40px; background-color: #f8fafc; }
+        header { border-bottom: 2px solid #F43F5E; margin-bottom: 30px; padding-bottom: 20px; }
+        h1, h2, h3 { color: #1e293b; }
+        h1 { color: #F43F5E; font-size: 2.5rem; margin-bottom: 10px; }
+        h2 { border-left: 5px solid #F43F5E; padding-left: 15px; margin-top: 40px; }
+        code { background: #e2e8f0; padding: 2px 5px; border-radius: 4px; font-family: 'Consolas', monospace; font-size: 0.9em; }
+        pre { background: #1e293b; color: #f8fafc; padding: 20px; border-radius: 8px; overflow-x: auto; font-family: 'Consolas', monospace; line-height: 1.4; }
+        .nav { margin-bottom: 30px; display: flex; gap: 15px; }
+        .nav a { text-decoration: none; color: #F43F5E; font-weight: bold; padding: 8px 15px; border: 1px solid #F43F5E; border-radius: 5px; transition: all 0.3s; }
+        .nav a:hover { background-color: #F43F5E; color: white; }
+        .section { background: white; padding: 25px; border-radius: 10px; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.1); margin-bottom: 25px; }
+        .tag { display: inline-block; background: #fee2e2; color: #991b1b; padding: 2px 10px; border-radius: 15px; font-size: 0.8rem; font-weight: bold; text-transform: uppercase; margin-bottom: 10px; }
+    </style>
+</head>
+<body>
+    <div class="nav">
+        <a href="../index.html">Main Index</a>
+        <a href="../../budolecosystem_docs_2026-01-11_v319/index.html">Previous (v319)</a>
+        <a href="../../budolecosystem_docs_2026-01-11_v321/index.html">Next (v321)</a>
+    </div>
+
+    <header>
+        <span class="tag">Version 320</span>
+        <h1>Developer Manual</h1>
+        <p>Technical implementation details for Mobile App Build v1.2.47 and Version Synchronization.</p>
+    </header>
+
+    <div class="section">
+        <h2>Purpose</h2>
+        <p>The purpose of this update is to formalize the release of budolPay Mobile version 1.2.47, ensuring all configuration files and build artifacts are synchronized and correctly stored in the centralized ecosystem installer directory.</p>
+    </div>
+
+    <div class="section">
+        <h2>Explanation & Rationale</h2>
+        <p>Consistent versioning across <code>pubspec.yaml</code> and internal services (like <code>api_service.dart</code>) is critical for debugging and API gateway compatibility. Centralizing build artifacts in <code>\budolEcosystem\android-installer</code> allows for easier distribution and version tracking by system administrators.</p>
+    </div>
+
+    <div class="section">
+        <h2>Issues & Fixes</h2>
+        <ul>
+            <li><strong>Issue:</strong> App version was out of sync (1.2.46) with the latest biometric features.
+                <br><strong>Fix:</strong> Incremented version to 1.2.47 in <code>pubspec.yaml</code> and <code>api_service.dart</code>.</li>
+            <li><strong>Issue:</strong> Build artifacts were scattered in default Flutter build directories.
+                <br><strong>Fix:</strong> Automated the movement of the release APK to the centralized <code>android-installer</code> folder with a standardized naming convention.</li>
+        </ul>
+    </div>
+
+    <div class="section">
+        <h2>Technical Details</h2>
+        <h3>Version Configuration</h3>
+        <p>The following files were updated to reflect version 1.2.47:</p>
+        <ul>
+            <li><code>budolPayMobile/pubspec.yaml</code>: <code>version: 1.2.47+47</code></li>
+            <li><code>budolPayMobile/lib/services/api_service.dart</code>: <code>String _appVersion = '1.2.47';</code></li>
+        </ul>
+        <h3>Build Procedure</h3>
+        <pre><code>
+cd budolPayMobile
+flutter build apk --release
+Move-Item -Path build\app\outputs\flutter-apk\app-release.apk -Destination ..\android-installer\budolPay_1.2.47.apk -Force
+        </code></pre>
+    </div>
+
+    <div class="section">
+        <h2>Code Details</h2>
+        <h3>Version Synchronization</h3>
+        <pre><code>
+// lib/services/api_service.dart
+class ApiService {
+  // ...
+  String _appVersion = '1.2.47'; // Fallback for display and headers
+  // ...
+}
+        </code></pre>
+    </div>
+
+    <div class="section">
+        <h2>Risk & Mitigation</h2>
+        <ul>
+            <li><strong>Risk:</strong> Version mismatch between APK and API Gateway.
+                <br><strong>Mitigation:</strong> Manual verification of the <code>_appVersion</code> string in the service layer during the build process.</li>
+            <li><strong>Risk:</strong> Corrupted build artifact.
+                <br><strong>Mitigation:</strong> Use of Flutter's built-in integrity checks during <code>flutter build apk</code>.</li>
+        </ul>
+    </div>
+
+    <div class="section">
+        <h2>Test Results</h2>
+        <p>Build integrity and version verification:</p>
+        <ul>
+            <li>✅ <code>flutter build apk --release</code> completed successfully.</li>
+            <li>✅ APK moved to <code>\budolEcosystem\android-installer\budolPay_1.2.47.apk</code>.</li>
+            <li>✅ Verified version 1.2.47 is displayed on the Splash Screen.</li>
+            <li>✅ Verified version 1.2.47 is correctly reported in API headers.</li>
+        </ul>
+    </div>
+
+    <div class="section">
+        <h2>Recommendation for Future Enhancement</h2>
+        <p>Implement an automated CI/CD pipeline that automatically increments the version and moves the build artifact upon every merge to the main branch. Integrate ProGuard for further APK obfuscation and size reduction.</p>
+    </div>
+
+    <div class="nav">
+        <a href="system_admin_manual.html">Next: System Admin Manual →</a>
+    </div>
+</body>
+</html>

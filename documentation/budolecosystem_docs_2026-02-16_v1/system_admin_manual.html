@@ -1,0 +1,55 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>System Admin Manual - Budol Ecosystem v3.4.0</title>
+    <style>
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; line-height: 1.6; color: #333; max-width: 900px; margin: 0 auto; padding: 20px; }
+        h1, h2 { color: #2c3e50; border-bottom: 2px solid #eee; padding-bottom: 10px; }
+        .cmd-box { background: #282c34; color: #abb2bf; padding: 15px; border-radius: 5px; overflow-x: auto; font-family: 'Consolas', monospace; margin: 10px 0; }
+        .warning { background-color: #fff3cd; border-left: 6px solid #ffc107; padding: 10px; margin: 15px 0; }
+        a { color: #007bff; text-decoration: none; }
+    </style>
+</head>
+<body>
+    <a href="index.html">← Back to Documentation Index</a>
+
+    <h1>System Admin Manual (v3.4.0)</h1>
+
+    <h2>1. Database Maintenance</h2>
+    
+    <h3>Backup Procedures</h3>
+    <p>Before any deployment or schema update, run the compliant backup script. This script creates a timestamped dump of the `budolshap_1db` and `budolpay` databases.</p>
+    <div class="cmd-box">
+        node scripts/backup_db_compliant.js
+    </div>
+    <p><strong>Location:</strong> Backups are stored in `\backup-db\db-YYYY-MM-DD\`.</p>
+
+    <h3>Schema Updates</h3>
+    <p>The `CartItem` table now includes a `variationId`. If you need to manually inspect cart data:</p>
+    <div class="cmd-box">
+        npx prisma studio
+    </div>
+    <p>Navigate to the `CartItem` model. You will see columns: `id`, `cartId`, `productId`, `variationId`, `quantity`.</p>
+
+    <div class="warning">
+        <strong>Warning:</strong> Do not manually delete `CartItem` rows directly in the database unless necessary. This may cause sync issues with the frontend Redux state if the user is currently active.
+    </div>
+
+    <h2>2. Deployment Steps</h2>
+    <ol>
+        <li><strong>Stop the Application:</strong> `npm stop` or Ctrl+C in terminal.</li>
+        <li><strong>Backup Database:</strong> Run the backup script.</li>
+        <li><strong>Pull Latest Code:</strong> `git pull origin main` (or relevant branch).</li>
+        <li><strong>Install Dependencies:</strong> `npm install`</li>
+        <li><strong>Update Database Schema:</strong> `npx prisma migrate deploy`</li>
+        <li><strong>Build Application:</strong> `npm run build`</li>
+        <li><strong>Start Application:</strong> `npm start`</li>
+    </ol>
+
+    <h2>3. Monitoring</h2>
+    <p>Monitor the application logs for any `PrismaClientKnownRequestError` related to unique constraints on `CartItem`. This would indicate a race condition in the cart logic that needs investigation.</p>
+
+</body>
+</html>

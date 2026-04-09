@@ -1,0 +1,100 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Developer Manual - v163</title>
+    <style>
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; line-height: 1.6; color: #333; max-width: 1000px; margin: 0 auto; padding: 20px; background-color: #f4f7f6; }
+        header { background-color: #F43F5E; color: white; padding: 20px; border-radius: 8px 8px 0 0; }
+        main { background: white; padding: 30px; border-radius: 0 0 8px 8px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); }
+        h1, h2, h3 { color: #F43F5E; }
+        code { background-color: #f0f0f0; padding: 2px 5px; border-radius: 4px; font-family: 'Courier New', Courier, monospace; }
+        pre { background-color: #2d2d2d; color: #ccc; padding: 15px; border-radius: 8px; overflow-x: auto; }
+        .back-link { display: inline-block; margin-bottom: 20px; text-decoration: none; color: #F43F5E; font-weight: bold; }
+        .section { margin-bottom: 30px; border-bottom: 1px solid #eee; padding-bottom: 20px; }
+    </style>
+</head>
+<body>
+    <header>
+        <div style="padding: 10px 20px;">
+            <h1>Developer Manual v163</h1>
+            <p>Transaction History Implementation & Parsing Fixes</p>
+        </div>
+    </header>
+    <main>
+        <a href="../index.html" class="back-link">← Back to v163 Index</a>
+
+        <div class="section">
+            <h2>Purpose</h2>
+            <p>To enable the "Recent Transactions" feature on the budolPay mobile app by implementing the missing backend history endpoint and fixing frontend data parsing errors.</p>
+        </div>
+
+        <div class="section">
+            <h2>Issues Identified</h2>
+            <ul>
+                <li><strong>404 Not Found:</strong> The mobile app was calling <code>GET /transactions/history/:userId</code>, which was not defined in the <code>transaction-service</code>.</li>
+                <li><strong>Type Casting Error:</strong> The Flutter <code>HomeScreen</code> was attempting to cast <code>tx['amount']</code> directly to <code>num</code>, which failed when the API returned a string (common with Prisma Decimal fields).</li>
+            </ul>
+        </div>
+
+        <div class="section">
+            <h2>Technical Implementation</h2>
+            <h3>1. Backend: Transaction Service History Endpoint</h3>
+            <p>Added a new route in <code>services/transaction-service/index.js</code> to handle user-specific history requests. The query uses an <code>OR</code> condition to include transactions where the user is either the sender or the receiver.</p>
+            <pre><code>app.get('/history/:userId', async (req, res) => {
+    const { userId } = req.params;
+    try {
+        const transactions = await prisma.transaction.findMany({
+            where: {
+                OR: [
+                    { senderId: userId },
+                    { receiverId: userId }
+                ]
+            },
+            orderBy: { createdAt: 'desc' },
+            take: 50
+        });
+        res.json(transactions);
+    } catch (error) {
+        res.status(500).json({ error: 'Failed to fetch transaction history' });
+    }
+});</code></pre>
+
+            <h3>2. Frontend: Safe Amount Parsing</h3>
+            <p>Modified <code>lib/screens/home_screen.dart</code> to safely parse the transaction amount from the API response.</p>
+            <pre><code>// Before
+final double amount = (tx['amount'] as num).toDouble();
+
+// After
+final double amount = double.tryParse(tx['amount'].toString()) ?? 0.0;</code></pre>
+        </div>
+
+        <div class="section">
+            <h2>Test Results</h2>
+            <p>Verified using a dedicated test script <code>test-transaction-history-v163.js</code> which performs a P2P transfer and immediately verifies its presence in the history endpoint.</p>
+            <ul>
+                <li><strong>P2P Transfer:</strong> ✅ Success (BP-83ECF470)</li>
+                <li><strong>History Retrieval:</strong> ✅ Success (Found 100% match for reference ID)</li>
+            </ul>
+        </div>
+
+        <div class="section">
+            <h2>Risks & Mitigations</h2>
+            <ul>
+                <li><strong>Risk:</strong> Performance issues with large transaction tables.</li>
+                <li><strong>Mitigation:</strong> Implemented <code>take: 50</code> limit and ensured <code>createdAt</code> indexing in the database.</li>
+            </ul>
+        </div>
+
+        <div class="section">
+            <h2>Future Enhancements</h2>
+            <ul>
+                <li>Implement pagination for transaction history.</li>
+                <li>Add filtering by transaction type (Cash In, Transfer, Merchant Payment).</li>
+                <li>Add date range filtering.</li>
+            </ul>
+        </div>
+    </main>
+</body>
+</html>

@@ -1,0 +1,74 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>System Admin Manual - v412</title>
+    <style>
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; line-height: 1.6; padding: 40px; background: #f4f7f6; color: #333; }
+        .admin-note { background: #fff3cd; border-left: 5px solid #ffc107; padding: 15px; margin: 20px 0; border-radius: 4px; }
+        .config-table { width: 100%; border-collapse: collapse; margin: 20px 0; background: white; }
+        .config-table th, .config-table td { border: 1px solid #dee2e6; padding: 12px; text-align: left; }
+        .config-table th { background: #0747A6; color: white; }
+        h2 { color: #0747A6; border-bottom: 2px solid #0747A6; padding-bottom: 10px; }
+        .step-card { background: white; padding: 20px; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.05); margin-bottom: 20px; }
+    </style>
+</head>
+<body>
+    <header>
+        <a href="../index.html" style="text-decoration: none; color: #0747A6;">← Back to v412 Overview</a>
+        <h2>System Admin Manual: Mobile Session Management & Deployment</h2>
+    </header>
+
+    <div class="admin-note">
+        <strong>Important:</strong> Version 412 requires an update to the <code>budolPay</code> Android APK (v1.2.96) to resolve user session persistence issues. Ensure the backend <code>auth-service</code> is running and reachable at the configured <code>AUTH_URL</code>.
+    </div>
+
+    <h3>1. Backend Configuration Verification</h3>
+    <p>Administrators must verify that the <code>auth-service</code> correctly exposes the <code>/verify</code> endpoint. This endpoint is critical for mobile apps to validate existing JWT tokens upon restart.</p>
+    
+    <table class="config-table">
+        <thead>
+            <tr>
+                <th>Service</th>
+                <th>Endpoint</th>
+                <th>Function</th>
+                <th>Status</th>
+            </tr>
+        </thead>
+        <tbody>
+            <tr>
+                <td>Auth Service</td>
+                <td><code>/verify</code></td>
+                <td>Token Validation & User Sync</td>
+                <td><span style="color: green; font-weight: bold;">Operational</span></td>
+            </tr>
+            <tr>
+                <td>Prisma DB</td>
+                <td><code>User Table</code></td>
+                <td>Persistent Storage</td>
+                <td><span style="color: green; font-weight: bold;">Connected</span></td>
+            </tr>
+        </tbody>
+    </table>
+
+    <h3>2. APK Deployment & Distribution</h3>
+    <div class="step-card">
+        <h4>Step 1: Build the APK</h4>
+        <p>Run the Flutter build command to generate the release APK for version 1.2.96.</p>
+        <code>flutter build apk --release</code>
+    </div>
+
+    <div class="step-card">
+        <h4>Step 2: Version Verification</h4>
+        <p>Confirm the splash screen displays <strong>v1.2.96</strong>. This build includes the fix for the <code>/verify</code> endpoint and immediate state notification.</p>
+    </div>
+
+    <div class="step-card">
+        <h4>Step 3: Distribution</h4>
+        <p>Upload <code>app-release.apk</code> to the internal <code>budolEcosystem/android-installer</code> directory and update the distribution portal links.</p>
+    </div>
+
+    <h3>3. Monitoring & Troubleshooting</h3>
+    <p>Monitor the <code>auth-service</code> logs for any <code>401 Unauthorized</code> or <code>404 Not Found</code> errors during the <code>/verify</code> request. If users report being logged out, verify that their JWT tokens haven't expired (standard expiry is 30 days for mobile).</p>
+</body>
+</html>

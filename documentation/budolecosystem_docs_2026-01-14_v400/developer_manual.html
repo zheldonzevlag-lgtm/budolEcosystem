@@ -1,0 +1,168 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Developer Manual - v400</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
+        @import url('https://fonts.googleapis.com/css2?family=Fira+Code:wght@400;500&display=swap');
+        body { font-family: 'Inter', sans-serif; }
+        code { font-family: 'Fira Code', monospace; }
+        pre { background: #1e293b; color: #f8fafc; padding: 1.5rem; border-radius: 0.75rem; overflow-x: auto; }
+        .code-link { color: #818cf8; text-decoration: underline; font-size: 0.875rem; margin-top: 0.5rem; display: inline-block; }
+        .code-link:hover { color: #c7d2fe; }
+    </style>
+</head>
+<body class="bg-slate-50 min-h-screen flex">
+    <!-- Sidebar -->
+    <aside class="w-64 bg-slate-900 text-slate-300 flex flex-col fixed h-full">
+        <div class="p-6">
+            <div class="flex items-center gap-3 mb-8">
+                <div class="w-8 h-8 bg-indigo-600 rounded-lg flex items-center justify-center text-white font-bold">B</div>
+                <span class="text-xl font-bold text-white tracking-tight">Budol Docs</span>
+            </div>
+            <nav class="space-y-1">
+                <a href="index.html" class="flex items-center gap-3 px-3 py-2 hover:bg-slate-800 hover:text-white rounded-lg transition-colors">
+                    <span>🏠</span> Index
+                </a>
+                <a href="developer_manual.html" class="flex items-center gap-3 px-3 py-2 bg-slate-800 text-white rounded-lg">
+                    <span>💻</span> Developer Manual
+                </a>
+                <a href="system_admin_manual.html" class="flex items-center gap-3 px-3 py-2 hover:bg-slate-800 hover:text-white rounded-lg transition-colors">
+                    <span>⚙️</span> SysAdmin Manual
+                </a>
+                <a href="user_manual.html" class="flex items-center gap-3 px-3 py-2 hover:bg-slate-800 hover:text-white rounded-lg transition-colors">
+                    <span>👤</span> User Manual
+                </a>
+                <a href="risk_register.html" class="flex items-center gap-3 px-3 py-2 hover:bg-slate-800 hover:text-white rounded-lg transition-colors">
+                    <span>⚠️</span> Risk Register
+                </a>
+                <a href="Mitigation.html" class="flex items-center gap-3 px-3 py-2 hover:bg-slate-800 hover:text-white rounded-lg transition-colors">
+                    <span>🛡️</span> Mitigation Plan
+                </a>
+                <a href="test_results.html" class="flex items-center gap-3 px-3 py-2 hover:bg-slate-800 hover:text-white rounded-lg transition-colors">
+                    <span>🧪</span> Test Results
+                </a>
+                <a href="future_recommendations.html" class="flex items-center gap-3 px-3 py-2 hover:bg-slate-800 hover:text-white rounded-lg transition-colors">
+                    <span>🚀</span> Future Recommendations
+                </a>
+            </nav>
+        </div>
+    </aside>
+
+    <!-- Main Content -->
+    <main class="flex-1 ml-64 p-12">
+        <div class="max-w-4xl mx-auto">
+            <header class="mb-12">
+                <h1 class="text-4xl font-extrabold text-slate-900 mb-4">Developer Manual</h1>
+                <p class="text-xl text-slate-600">Technical documentation for the SSO schema fix and system synchronization.</p>
+            </header>
+
+            <section class="mb-12">
+                <h2 class="text-2xl font-bold text-slate-900 mb-6">Purpose & Rationale</h2>
+                <div class="prose prose-slate max-w-none text-slate-600">
+                    <p>The primary objective of this update was to resolve a critical 500 Internal Server Error encountered by users attempting to log in via SSO. The error was traced to a desynchronization between the application's Prisma models and the physical database schema in the budolID service.</p>
+                </div>
+            </section>
+
+            <section class="mb-12">
+                <h2 class="text-2xl font-bold text-slate-900 mb-6">Technical Explanation</h2>
+                <div class="bg-white p-8 rounded-2xl border border-slate-200 shadow-sm space-y-8">
+                    <div>
+                        <h3 class="text-lg font-bold text-slate-900 mb-2">1. SSO Login Route Implementation</h3>
+                        <p class="text-slate-600 mb-4">The budolID service handles SSO requests via the `/auth/sso/login` endpoint. It validates the API key, authenticates the user, and creates a session.</p>
+                        <pre><code>app.post('/auth/sso/login', async (req, res) => {
+    const { email, password, apiKey, redirect_uri } = req.body;
+    // ... validation and authentication logic
+    const user = await prisma.user.findUnique({ where: { email } });
+    // ... session creation
+});</code></pre>
+                        <a href="file:///d:/IT Projects/budolEcosystem/budolID-0.1.0/api/index.js" class="code-link">View budolID api/index.js</a>
+                    </div>
+
+                    <div>
+                        <h3 class="text-lg font-bold text-slate-900 mb-2">2. Database Schema Synchronization</h3>
+                        <p class="text-slate-600 mb-4">The error occurred because the `User.faceTemplate` column was missing in the database but required by the Prisma client. We synchronized the schema using the ecosystem's master schema.</p>
+                        <pre><code>// Master Schema Fragment
+model User {
+  id                 String                 @id @default(uuid())
+  email              String                 @unique
+  // ... other fields
+  faceTemplate       String?
+}</code></pre>
+                        <a href="file:///d:/IT Projects/budolEcosystem/budolpay-0.1.0/packages/database/prisma/schema.prisma" class="code-link">View Master schema.prisma</a>
+                    </div>
+                </div>
+            </section>
+
+            <section class="mb-12">
+                <h2 class="text-2xl font-bold text-slate-900 mb-6">Changes & Fixes</h2>
+                <div class="bg-slate-900 rounded-2xl p-8 text-slate-300 overflow-x-auto">
+                    <ul class="list-disc list-inside space-y-2">
+                        <li>Identified missing <code class="text-indigo-400">faceTemplate</code> column in <code class="text-indigo-400">budolid</code> database.</li>
+                        <li>Executed <code class="text-indigo-400">prisma db push</code> to synchronize the database with the Prisma model.</li>
+                        <li>Created <code class="text-indigo-400">seed-test-user.js</code> to verify authentication flow with known credentials.</li>
+                        <li>Updated <code class="text-indigo-400">check-db.js</code> for improved diagnostic reporting.</li>
+                    </ul>
+                </div>
+            </section>
+
+            <section class="mb-12">
+                <h2 class="text-2xl font-bold text-slate-900 mb-6">Dependencies</h2>
+                <div class="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm">
+                    <table class="w-full text-sm text-left">
+                        <thead>
+                            <tr class="text-slate-500 border-b">
+                                <th class="pb-3 font-semibold">Package</th>
+                                <th class="pb-3 font-semibold">Role</th>
+                            </tr>
+                        </thead>
+                        <tbody class="text-slate-700">
+                            <tr class="border-b">
+                                <td class="py-3 font-mono">@budolpay/database</td>
+                                <td class="py-3">Ecosystem-wide Prisma client and database logic.</td>
+                            </tr>
+                            <tr class="border-b">
+                                <td class="py-3 font-mono">express</td>
+                                <td class="py-3">Web framework for budolID API.</td>
+                            </tr>
+                            <tr>
+                                <td class="py-3 font-mono">bcryptjs</td>
+                                <td class="py-3">Secure password hashing for user authentication.</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </section>
+
+            <section class="mb-12">
+                <h2 class="text-2xl font-bold text-slate-900 mb-6">Phase 8: Dependencies & Software Choices</h2>
+                <div class="bg-white p-8 rounded-2xl border border-slate-200 shadow-sm space-y-6 text-slate-600">
+                    <div>
+                        <h3 class="text-lg font-bold text-slate-900 mb-2">Prisma ORM</h3>
+                        <p>Chosen for its type-safe database access and automated migration capabilities. It ensures that the database schema is always in sync with the application models, which was the primary fix in this release.</p>
+                    </div>
+                    <div>
+                        <h3 class="text-lg font-bold text-slate-900 mb-2">Express.js</h3>
+                        <p>A minimalist and flexible Node.js web application framework used for the budolID SSO service. Its middleware-based architecture allows for efficient handling of authentication flows and JWT issuance.</p>
+                    </div>
+                    <div>
+                        <h3 class="text-lg font-bold text-slate-900 mb-2">PostgreSQL</h3>
+                        <p>Our primary relational database for Identity and Session management. It provides robust ACID compliance and advanced features like JSONB support, which are essential for storing complex user profiles and session data.</p>
+                    </div>
+                    <div>
+                        <h3 class="text-lg font-bold text-slate-900 mb-2">JWT (JSON Web Tokens)</h3>
+                        <p>Used for secure, stateless session management across the ecosystem. JWTs allow us to share user identity between services (budolID, budolPay, budolShap) without constant database lookups.</p>
+                    </div>
+                </div>
+            </section>
+
+            <footer class="border-t border-slate-200 pt-8 text-slate-400 text-sm">
+                <p>&copy; 2026 Budol Ecosystem. All rights reserved. Confidential Property.</p>
+            </footer>
+        </div>
+    </main>
+</body>
+</html>

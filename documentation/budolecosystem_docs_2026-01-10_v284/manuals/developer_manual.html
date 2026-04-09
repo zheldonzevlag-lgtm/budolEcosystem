@@ -1,0 +1,65 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Developer Manual v284</title>
+    <style>
+        body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; line-height: 1.6; color: #333; max-width: 800px; margin: 0 auto; padding: 20px; background-color: #f4f7f6; }
+        h1 { color: #2c3e50; border-bottom: 2px solid #3498db; padding-bottom: 10px; }
+        h2 { color: #2980b9; margin-top: 30px; }
+        code { background-color: #eee; padding: 2px 5px; border-radius: 4px; font-family: monospace; }
+        pre { background: #2d3436; color: #dfe6e9; padding: 15px; border-radius: 8px; overflow-x: auto; }
+        .back-link { margin-bottom: 20px; display: block; text-decoration: none; color: #3498db; font-weight: bold; }
+        .nav-links { display: flex; justify-content: space-between; margin-top: 40px; padding-top: 20px; border-top: 1px solid #ccc; }
+        .nav-links a { text-decoration: none; color: #3498db; font-weight: bold; }
+    </style>
+</head>
+<body>
+    <a href="../index.html" class="back-link">← Back to v284 Index</a>
+    <h1>Developer Manual - v284</h1>
+
+    <h2>Purpose</h2>
+    <p>This version focuses on verifying the end-to-end SSO flow across the entire ecosystem in a LAN environment and ensuring consistent data synchronization between services.</p>
+
+    <h2>SSO Flow Verification</h2>
+    <p>Comprehensive testing was conducted to ensure that <code>budolID</code> correctly authenticates users and redirects them to the respective applications (<code>budolShap</code> and <code>budolPay Admin</code>) with valid session tokens.</p>
+
+    <h3>Technical Details</h3>
+    <ul>
+        <li><strong>JWT Consistency:</strong> Verified that <code>JWT_SECRET</code> is standardized across <code>budolID</code>, <code>budolShap</code>, and <code>budolPay Admin</code>.</li>
+        <li><strong>Token Verification:</strong> Confirmed that the <code>/auth/verify</code> endpoint in <code>budolID</code> correctly validates tokens and includes the associated <code>app</code> and <code>user</code> data.</li>
+        <li><strong>Cookie Management:</strong> Verified that session cookies (<code>budolshap_token</code>, <code>budolpay_token</code>) are correctly set with <code>SameSite=Lax</code> and appropriate expiration times for LAN accessibility.</li>
+    </ul>
+
+    <h2>Prisma Client Synchronization</h2>
+    <p>Addressed issues where test scripts were using mismatched Prisma Client instances. Developers should always use the centralized client from <code>lib/prisma.js</code> to ensure schema consistency.</p>
+
+    <h2>Test Results</h2>
+    <pre><code>--- Simulating SSO Callback ---
+Logging into budolID...
+Redirect URL: http://192.168.1.24:3001/auth/callback?token=...
+✅ Cookie was set!
+Me response status: 200 (budolShap)
+
+--- Simulating budolPay Admin SSO Callback ---
+Redirect URL: http://192.168.1.24:3000/api/auth/callback?token=...
+✅ Cookie budolpay_token was set!
+Me response status: 200 (budolPay Admin)
+
+--- Testing budolID /auth/verify with budolpay_token ---
+Verify response status: 200
+Verify response data: { "valid": true, "user": { ... }, "app": { "name": "budolPay" } }</code></pre>
+
+    <h2>Future Enhancements</h2>
+    <ul>
+        <li>Implement automated E2E tests for SSO using Playwright or Cypress in the CI/CD pipeline.</li>
+        <li>Enhance token rotation and refresh mechanisms for improved security.</li>
+    </ul>
+
+    <div class="nav-links">
+        <a href="../../budolecosystem_docs_2026-01-10_v283/manuals/developer_manual.html">← Previous (v283)</a>
+        <span>Next (v285) →</span>
+    </div>
+</body>
+</html>

@@ -1,0 +1,62 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>System Admin Manual - v195</title>
+    <style>
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; line-height: 1.6; color: #333; max-width: 900px; margin: 0 auto; padding: 20px; background-color: #f4f7f6; }
+        .container { background-color: white; padding: 40px; border-radius: 8px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); }
+        h1, h2, h3 { color: #2c3e50; border-bottom: 2px solid #f59e0b; padding-bottom: 10px; }
+        .note { background-color: #e3f2fd; border-left: 5px solid #2196f3; padding: 15px; margin: 20px 0; }
+        .command { background-color: #2d3436; color: #dfe6e9; padding: 10px; border-radius: 4px; font-family: 'Courier New', Courier, monospace; display: block; }
+        .nav-links { margin-bottom: 20px; }
+        .nav-links a { color: #f59e0b; text-decoration: none; font-weight: bold; margin-right: 20px; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="nav-links">
+            <a href="../index.html">← Back to v195 Index</a>
+            <a href="../../index.html">Main Index</a>
+        </div>
+        <h1>System Admin Manual: Wallet Service Stabilization</h1>
+        
+        <h2>Purpose</h2>
+        <p>This manual provides operational instructions for verifying the stability of the Wallet Service after the fix for the identification error.</p>
+
+        <h2>Service Health Verification</h2>
+        <p>After deployment, verify that the Wallet Service is correctly handling balance requests without logging ReferenceErrors.</p>
+        
+        <h3>1. Check Logs for ReferenceErrors</h3>
+        <p>Monitor the Wallet Service logs for the following pattern which indicates the fix is working:</p>
+        <div class="note">
+            <p>If an error occurs, the logs should now correctly display the <code>userId</code> instead of failing with "userId is not defined".</p>
+        </div>
+        <code class="command">tail -f logs/wallet-service.log | grep "Error in getBalance"</code>
+
+        <h3>2. Manual Health Check</h3>
+        <p>Ping the balance endpoint with a test UUID to ensure the service responds (even if the user doesn't exist, it should create a wallet failsafe):</p>
+        <code class="command">curl http://localhost:3003/balance/test_admin_user</code>
+
+        <h2>Infrastructure Changes</h2>
+        <p>No changes to infrastructure or environment variables were required for this fix. The change is purely at the application logic level.</p>
+
+        <h2>Database Impact</h2>
+        <p>No schema changes or migrations were necessary. The fix ensures that the Prisma client calls are correctly wrapped in error handling.</p>
+
+        <h2>Incident Response</h2>
+        <p>If "identification failed" errors persist in the mobile app:</p>
+        <ol>
+            <li>Verify the API Gateway is correctly routing to the Wallet Service.</li>
+            <li>Check the <code>userId</code> format being sent by the mobile app.</li>
+            <li>Ensure the Wallet Service has connectivity to the PostgreSQL database via Prisma.</li>
+        </ol>
+
+        <div style="margin-top: 40px; border-top: 1px solid #eee; padding-top: 20px;">
+            <p><strong>Previous Version:</strong> <a href="../../budolecosystem_docs_2026-01-08_v194/manuals/sysadmin_manual.html">v194 SysAdmin Manual</a></p>
+            <p><strong>Next Version:</strong> TBD</p>
+        </div>
+    </div>
+</body>
+</html>

@@ -1,0 +1,79 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>v35 Developer Manual - BudolPay Build Stabilization</title>
+    <style>
+        body { font-family: -apple-system, system-ui, sans-serif; line-height: 1.6; color: #172B4D; background: #F4F5F7; padding: 48px; }
+        .container { max-width: 1000px; margin: 0 auto; background: white; padding: 48px; border-radius: 12px; box-shadow: 0 4px 12px rgba(9,30,66,0.08); }
+        h1 { font-size: 2.2rem; margin-bottom: 32px; border-bottom: 2px solid #DFE1E6; padding-bottom: 16px; }
+        h2 { margin-top: 48px; border-left: 4px solid #0052cc; padding-left: 16px; font-size: 1.5rem; }
+        pre { background: #091e42; color: #fff; padding: 24px; border-radius: 8px; overflow-x: auto; font-family: 'SFMono-Medium', 'Menlo', monospace; font-size: 0.9rem; }
+        code { color: #de350b; font-weight: 600; }
+        .link { color: #0052cc; text-decoration: none; font-weight: 600; border-bottom: 1px solid transparent; transition: 0.2s; }
+        .link:hover { border-color: #0052cc; }
+        .task-list { list-style: none; padding: 0; }
+        .task-item { padding: 12px 16px; border-bottom: 1px solid #DFE1E6; display: flex; align-items: center; gap: 12px; }
+        .task-item.done { text-decoration: line-through; color: #6B778C; }
+        .tag { background: #E6EFFC; color: #0052cc; padding: 2px 8px; border-radius: 4px; font-size: 0.75rem; font-weight: 700; margin-right: 8px; }
+        .file-link { background: #F4F5F7; padding: 8px 12px; border-radius: 6px; display: block; margin: 12px 0; font-family: monospace; font-size: 0.85rem; color: #172B4D; text-decoration: none; border: 1px solid #DFE1E6; }
+        .file-link:hover { background: #EBECF0; border-color: #0052cc; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <a href="index.html" class="link">← Back to Overview</a>
+        <h1>Developer Manual: Build Stabilization & Vercel Nexus</h1>
+        
+        <h2>Rationale</h2>
+        <p>The transition to <code>Next.js 14 (App Router)</code> on Vercel requires strict separation between <strong>Build-time (Static)</strong> and <strong>Runtime (Dynamic)</strong> environments. Prerendering failues occur when static analysis triggers database queries in environments without <code>DATABASE_URL</code> (e.g. Preview build machines).</p>
+
+        <h2>Phase 0: Build Resilience Architecture</h2>
+        <p>We implemented a <strong>Dummy Connection Fallback</strong> in the core database client. If <code>DATABASE_URL</code> is missing during the <code>next build</code> phase, the client returns a local mock string instead of crashing the process.</p>
+
+        <a href="file:///d:/IT Projects/clone/budolEcosystem/budolpay-0.1.0/packages/database/index.ts" class="file-link">📂 packages/database/index.ts</a>
+        <pre>
+const dbUrl = process.env.DATABASE_URL && process.env.DATABASE_URL.length > 0 
+  ? process.env.DATABASE_URL 
+  : "postgresql://postgres:postgres@localhost:5432/budolpay?schema=public";</pre>
+
+        <h2>Phase 1: Route Dynamic Forcing</h2>
+        <p>To prevent <code>DynamicServerUsage</code> errors during static optimization, all pages fetching live data from the database or accessing <code>request.url</code> are marked with <code>force-dynamic</code>.</p>
+
+        <a href="file:///d:/IT Projects/clone/budolEcosystem/budolpay-0.1.0/apps/admin/app/page.tsx" class="file-link">📂 apps/admin/app/page.tsx</a>
+        <pre>
+export const dynamic = 'force-dynamic';
+// Root dashboard fetches count() from prisma during render</pre>
+
+        <a href="file:///d:/IT Projects/clone/budolEcosystem/budolpay-0.1.0/apps/admin/app/api/audit-logs/route.ts" class="file-link">📂 apps/admin/app/api/audit-logs/route.ts</a>
+        <pre>
+export const dynamic = 'force-dynamic';
+// API routes using request.url must be dynamic</pre>
+
+        <h2>Phase 2: MathCaptcha Persistence</h2>
+        <p>Re-instated the <code>Shield Challenge</code> on the admin login page to fulfill <code>PCI DSS 10.2.1</code> requirements for bot mitigation and session protection.</p>
+        <a href="file:///d:/IT Projects/clone/budolEcosystem/budolpay-0.1.0/apps/admin/app/login/page.tsx" class="file-link">📂 apps/admin/app/login/page.tsx</a>
+
+        <h2>Implementation Checklist</h2>
+        <ul class="task-list">
+            <li class="task-item done">✅ [DONE] Implement build-time fallback in <code>packages/database</code></li>
+            <li class="task-item done">✅ [DONE] Apply <code>force-dynamic</code> to <code>/</code>, <code>/accounting</code>, <code>/settings-orig</code></li>
+            <li class="task-item done">✅ [DONE] Apply <code>force-dynamic</code> to <code>/api/audit-logs</code> and <code>/api/transactions</code></li>
+            <li class="task-item done">✅ [DONE] Revert <code>MathCaptcha</code> in login flow</li>
+            <li class="task-item done">✅ [DONE] Link Vercel Postgres Storage to Project Settings</li>
+            <li class="task-item done">✅ [DONE] Sync Production variables (POSTGRES_PRISMA_URL)</li>
+        </ul>
+
+        <h2>Dependencies</h2>
+        <ul>
+            <li><code>next</code>: ^14.0.0 (App Router Stabilization)</li>
+            <li><code>prisma</code>: 5.14.0 (Consistent Binary Engine)</li>
+            <li><code>@budolpay/database</code>: Internal Workspace Package</li>
+        </ul>
+
+        <div style="margin-top: 48px;">
+            <a href="system_admin_manual.html" class="link">Next: System Admin Manual →</a>
+        </div>
+    </div>
+</body>
+</html>

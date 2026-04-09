@@ -1,0 +1,71 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Mitigation Strategies - v524</title>
+    <style>
+        body { font-family: -apple-system, system-ui, sans-serif; line-height: 1.6; max-width: 1200px; margin: 0 auto; padding: 2rem; color: #333; }
+        header { background: #f8f9fa; padding: 2rem; border-radius: 8px; margin-bottom: 2rem; border-left: 5px solid #3498db; }
+        h1 { margin: 0; color: #2d3748; }
+        h2 { color: #2980b9; border-bottom: 2px solid #e2e8f0; padding-bottom: 0.5rem; margin-top: 2rem; }
+        .strategy { background: #eaf2f8; padding: 1.5rem; border-radius: 8px; margin-bottom: 1.5rem; border: 1px solid #d4e6f1; }
+        .strategy h3 { margin-top: 0; color: #2980b9; }
+        .nav-link { display: inline-block; margin-bottom: 1rem; color: #3498db; text-decoration: none; }
+        .nav-link:hover { text-decoration: underline; }
+    </style>
+</head>
+<body>
+    <a href="index.html" class="nav-link">← Back to Index</a>
+
+    <header>
+        <h1>🛡️ Mitigation Strategies - v524</h1>
+        <p>Detailed plans to address identified risks</p>
+    </header>
+
+    <h2>1. Addressing Risk R-524-001 (User Confusion)</h2>
+    <div class="strategy">
+        <h3>Strategy: Clear UI Feedback & Education</h3>
+        <p><strong>Implementation:</strong></p>
+        <ul>
+            <li>Updated <strong>User Manual</strong> to explicitly explain why orders disappear.</li>
+            <li><strong>Future Tech Fix:</strong> Implement a "Cancelled Orders" tab in the UI (Phase 7 Recommendation) so users can toggle visibility instead of hard hiding.</li>
+            <li><strong>Immediate Action:</strong> Real-time status updates via Pusher ensure that if a user is staring at the screen when an order expires/fails, it updates dynamically.</li>
+        </ul>
+    </div>
+
+    <h2>2. Addressing Risk R-524-003 (Delayed Webhooks)</h2>
+    <div class="strategy">
+        <h3>Strategy: Robust Status Checking & Webhook Reliability</h3>
+        <p><strong>Implementation:</strong></p>
+        <ul>
+            <li>The exclusion logic <strong>strictly checks</strong> for <code>awaiting_payment</code>. It does NOT exclude <code>processing</code>, <code>paid</code>, or <code>succeeded</code>.</li>
+            <li><strong>Fail-Safe:</strong> If a webhook arrives late (e.g., 45 mins later) and updates status to <code>paid</code>, the order will <strong>immediately reappear</strong> in the list because the exclusion condition <code>paymentStatus: 'awaiting_payment'</code> will no longer be met.</li>
+            <li><strong>Monitoring:</strong> System Admins should monitor the <code>failed</code> payment logs to identify if legitimate payments are failing.</li>
+        </ul>
+    </div>
+
+    <h2>3. Addressing Risk R-524-004 (Name Mismatch)</h2>
+    <div class="strategy">
+        <h3>Strategy: Explicit Labeling</h3>
+        <p><strong>Implementation:</strong></p>
+        <ul>
+            <li>We modified <code>OrderItem.jsx</code> to separate the identities.</li>
+            <li><strong>Primary Header:</strong> Uses <code>order.user.name</code> (The Account Holder).</li>
+            <li><strong>Secondary Label:</strong> "Shipping To: <code>order.address.name</code>" (The Recipient).</li>
+            <li>This dual-display eliminates ambiguity while ensuring the user knows <em>which</em> account placed the order.</li>
+        </ul>
+    </div>
+
+    <h2>4. Addressing Risk R-524-005 (Mobile/Backend Desync)</h2>
+    <div class="strategy">
+        <h3>Strategy: Versioned API & Defensive Coding</h3>
+        <p><strong>Implementation:</strong></p>
+        <ul>
+            <li><strong>Backend:</strong> Updated <code>/process-qr</code> to include the <code>transaction</code> object. The change is backward-compatible as it only adds new fields.</li>
+            <li><strong>Frontend (Mobile):</strong> Implemented defensive null-checks in <code>PaymentStatusScreen.dart</code>. If <code>transactionData</code> is missing fields, it falls back to <code>N/A</code> or <code>Merchant</code> instead of crashing.</li>
+            <li><strong>Deployment Order:</strong> Wallet Service update is prioritized in the deployment pipeline before the Mobile App update.</li>
+        </ul>
+    </div>
+</body>
+</html>

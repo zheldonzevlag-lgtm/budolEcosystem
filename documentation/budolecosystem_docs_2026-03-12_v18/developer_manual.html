@@ -1,0 +1,48 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Developer Manual - v18</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600&display=swap" rel="stylesheet">
+    <style>
+        body { font-family: 'Inter', sans-serif; padding: 40px; color: #172B4D; line-height: 1.6; }
+        .code-block { background: #091E42; color: #fff; padding: 20px; border-radius: 6px; overflow-x: auto; margin: 20px 0; }
+        .file-link { color: #0052CC; text-decoration: none; font-weight: 600; cursor: pointer; }
+        .file-link:hover { text-decoration: underline; }
+        h2 { border-bottom: 2px solid #DFE1E6; padding-bottom: 10px; margin-top: 40px; }
+    </style>
+</head>
+<body>
+    <h1>Developer Manual (v18)</h1>
+    
+    <h2>Docker Image Architecture</h2>
+    <p>In this release, we have decoupled the services into individual Dockerfiles to allow for independent scaling and deployment.</p>
+
+    <h3>1. BudolShap (Frontend)</h3>
+    <p>File: <a class="file-link" href="file:///d:/IT%20Projects/clone/budolEcosystem/budolshap-0.1.0/Dockerfile">budolshap-0.1.0/Dockerfile</a></p>
+    <p>Uses Next.js standalone mode for minimal image size.</p>
+
+    <h3>2. BudolID (Identity Provider)</h3>
+    <p>File: <a class="file-link" href="file:///d:/IT%20Projects/clone/budolEcosystem/budolID-0.1.0/Dockerfile">budolID-0.1.0/Dockerfile</a></p>
+    <p>Includes Prisma client generation in the build stage.</p>
+
+    <h3>3. BudolAccounting</h3>
+    <p>File: <a class="file-link" href="file:///d:/IT%20Projects/clone/budolEcosystem/budolAccounting-0.1.0/Dockerfile">budolAccounting-0.1.0/Dockerfile</a></p>
+    <p><strong>Note:</strong> Requires copying the shared database package from `budolpay-0.1.0/packages/database` into the build context.</p>
+
+    <h3>4. BudolWS (WebSocket)</h3>
+    <p>File: <a class="file-link" href="file:///d:/IT%20Projects/clone/budolEcosystem/websocket-server/Dockerfile">websocket-server/Dockerfile</a></p>
+    <p>Lightweight Node.js alpine image for handling real-time socket connections.</p>
+
+    <h3>5. BudolPay Monorepo</h3>
+    <p>File: <a class="file-link" href="file:///d:/IT%20Projects/clone/budolEcosystem/budolpay-0.1.0/Dockerfile">budolpay-0.1.0/Dockerfile</a></p>
+    <p>Utilizes multi-stage targets (`gateway`, `auth`, `wallet`, `transaction`) to build service-specific images from the same codebase.</p>
+
+    <h2>Deployment Workflow</h2>
+    <p>Use the provided PowerShell script to build and push all images to ECR:</p>
+    <p>Script: <a class="file-link" href="file:///d:/IT%20Projects/clone/budolEcosystem/scripts/deploy_v18.ps1">scripts/deploy_v18.ps1</a></p>
+
+    <h2>Database Schema & Migrations</h2>
+    <p>Ensure that all Prisma schemas are synchronized before building. The Dockerfiles automatically run `npx prisma generate`, but `npx prisma db push` should be run manually against the production database if schema changes are made.</p>
+</body>
+</html>

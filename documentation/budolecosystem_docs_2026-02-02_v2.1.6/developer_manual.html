@@ -1,0 +1,76 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Developer Manual - v2.1.6</title>
+    <style>
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; line-height: 1.6; color: #333; max-width: 900px; margin: 0 auto; padding: 20px; background-color: #f4f7f6; }
+        h1, h2, h3 { color: #2c3e50; }
+        .section { background: white; padding: 20px; border-radius: 8px; margin-bottom: 20px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
+        pre { background: #1e1e1e; color: #d4d4d4; padding: 15px; border-radius: 5px; overflow-x: auto; font-family: 'Consolas', monospace; }
+        .code-link { color: #3498db; text-decoration: none; font-weight: bold; border-bottom: 1px dashed #3498db; }
+        .code-link:hover { color: #2980b9; }
+        .tag { background: #3498db; color: white; padding: 2px 8px; border-radius: 4px; font-size: 0.8rem; }
+    </style>
+</head>
+<body>
+    <h1>🛠 Developer Manual - v2.1.6</h1>
+    
+    <div class="section">
+        <h2>SSPR Architecture</h2>
+        <p>The Self-Service Password Reset (SSPR) is implemented centrally in <strong>budolID</strong> to provide ecosystem-wide recovery. It uses a three-step verification process:</p>
+        <ol>
+            <li><strong>Identification:</strong> User provides email. System generates 6-digit OTP.</li>
+            <li><strong>Verification:</strong> User provides OTP. System generates a secure Reset Token.</li>
+            <li><strong>Execution:</strong> User provides Reset Token and New Password. System updates the hash.</li>
+        </ol>
+    </div>
+
+    <div class="section">
+        <h2>Data Model Changes</h2>
+        <p>File: <a class="code-link" href="file:///d:/IT Projects/budolEcosystem/budolID-0.1.0/prisma/schema.prisma">budolID-0.1.0/prisma/schema.prisma</a></p>
+        <pre><code>model User {
+  // ... existing fields
+  resetToken        String?   @unique
+  resetTokenExpires DateTime?
+  otp               String?
+  otpExpires        DateTime?
+}</code></pre>
+    </div>
+
+    <div class="section">
+        <h2>API Implementation</h2>
+        <p>File: <a class="code-link" href="file:///d:/IT Projects/budolEcosystem/budolID-0.1.0/index.js">budolID-0.1.0/index.js</a></p>
+        
+        <h3>1. Forgot Password (OTP Generation)</h3>
+        <pre><code>app.post('/auth/forgot-password', async (req, res) => {
+    // Generates 6-digit OTP
+    // Expires in 5 minutes
+    // Simulations: OTP is logged to console for testing
+});</code></pre>
+
+        <h3>2. Verify OTP</h3>
+        <pre><code>app.post('/auth/verify-otp', async (req, res) => {
+    // Validates OTP against email
+    // Generates crypto resetToken (32 bytes)
+    // Expires in 10 minutes
+});</code></pre>
+
+        <h3>3. Reset Password</h3>
+        <pre><code>app.post('/auth/reset-password', async (req, res) => {
+    // Validates resetToken
+    // Hashes new password with bcrypt (10 rounds)
+    // Clears tokens upon success
+});</code></pre>
+    </div>
+
+    <div class="section">
+        <h2>Testing Strategy</h2>
+        <p>E2E Testing is performed via: <a class="code-link" href="file:///d:/IT Projects/budolEcosystem/scripts/test_scripts/sspr_test_full.js">sspr_test_full.js</a></p>
+        <p>The test covers OTP verification, token generation, and password rotation.</p>
+    </div>
+
+    <p><a href="index.html">Back to Index</a></p>
+</body>
+</html>

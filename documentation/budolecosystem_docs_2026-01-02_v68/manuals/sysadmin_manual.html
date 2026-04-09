@@ -1,0 +1,112 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>System Admin Manual - v68</title>
+    <style>
+        body { font-family: sans-serif; line-height: 1.6; color: #333; max-width: 800px; margin: 0 auto; padding: 20px; }
+        h1, h2 { color: #F43F5E; }
+        .back { margin-bottom: 20px; }
+        .alert { background: #fffbeb; border: 1px solid #f59e0b; padding: 10px; border-radius: 4px; }
+    </style>
+</head>
+<body>
+    <div class="back"><a href="../index.html">← Back to v68 Index</a></div>
+    <h1>System Admin Manual - v68</h1>
+
+    <section>
+        <h2>Vercel Deployment & API Configuration</h2>
+        <p>The mobile app is designed to be deployed to Vercel. To ensure it connects to the correct backend services in production, use the following build variables:</p>
+        <ul>
+            <li><strong>GATEWAY_URL:</strong> The production URL of the budolPay Gateway.</li>
+            <li><strong>AUTH_URL:</strong> The production URL of the budolID Auth Service.</li>
+            <li><strong>BUDOLPAY_API_KEY:</strong> The API Key for budolPay authentication (Default: <code>bp_key_2025</code>).</li>
+        </ul>
+        <h3>Build Command Example:</h3>
+        <pre style="background: #f1f5f9; padding: 10px; border-radius: 4px;"><code>flutter build web --release \
+  --dart-define=GATEWAY_URL=https://api.budolpay.com \
+  --dart-define=AUTH_URL=https://id.budolpay.com \
+  --dart-define=BUDOLPAY_API_KEY=your_production_key</code></pre>
+        <div class="alert">
+            <strong>Pro Tip:</strong> If no build variables are provided, the app defaults to local discovery mode, automatically connecting to the host IP on ports 8004 and 8000.
+        </div>
+    </section>
+
+    <section>
+        <h2>Android SDK Setup</h2>
+        <p>To build native Android apps, you must have the Android SDK installed. You have two options:</p>
+        
+        <h3>Method A: Android Studio (Easiest)</h3>
+        <ol>
+            <li>Download and install <strong><a href="https://developer.android.com/studio" target="_blank">Android Studio</a></strong>.</li>
+            <li>During installation, ensure "Android SDK" and "Android Virtual Device" are selected.</li>
+            <li>Once installed, open Android Studio and go to <strong>Settings > Languages & Frameworks > Android SDK</strong> to install the latest platform tools.</li>
+        </ol>
+
+        <h3>Method B: Automated CLI Setup (Advanced)</h3>
+            <p>I have successfully configured the Android SDK at <code>d:\android</code> and built the native app. If you encounter memory issues during build, follow these optimizations:</p>
+            <ol>
+                <li><strong>Memory Optimization:</strong> The <code>android/gradle.properties</code> has been tuned to work on systems with limited paging files:
+                    <pre style="background: #f1f5f9; padding: 10px; border-radius: 4px;"><code>org.gradle.jvmargs=-Xmx1024m -XX:MaxMetaspaceSize=256m
+org.gradle.daemon=false</code></pre>
+                </li>
+                <li><strong>Environment Setup:</strong> Ensure <code>JAVA_HOME</code> is set to the Android Studio JBR:
+                    <pre style="background: #f1f5f9; padding: 10px; border-radius: 4px;"><code>$env:JAVA_HOME = "d:\android\Android Studio\jbr"</code></pre>
+                </li>
+                <li><strong>Final Installation:</strong> To reinstall or update the app on your connected phone:
+                    <pre style="background: #f1f5f9; padding: 10px; border-radius: 4px;"><code>flutter run -d RR8M60AYXKF --debug</code></pre>
+                </li>
+                <li><strong>Custom Icons:</strong> The app icons have been updated using the files from <code>C:\Users\Administrator\Pictures\budolPay_app_icons</code>. The 512x512 Android icon was used as the base.</li>
+            </ol>
+    </section>
+
+    <section>
+        <h2>Mobile Installation Guide</h2>
+        <h3>Option 1: Progressive Web App (PWA) - Recommended</h3>
+        <p>Since the project is currently optimized for Web, users can install the app directly from their mobile browser without needing an APK.</p>
+        <ol>
+            <li>Open Chrome on your Android phone.</li>
+            <li>Navigate to <code>http://92.168.1.24:8081</code> (or your current server IP).</li>
+            <li>Tap the <strong>three dots (⋮)</strong> in the top right corner.</li>
+            <li>Select <strong>"Add to Home screen"</strong> or <strong>"Install app"</strong>.</li>
+            <li>The app will now appear on your phone's home screen with the budolPay icon.</li>
+        </ol>
+
+        <h3>Option 2: Native Android APK (Installer)</h3>
+        <p>A release APK has been built and is ready for installation. This version is optimized and avoids many of the issues found in debug mode (like the "black screen" during startup).</p>
+        <ul>
+            <li><strong>APK Location:</strong> <code>D:\IT Projects\budolEcosystem\budolPayMobile\build\app\outputs\flutter-apk\app-release.apk</code></li>
+            <li><strong>How to Install:</strong>
+                <ol>
+                    <li>Copy the <code>app-release.apk</code> to your phone.</li>
+                    <li>Open the file on your phone and tap <strong>Install</strong> (you may need to allow "Install from unknown sources").</li>
+                    <li>Alternatively, use ADB to install it from your PC:
+                        <pre style="background: #f1f5f9; padding: 10px; border-radius: 4px;"><code>& "d:\android\platform-tools\adb.exe" install -r "D:\IT Projects\budolEcosystem\budolPayMobile\build\app\outputs\flutter-apk\app-release.apk"</code></pre>
+                    </li>
+                </ol>
+            </li>
+        </ul>
+        <div class="alert">
+            <strong>Troubleshooting:</strong> If you see a black screen, it is likely due to the app's dark theme (#0F172A) combined with a slow initial load. The release APK significantly improves this performance.
+        </div>
+    </section>
+
+    <section>
+        <h2>User Management in budolID</h2>
+        <p>Admins can now verify and manage users across the ecosystem by running the <code>check-users-budolid.js</code> script in the <code>budolID-0.1.0</code> directory.</p>
+        <div class="alert">
+            <strong>Note:</strong> When users report login failures, verify their email domain (e.g., <code>@budolpay.com</code> vs <code>@budolshap.com</code>) as they are treated as distinct accounts in the SSO provider.
+        </div>
+    </section>
+
+    <section>
+        <h2>Verifying Test Accounts</h2>
+        <p>The following test account is now available for <code>budolPay</code> testing:</p>
+        <ul>
+            <li><strong>Email:</strong> <code>diana.prince@budolpay.com</code></li>
+            <li><strong>Password:</strong> <code>asakapa</code></li>
+            <li><strong>Role:</strong> USER</li>
+        </ul>
+    </section>
+</body>
+</html>

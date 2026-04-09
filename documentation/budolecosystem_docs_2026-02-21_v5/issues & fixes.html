@@ -1,0 +1,77 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Issues & Fixes - v5</title>
+    <style>
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; margin: 0; padding: 0; display: flex; }
+        nav { width: 250px; background: #f4f5f7; height: 100vh; padding: 20px; border-right: 1px solid #dfe1e6; position: fixed; }
+        main { margin-left: 290px; padding: 40px; max-width: 1000px; }
+        h1, h2, h3 { color: #de350b; }
+        .fixed { color: #00875a; }
+        .code-block { background: #f4f5f7; padding: 10px; border-radius: 5px; font-family: monospace; }
+    </style>
+</head>
+<body>
+    <nav>
+        <h3>Budol Ecosystem</h3>
+        <ul>
+            <li><a href="index.html">Overview</a></li>
+            <li><a href="issues & fixes.html"><strong>Issues & Fixes</strong></a></li>
+        </ul>
+    </nav>
+    <main>
+        <h1>Issues & Fixes Log</h1>
+
+        <h2>1. Jest Configuration Conflict</h2>
+        <p><strong>Issue:</strong> Running tests failed with "Implicit config resolution does not allow multiple configuration files".</p>
+        <p><strong>Cause:</strong> Jest detected multiple potential config files or conflicts in the project root.</p>
+        <p><strong>Fix:</strong> Explicitly specified the configuration file in the test command.</p>
+        <div class="code-block">npm test ... -- --config=jest.config.cjs</div>
+
+        <h2>2. Accessibility / Test Selector Failure</h2>
+        <p><strong>Issue:</strong> <code>screen.getByLabelText(/Product Name/i)</code> failed in tests.</p>
+        <p><strong>Cause:</strong> Inputs were not associated with labels via <code>id</code>/<code>for</code> attributes, nor nested inside labels.</p>
+        <p><strong>Fix:</strong> Added <code>htmlFor="name"</code> to label and <code>id="name"</code> to input in <code>AddProductWizard.jsx</code>.</p>
+
+        <h2>3. Image Sorting Instability</h2>
+        <p><strong>Issue:</strong> Drag-and-drop sorting in <code>DragDropImageUpload</code> was glitchy when using base64 strings as keys.</p>
+        <p><strong>Fix:</strong> Refactored to use object-based state <code>{ id, url }</code> where <code>id</code> is a unique string, ensuring stable keys for <code>dnd-kit</code>.</p>
+
+        <h2>4. Product Data Persistence Failure (Shipping & Condition)</h2>
+        <p><strong>Issue:</strong> User reported "data values are not save" and "Failed to update product". Specifically, shipping dimensions (weight, length, width, height), condition, and pre-order status were not persisting to the database.</p>
+        <p><strong>Cause:</strong> The API endpoints (<code>POST /api/products</code> and <code>PUT /api/products/[id]</code>) were not extracting these fields from the request body, and the Prisma schema was missing the <code>preOrder</code> field definition.</p>
+        <p><strong>Fix:</strong>
+            <ul>
+                <li>Updated <code>prisma/schema.prisma</code> to include <code>preOrder Boolean @default(false)</code>.</li>
+                <li>Modified API route handlers to destructure and save all shipping/condition fields.</li>
+                <li>Fixed <code>BigInt</code> serialization error in database backup script to enable safe backups before schema changes.</li>
+            </ul>
+        </p>
+        <div class="code-block">
+            // prisma/schema.prisma
+            model Product {
+              ...
+              preOrder Boolean @default(false)
+              ...
+            }
+        </div>
+        <h2>5. Infinite Loop on Cart Page</h2>
+        <p><strong>Issue:</strong> User reported infinite loop with repeated GET requests to <code>/api/products?ids=...</code>.</p>
+        <p><strong>Cause:</strong> The <code>useEffect</code> hook in <code>Cart</code> component was repeatedly fetching missing product IDs that were never successfully resolved (e.g., deleted products), causing state updates that re-triggered the effect.</p>
+        <p><strong>Fix:</strong> Introduced <code>attemptedIdsRef</code> (useRef) to track IDs that have already been fetched (success or fail) and prevent re-fetching them within the same component lifecycle.</p>
+        <div class="code-block">
+            // app/(public)/cart/page.jsx
+            const attemptedIdsRef = useRef(new Set());
+            // ...
+            const missingIds = productIds.filter(id => !productsMap[id] && !attemptedIdsRef.current.has(id));
+        </div>
+
+        <h2>6. Prisma Client Generation Error</h2>
+        <p><strong>Issue:</strong> Build error <code>ENOENT: no such file or directory, open '.../@prisma/client-custom/index.js'</code>.</p>
+        <p><strong>Cause:</strong> The custom Prisma client output directory was not generated after package installation.</p>
+        <p><strong>Fix:</strong> Ran <code>npx prisma generate</code> to rebuild the client and added <code>"postinstall": "prisma generate"</code> to <code>package.json</code> to ensure automatic generation in the future.</p>
+    </main>
+</body>
+</html>

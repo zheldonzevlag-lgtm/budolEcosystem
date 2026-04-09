@@ -1,0 +1,467 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>System Admin Manual - AWS Cloud Migration v6.0.0</title>
+    <style>
+        :root {
+            --primary: #0052cc;
+            --secondary: #172b4d;
+            --border: #dfe1e6;
+        }
+
+        body {
+            font-family: 'Inter', sans-serif;
+            line-height: 1.6;
+            color: var(--secondary);
+            margin: 0;
+            display: flex;
+        }
+
+        .sidebar {
+            width: 260px;
+            height: 100vh;
+            background: #fff;
+            border-right: 1px solid var(--border);
+            position: fixed;
+            padding: 2rem 1rem;
+        }
+
+        .main {
+            margin-left: 280px;
+            padding: 3rem 4rem;
+            max-width: 900px;
+        }
+
+        .nav-item {
+            display: block;
+            padding: 0.75rem 1rem;
+            color: #64748b;
+            text-decoration: none;
+            border-radius: 8px;
+            margin-bottom: 0.25rem;
+            font-size: 0.9rem;
+        }
+
+        .nav-item:hover {
+            background: #f1f5f9;
+            color: var(--primary);
+        }
+
+        .nav-item.active {
+            background: #e0e7ff;
+            color: var(--primary);
+        }
+
+        .admin-task {
+            background: #f4f5f7;
+            padding: 1.5rem;
+            border-radius: 8px;
+            margin-bottom: 1.5rem;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="sidebar">
+        <div style="font-weight: 800; font-size: 1.25rem; color: var(--primary); margin-bottom: 2rem; padding: 0 1rem;">
+            Budol Ecosystem</div>
+        <nav>
+            <a href="index.html" class="nav-item">Overview</a>
+            <a href="walkthrough.html" class="nav-item">Infrastructure Walkthrough</a>
+            <a href="how_to_guide.html" class="nav-item">Detailed How-To Guide</a>
+            <a href="implementation_plan.html" class="nav-item">Implementation Plan</a>
+            <a href="developer_manual.html" class="nav-item">Developer Manual</a>
+            <a href="user_manual.html" class="nav-item">User Manual</a>
+            <a href="task.html" class="nav-item">Task/Checklist</a>
+            <a href="system_admin_manual.html" class="nav-item active">System Admin</a>
+            <hr style="margin: 1.5rem 0; border: 0; border-top: 1px solid var(--border);">
+            <a href="risk_register.html" class="nav-item">Risk Register</a>
+            <a href="Mitigation.html" class="nav-item">Mitigation Plan</a>
+            <a href="issues_fixes.html" class="nav-item">Issues & Fixes</a>
+            <a href="test_results.html" class="nav-item">Test Results</a>
+            <a href="future_recommendations.html" class="nav-item">Recommendations</a>
+            <hr style="margin: 1.5rem 0; border: 0; border-top: 1px solid var(--border);">
+            <a href="../../knowledgebase.html" class="nav-item">← Back to KB</a>
+        </nav>
+    </div>
+    <div class="main">
+        <h1>System Admin Manual: AWS Hosting</h1>
+        <section>
+            <h2>Infrastructure Management</h2>
+            <div class="admin-task">
+                <h3>1. Billing & Free Tier Monitoring</h3>
+                <p>Administrators must check the AWS Billing Dashboard weekly. Ensure the "Estimated monthly charge"
+                    remains at $0.00. Set up billing alarms for any amount over $0.01.</p>
+            </div>
+            <div class="admin-task">
+                <h3>2. RDS Instance Management</h3>
+                <p>The <code>db.t3.micro</code> instance allows for 750 free hours per month. Only one instance should
+                    be running to stay within this limit. Automatic backups should be enabled with a 7-day retention
+                    period.</p>
+            </div>
+            <div class="admin-task">
+                <h3>4. Creating Multi-AZ Subnets</h3>
+                <p>Based on your <code>budol-vpc</code> configuration (VPC ID: <code>vpc-0f65f8cafca200de6</code>),
+                    follow these steps:</p>
+                <ol>
+                    <li>In the VPC Dashboard, click <strong>Subnets</strong> in the left sidebar.</li>
+                    <li>Click the <strong>Create subnet</strong> button.</li>
+                    <li><strong>VPC ID:</strong> Select <code>vpc-0f65f8cafca200de6</code> (budol-vpc).</li>
+                    <li><strong>Subnet Settings:</strong> Click "Add new subnet" 4 times and enter exactly:
+                        <table style="width:100%; font-size: 0.8rem; margin-top: 10px;">
+                            <tr style="background: #f1f5f9;">
+                                <th>Subnet Name</th>
+                                <th>Availability Zone</th>
+                                <th>IPv4 CIDR</th>
+                            </tr>
+                            <tr>
+                                <td>Public-A</td>
+                                <td>ap-southeast-1a</td>
+                                <td>10.0.1.0/24</td>
+                            </tr>
+                            <tr>
+                                <td>Public-B</td>
+                                <td>ap-southeast-1b</td>
+                                <td>10.0.2.0/24</td>
+                            </tr>
+                            <tr>
+                                <td>Private-A</td>
+                                <td>ap-southeast-1a</td>
+                                <td>10.0.10.0/24</td>
+                            </tr>
+                            <tr>
+                                <td>Private-B</td>
+                                <td>ap-southeast-1b</td>
+                                <td>10.0.11.0/24</td>
+                            </tr>
+                        </table>
+                    </li>
+                    <li>Click <strong>Create subnet</strong> at the bottom.</li>
+                </ol>
+                <div class="alert alert-important"
+                    style="font-size: 0.85rem; background: #fff4e5; border-left: 4px solid #ff9800; padding: 10px;">
+                    <strong>Crucial Step:</strong> After creation, select <code>Public-A</code> and
+                    <code>Public-B</code>, go to <strong>Actions</strong> -> <strong>Edit subnet settings</strong>, and
+                    check <strong>"Enable auto-assign public IPv4 address"</strong>.
+                </div>
+            </div>
+        </section>
+
+        <section id="duckdns-guide">
+            <h2>External DNS Management (Hybrid Strategy)</h2>
+            <div class="admin-task">
+                <h3>1. Manual DuckDNS Portal Setup (Primary)</h3>
+                <p>Register the first 5 subdomains at <a href="https://www.duckdns.org" target="_blank">duckdns.org</a>:
+                </p>
+                <ul>
+                    <li><code>budolshap</code>, <code>budolid</code>, <code>budolpay</code>, <code>budolws</code>,
+                        <code>budoladmin</code>
+                    </li>
+                </ul>
+            </div>
+            <div class="admin-task">
+                <h3>2. Manual FreeDNS (Afraid.org) Setup (Secondary)</h3>
+                <p>Since DuckDNS has a 5-domain limit, use <a href="https://freedns.afraid.org"
+                        target="_blank">FreeDNS</a> for the Accounting service:</p>
+                <ol>
+                    <li>Sign up for a free account at FreeDNS.</li>
+                    <li>Click <strong>Subdomains</strong> -> <strong>Add</strong>.</li>
+                    <li>Type <code>budolaccounting</code> and choose a domain (e.g., <code>mooo.com</code>).</li>
+                    <li>Point the Destination to your AWS Public IP.</li>
+                </ol>
+            </div>
+            <div class="admin-task">
+                <h3>3. Production Subdomain Matrix</h3>
+                <table
+                    style="width:100%; border-collapse: collapse; font-size: 0.9rem; margin: 1rem 0; background: #fff;">
+                    <tr style="background:#f1f5f9; border-bottom: 2px solid var(--border);">
+                        <th style="padding:0.5rem; text-align:left;">Subdomain</th>
+                        <th style="padding:0.5rem; text-align:left;">Target Endpoint</th>
+                    </tr>
+                    <tr>
+                        <td style="padding:0.5rem;"><code>budolshap.duckdns.org</code></td>
+                        <td style="padding:0.5rem;">Amplify / ALB</td>
+                    </tr>
+                    <tr>
+                        <td style="padding:0.5rem;"><code>budolid.duckdns.org</code></td>
+                        <td style="padding:0.5rem;">Lambda / ALB</td>
+                    </tr>
+                    <tr>
+                        <td style="padding:0.5rem;"><code>budolpay.duckdns.org</code></td>
+                        <td style="padding:0.5rem;">API Gateway / ALB</td>
+                    </tr>
+                    <tr>
+                        <td style="padding:0.5rem;"><code>budolws.duckdns.org</code></td>
+                        <td style="padding:0.5rem;">EC2 WebSocket Port 4000</td>
+                    </tr>
+                    <tr>
+                        <td style="padding:0.5rem;"><code>budoladmin.duckdns.org</code></td>
+                        <td style="padding:0.5rem;">Amplify Admin Port 3000</td>
+                    </tr>
+                    <tr>
+                        <td style="padding:0.5rem;"><code>budolaccounting.mooo.com</code> <span
+                                style="font-size: 0.7rem; color: #64748b;">(via FreeDNS)</span></td>
+                        <td style="padding:0.5rem;">Lambda Port 8005</td>
+                    </tr>
+                </table>
+            </div>
+            <div class="admin-task">
+                <h3>4. IP Auto-Update Script (Automated)</h3>
+                <p>The <code>scripts/setup_websocket_ec2.sh</code> script automatically creates an update utility and
+                    schedules it. To update manually or check status:</p>
+                <div
+                    style="background: #1e1e1e; color: #d4d4d4; padding: 1rem; border-radius: 5px; font-family: monospace; font-size: 0.85rem; margin-bottom: 1rem;">
+                    # Run manually<br>
+                    ~/budol-ws/update_duckdns.sh<br><br>
+                    # Check crontab schedule<br>
+                    crontab -l
+                </div>
+                <p>Ensure the <code>TOKEN</code> in <code>~/budol-ws/update_duckdns.sh</code> matches your DuckDNS
+                    portal token.</p>
+            </div>
+        </section>
+
+        <section id="websocket-ops">
+            <h2>WebSocket Microservice Operations</h2>
+            <div class="admin-task">
+                <h3>1. Instance Reference</h3>
+                <table style="width:100%;border-collapse:collapse;font-size:0.9rem;">
+                    <tr style="background:#f1f5f9;">
+                        <th style="padding:0.5rem;">Field</th>
+                        <th style="padding:0.5rem;">Value</th>
+                    </tr>
+                    <tr>
+                        <td style="padding:0.5rem;">Instance ID</td>
+                        <td style="padding:0.5rem;"><code>i-00e50e8bb90c9397a</code></td>
+                    </tr>
+                    <tr>
+                        <td style="padding:0.5rem;">Instance Name</td>
+                        <td style="padding:0.5rem;">budol-ws</td>
+                    </tr>
+                    <tr>
+                        <td style="padding:0.5rem;">OS</td>
+                        <td style="padding:0.5rem;">Ubuntu 24.04 LTS</td>
+                    </tr>
+                    <tr>
+                        <td style="padding:0.5rem;">Type</td>
+                        <td style="padding:0.5rem;">t3.micro</td>
+                    </tr>
+                    <tr>
+                        <td style="padding:0.5rem;">Private IP</td>
+                        <td style="padding:0.5rem;">10.0.11.229</td>
+                    </tr>
+                    <tr>
+                        <td style="padding:0.5rem;">Subnet</td>
+                        <td style="padding:0.5rem;">Private-B (ap-southeast-1b)</td>
+                    </tr>
+                    <tr>
+                        <td style="padding:0.5rem;">IAM Role</td>
+                        <td style="padding:0.5rem;">budol-ec2-ssm-role</td>
+                    </tr>
+                    <tr>
+                        <td style="padding:0.5rem;">Security Group</td>
+                        <td style="padding:0.5rem;">budol-ws-sg (ports 4000/VPC, 80/443/public)</td>
+                    </tr>
+                    <tr>
+                        <td style="padding:0.5rem;">Internal DNS</td>
+                        <td style="padding:0.5rem;">ws.budol.internal</td>
+                    </tr>
+                    <tr>
+                        <td style="padding:0.5rem;">External DNS</td>
+                        <td style="padding:0.5rem;">budolws.duckdns.org</td>
+                    </tr>
+                    <tr>
+                        <td style="padding:0.5rem;">Deployed On</td>
+                        <td style="padding:0.5rem;">2026-03-01 via AWS CLI + SSM Automation</td>
+                    </tr>
+                </table>
+            </div>
+            <div class="admin-task">
+                <h3>2. Connecting to the Instance (No SSH Key Required)</h3>
+                <p>Access is managed exclusively via <strong>AWS Systems Manager Session Manager</strong>. No SSH key
+                    pairs are configured.</p>
+                <div
+                    style="background: #1e1e1e; color: #d4d4d4; padding: 1rem; border-radius: 5px; font-family: monospace; font-size: 0.85rem;">
+                    # Connect interactively<br>
+                    aws ssm start-session --target i-00e50e8bb90c9397a<br><br>
+                    # Or run a remote command<br>
+                    aws ssm send-command --instance-ids i-00e50e8bb90c9397a \
+                    --document-name AWS-RunShellScript --parameters 'commands=["YOUR_CMD"]'
+                </div>
+            </div>
+            <div class="admin-task">
+                <h3>3. Service Status &amp; Logs</h3>
+                <p>The WebSocket server runs as Docker container <code>budol-ws-websocket-server-1</code>.</p>
+                <div
+                    style="background: #1e1e1e; color: #d4d4d4; padding: 1rem; border-radius: 5px; font-family: monospace; font-size: 0.85rem;">
+                    cd /home/ubuntu/budol-ws<br><br>
+                    # View running containers<br>
+                    docker compose ps<br><br>
+                    # View real-time logs<br>
+                    docker compose logs -f websocket-server<br><br>
+                    # Restart after code changes<br>
+                    docker compose restart websocket-server<br><br>
+                    # Full rebuild<br>
+                    docker compose up -d --build
+                </div>
+            </div>
+            <div class="admin-task">
+                <h3>4. Critical Trigger Endpoint</h3>
+                <p>Internal services trigger events via <code>http://ws.budol.internal:4000/trigger</code>. If
+                    notifications fail, verify reachability from APP EC2 instances:</p>
+                <div
+                    style="background: #1e1e1e; color: #d4d4d4; padding: 1rem; border-radius: 5px; font-family: monospace; font-size: 0.85rem;">
+                    curl -X POST http://ws.budol.internal:4000/trigger \
+                    -H 'Content-Type: application/json' \
+                    -d '{"channel":"test","event":"ping","data":"pong"}'<br><br>
+                    # Expected: {"success":true}
+                </div>
+            </div>
+            <div class="admin-task">
+                <h3>6. SSL Certificate Management (Let's Encrypt)</h3>
+                <p>SSL is managed via Certbot. DuckDNS domains use the <code>dns-duckdns</code> plugin (DNS-01
+                    challenge),
+                    while FreeDNS domains use the HTTP-01 challenge via Nginx.</p>
+
+                <h4>A. DuckDNS SSL (DNS-01)</h4>
+                <p>Use for <code>budolws</code>, <code>budolid</code>, <code>budolpay</code>.</p>
+                <div
+                    style="background: #1e1e1e; color: #d4d4d4; padding: 1rem; border-radius: 5px; font-family: monospace; font-size: 0.85rem; margin-bottom: 1rem;">
+                    # Obtain certificate for a new DuckDNS domain<br>
+                    sudo certbot certonly --non-interactive --agree-tos -m admin@budolecosystem.com \<br>
+                    --preferred-challenges dns --authenticator dns-duckdns \<br>
+                    --dns-duckdns-token-file /etc/letsencrypt/duckdns.token \<br>
+                    -d budolpay.duckdns.org
+                </div>
+
+                <h4>B. FreeDNS SSL (HTTP-01)</h4>
+                <p>Use for <code>budolaccounting.mooo.com</code>. Requires Nginx to be running.</p>
+                <div
+                    style="background: #1e1e1e; color: #d4d4d4; padding: 1rem; border-radius: 5px; font-family: monospace; font-size: 0.85rem; margin-bottom: 1rem;">
+                    # Obtain certificate via HTTP-01<br>
+                    sudo certbot certonly --nginx -d budolaccounting.mooo.com
+                </div>
+
+                <h4>C. General Maintenance</h4>
+                <div
+                    style="background: #1e1e1e; color: #d4d4d4; padding: 1rem; border-radius: 5px; font-family: monospace; font-size: 0.85rem; margin-bottom: 1rem;">
+                    # List all certificates<br>
+                    sudo certbot certificates<br><br>
+                    # Test renewal process (Dry Run)<br>
+                    sudo certbot renew --dry-run
+                </div>
+                <p><strong>Config Path:</strong> <code>/etc/letsencrypt/live/</code></p>
+            </div>
+
+            <div class="admin-task">
+                <h3>7. SSM Command Audit Trail (Phase 3.1 Updates)</h3>
+                <table style="width:100%;border-collapse:collapse;font-size:0.85rem;">
+                    <tr style="background:#f1f5f9;">
+                        <th style="padding:0.4rem;">Command ID</th>
+                        <th style="padding:0.4rem;">Description</th>
+                        <th style="padding:0.4rem;">Status</th>
+                        <th style="padding:0.4rem;">Time (PHT)</th>
+                    </tr>
+                    <tr>
+                        <td style="padding:0.4rem;"><code>4fb9a67b</code></td>
+                        <td style="padding:0.4rem;">Certbot + SSL DNS-01 challenge</td>
+                        <td style="padding:0.4rem;color:green;">&#10003; Success</td>
+                        <td style="padding:0.4rem;">2026-03-01 22:15</td>
+                    </tr>
+                    <tr>
+                        <td style="padding:0.4rem;"><code>5036728a</code></td>
+                        <td style="padding:0.4rem;">Nginx 443/SSL Config + Restart</td>
+                        <td style="padding:0.4rem;color:green;">&#10003; Success</td>
+                        <td style="padding:0.4rem;">2026-03-01 22:25</td>
+                    </tr>
+                    <tr>
+                        <td style="padding:0.4rem;">Local</td>
+                        <td style="padding:0.4rem;">Environment Sync & DB Migration</td>
+                        <td style="padding:0.4rem;color:green;">&#10003; Success</td>
+                        <td style="padding:0.4rem;">2026-03-01 23:00</td>
+                    </tr>
+                    <tr>
+                        <td style="padding:0.4rem;"><code>3e1d78a2</code></td>
+                        <td style="padding:0.4rem;">Redis RequirePass Security Implementation</td>
+                        <td style="padding:0.4rem;color:green;">&#10003; Success</td>
+                        <td style="padding:0.4rem;">2026-03-01 23:15</td>
+                    </tr>
+                    <tr>
+                        <td style="padding:0.4rem;"><code>da7a3d5c</code></td>
+                        <td style="padding:0.4rem;">Multi-Domain SSL (DuckDNS)</td>
+                        <td style="padding:0.4rem;color:orange;">⚠ Blocked (Networking)</td>
+                        <td style="padding:0.4rem;">2026-03-01 23:20</td>
+                    </tr>
+                </table>
+            </div>
+            <section id="ecs-fargate">
+                <h2>Microservice Containerization (ECS Fargate)</h2>
+                <div class="admin-task">
+                    <h3>1. Deployment Strategy</h3>
+                    <p>Backend microservices are containerized using a unified multi-stage Docker build process. This
+                        ensures
+                        consistent dependencies and smaller image sizes.</p>
+                    <div
+                        style="background: #1e1e1e; color: #d4d4d4; padding: 1rem; border-radius: 5px; font-family: monospace; font-size: 0.85rem; margin-bottom: 1rem;">
+                        # Build all services from the root<br>
+                        docker build -f Dockerfile.backend --target budol-id -t budolid:latest .<br>
+                        docker build -f Dockerfile.backend --target budol-accounting -t budolaccounting:latest .<br>
+                        docker build -f Dockerfile.backend --target budol-pay -t budolpay:latest .
+                    </div>
+                </div>
+                <div class="admin-task">
+                    <h3>2. ECS Cluster (budol-cluster)</h3>
+                    <p>Services run on <strong>AWS Fargate</strong> with the following resource limits to stay within
+                        the
+                        Free Tier or minimize costs:</p>
+                    <ul>
+                        <li><strong>CPU:</strong> 0.25 vCPU</li>
+                        <li><strong>Memory:</strong> 0.5 GB</li>
+                        <li><strong>Network:</strong> AWSVPC mode</li>
+                    </ul>
+                </div>
+            </section>
+
+            <section id="amplify-ops">
+                <h2>Frontend Operations (AWS Amplify)</h2>
+                <div class="admin-task">
+                    <h3>1. Mobile Web Deployment (budolPayMobile)</h3>
+                    <p>The Flutter Web version is deployed via AWS Amplify using the following custom build
+                        specification:
+                    </p>
+                    <div
+                        style="background: #f1f5f9; padding: 1rem; border-radius: 5px; font-family: monospace; font-size: 0.85rem; margin-bottom: 1rem;">
+                        <strong>Buildspec:</strong> <a
+                            href="../../amplify-budolpaymobile-buildspec.yml">amplify-budolpaymobile-buildspec.yml</a>
+                    </div>
+                    <p>To trigger a manual redeploy:</p>
+                    <ol>
+                        <li>Commit changes to the <code>main</code> branch.</li>
+                        <li>Amplify will detect the change and run the <code>preBuild</code> and <code>build</code>
+                            phases.
+                        </li>
+                        <li>Artifacts in <code>budolPayMobile/build/web</code> will be uploaded to the Amplify CDN.</li>
+                    </ol>
+                </div>
+            </section>
+
+            <section id="ssl-ops">
+                <h2>SSL & Compliance Verification</h2>
+                <div class="admin-task">
+                    <h3>1. 100% HTTPS Audit</h3>
+                    <p>All endpoints must be verified against the following SSL targets:</p>
+                    <ul>
+                        <li><code>https://budolshap.duckdns.org</code> (Amplify)</li>
+                        <li><code>https://budolid.duckdns.org</code> (ALB -> ECS)</li>
+                        <li><code>https://budolpay.duckdns.org</code> (ALB -> Gateway)</li>
+                        <li><code>wss://budolws.duckdns.org</code> (EC2 Dedicated)</li>
+                    </ul>
+                </div>
+            </section>
+    </div>
+</body>
+
+</html>

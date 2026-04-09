@@ -1,0 +1,65 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Budol Ecosystem Restoration Manual - v16</title>
+    <style>
+        :root { --primary: #0052CC; --secondary: #172B4D; --bg: #F4F5F7; --text: #172B4D; --success: #36B37E; }
+        body { font-family: -apple-system, sans-serif; margin: 0; display: flex; background: var(--bg); }
+        .sidebar { width: 260px; background: var(--secondary); color: white; height: 100vh; position: fixed; padding: 20px; }
+        .main { margin-left: 260px; padding: 40px; width: 100%; }
+        .card { background: white; padding: 20px; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); margin-bottom: 20px; border-left: 5px solid var(--primary); }
+        pre { background: #eee; padding: 10px; border-radius: 4px; overflow-x: auto; }
+        .success { border-left-color: var(--success); }
+    </style>
+</head>
+<body>
+    <div class="sidebar">
+        <h2>Budol Docs v16</h2>
+        <p>Restoration Phase</p>
+        <hr>
+        <nav>
+            <a href="index.html" style="color:white">Overview</a><br><br>
+            <a href="developer_manual.html" style="color:white">Developer Manual</a>
+        </nav>
+    </div>
+    <div class="main">
+        <h1>Database & Product Service Restoration (v16)</h1>
+        
+        <div class="card">
+            <h2>Situation Analysis</h2>
+            <p><strong>Issue:</strong> EcosystemApp table missing and "0 products found" on frontend.</p>
+            <p><strong>Root Cause:</strong> Database corruption/missing tables in production instance and Prisma engine runtime failure due to missing libssl in Alpine container.</p>
+        </div>
+
+        <div class="card success">
+            <h2>Implementation Steps</h2>
+            <ul>
+                <li><strong>DB Restore:</strong> Created <code>budol-db-restored</code> from snapshot (2026-03-10).</li>
+                <li><strong>Unified DB Connection:</strong> Pointed connection string to <code>budolshap_1db</code> which contains all combined schemas.</li>
+                <li><strong>Container Patch:</strong> Switched Docker image to <code>node:20-slim</code> (Debian) to provide required OpenSSL libraries for Prisma.</li>
+            </ul>
+        </div>
+
+        <div class="card">
+            <h2>Infrastructure Changes</h2>
+            <pre>
+RDS: budol-db-restored (Active)
+ECR: budol-shap:v16 (libssl fix)
+ECS: Redeployed services via force-deployment
+            </pre>
+        </div>
+
+        <div class="card">
+            <h2>Final Health Check</h2>
+            <p>Verification script confirmed <code>Product</code> table rows are present in the restored database. ECS logs no longer show Prisma initialization errors.</p>
+        </div>
+
+        <div class="card">
+            <h2>Next Steps & Cleanup</h2>
+            <p>1. Confirm frontend product visibility.<br>
+            2. Manually delete the original <code>budol-db-production</code> to save AWS costs.</p>
+        </div>
+    </div>
+</body>
+</html>

@@ -1,0 +1,74 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Developer Manual - v285</title>
+    <style>
+        body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; line-height: 1.6; color: #333; max-width: 900px; margin: 0 auto; padding: 20px; background-color: #f4f7f6; }
+        h1, h2, h3 { color: #2c3e50; }
+        h1 { border-bottom: 2px solid #3498db; padding-bottom: 10px; }
+        .section { background: white; padding: 20px; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); margin-bottom: 20px; }
+        code { background: #eee; padding: 2px 5px; border-radius: 4px; font-family: monospace; }
+        pre { background: #2d3436; color: #dfe6e9; padding: 15px; border-radius: 8px; overflow-x: auto; }
+        .nav-links { margin-bottom: 20px; display: flex; justify-content: space-between; font-weight: bold; }
+        .nav-links a { text-decoration: none; color: #3498db; }
+        .test-results { background: #e8f5e9; padding: 10px; border-left: 5px solid #4caf50; margin: 10px 0; }
+    </style>
+</head>
+<body>
+    <div class="nav-links">
+        <a href="../index.html">← Back to v285 Index</a>
+    </div>
+    <h1>Developer Manual - v285</h1>
+
+    <div class="section">
+        <h2>1. Purpose</h2>
+        <p>This update addresses critical runtime errors and hydration mismatches in the budolShap application, ensuring a stable user experience during LAN-based cross-computer testing.</p>
+    </div>
+
+    <div class="section">
+        <h2>2. Technical Details & Code Changes</h2>
+        
+        <h3>2.1. AuthContext ReferenceError Fix</h3>
+        <p><strong>Issue:</strong> <code>ReferenceError: getToken is not defined</code> occurred in <code>AuthContext.jsx</code> at line 29 because the <code>getToken</code> utility was used but not imported.</p>
+        <p><strong>Fix:</strong> Added <code>getToken</code> to the imports from <code>@/lib/auth-client</code>.</p>
+        <pre><code>// budolshap-0.1.0/context/AuthContext.jsx
+import { getUser, getToken, logout as logoutService, getCurrentUser, setAuth } from '@/lib/auth-client';</code></pre>
+
+        <h3>2.2. Hydration Mismatch Resolution</h3>
+        <p><strong>Issue:</strong> Next.js hydration errors occurred due to:</p>
+        <ul>
+            <li>Invalid HTML nesting in <code>Banner.jsx</code> (a <code>div</code> inside a <code>p</code> tag).</li>
+            <li>Browser extensions (like "Fast Download" or password managers) injecting attributes like <code>fdprocessedid</code> into form elements and buttons.</li>
+            <li>Client-side random selection in <code>MarketingAdPopup.jsx</code>.</li>
+        </ul>
+        <p><strong>Fixes:</strong></p>
+        <ul>
+            <li>Corrected <code>Banner.jsx</code> HTML structure.</li>
+            <li>Applied <code>suppressHydrationWarning</code> to buttons and input fields in <code>Banner.jsx</code>, <code>Navbar.jsx</code>, <code>Hero.jsx</code>, <code>CategoriesMarquee.jsx</code>, and <code>MarketingAdPopup.jsx</code>.</li>
+        </ul>
+        <pre><code>&lt;button suppressHydrationWarning ... &gt;</code></pre>
+    </div>
+
+    <div class="section">
+        <h2>3. Test Results</h2>
+        <div class="test-results">
+            <strong>Verification:</strong>
+            <ul>
+                <li>Console errors for <code>getToken</code> are resolved.</li>
+                <li>Hydration warnings related to <code>fdprocessedid</code> and random ad selection are suppressed.</li>
+                <li>The application now hydrates successfully on LAN-connected devices.</li>
+            </ul>
+        </div>
+    </div>
+
+    <div class="section">
+        <h2>4. Recommendations for Future Enhancement</h2>
+        <ul>
+            <li><strong>Server-Side Ad Selection:</strong> Move the random ad selection logic to the server or a stable client-side <code>useEffect</code> to avoid any hydration mismatch without relying on <code>suppressHydrationWarning</code>.</li>
+            <li><strong>Global Hydration Strategy:</strong> Consider a more systematic approach to handling browser-injected attributes if they continue to cause issues across the ecosystem.</li>
+        </ul>
+    </div>
+</body>
+</html>

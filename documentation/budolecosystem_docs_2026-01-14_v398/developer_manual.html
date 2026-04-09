@@ -1,0 +1,74 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Implementation Plan: GoTyme-Style Login - v398</title>
+    <style>
+        :root { --primary: #F43F5E; --bg: #0F172A; --card-bg: #1E293B; --text: #F8FAFC; }
+        body { font-family: 'Inter', sans-serif; background: var(--bg); color: var(--text); margin: 0; display: flex; }
+        .sidebar { width: 280px; background: var(--card-bg); height: 100vh; padding: 20px; border-right: 1px solid #334155; position: fixed; }
+        .main-content { margin-left: 320px; padding: 40px; max-width: 900px; }
+        .nav-link { display: block; padding: 12px; color: #94a3b8; text-decoration: none; border-radius: 8px; margin-bottom: 4px; }
+        .nav-link:hover { background: #334155; color: white; }
+        .nav-link.active { background: var(--primary); color: white; }
+        .card { background: var(--card-bg); padding: 30px; border-radius: 16px; border: 1px solid #334155; margin-bottom: 24px; }
+        pre { background: #0F172A; padding: 16px; border-radius: 8px; overflow-x: auto; color: #E2E8F0; border: 1px solid #334155; }
+        code { font-family: 'Fira Code', monospace; }
+        .step { margin-bottom: 20px; }
+        .step-title { font-weight: bold; color: var(--primary); margin-bottom: 8px; }
+    </style>
+</head>
+<body>
+    <div class="sidebar">
+        <h2 style="color: white; margin-bottom: 30px;">budolPay Docs</h2>
+        <a href="index.html" class="nav-link">Comparative Analysis</a>
+        <a href="developer_manual.html" class="nav-link active">Implementation Plan</a>
+        <a href="user_manual.html" class="nav-link">User Manual</a>
+        <a href="risk_register.html" class="nav-link">Risk Register</a>
+    </div>
+    <div class="main-content">
+        <h1>Implementation Plan: GoTyme-Style Login</h1>
+        
+        <div class="card">
+            <h2>Objective</h2>
+            <p>Implement an automatic, zero-tap biometric login trigger that activates as soon as the user is prompted for their PIN.</p>
+        </div>
+
+        <div class="card">
+            <h2>Technical Steps</h2>
+            
+            <div class="step">
+                <div class="step-title">1. State Management</div>
+                <p>Add a <code>_hasAutoPrompted</code> flag to <a href="file:///d:/IT Projects/budolEcosystem/budolPayMobile/lib/screens/login_screen.dart" class="file-link">login_screen.dart</a> to track if the automatic prompt has already been shown in the current session.</p>
+            </div>
+
+            <div class="step">
+                <div class="step-title">2. Auto-Trigger Logic</div>
+                <p>Create a method <code>_maybeTriggerAutoBiometrics()</code> that checks if the user is on the PIN step and biometrics are enabled.</p>
+                <pre><code>
+void _maybeTriggerAutoBiometrics() {
+  if (_currentStep == LoginStep.pin && 
+      _isBiometricEnabled && 
+      !_hasAutoPrompted) {
+    _hasAutoPrompted = true;
+    Future.delayed(Duration(milliseconds: 500), () {
+      _handleFaceRecognitionLogin();
+    });
+  }
+}
+                </code></pre>
+            </div>
+
+            <div class="step">
+                <div class="step-title">3. Lifecycle Integration</div>
+                <p>Call the auto-trigger logic during step transitions (Identification, OTP verification) and after biometric availability checks are complete.</p>
+            </div>
+        </div>
+
+        <div class="card">
+            <h2>Rationale</h2>
+            <p>This mimics the GoTyme experience by anticipating the user's intent. Since 90% of users who enable biometrics prefer using them over PIN, forcing a manual tap is an unnecessary hurdle.</p>
+        </div>
+    </div>
+</body>
+</html>

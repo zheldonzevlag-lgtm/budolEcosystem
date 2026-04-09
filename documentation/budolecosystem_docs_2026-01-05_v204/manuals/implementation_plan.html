@@ -1,0 +1,129 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Comparative Analysis & Implementation Plan - v204 - GCash-Like Login Flow</title>
+    <style>
+        body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; line-height: 1.6; color: #333; max-width: 900px; margin: 0 auto; padding: 20px; }
+        h1, h2, h3 { color: #0070f3; }
+        .nav { margin-bottom: 20px; display: flex; justify-content: space-between; }
+        .comparison-table { width: 100%; border-collapse: collapse; margin: 20px 0; }
+        .comparison-table th, .comparison-table td { border: 1px solid #ddd; padding: 12px; text-align: left; }
+        .comparison-table th { background: #f4f4f4; }
+        .status-badge { display: inline-block; padding: 2px 8px; border-radius: 12px; font-size: 0.85em; font-weight: bold; }
+        .status-completed { background: #e6fffa; color: #2c7a7b; }
+        .status-pending { background: #feebc8; color: #9c4221; }
+        .flow-box { background: #f9f9f9; border: 1px solid #ddd; padding: 15px; border-radius: 8px; margin: 10px 0; }
+        .highlight { color: #0070f3; font-weight: bold; }
+    </style>
+</head>
+<body>
+    <div class="nav">
+        <a href="../index.html">← Back to v204 Index</a>
+        <div>
+            <a href="../../budolecosystem_docs_2026-01-05_v203/manuals/implementation_plan.html">Previous Version (v203)</a> | 
+            <span>Next Version (None)</span>
+        </div>
+    </div>
+
+    <h1>Comparative Analysis & Implementation Plan - v204</h1>
+    <p><strong>Subject:</strong> Transitioning budolPay to a GCash-Like Login Model</p>
+    <p><strong>Version:</strong> v204 (2026-01-05)</p>
+
+    <h2>1. Comparative Analysis: budolPay vs GCash</h2>
+    <p>This analysis compares the current budolPay authentication model with the industry-standard GCash mobile-first flow.</p>
+
+    <table class="comparison-table">
+        <thead>
+            <tr>
+                <th>Feature</th>
+                <th>budolPay (Current)</th>
+                <th>GCash (Target)</th>
+                <th>Gap / Improvement</th>
+            </tr>
+        </thead>
+        <tbody>
+            <tr>
+                <td><strong>Primary Identity</strong></td>
+                <td>Email Address</td>
+                <td>Mobile Number</td>
+                <td>Shift to Mobile-first identity for local PH market suitability.</td>
+            </tr>
+            <tr>
+                <td><strong>Credential</strong></td>
+                <td>Password (Alphanumeric)</td>
+                <td>4-digit MPIN</td>
+                <td>MPIN is faster for mobile users and reduces phishing risks.</td>
+            </tr>
+            <tr>
+                <td><strong>MFA / Security</strong></td>
+                <td>Optional / Manual</td>
+                <td>Mandatory OTP (New Device)</td>
+                <td>Device binding & OTP-on-new-device adds critical security.</td>
+            </tr>
+            <tr>
+                <td><strong>Session Lock</strong></td>
+                <td>Token-based (7 days)</td>
+                <td>MPIN / Biometric Lock</td>
+                <td>App-level locking for better privacy on shared/unlocked devices.</td>
+            </tr>
+            <tr>
+                <td><strong>Biometrics</strong></td>
+                <td>Not Implemented</td>
+                <td>Face ID / Fingerprint</td>
+                <td>High convenience for repeat daily transactions.</td>
+            </tr>
+        </tbody>
+    </table>
+
+    <h2>2. Proposed GCash-Like Login Flow for budolPay</h2>
+    <div class="flow-box">
+        <strong>New Sign-In Flow:</strong><br>
+        1. Open App → 2. Enter Mobile Number (+63) → 3. <strong>Check Device Trust</strong><br>
+        &nbsp;&nbsp;&nbsp;&nbsp;├─ <em>If NOT Trusted:</em> Send OTP → Verify OTP → Register Device<br>
+        &nbsp;&nbsp;&nbsp;&nbsp;└─ <em>If Trusted:</em> Proceed to Lock Screen<br>
+        4. Enter 4-digit MPIN / Biometric → 5. Access Wallet
+    </div>
+
+    <h2>3. Implementation Roadmap</h2>
+
+    <h3>Phase 1: Identity & Schema Migration <span class="status-badge status-pending">PLANNED</span></h3>
+    <ul>
+        <li>Update <code>User</code> model to include <code>mpinHash</code> and <code>trustedDevices</code>.</li>
+        <li>Implement migration script to set default MPINs or force users to set one on next login.</li>
+        <li>Update <code>auth-service</code> to support <code>POST /login/mobile</code>.</li>
+    </ul>
+
+    <h3>Phase 2: OTP & Device Binding <span class="status-badge status-pending">PLANNED</span></h3>
+    <ul>
+        <li>Integrate <code>deviceFingerprint</code> in the login payload.</li>
+        <li>Modify <code>sendOTP</code> logic to trigger automatically when a new fingerprint is detected.</li>
+        <li>Implement <code>POST /verify-device</code> to whitelist new fingerprints.</li>
+    </ul>
+
+    <h3>Phase 3: MPIN & Biometric Lock <span class="status-badge status-pending">PLANNED</span></h3>
+    <ul>
+        <li>Develop MPIN entry UI for Mobile/Web clients.</li>
+        <li>Implement MPIN hashing and verification logic in <code>auth-service</code>.</li>
+        <li>Add <code>biometricToken</code> field for mapping FaceID/Fingerprint results to the user session.</li>
+    </ul>
+
+    <h3>Phase 4: Compliance & Session Management <span class="status-badge status-pending">PLANNED</span></h3>
+    <ul>
+        <li>Implement automatic session timeout (e.g., lock after 5 mins of inactivity).</li>
+        <li>Add BSP-compliant login attempt limits (lock after 3 failed MPIN attempts).</li>
+        <li>Implement "Forgot MPIN" flow via OTP verification.</li>
+    </ul>
+
+    <h2>4. Technical Specifications</h2>
+    <ul>
+        <li><strong>MPIN Storage:</strong> Hashed using bcrypt (consistent with current password storage).</li>
+        <li><strong>Device Trust:</strong> JWT-based device tokens stored in <code>localStorage</code> or Secure Enclave.</li>
+        <li><strong>API Security:</strong> Rate limiting on <code>/login/mobile</code> and <code>/verify-otp</code> endpoints.</li>
+    </ul>
+
+    <h2>5. Recommendation for Future Enhancement</h2>
+    <p>Consolidated in <a href="../../consolidated_recommendations.html">consolidated_recommendations.html</a>.</p>
+</body>
+</html>

@@ -1,0 +1,109 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Developer Manual - v401</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
+        body { font-family: 'Inter', sans-serif; }
+    </style>
+</head>
+<body class="bg-slate-50 min-h-screen flex">
+    <!-- Sidebar -->
+    <aside class="w-64 bg-slate-900 text-slate-300 flex flex-col fixed h-full">
+        <div class="p-6">
+            <div class="flex items-center gap-3 mb-8">
+                <div class="w-8 h-8 bg-indigo-600 rounded-lg flex items-center justify-center text-white font-bold">B</div>
+                <span class="text-xl font-bold text-white tracking-tight">Budol Docs</span>
+            </div>
+            <nav class="space-y-1">
+                <a href="index.html" class="flex items-center gap-3 px-3 py-2 hover:bg-slate-800 hover:text-white rounded-lg transition-colors">
+                    <span>🏠</span> Index
+                </a>
+                <a href="developer_manual.html" class="flex items-center gap-3 px-3 py-2 bg-slate-800 text-white rounded-lg">
+                    <span>💻</span> Developer Manual
+                </a>
+                <a href="system_admin_manual.html" class="flex items-center gap-3 px-3 py-2 hover:bg-slate-800 hover:text-white rounded-lg transition-colors">
+                    <span>⚙️</span> SysAdmin Manual
+                </a>
+                <a href="user_manual.html" class="flex items-center gap-3 px-3 py-2 hover:bg-slate-800 hover:text-white rounded-lg transition-colors">
+                    <span>👤</span> User Manual
+                </a>
+                <a href="risk_register.html" class="flex items-center gap-3 px-3 py-2 hover:bg-slate-800 hover:text-white rounded-lg transition-colors">
+                    <span>⚠️</span> Risk Register
+                </a>
+                <a href="Mitigation.html" class="flex items-center gap-3 px-3 py-2 hover:bg-slate-800 hover:text-white rounded-lg transition-colors">
+                    <span>🛡️</span> Mitigation Plan
+                </a>
+                <a href="test_results.html" class="flex items-center gap-3 px-3 py-2 hover:bg-slate-800 hover:text-white rounded-lg transition-colors">
+                    <span>🧪</span> Test Results
+                </a>
+                <a href="future_recommendations.html" class="flex items-center gap-3 px-3 py-2 hover:bg-slate-800 hover:text-white rounded-lg transition-colors">
+                    <span>🚀</span> Future Recommendations
+                </a>
+            </nav>
+        </div>
+    </aside>
+
+    <!-- Main Content -->
+    <main class="flex-1 ml-64 p-12">
+        <div class="max-w-4xl mx-auto">
+            <header class="mb-12">
+                <h1 class="text-4xl font-extrabold text-slate-900 mb-4 tracking-tight">Developer Manual</h1>
+                <p class="text-xl text-slate-600 leading-relaxed">Technical implementation details for the Flutter Web build fix.</p>
+            </header>
+
+            <section class="mb-12">
+                <h2 class="text-2xl font-bold text-slate-900 mb-6">Technical Explanation</h2>
+                <div class="bg-white p-8 rounded-2xl border border-slate-200 shadow-sm space-y-6">
+                    <p class="text-slate-600 leading-relaxed">
+                        The <code>tflite_flutter</code> package provides a <code>reshape</code> extension method on the <code>List</code> class. However, in the Flutter Web build context where <code>tflite_flutter</code> is substituted by a stub, this extension was missing. Additionally, Dart's extension resolution can sometimes fail for <code>Float32List</code> unless it is explicitly cast to a <code>List</code> type.
+                    </p>
+                    <div class="bg-slate-900 rounded-xl p-6 text-slate-300 font-mono text-sm overflow-x-auto">
+                        <div class="text-indigo-400 mb-2">// Fix in tflite_web_stub.dart</div>
+                        extension Reshape on List {<br>
+                        &nbsp;&nbsp;List reshape(List&lt;int&gt; shape) {<br>
+                        &nbsp;&nbsp;&nbsp;&nbsp;return this; // Web implementation returns the flat list<br>
+                        &nbsp;&nbsp;}<br>
+                        }
+                    </div>
+                </div>
+            </section>
+
+            <section class="mb-12">
+                <h2 class="text-2xl font-bold text-slate-900 mb-6">Code References</h2>
+                <div class="space-y-4">
+                    <a href="file:///d:/IT Projects/budolEcosystem/budolPayMobile/lib/services/tflite_web_stub.dart" class="block p-6 bg-white rounded-2xl border border-slate-200 shadow-sm hover:border-indigo-500 transition-colors">
+                        <div class="font-bold text-slate-900">tflite_web_stub.dart</div>
+                        <p class="text-sm text-slate-500">Added Reshape extension to ensure compilation parity with native builds.</p>
+                    </a>
+                    <a href="file:///d:/IT Projects/budolEcosystem/budolPayMobile/lib/services/face_embedding_service.dart" class="block p-6 bg-white rounded-2xl border border-slate-200 shadow-sm hover:border-indigo-500 transition-colors">
+                        <div class="font-bold text-slate-900">face_embedding_service.dart</div>
+                        <p class="text-sm text-slate-500">Implemented explicit casting to List&lt;double&gt; for reliable extension method access.</p>
+                    </a>
+                </div>
+            </section>
+
+            <section class="mb-12">
+                <h2 class="text-2xl font-bold text-slate-900 mb-6">Phase 8: Dependencies & Software Choices</h2>
+                <div class="bg-white p-8 rounded-2xl border border-slate-200 shadow-sm space-y-6 text-slate-600">
+                    <div>
+                        <h3 class="text-lg font-bold text-slate-900 mb-2">Dart Conditional Imports</h3>
+                        <p>Used to decouple the native TFLite dependency from the Web build, preventing compilation errors in environments where native libraries are unavailable.</p>
+                    </div>
+                    <div>
+                        <h3 class="text-lg font-bold text-slate-900 mb-2">TFLite Flutter</h3>
+                        <p>Chosen for its efficient on-device AI inference capabilities. The 'reshape' method is critical for structuring image data into the 4D tensors expected by the FaceNet model.</p>
+                    </div>
+                </div>
+            </section>
+
+            <footer class="border-t border-slate-200 pt-8 text-slate-400 text-sm">
+                <p>&copy; 2026 Budol Ecosystem. All rights reserved. Confidential Property.</p>
+            </footer>
+        </div>
+    </main>
+</body>
+</html>

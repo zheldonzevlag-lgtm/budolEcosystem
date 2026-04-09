@@ -1,0 +1,79 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Fixes & Changelog - Budol Ecosystem</title>
+    <style>
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; line-height: 1.6; margin: 0; padding: 0; color: #333; }
+        .container { max-width: 1200px; margin: 0 auto; padding: 20px; }
+        header { background: #2c3e50; color: #fff; padding: 20px 0; text-align: center; }
+        nav { background: #34495e; padding: 10px 0; text-align: center; }
+        nav a { color: #fff; text-decoration: none; margin: 0 15px; font-weight: bold; }
+        .card { background: #f9f9f9; border: 1px solid #ddd; padding: 20px; margin-bottom: 20px; border-radius: 5px; }
+        h2 { color: #2c3e50; border-bottom: 2px solid #eee; padding-bottom: 10px; }
+        .fix { margin-bottom: 30px; border-left: 4px solid #27ae60; padding-left: 20px; }
+        .code { background: #1e1e1e; color: #d4d4d4; padding: 15px; border-radius: 5px; overflow-x: auto; font-family: 'Consolas', 'Monaco', monospace; margin: 10px 0; }
+        pre { margin: 0; }
+    </style>
+</head>
+<body>
+    <header>
+        <div class="container">
+            <h1>Fixes & Changelog</h1>
+            <p>Version: 2026-02-17_v1</p>
+        </div>
+    </header>
+    <nav>
+        <a href="index.html">Home</a>
+        <a href="developer_manual.html">Developer Manual</a>
+        <a href="fixes.html">Fixes</a>
+    </nav>
+    <div class="container">
+        <div class="card">
+            <h2>Critical Fixes</h2>
+            
+            <div class="fix">
+                <h3>1. Cart Persistence Bug (Critical)</h3>
+                <p><strong>Issue:</strong> Ordered items remained in the cart after successful payment/order placement.</p>
+                <p><strong>Root Cause:</strong> The cart cleanup logic in <code>createOrder</code> failed to match items for products without variations. The frontend or request payload might send <code>variationId</code> as undefined or garbage, while the database expects <code>null</code>. The mismatch caused <code>deleteMany</code> to skip these items.</p>
+                <p><strong>Fix:</strong> Implemented robust variation ID normalization in <a href="file:///d:/IT Projects/budolEcosystem/budolshap-0.1.0/lib/services/ordersService.js">lib/services/ordersService.js</a>. The logic now checks if the product has a variation matrix. If empty, it forces <code>variationId</code> to <code>null</code> regardless of the input payload.</p>
+                <div class="code">
+                    <pre>
+// If product has no variations, we must target the base item (variationId: null)
+const targetVariationId = hasVariations ? (item.variationId || null) : null;
+
+const deleteResult = await tx.cartItem.deleteMany({
+    where: {
+        cartId: userCart.id,
+        OR: cartCleanupConditions
+    }
+});
+                    </pre>
+                </div>
+            </div>
+
+            <div class="fix">
+                <h3>2. Return Service Audit Log User ID Mismatch</h3>
+                <p><strong>Issue:</strong> The <code>receiveReturn</code> function in <a href="file:///d:/IT Projects/budolEcosystem/budolshap-0.1.0/lib/services/returnsService.js">lib/services/returnsService.js</a> was passing <code>storeId</code> instead of <code>userId</code> to the audit log service, causing potential foreign key violations or incorrect attribution.</p>
+                <p><strong>Fix:</strong> Updated the function to traverse the relation <code>returnRequest.order.store.userId</code> to get the correct User ID of the store owner.</p>
+                <div class="code">
+                    <pre>
+// Before
+createAuditLog(returnRequest.order.storeId, 'RETURN_RECEIVED', ...
+
+// After
+createAuditLog(returnRequest.order.store.userId, 'RETURN_RECEIVED', ...
+                    </pre>
+                </div>
+            </div>
+
+            <div class="fix">
+                <h3>3. Return Service DB Update Optimization</h3>
+                <p><strong>Issue:</strong> <code>buyerRespondToProposal</code> was performing two separate DB updates to the <code>Return</code> model (one for escrow unlock, one for status), causing inefficiency and race conditions in tests.</p>
+                <p><strong>Fix:</strong> Merged the updates into a single <code>prisma.return.update</code> call.</p>
+            </div>
+        </div>
+    </div>
+</body>
+</html>

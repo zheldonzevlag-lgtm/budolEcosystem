@@ -1,0 +1,62 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>System Admin Manual - v0.1.1</title>
+    <style>
+        :root { --primary: #0052cc; --sidebar-bg: #f4f5f7; --text-main: #172b4d; }
+        body { font-family: -apple-system, sans-serif; display: flex; margin: 0; }
+        .sidebar { width: 260px; background: var(--sidebar-bg); padding: 20px; height: 100vh; position: fixed; }
+        .main-content { margin-left: 260px; padding: 40px; max-width: 900px; }
+        .admin-box { background: #fdfdfd; border: 1px solid #dfe1e6; padding: 20px; border-radius: 8px; margin: 20px 0; }
+        .badge { padding: 4px 8px; border-radius: 4px; font-size: 12px; font-weight: bold; }
+        .badge-info { background: #deebff; color: #0747a6; }
+    </style>
+</head>
+<body>
+    <div class="sidebar">
+        <h3>Budol Ecosystem</h3>
+        <a href="index.html">Overview</a>
+        <a href="system_admin_manual.html" style="font-weight:bold;">Admin Manual</a>
+    </div>
+    <div class="main-content">
+        <h1>System Admin Manual: Realtime Configuration</h1>
+        
+        <h2>1. Accessing Realtime Settings</h2>
+        <p>Navigate to <strong>Settings > Realtime Updates</strong> in the Admin Dashboard.</p>
+
+        <h2>2. Provider Selection</h2>
+        <div class="admin-box">
+            <h3>Pusher (Hosted)</h3>
+            <p>Recommended for production environments with high traffic. Requires valid Pusher credentials.</p>
+            <ul>
+                <li><strong>App ID, Key, Secret, Cluster</strong></li>
+            </ul>
+        </div>
+
+        <div class="admin-box">
+            <h3>Socket.io (Self-hosted)</h3>
+            <p>Uses the internal API Gateway. Best for cost optimization in development or high-security internal networks. The Socket.io server runs directly on the API Gateway instance and serves as the **central communications hub for all apps** in the Budol Ecosystem (BudolPay, BudolShap, BudolID).</p>
+            <ul>
+                <li><strong>Gateway URL:</strong> Typically <code>http://localhost:8080</code> or the production LB URL. This URL is used by the frontend to establish the WebSocket connection.</li>
+                <li><strong>Cross-App Communication:</strong> By centralizing Socket.io on the Gateway, events from any service are unified into a single stream for the Admin Dashboard and Mobile App.</li>
+            </ul>
+        </div>
+
+        <div class="admin-box">
+            <h3>SWR Polling (Client-side)</h3>
+            <p>Fallback mode. Clients will poll the API at a defined interval.</p>
+            <ul>
+                <li><strong>Polling Interval:</strong> Default 10,000ms (10 seconds).</li>
+            </ul>
+        </div>
+
+        <h2>3. Troubleshooting</h2>
+        <ul>
+            <li><strong>Audit Logs not updating:</strong> Check the <code>GATEWAY_URL</code> in <code>.env</code> and ensure <code>BUDOLPAY_API_KEY</code> matches between services.</li>
+            <li><strong>Socket.io connection failed:</strong> Ensure CORS settings in API Gateway allow the dashboard domain.</li>
+        </ul>
+    </div>
+</body>
+</html>

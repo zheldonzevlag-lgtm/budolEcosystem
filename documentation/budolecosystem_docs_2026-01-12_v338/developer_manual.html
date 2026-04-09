@@ -1,0 +1,82 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Developer Manual - SSL Pinning Implementation v337</title>
+    <style>
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; line-height: 1.6; color: #333; margin: 0; padding: 20px; background: #f4f7f6; }
+        .container { max-width: 1000px; margin: 0 auto; background: #fff; padding: 40px; border-radius: 8px; box-shadow: 0 2px 10px rgba(0,0,0,0.1); }
+        h1, h2, h3 { color: #0284c7; }
+        code { background: #f1f5f9; padding: 2px 6px; border-radius: 4px; font-family: 'Fira Code', monospace; color: #d00000; font-weight: bold; }
+        pre { background: #0d1117; color: #e6edf3; padding: 20px; border-radius: 8px; overflow-x: auto; position: relative; border: 1px solid #30363d; line-height: 1.45; }
+        pre code { background: transparent; padding: 0; color: inherit; font-weight: normal; }
+        .code-link { position: absolute; top: 10px; right: 10px; background: #238636; color: white; padding: 5px 10px; border-radius: 4px; text-decoration: none; font-size: 0.8em; font-weight: bold; }
+        .code-link:hover { background: #2ea043; }
+        .note { background: #e0f2fe; border-left: 4px solid #0ea5e9; padding: 15px; margin: 20px 0; border-radius: 4px; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Developer Manual: SSL/TLS Certificate Pinning</h1>
+        <p>This manual covers the implementation of SSL/TLS certificate pinning in the BudolPay Flutter application, ensuring secure communication with the backend services.</p>
+
+        <h2>1. Implementation Details</h2>
+        <p>SSL pinning is implemented in the <code>ApiService</code> class using a custom <code>HttpClient</code> that verifies the server's certificate hash against a list of expected SHA-256 hashes.</p>
+
+        <h3>1.1 Service Configuration</h3>
+        <p>The <code>ApiService</code> now supports multiple hashes to allow for certificate rotation during cloud migration (e.g., moving to AWS or Vercel).</p>
+        
+        <div style="position: relative;">
+            <pre><code>// Certificate Pinning Hashes (SHA-256)
+static const List&lt;String&gt; _expectedCertHashes = [
+  'SHA256_HASH_OF_PRIMARY_CERTIFICATE',
+  'SHA256_HASH_OF_BACKUP_CERTIFICATE', // Backup for rotation
+];</code></pre>
+            <a href="file:///d:/IT Projects/budolEcosystem/budolPayMobile/lib/services/api_service.dart" class="code-link">View api_service.dart</a>
+        </div>
+
+        <h3>1.2 Verification Logic</h3>
+        <p>The verification occurs during the <code>badCertificateCallback</code> or through manual verification of the certificate chain. We extract the DER encoding of the certificate and calculate its SHA-256 hash.</p>
+
+        <div style="position: relative;">
+            <pre><code>bool _verifyCertificatePin(X509Certificate cert) {
+  final List&lt;int&gt; certBytes = cert.der;
+  final hash = sha256.convert(certBytes).toString();
+  
+  if (kDebugMode) {
+    print('ApiService: Server Certificate Hash: $hash');
+  }
+
+  if (_expectedCertHashes.contains('SHA256_HASH_OF_PRIMARY_CERTIFICATE')) {
+    return true; // Allow in dev if not configured
+  }
+
+  return _expectedCertHashes.contains(hash);
+}</code></pre>
+            <a href="file:///d:/IT Projects/budolEcosystem/budolPayMobile/lib/services/api_service.dart" class="code-link">View api_service.dart</a>
+        </div>
+
+        <h2>2. Integration in Screens</h2>
+        <p>All network requests must use the pinned client exposed by <code>ApiService</code>. For example, in <code>KYCVerificationScreen</code>, the <code>MultipartRequest</code> was updated to use the pinned client's <code>send</code> method.</p>
+
+        <div style="position: relative;">
+            <pre><code>final apiService = Provider.of&lt;ApiService&gt;(context, listen: false);
+// ...
+final response = await apiService.client.send(request);</code></pre>
+            <a href="file:///d:/IT Projects/budolEcosystem/budolPayMobile/lib/screens/kyc_verification_screen.dart" class="code-link">View kyc_verification_screen.dart</a>
+        </div>
+
+        <div class="note">
+            <strong>Security Warning:</strong> Never hardcode production hashes in the source code without a rotation strategy. Use the <code>_expectedCertHashes</code> list to include both current and upcoming certificates.
+        </div>
+
+        <h2>3. Cloud Migration Roadmap (Phase 0)</h2>
+        <p>When migrating to AWS (ACM) or Vercel (Managed Certificates), ensure that the public key hashes are extracted and added to the pinning list <strong>before</strong> switching the DNS traffic.</p>
+        <ul>
+            <li><strong>AWS ACM:</strong> Extract hash from the ACM certificate public key.</li>
+            <li><strong>Vercel:</strong> Extract hash from the Let's Encrypt or custom certificate provided by Vercel.</li>
+        </ul>
+    </div>
+</body>
+</html>

@@ -1,0 +1,46 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Developer Manual v125 - Session Initialization</title>
+    <style>
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; line-height: 1.6; color: #333; max-width: 800px; margin: 0 auto; padding: 20px; }
+        h1, h2 { color: #f43f5e; }
+        pre { background: #f4f4f4; padding: 15px; border-radius: 8px; overflow-x: auto; }
+        code { font-family: monospace; }
+    </style>
+</head>
+<body>
+    <h1>Developer Manual - Async Session Initialization</h1>
+    
+    <section>
+        <h2>The Issue</h2>
+        <p>A race condition occurred where <code>SharedPreferences.getInstance()</code> (async) was still running when <code>processPayment</code> was called, leading to a <code>null</code> user object and "session expired" errors.</p>
+    </section>
+
+    <section>
+        <h2>The Fix</h2>
+        <p>Implemented a Future-based initialization gate in <code>ApiService</code>:</p>
+        <pre><code>Future&lt;void&gt;? _initFuture;
+
+ApiService(...) {
+  _initFuture = _loadSession();
+}
+
+Future&lt;void&gt; _ensureInitialized() async {
+  if (_initFuture != null) await _initFuture;
+}
+
+Future&lt;...&gt; processPayment(...) async {
+  await _ensureInitialized(); // Gatekeeper
+  if (user == null) throw ...
+}</code></pre>
+    </section>
+
+    <section>
+        <h2>UI Update</h2>
+        <p>The <code>Store Name</code> detail row was removed from <code>PaymentSummaryScreen</code> to reduce clutter, as it is already prominently displayed in the header.</p>
+    </section>
+</body>
+</html>

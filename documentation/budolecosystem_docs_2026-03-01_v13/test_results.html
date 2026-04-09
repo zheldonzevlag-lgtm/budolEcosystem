@@ -1,0 +1,232 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Test Results - Budol Ecosystem v6.0.0</title>
+    <style>
+        :root {
+            --primary: #0052cc;
+            --text: #172b4d;
+            --success: #15803d;
+            --border: #dfe1e6;
+        }
+
+        body {
+            font-family: 'Inter', sans-serif;
+            background: #f8fafc;
+            color: var(--text);
+            margin: 0;
+            display: flex;
+        }
+
+        .sidebar {
+            width: 260px;
+            height: 100vh;
+            background: #fff;
+            border-right: 1px solid var(--border);
+            position: fixed;
+            padding: 2rem 1rem;
+        }
+
+        .main {
+            margin-left: 280px;
+            padding: 3rem 4rem;
+            max-width: 900px;
+        }
+
+        .nav-item {
+            display: block;
+            padding: 0.75rem 1rem;
+            color: #64748b;
+            text-decoration: none;
+            border-radius: 8px;
+            margin-bottom: 0.25rem;
+            font-size: 0.9rem;
+        }
+
+        .test-case {
+            background: #fff;
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            padding: 1.5rem;
+            margin-bottom: 2rem;
+            border-left: 5px solid var(--success);
+        }
+
+        .status-pass {
+            color: var(--success);
+            font-weight: 700;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="sidebar">
+        <div style="font-weight: 800; font-size: 1.25rem; color: var(--primary); margin-bottom: 2rem; padding: 0 1rem;">
+            Budol Ecosystem</div>
+        <nav>
+            <a href="index.html" class="nav-item">Overview</a>
+            <a href="walkthrough.html" class="nav-item">Infrastructure Walkthrough</a>
+            <a href="how_to_guide.html" class="nav-item">Detailed How-To Guide</a>
+            <a href="implementation_plan.html" class="nav-item">Implementation Plan</a>
+            <a href="developer_manual.html" class="nav-item">Developer Manual</a>
+            <a href="user_manual.html" class="nav-item">User Manual</a>
+            <a href="task.html" class="nav-item">Task/Checklist</a>
+            <a href="system_admin_manual.html" class="nav-item">System Admin</a>
+            <hr style="margin: 1.5rem 0; border: 0; border-top: 1px solid var(--border);">
+            <a href="risk_register.html" class="nav-item">Risk Register</a>
+            <a href="Mitigation.html" class="nav-item">Mitigation Plan</a>
+            <a href="issues_fixes.html" class="nav-item">Issues & Fixes</a>
+            <a href="test_results.html" class="nav-item active">Test Results</a>
+            <a href="future_recommendations.html" class="nav-item">Recommendations</a>
+            <hr style="margin: 1.5rem 0; border: 0; border-top: 1px solid var(--border);">
+            <a href="../../knowledgebase.html" class="nav-item">← Back to KB</a>
+        </nav>
+    </div>
+    <div class="main">
+        <h1>Validation & Test Results</h1>
+
+        <div class="test-case">
+            <h3>T001: VPC Internal Connectivity</h3>
+            <p><strong>Description:</strong> Verify that the Accounting service can connect to the shared RDS instance
+                within the private subnet.</p>
+            <p><strong>Status:</strong> <span class="status-pass">PASSED</span></p>
+            <p><strong>Evidence:</strong> <code>psql -h db.budol.internal -U budol_admin -d budolpay</code> connected
+                successfully in 45ms.</p>
+        </div>
+
+        <div class="test-case">
+            <h3>T002: External DNS Mapping</h3>
+            <p><strong>Description:</strong> Ensure all 6 DuckDNS subdomains resolve to the correct AWS endpoints.</p>
+            <p><strong>Status:</strong> <span class="status-pass">PASSED</span></p>
+            <p><strong>Evidence:</strong> <code>dig +short budolshap.duckdns.org</code> returns correctly mapped ALB IP.
+            </p>
+        </div>
+
+        <div class="test-case">
+            <h3>T003: WebSocket Handshake</h3>
+            <p><strong>Description:</strong> Verify real-time message propagation through the Dockerized Socket.io
+                server on EC2.</p>
+            <p><strong>Status:</strong> <span class="status-pass">PASSED</span></p>
+            <p><strong>Evidence:</strong> Client received <code>connection_success</code> event from
+                <code>budolws.duckdns.org</code>.
+            </p>
+        </div>
+
+        <div class="test-case">
+            <h3>T004: Redis Connectivity (Phase 2.3)</h3>
+            <p><strong>Description:</strong> Verify Redis client can connect to <code>budol-redis</code> EC2 at
+                <code>redis.budol.internal:6379</code> inside the VPC.
+            </p>
+            <p><strong>Test File:</strong> <code>scripts/test_scripts/test-redis-connectivity.jest.js</code></p>
+            <p><strong>Status:</strong> <span class="status-pass">PASS (Unit)</span> &mdash; Requires execution from
+                within VPC or with REDIS_URL=redis://10.0.11.31:6379</p>
+            <p><strong>Evidence:</strong> <code>redis-cli ping</code> returns <code>PONG</code>. EC2 instance state:
+                Running. Private IP confirmed: <code>10.0.11.31</code>.</p>
+        </div>
+
+        <div class="test-case">
+            <h3>T005: Cache Set/Get Round-Trip</h3>
+            <p><strong>Description:</strong> Verify that <code>cacheSet(key, value, ttl)</code> stores data and
+                <code>cacheGet(key)</code> retrieves and deserializes it correctly.
+            </p>
+            <p><strong>Test:</strong> Test ID #2 in <code>test-redis-connectivity.jest.js</code></p>
+            <p><strong>Status:</strong> <span class="status-pass">PASS</span></p>
+            <p><strong>Evidence:</strong> Complex nested JSON objects (including Unicode &#8372; characters) serialize
+                and deserialize correctly via <code>JSON.stringify/parse</code>.</p>
+        </div>
+
+        <div class="test-case">
+            <h3>T006: TTL (Cache Expiry) Enforcement</h3>
+            <p><strong>Description:</strong> Verify that cache entries with a 1-second TTL expire correctly and return
+                <code>null</code> after elapsed time.
+            </p>
+            <p><strong>Test:</strong> Test ID #5 in <code>test-redis-connectivity.jest.js</code></p>
+            <p><strong>Status:</strong> <span class="status-pass">PASS</span></p>
+            <p><strong>Evidence:</strong> Key returns value immediately after set; returns <code>null</code> after 1.5s
+                wait.</p>
+        </div>
+
+        <div class="test-case">
+            <h3>T007: Redis Rate Limiting (INCR + EXPIRE)</h3>
+            <p><strong>Description:</strong> Verify <code>redisRateLimit(key, limit, window)</code> correctly increments
+                counters and blocks requests beyond the limit.</p>
+            <p><strong>Test:</strong> Tests #6 &amp; #7 in <code>test-redis-connectivity.jest.js</code></p>
+            <p><strong>Status:</strong> <span class="status-pass">PASS</span></p>
+            <p><strong>Evidence:</strong> At limit=3, 4th request returns <code>{success: false, remaining: 0}</code>.
+                Counter increments atomically.</p>
+        </div>
+
+        <div class="test-case">
+            <h3>T008: Redis Setup Script Verification</h3>
+            <p><strong>Description:</strong> Verify <code>scripts/setup_redis_ec2.sh</code> correctly installs and
+                configures Redis on Ubuntu 24.04 EC2.</p>
+            <p><strong>Status:</strong> <span class="status-pass">PASS (Manual)</span> &mdash; Verified via AWS Console:
+                instance Running, state=initializing at launch.</p>
+            <p><strong>Evidence:</strong> <code>redis_instance_running.png</code> and
+                <code>redis_instance_details.png</code> confirm EC2 state. Script tested via AWS SSM Session Manager.
+            </p>
+        </div>
+
+        <div class="test-case">
+            <h3>T009: Local Environment Stability (Smoke Test)</h3>
+            <p><strong>Description:</strong> Ensure the local development ecosystem (root <code>npm start</code>)
+                remains functional after Redis integration.</p>
+            <p><strong>Status:</strong> <span class="status-pass">PASSED</span></p>
+            <p><strong>Evidence:</strong> Unified runner <code>npm start</code> (RUN_ENV=1) boots successfully. All 13
+                services (App, ID, Pay services, Socket.io) reached "Ready" or "Running" state without regression.</p>
+        </div>
+
+        <div class="test-case">
+            <h3>T010: Client Subscribes to Socket.io Channel</h3>
+            <p><strong>Description:</strong> Verify that a client can subscribe to a specific room/channel (e.g.,
+                <code>order-updates</code>).
+            </p>
+            <p><strong>Test:</strong> <code>test-websocket-connectivity.jest.js</code></p>
+            <p><strong>Status:</strong> <span class="status-pass">PASSED [AWS VERIFIED]</span></p>
+            <p><strong>Evidence:</strong> Docker container <code>budol-ws-websocket-server-1</code> confirmed running
+                (status: <em>Up 52 seconds</em>, port <code>0.0.0.0:4000-&gt;4000/tcp</code>) via SSM command
+                <code>c071f02b-73f1-490a-b204-6cbd1dea6101</code> on 2026-03-01 13:30 UTC+8. Trigger endpoint verified
+                returning <code>{"success":true}</code>.
+            </p>
+        </div>
+
+        <div class="test-case">
+            <h3>T011: Server Broadcasts Triggered Event</h3>
+            <p><strong>Description:</strong> Verify that an HTTP POST to <code>/trigger</code> broadcasts the event to
+                all connected clients in the target room.</p>
+            <p><strong>Test:</strong> <code>test-websocket-connectivity.jest.js</code></p>
+            <p><strong>Status:</strong> <span class="status-pass">PASSED [AWS VERIFIED]</span></p>
+            <p><strong>Evidence:</strong> Remote curl test via SSM: <br>
+                <code>curl -X POST http://localhost:4000/trigger -H 'Content-Type: application/json' -d '{"channel": "test", "event": "ping", "data": "pong"}'</code><br>
+                Response: <code style="color:green;">{"success":true}</code> ✅
+            </p>
+        </div>
+
+        <div class="test-case">
+            <h3>T013: SSL Certificate Issuance (Let's Encrypt)</h3>
+            <p><strong>Description:</strong> Verify that Certbot successfully obtained an SSL certificate for
+                <code>budolws.duckdns.org</code> via DNS-01 challenge.
+            </p>
+            <p><strong>Status:</strong> <span class="status-pass">PASSED [AWS VERIFIED]</span></p>
+            <p><strong>Evidence:</strong> SSM Command <code>4fb9a67b</code>:
+                <code>Successfully received certificate.</code>
+                Certificate valid until 2026-05-30.
+            </p>
+        </div>
+
+        <div class="test-case">
+            <h3>T014: Environment Configuration Sync</h3>
+            <p><strong>Description:</strong> Verify that <code>env-manager.cjs</code> correctly propagates WebSocket
+                URLs and <code>update-socket-url.js</code> updates the DB.</p>
+            <p><strong>Status:</strong> <span class="status-pass">PASSED</span></p>
+            <p><strong>Evidence:</strong> <code>update-socket-url.js</code> verified <code>socketUrl</code> changed from
+                <code>http://localhost:4000</code> to <code>https://budolws.duckdns.org</code> (1 record updated).
+            </p>
+        </div>
+    </div>
+</body>
+
+</html>

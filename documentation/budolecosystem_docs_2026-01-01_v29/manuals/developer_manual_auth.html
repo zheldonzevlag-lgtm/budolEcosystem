@@ -1,0 +1,81 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Developer Manual - Authentication & SSO Strategy</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/milligram/1.4.1/milligram.min.css">
+    <style>
+        body { padding: 2rem; max-width: 1000px; margin: auto; }
+        .code-block { background: #f4f5f6; padding: 1rem; border-radius: 4px; font-family: monospace; overflow-x: auto; margin-bottom: 1.5rem; }
+        .tag { display: inline-block; padding: 0.2rem 0.5rem; border-radius: 4px; font-size: 0.8rem; font-weight: bold; }
+        .tag-sso { background: #e0e7ff; color: #4338ca; }
+        .tag-db { background: #ecfdf5; color: #065f46; }
+    </style>
+</head>
+<body>
+    <h1>Developer Manual: Authentication & SSO Strategy</h1>
+    <p>Version: 2026-01-01_v29 | Author: Implementation Planner</p>
+
+    <section id="architecture">
+        <h2>1. Architectural Overview</h2>
+        <p>The BudolEcosystem uses a centralized identity provider model. <strong>budolID</strong> acts as the single source of truth for user identities across all platforms.</p>
+        <ul>
+            <li><strong>Centralized SSO (budolID):</strong> Port 8000. Manages global users and app API keys.</li>
+            <li><strong>Application Clients:</strong> BudolShap (Next.js) and BudolPay (Express) consume the SSO service.</li>
+        </ul>
+    </section>
+
+    <section id="login-flow">
+        <h2>2. Authentication Flows</h2>
+        
+        <h3>A. Global SSO Login</h3>
+        <p>Apps redirect users to the budolID portal for authentication.</p>
+        <div class="code-block">
+GET http://192.168.1.24:8000/login?apiKey={APP_API_KEY}
+        </div>
+        <p>The portal verifies credentials against <code>budolid_db</code> and redirects back with a JWT token.</p>
+
+        <h3>B. Token Verification</h3>
+        <p>Apps verify the token using the budolID public API.</p>
+        <div class="code-block">
+GET http://192.168.1.24:8000/auth/verify
+Authorization: Bearer {TOKEN}
+        </div>
+    </section>
+
+    <section id="data-model">
+        <h2>3. Data Models & Syncing</h2>
+        <p>Users exist in two contexts:</p>
+        <table>
+            <thead>
+                <tr>
+                    <th>Context</th>
+                    <th>Database</th>
+                    <th>Table/Model</th>
+                    <th>Scope</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td><strong>Ecosystem</strong></td>
+                    <td><code>budolid_db</code></td>
+                    <td><code>User</code></td>
+                    <td>Global (SSO)</td>
+                </tr>
+                <tr>
+                    <td><strong>BudolShap</strong></td>
+                    <td><code>budolshap_1db</code></td>
+                    <td><code>User</code></td>
+                    <td>Local (Shop)</td>
+                </tr>
+            </tbody>
+        </table>
+        <p><em>Note: Users must be synced to budolID to use SSO features.</em></p>
+    </section>
+
+    <footer>
+        <p><a href="../index.html">← Back to Index</a></p>
+    </footer>
+</body>
+</html>

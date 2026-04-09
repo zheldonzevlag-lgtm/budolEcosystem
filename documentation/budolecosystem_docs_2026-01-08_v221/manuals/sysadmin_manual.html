@@ -1,0 +1,42 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SysAdmin Manual - v221</title>
+    <style>
+        body { font-family: 'Segoe UI', sans-serif; line-height: 1.6; max-width: 900px; margin: 0 auto; padding: 30px; background: #f4f4f4; color: #2c3e50; }
+        .container { background: white; padding: 30px; border-radius: 8px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); }
+        h1, h2 { border-bottom: 2px solid #3498db; padding-bottom: 10px; }
+        .cmd { background: #2d3436; color: #fab1a0; padding: 10px; border-radius: 5px; font-family: monospace; display: block; margin: 10px 0; }
+    </style>
+</head>
+<body>
+    <div style="margin-bottom: 20px;"><a href="../index.html">← Back to v221 Index</a></div>
+    <div class="container">
+        <h1>SysAdmin Manual: Database Sanitation & Sandbox Resets</h1>
+        
+        <section>
+            <h2>1. Executing the Sandbox Reset</h2>
+            <p>To reset the BudolPay database to its core state, execute the following command in the <code>budolpay-0.1.0</code> directory:</p>
+            <code class="cmd">node cleanup-db.mjs</code>
+            <p><strong>Warning:</strong> This operation is destructive and cannot be undone. It will permanently delete all transaction history.</p>
+        </section>
+
+        <section>
+            <h2>2. User Retention Policy</h2>
+            <p>The cleanup script is configured to retain only authorized test users. If new test accounts need to be whitelisted, modify the <code>keepEmails</code> array in <code>cleanup-db.mjs</code> before execution.</p>
+        </section>
+
+        <section>
+            <h2>3. Wallet Balance Integrity</h2>
+            <p>Post-cleanup, all retained wallets are reset to <code>0.00</code>. If specific starting balances are required for testing, they must be manually updated via the <code>Wallet</code> table or a separate initialization script.</p>
+        </section>
+
+        <section>
+            <h2>4. Post-Cleanup Verification</h2>
+            <p>After running the cleanup, ensure the API Gateway and microservices are restarted to clear any cached session tokens that may still point to deleted users.</p>
+        </section>
+    </div>
+</body>
+</html>

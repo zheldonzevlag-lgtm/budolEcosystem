@@ -1,0 +1,294 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Developer Manual - v1.3.7</title>
+    <style>
+        :root {
+            --primary: #0052CC;
+            --secondary: #172B4D;
+            --bg: #F4F5F7;
+            --text: #172B4D;
+            --sidebar-width: 280px;
+            --code-bg: #282c34;
+            --code-text: #abb2bf;
+        }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            margin: 0;
+            display: flex;
+            background-color: var(--bg);
+            color: var(--text);
+        }
+        .sidebar {
+            width: var(--sidebar-width);
+            height: 100vh;
+            background: #0747A6;
+            color: white;
+            position: fixed;
+            padding: 20px;
+            box-sizing: border-box;
+            overflow-y: auto;
+        }
+        .sidebar h2 { font-size: 1.2rem; margin-bottom: 20px; border-bottom: 1px solid rgba(255,255,255,0.2); padding-bottom: 10px; }
+        .sidebar ul { list-style: none; padding: 0; }
+        .sidebar li { margin: 10px 0; }
+        .sidebar a { color: #DEEBFF; text-decoration: none; font-size: 0.95rem; display: block; padding: 8px; border-radius: 4px; transition: 0.2s; }
+        .sidebar a:hover { background: rgba(255,255,255,0.1); color: white; }
+        .sidebar .active { background: rgba(255,255,255,0.2); color: white; font-weight: bold; }
+        
+        .main-content {
+            margin-left: var(--sidebar-width);
+            flex: 1;
+            padding: 40px;
+            max-width: 1000px;
+        }
+        .card {
+            background: white;
+            padding: 30px;
+            border-radius: 8px;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.12);
+            margin-bottom: 20px;
+        }
+        h1, h2, h3 { color: var(--secondary); }
+        .code-block {
+            background-color: var(--code-bg);
+            color: var(--code-text);
+            padding: 20px;
+            border-radius: 8px;
+            overflow-x: auto;
+            font-family: 'Courier New', Courier, monospace;
+            margin: 15px 0;
+            white-space: pre;
+            line-height: 1.5;
+        }
+        .file-link {
+            color: var(--primary);
+            text-decoration: none;
+            font-weight: bold;
+            display: inline-block;
+            margin-bottom: 10px;
+        }
+        .file-link:hover { text-decoration: underline; }
+    </style>
+</head>
+<body>
+    <div class="sidebar">
+        <h2>Budol Ecosystem</h2>
+        <ul>
+            <li><a href="index.html">Overview</a></li>
+            <li><a href="comparative_analysis.html">Comparative Analysis</a></li>
+            <li><a href="developer_manual.html" class="active">Developer Manual</a></li>
+            <li><a href="system_admin_manual.html">System Admin Manual</a></li>
+            <li><a href="user_manual.html">User Manual</a></li>
+            <li><a href="risk_register.html">Risk Register</a></li>
+            <li><a href="Mitigation.html">Mitigation Plan</a></li>
+            <li><a href="issues.html">Known Issues</a></li>
+            <li><a href="fixes.html">Resolved Fixes</a></li>
+            <li><a href="test_results.html">Test Results</a></li>
+            <li><a href="future_recommendations.html">Future Recommendations</a></li>
+        </ul>
+    </div>
+
+    <div class="main-content">
+        <div class="card">
+            <h1>Developer Manual: KYC Standards Alignment</h1>
+            <p>This document details the technical implementation of changes in v1.3.7, focusing on aligning the BudolShap KYC process with industry standards (Shopee model).</p>
+
+            <h2>1. Database Schema Updates (Tiered KYC)</h2>
+            <p>To align with the Shopee model, the <code>User</code> and <code>Store</code> models have been updated to support differentiated verification types (Buyer vs. Individual Seller vs. Business Seller).</p>
+            
+            <div class="code-block">
+// Added KYCTier Enum
+enum KYCTier {
+  BUYER
+  INDIVIDUAL
+  BUSINESS
+}
+
+// Updated User Model for Buyer KYC
+model User {
+  // ...
+  kycStatus     KYCStatus @default(UNVERIFIED)
+  kycTier       KYCTier?
+  kycDetails    Json?     // Audit info: { ip, userAgent, livenessScore }
+}</div>
+
+            <h2>2. Shopee-Style Buyer KYC Flow</h2>
+            <p>Following the ShopeePay model, the <code>KYCWizard</code> now supports a "Standard Buyer" verification flow. This focuses on unlocking financial capabilities within the Budol Ecosystem.</p>
+            <ul>
+                <li><strong>Standard Buyer:</strong> Unlocks ₱100k budolPay limit, bank withdrawals, and P2P transfers. Requires Valid ID + Liveness Check.</li>
+                <li><strong>Biometric Verification:</strong> Integrated a real-time biometric liveness check using the <code>navigator.mediaDevices.getUserMedia</code> API.</li>
+                 <li><strong>Security Requirement:</strong> Access to the camera requires a <strong>Secure Context (HTTPS)</strong>. The application will block biometric capture on insecure connections to protect user data.</li>
+                  <li><strong>Photo Preview:</strong> Upon successful liveness verification, the captured selfie is displayed to the user within a circular preview, overlaid with a verification badge to confirm the session's authenticity.</li>
+                   <li><strong>Real OCR Engine:</strong> Integrated <code>Tesseract.js</code> for client-side Optical Character Recognition.</li>
+                   <li><strong>OCR Accuracy Hardening (Phase 2):</strong>
+                       <ul>
+                           <li><strong>Line-by-Line Interactive Mapping:</strong> Added a UI section in the verification step that displays all raw OCR-extracted lines, allowing users to manually map specific lines to Name, ID, or Business fields via interactive buttons.</li>
+                           <li><strong>Sequence-Based Extraction:</strong> Implemented layout-aware extraction that follows the visual sequence of data on common PH IDs (e.g., Header -> ID Number -> Name for Voter IDs).</li>
+                           <li><strong>Image Pre-processing:</strong> Automated grayscale conversion, ultra-high contrast boosting (2.2x), and 1200px resolution normalization.</li>
+                           <li><strong>Deep Name Refinement:</strong> Implemented heuristic cleanup for trailing OCR artifacts (1-2 character noise) and common PH name misread corrections (e.g., 0/1 to O/I mapping).</li>
+                           <li><strong>PH ID Optimization:</strong> Advanced regex patterns for Voter ID (<code>XXXX-XXXXX-XXXXXXXXX</code>), Driver's Licenses, UMID, and Passport.</li>
+                           <li><strong>Fuzzy Label Matching:</strong> Implemented label detection for "VOTER ID", "LICENSE NO", and "PASSPORT" to find ID numbers even when layout varies.</li>
+                           <li><strong>Noise Filtering:</strong> Expanded blacklist including government departments (DOTr, LTO, BIR) to prevent false-positive name extraction.</li>
+                       </ul>
+                   </li>
+                   <li><strong>Document Storage & Compliance:</strong>
+                       <ul>
+                           <li><strong>Persistence:</strong> Uploaded documents and biometric captures are now saved as base64 in the <code>kycDetails</code> field for audit and manual review.</li>
+                           <li><strong>AMLA/BSP Compliance:</strong> Retention policy set to 5 years (calculated via <code>retentionExpiry</code> in the backend).</li>
+                           <li><strong>NPC Compliance:</strong> Documents are stored solely for verification purposes with encrypted transmission (HTTPS).</li>
+                       </ul>
+                   </li>
+                   <li><strong>Dynamic Input Binding:</strong> Extracted data is automatically bound to the verification form, allowing users to review and correct any misread characters before submission.</li>
+                   <li><strong>Secure Capture:</strong> Frames are processed locally via a hidden canvas before being certified by the AI liveness engine.</li>
+            </ul>
+
+            <h2>2. KYC Data Contract</h2>
+            <p>The <code>kycDocuments</code> JSON field in the <code>Store</code> model is now expected to follow a structured format based on the <code>sellerType</code>:</p>
+            
+            <h3>Individual Seller</h3>
+            <div class="code-block">
+{
+  "id_type": "Passport",
+  "id_number": "P1234567A",
+  "id_front_url": "...",
+  "selfie_url": "..."
+}</div>
+
+            <h3>Business Seller</h3>
+            <div class="code-block">
+{
+  "business_type": "Corporation",
+  "dti_sec_url": "...",
+  "bir_2303_url": "...",
+  "representative_id_url": "...",
+  "representative_selfie_url": "..."
+}</div>
+
+            <h2>3. Registration Flow Persistence (OTP Visibility)</h2>
+            <p>To fix the issue where the OTP input was hidden immediately after phone registration (v1.3.6), we introduced <code>justRegisteredRef</code> in the <code>AuthForm</code> component. This ref prevents the auth state from being reset to "login" when the modal closes or re-renders during the registration-to-OTP transition.</p>
+            
+            <div class="code-block">
+// AuthForm.jsx snippet
+const justRegisteredRef = useRef(false);
+
+const handleRegisterSuccess = () => {
+  justRegisteredRef.current = true;
+  setMode('otp'); // Force transition to OTP
+};</div>
+
+            <h2>4. UI Optimization: Navbar Identifier Filtering</h2>
+            <p>To improve user clarity, internal system identifiers (<code>@quick.budolpay.com</code>) are now filtered out of the Navbar dropdown, showing only user-friendly names or phone numbers.</p>
+
+            <h2>5. Universal Shipping Status Mapping</h2>
+            <p>To ensure courier-agnostic shipping status tracking, we updated the <code>statusMapper.js</code> logic to handle both forward and return logistics with universal labels (e.g., "To Pick Up" for returns in PROCESSING state). Corresponding integration tests in <code>integration.test.js</code> were updated to validate these mappings.</p>
+
+            <div class="code-block">
+// statusMapper.js - Universal Label Logic
+export function getStatusLabel(status, isReturn = false) {
+    const labels = {
+        // ...
+        [UNIVERSAL_STATUS.TO_PICKUP]: isReturn ? 'To Pick Up' : 'To Ship',
+        // ...
+    };
+    return labels[status] || status;
+}</div>
+
+            <h2>6. Real-Time OCR Integration (KYC)</h2>
+            <p>To automate data extraction and reduce manual entry errors during the KYC process, we integrated <code>google_mlkit_text_recognition</code>. This allows the system to scan ID cards and business documents in real-time, extracting key fields like ID number, registration date, and legal name for automatic validation against user-provided data.</p>
+
+            <div class="code-block">
+// Conceptual OCR implementation
+import { TextRecognition } from 'google_mlkit_text_recognition';
+
+async function processKYCDocument(imageUri) {
+  const result = await TextRecognition.recognize(imageUri);
+  const extractedData = parseExtractedText(result.text);
+  return extractedData;
+}</div>
+
+            <h2>7. Compliance-First UI: Profile & Dashboard Integration</h2>
+            <p>To ensure maximum visibility and proactive compliance, the Account Verification (KYC) status and submission link have been integrated into two key areas: the <code>Navbar</code> user dropdown and the <code>Profile</code> dashboard. This ensures users are constantly aware of their compliance status without having to search through nested settings.</p>
+
+            <h3>Navbar Integration</h3>
+            <p>The <code>Navbar.jsx</code> component now features a dynamic verification status indicator that changes color and icon based on the user's current <code>kycStatus</code>.</p>
+            <div class="code-block">
+// Navbar.jsx Integration snippet
+{user && (
+  <Link href="/profile/verify" className="flex items-center gap-3 px-4 py-2 hover:bg-slate-50 transition">
+    {user.kycStatus === 'VERIFIED' ? (
+      <ShieldCheck size={18} className="text-green-500" />
+    ) : (
+      <ShieldAlert size={18} className={user.kycStatus === 'PENDING' ? "text-yellow-500" : "text-slate-400"} />
+    )}
+    <span>{user.kycStatus === 'VERIFIED' ? "Account Verified" : "Verify Account"}</span>
+  </Link>
+)}</div>
+
+            <h3>Profile Dashboard Enhancement</h3>
+            <p>The Profile UI has been updated to include a "Compliance Shield" component that displays detailed verification progress and pending requirements.</p>
+            <div class="code-block">
+// ProfileDashboard.jsx (Conceptual Integration)
+<div className="bg-white p-6 rounded-lg border border-slate-100 shadow-sm">
+  <div className="flex items-center justify-between">
+    <div className="flex items-center gap-4">
+      <ShieldCheck className={user.kycStatus === 'VERIFIED' ? "text-green-500" : "text-slate-300"} size={32} />
+      <div>
+        <h3 className="font-bold text-slate-800">Identity Verification</h3>
+        <p className="text-sm text-slate-500">
+          {user.kycStatus === 'VERIFIED' ? 'Your account is fully compliant.' : 'Verify your identity to unlock all features.'}
+        </p>
+      </div>
+    </div>
+    <Link href="/profile/verify" className="px-4 py-2 bg-primary text-white rounded-md text-sm font-medium">
+      {user.kycStatus === 'VERIFIED' ? 'View Details' : 'Verify Now'}
+    </Link>
+  </div>
+</div></div>
+
+            <h2>8. Code References</h2>
+            <ul>
+                <li><a class="file-link" href="file:///d:/IT Projects/budolEcosystem/budolshap-0.1.0/prisma/schema.prisma">schema.prisma</a>: Updated data model for tiered seller KYC.</li>
+                <li><a class="file-link" href="file:///d:/IT Projects/budolEcosystem/budolshap-0.1.0/components/KYCWizard.jsx">KYCWizard.jsx</a>: Multi-step wizard with simulated OCR for document verification.</li>
+                <li><a class="file-link" href="file:///d:/IT Projects/budolEcosystem/budolshap-0.1.0/app/(public)/profile/verify/page.jsx">verify/page.jsx</a>: Verification page hosting the KYC wizard.</li>
+                <li><a class="file-link" href="file:///d:/IT Projects/budolEcosystem/budolshap-0.1.0/app/(public)/profile/page.jsx">profile/page.jsx</a>: Profile dashboard with integrated compliance indicators.</li>
+                <li><a class="file-link" href="file:///d:/IT Projects/budolEcosystem/budolshap-0.1.0/app/api/user/kyc/route.js">api/user/kyc/route.js</a>: Backend API for KYC submission and status retrieval.</li>
+                <li><a class="file-link" href="file:///d:/IT Projects/budolEcosystem/budolshap-0.1.0/components/Navbar.jsx">Navbar.jsx</a>: Integration of KYC status indicators in the user dropdown.</li>
+                <li><a class="file-link" href="file:///d:/IT Projects/budolEcosystem/budolshap-0.1.0/lib/shipping/statusMapper.js">statusMapper.js</a>: Universal shipping status mapping logic.</li>
+                <li><a class="file-link" href="file:///d:/IT Projects/budolEcosystem/budolshap-0.1.0/lib/shipping/integration.test.js">integration.test.js</a>: Automated tests for status mapping validation.</li>
+            </ul>
+
+            <div class="code-block">
+const handleComplete = async (tier, details) => {
+  // Logic for submitting KYC data to the backend
+  const response = await fetch('/api/user/kyc', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ tier, details })
+  });
+};
+            </div>
+
+            <div class="nav-links" style="margin-top: 40px; border-top: 1px solid #DFE1E6; padding-top: 20px; display: flex; justify-content: space-between;">
+                <a href="../budolecosystem_docs_2026-02-07_v1.3.6/developer_manual.html">← Previous (v1.3.6)</a>
+                <span>Next (v1.3.8) →</span>
+            </div>
+        </div>
+
+        <div class="card">
+            <h2>8. Dependencies and Software Rationale</h2>
+            <p>The following software and libraries were chosen for the KYC implementation to ensure compliance, performance, and developer productivity:</p>
+            <ul>
+                <li><strong>Next.js (App Router):</strong> Chosen for its server-side rendering (SSR) capabilities which are essential for SEO and initial load performance, as well as its robust API routing for backend logic.</li>
+                <li><strong>Prisma ORM:</strong> Provides type-safe database access, ensuring that KYC data contracts are strictly enforced at the database level.</li>
+                <li><strong>Tailwind CSS:</strong> Allows for rapid UI development with a consistent design system, ensuring that compliance shields and status indicators are visually clear across all devices.</li>
+                <li><strong>Lucide React:</strong> Used for lightweight, consistent iconography (e.g., Shield, CheckCircle, AlertTriangle) to enhance UX during the verification flow.</li>
+                <li><strong>Jest:</strong> Selected as the primary testing framework to validate complex state transitions and audit logging logic, ensuring system reliability before deployment.</li>
+                <li><strong>Google ML Kit (OCR):</strong> Chosen for its on-device processing capabilities, ensuring that sensitive ID information is extracted locally whenever possible to enhance user privacy and reduce server load.</li>
+            </ul>
+        </div>
+    </div>
+</body>
+</html>

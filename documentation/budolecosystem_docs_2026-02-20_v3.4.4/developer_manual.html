@@ -1,0 +1,88 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Developer Manual - v3.4.4</title>
+    <style>
+        :root { --primary: #0052CC; --text-main: #172B4D; --bg-sidebar: #F4F5F7; --border: #DFE1E6; --code-bg: #F4F5F7; }
+        body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; color: var(--text-main); margin: 0; display: flex; }
+        .sidebar { width: 280px; background: var(--bg-sidebar); height: 100vh; padding: 24px; border-right: 1px solid var(--border); position: fixed; overflow-y: auto; }
+        .main { margin-left: 280px; padding: 40px; max-width: 900px; flex-grow: 1; }
+        .nav-item { display: block; padding: 8px 12px; color: var(--text-main); text-decoration: none; margin-bottom: 4px; border-radius: 4px; }
+        .nav-item:hover { background: #EBECF0; }
+        .nav-item.active { background: #DEEBFF; color: var(--primary); font-weight: 500; }
+        .nav-title { font-size: 0.75rem; font-weight: 700; color: #6B778C; text-transform: uppercase; margin: 24px 0 8px 12px; }
+        h1 { font-size: 2rem; margin-bottom: 24px; border-bottom: 1px solid var(--border); padding-bottom: 16px; }
+        h2 { font-size: 1.5rem; margin-top: 32px; margin-bottom: 16px; }
+        h3 { font-size: 1.2rem; margin-top: 24px; margin-bottom: 12px; }
+        p { line-height: 1.6; margin-bottom: 16px; }
+        code { background: var(--code-bg); padding: 2px 4px; border-radius: 4px; font-family: monospace; color: #EB144C; }
+        pre { background: #091E42; color: #fff; padding: 16px; border-radius: 4px; overflow-x: auto; }
+        .code-ref { display: inline-block; padding: 2px 6px; background: #DEEBFF; color: #0052CC; border-radius: 4px; text-decoration: none; font-size: 0.9rem; }
+        .code-ref:hover { background: #B3D4FF; }
+    </style>
+</head>
+<body>
+
+<div class="sidebar">
+    <div style="font-weight: 700; font-size: 1.1rem; margin-bottom: 24px; padding-left: 12px;">Budol Ecosystem</div>
+    <div class="nav-title">Documents</div>
+    <a href="index.html" class="nav-item">Overview & Tasks</a>
+    <a href="developer_manual.html" class="nav-item active">Developer Manual</a>
+    <a href="system_admin_manual.html" class="nav-item">System Admin Manual</a>
+    <a href="user_manual.html" class="nav-item">User Manual</a>
+    <a href="risk_register.html" class="nav-item">Risk Register</a>
+    <a href="Mitigation.html" class="nav-item">Mitigation Strategies</a>
+    <a href="issues_and_fixes.html" class="nav-item">Issues & Fixes</a>
+    <a href="test_results.html" class="nav-item">Test Results</a>
+    <a href="future_recommendations.html" class="nav-item">Future Recommendations</a>
+    <div class="nav-title">Navigation</div>
+    <a href="../knowledgebase.html" class="nav-item">← Back to Knowledgebase</a>
+</div>
+
+<div class="main">
+    <h1>Developer Manual</h1>
+    <p>This document details the changes made in v3.4.4 regarding Cart Clearance and Multi-Store Logic.</p>
+
+    <h2>Purpose</h2>
+    <p>To ensure that items are reliably removed from the user's cart after an order is successfully created, regardless of the payment method (Synchronous or Asynchronous). Additionally, to enforce shipping restrictions for multi-store orders.</p>
+
+    <h2>Rationale</h2>
+    <p>Previously, asynchronous payments (GCash, Maya, etc.) were excluded from immediate cart clearance. This was intended to preserve the cart in case of payment failure. However, it led to duplicate orders if users navigated back and re-submitted the order. Clearing the cart upon order creation is a safer default to prevent duplicates.</p>
+
+    <h2>Technical Explanation</h2>
+    <p>The logic in <code>OrderSummary.jsx</code> was modified to remove the conditional check <code>!isAsyncPayment</code>. Now, the <code>deleteItemFromCart</code> Redux action is dispatched for all successful API responses from <code>/api/orders</code>.</p>
+
+    <h3>Code Changes</h3>
+    <p>File: <a href="file:///d:/IT Projects/budolEcosystem/budolshap-0.1.0/components/OrderSummary.jsx" class="code-ref">components/OrderSummary.jsx</a></p>
+    
+    <pre>
+// Before:
+const isAsyncPayment = ['GCASH', 'MAYA', 'GRAB_PAY', 'QRPH', 'BUDOL_PAY'].includes(paymentMethod);
+if (response.ok && !isAsyncPayment) { ... }
+
+// After:
+if (response.ok) {
+    // Clear cart immediately
+    orderItems.forEach(item => {
+        dispatch(deleteItemFromCart({ ... }));
+    });
+}
+    </pre>
+
+    <h2>Compliance</h2>
+    <p>Ensures that order records are distinct and reduces the risk of accidental double-charging or inventory allocation errors (PCI DSS considerations for transaction integrity).</p>
+
+    <h2>Dependencies</h2>
+    <ul>
+        <li><code>react-redux</code>: For dispatching cart actions.</li>
+        <li><code>cartSlice.js</code>: Reducer handling deletion logic.</li>
+    </ul>
+
+    <h2>Tests</h2>
+    <p>Unit tests for <code>cartSlice</code> confirm that <code>deleteItemFromCart</code> correctly removes items based on <code>productId</code> and <code>variationId</code>.</p>
+</div>
+
+</body>
+</html>

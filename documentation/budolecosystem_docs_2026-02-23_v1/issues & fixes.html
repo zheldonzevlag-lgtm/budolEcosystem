@@ -1,0 +1,46 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Issues & Fixes - Geocoding Update</title>
+    <style>
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; line-height: 1.6; color: #333; max-width: 1200px; margin: 0 auto; padding: 20px; }
+        h1, h2 { color: #2c3e50; }
+        .issue { border: 1px solid #ddd; padding: 15px; margin-bottom: 20px; border-radius: 5px; }
+        .issue h3 { margin-top: 0; }
+        .status { display: inline-block; padding: 3px 8px; border-radius: 3px; font-size: 0.8em; color: white; }
+        .resolved { background-color: #5cb85c; }
+        .nav { margin-bottom: 20px; }
+        .nav a { color: #3498db; text-decoration: none; margin-right: 15px; }
+    </style>
+</head>
+<body>
+    <div class="nav">
+        <a href="index.html">← Back to Index</a>
+    </div>
+
+    <h1>Issues & Fixes Log</h1>
+
+    <div class="issue">
+        <h3>Issue #1: Inconsistent Address Fields across Providers</h3>
+        <p><strong>Description:</strong> Geoapify, Google Maps, Radar, and OSM return address components with different property names (e.g., 'suburb' vs 'neighborhood' vs 'sublocality'). This caused the form fields to not populate correctly when switching providers.</p>
+        <p><strong>Fix:</strong> Implemented a standardized <code>address</code> object in the backend API (<code>/api/system/geocode</code>). This object normalizes the data into <code>city</code>, <code>province</code>, <code>barangay</code>, <code>street</code>, <code>zip</code>, and <code>district</code> before sending it to the frontend.</p>
+        <span class="status resolved">Resolved</span>
+    </div>
+
+    <div class="issue">
+        <h3>Issue #2: Google Maps Missing Barangay</h3>
+        <p><strong>Description:</strong> Google Maps API often nests the Barangay level under 'sublocality_level_1' or 'neighborhood', which wasn't being captured by the legacy mapping.</p>
+        <p><strong>Fix:</strong> Updated the Google Maps extraction logic to check <code>sublocality_level_1</code>, <code>neighborhood</code>, and <code>sublocality</code> in that order to find the Barangay.</p>
+        <span class="status resolved">Resolved</span>
+    </div>
+
+    <div class="issue">
+        <h3>Issue #3: Search Selection Not Syncing Fields</h3>
+        <p><strong>Description:</strong> Selecting a result from the search bar updated the map but sometimes failed to update the specific text fields (City, Zip, etc.) if the provider format wasn't recognized.</p>
+        <p><strong>Fix:</strong> Updated <code>AddressFormManager.jsx</code> to use the same standardized <code>address</code> object for search results (forward geocoding) as it does for map clicks (reverse geocoding).</p>
+        <span class="status resolved">Resolved</span>
+    </div>
+</body>
+</html>

@@ -1,0 +1,70 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Developer Manual - v5.3.4 | Budol Ecosystem</title>
+    <style>
+        body {
+            font-family: 'Inter', system-ui, -apple-system, sans-serif;
+            line-height: 1.6;
+            color: #1e293b;
+            max-width: 1000px;
+            margin: 0 auto;
+            padding: 40px 20px;
+            background-color: #f8fafc;
+        }
+
+        .card {
+            background: white;
+            padding: 24px;
+            border-radius: 12px;
+            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+            margin-bottom: 24px;
+        }
+
+        pre {
+            background: #1e293b;
+            color: #f8fafc;
+            padding: 16px;
+            border-radius: 8px;
+            overflow-x: auto;
+        }
+
+        code {
+            color: #e11d48;
+        }
+    </style>
+</head>
+
+<body>
+    <h1>Developer Manual (v5.3.4)</h1>
+
+    <div class="card">
+        <h2>Data Normalization Logic</h2>
+        <p>The Category Admin UI sends <code>parentId: ""</code> when the user selects "None (Top Level)". In Prisma, a
+            string field with a foreign key constraint must either contain a valid ID or be <code>null</code>. The empty
+            string was causing a <code>P2003</code> Foreign Key violation.</p>
+
+        <h3>Fix Implementation</h3>
+        <p>Modified <code>app/api/admin/categories/route.js</code> to normalize the input:</p>
+        <pre><code>// In POST/PUT handlers
+if (validatedData.parentId === '') {
+    validatedData.parentId = null
+}
+
+// Auto-reset level if top-level
+if (validatedData.parentId === null) {
+    validatedData.level = 1
+}</code></pre>
+    </div>
+
+    <div class="card">
+        <h2>Zod Schema Update</h2>
+        <p>The schema now explicitly permits null values for the parent identifier:</p>
+        <pre><code>parentId: z.string().nullable().optional()</code></pre>
+    </div>
+</body>
+
+</html>
