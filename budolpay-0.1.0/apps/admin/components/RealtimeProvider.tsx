@@ -25,12 +25,13 @@ export default function RealtimeProvider() {
   const router = useRouter();
   const pathname = usePathname();
   const timerRef = useRef<NodeJS.Timeout | null>(null);
-  
-  // (v43.2) Disable realtime bus entirely on login page to avoid flickering
-  if (pathname === '/login') return null;
   const [wsConnected, setWsConnected] = useState(false);
   const configRef = useRef({ intervalMs: DEFAULT_POLL_MS });
   const mountedRef = useRef(false);
+
+  // (v43.2) Disable realtime bus entirely on login page to avoid flickering
+  // FIX: Moved after hooks to comply with React "Rules of Hooks" (v45.1.2)
+  if (pathname === '/login') return null;
 
   useEffect(() => {
     if (mountedRef.current) return;
