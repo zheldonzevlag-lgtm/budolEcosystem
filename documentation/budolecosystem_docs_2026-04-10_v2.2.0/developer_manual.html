@@ -1,0 +1,56 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Developer Manual - v2.2.0</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600&family=JetBrains+Mono&display=swap" rel="stylesheet">
+    <style>
+        body { font-family: 'Inter', sans-serif; line-height: 1.6; color: #172B4D; padding: 40px; max-width: 900px; margin: auto; }
+        pre { background: #091E42; color: #fff; padding: 20px; border-radius: 8px; overflow-x: auto; font-family: 'JetBrains Mono', monospace; }
+        code { font-family: 'JetBrains Mono', monospace; background: #EBECF0; padding: 2px 4px; border-radius: 4px; }
+        .file-link { color: #0052CC; text-decoration: none; font-weight: 600; }
+        .file-link:hover { text-underline-offset: 4px; text-decoration: underline; }
+        h1, h2 { color: #0747A6; }
+        .note { background: #DEEBFF; padding: 16px; border-left: 4px solid #0052CC; margin: 20px 0; border-radius: 4px; }
+    </style>
+</head>
+<body>
+    <h1>Developer Manual: Local SSO Stabilization</h1>
+    
+    <section>
+        <h2>Overview</h2>
+        <p>This document details the configuration changes required to ensure <strong>BudolID SSO</strong> works correctly in a local developer environment using the LAN IP <code>192.168.1.2</code>.</p>
+    </section>
+
+    <section>
+        <h2>Core Configuration Changes</h2>
+        <p>The primary fix involved updating the <code>.env.connection.local</code> template which acts as the source for all ecosystem services.</p>
+        
+        <h3>1. Template Update</h3>
+        <p>File: <a href="file:///d:/IT%20Projects/clone/budolEcosystem/budolshap-0.1.0/.env.connection.local" class="file-link">budolshap-0.1.0/.env.connection.local</a></p>
+        <pre>
+# Added consistent LAN IP URLs
+NEXT_PUBLIC_SSO_URL=http://192.168.1.2:8000
+BUDOLACCOUNTING_URL=http://192.168.1.2:8005
+NEXT_PUBLIC_APP_URL=http://192.168.1.2:3000
+NEXT_PUBLIC_BASE_URL=http://192.168.1.2:3000
+LOCAL_IP=192.168.1.2</pre>
+
+        <h3>2. Synchronization Script</h3>
+        <p>The <code>env-manager.cjs</code> script was used to propagate these values across all 11 relevant <code>.env</code> files in the ecosystem.</p>
+        <code>node scripts/env-manager.cjs local</code>
+    </section>
+
+    <section>
+        <h2>Code References</h2>
+        <ul>
+            <li><strong>Redirection Logic:</strong> <a href="file:///d:/IT%20Projects/clone/budolEcosystem/budolID-0.1.0/index.js#L1310" class="file-link">budolID-0.1.0/index.js (L1310-1314)</a> - Validates the dynamic <code>redirect_uri</code>.</li>
+            <li><strong>Environment Management:</strong> <a href="file:///d:/IT%20Projects/clone/budolEcosystem/budolshap-0.1.0/scripts/env-manager.cjs" class="file-link">env-manager.cjs</a> - Handles the secure propagation of connection strings.</li>
+        </ul>
+    </section>
+
+    <div class="note">
+        <strong>Important:</strong> After updating <code>.env</code> files, you must restart all services (BudolID, BudolShap, etc.) for the changes to take effect in the process environment.
+    </div>
+</body>
+</html>
