@@ -41,20 +41,44 @@ export async function createAuditLog(params: {
   };
 
   // Attempt to store userId for FK link (works for public schema users)
-  // For mobile users whose UUIDs only exist in budolpay schema,
-  // the FK constraint will cause Prisma to store null — that's expected.
-  // Identity is captured via actorName/actorEmail in metadata instead.
-  return await prisma.auditLog.create({
-    data: {
-      action: params.action,
-      entity: params.entity,
-      entityId: params.entityId,
-      userId: params.userId || null,
-      oldValue: params.oldValue,
-      newValue: params.newValue,
-      metadata: metadata,
-      ipAddress: params.ipAddress || 'UNKNOWN'
+  // FIX (v45.1.1): FK constraint on AuditLog→User throws error (P2003) if userId 
+  // doesn't exist. We catch this and store as null while preserving identity 
+  // via actorName/actorEmail in metadata.
+  try {
+    return await prisma.auditLog.create({
+      data: {
+        action: params.action,
+        entity: params.entity,
+        entityId: params.entityId,
+        userId: params.userId || null,
+        oldValue: params.oldValue,
+        newValue: params.newValue,
+        metadata: metadata,
+        ipAddress: params.ipAddress || 'UNKNOWN'
+      }
+    });
+  } catch (error: any) {
+    // P2003 is Prisma's error code for foreign key constraint failure
+    if (error.code === 'P2003') {
+      console.warn(`[AuditLog] Foreign key constraint failed for userId: ${params.userId}. Storing log with userId: null.`);
+      return await prisma.auditLog.create({
+        data: {
+          action: params.action,
+          entity: params.entity,
+          entityId: params.entityId,
+          userId: null,
+          oldValue: params.oldValue,
+          newValue: params.newValue,
+          metadata: {
+            ...metadata,
+            original_userId: params.userId, // Preserve the failed userId in metadata
+            warning: 'FK constraint failed - linked user not found in public schema'
+          },
+          ipAddress: params.ipAddress || 'UNKNOWN'
+        }
+      });
     }
-  });
+    throw error; // Re-throw other errors
+  }
 }
 
