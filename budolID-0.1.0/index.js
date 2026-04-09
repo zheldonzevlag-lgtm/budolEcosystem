@@ -264,7 +264,7 @@ app.get('/login', (req, res) => {
     const activeRedirectUri = redirect_uri || '';
 
     const errorToast = error ? `
-        <div id="toast-error" class="fixed top-6 right-6 z-[100] flex items-center w-full max-w-xs p-4 text-gray-500 bg-white rounded-xl shadow-2xl border border-gray-100 animate-in slide-in-from-top-4 duration-500" role="alert">
+        <div id="toast-error" class="fixed top-6 left-1/2 -translate-x-1/2 z-[100] flex items-center w-full max-w-xs p-4 text-gray-500 bg-white rounded-xl shadow-2xl border border-gray-100 animate-in slide-in-from-top-10 duration-500" role="alert">
             <div class="inline-flex items-center justify-center flex-shrink-0 w-10 h-10 text-red-500 bg-red-50 rounded-lg">
                 <svg class="w-5 h-5" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5"><path stroke-linecap="round" stroke-linejoin="round" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/></svg>
             </div>
@@ -277,7 +277,7 @@ app.get('/login', (req, res) => {
             setTimeout(() => {
                 const toast = document.getElementById('toast-error');
                 if (toast) {
-                    toast.classList.add('transition-all', 'duration-500', 'opacity-0', 'translate-x-full');
+                    toast.classList.add('transition-all', 'duration-500', 'opacity-0', '-translate-y-full');
                     setTimeout(() => toast.remove(), 500);
                 }
             }, 4000);
