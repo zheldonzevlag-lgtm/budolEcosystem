@@ -1,0 +1,82 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Budol Ecosystem v2 Developer Manual - 2026-04-09</title>
+    <style>
+        :root {
+            --primary: #0052CC;
+            --secondary: #172B4D;
+            --bg-sidebar: #F4F5F7;
+            --bg-main: #FFFFFF;
+            --text-main: #172B4D;
+            --text-subtle: #6B778C;
+            --border: #DFE1E6;
+        }
+        body { font-family: 'Inter', sans-serif; display: flex; min-height: 100vh; margin: 0; background: var(--bg-main); color: var(--text-main); }
+        .sidebar { width: 280px; background: var(--bg-sidebar); border-right: 1px solid var(--border); padding: 20px; }
+        .main-content { flex: 1; padding: 40px; }
+        h1 { color: var(--primary); border-bottom: 2px solid var(--primary); padding-bottom: 10px; }
+        .nav-item { display: block; padding: 10px; color: var(--text-main); text-decoration: none; border-radius: 4px; }
+        .nav-item:hover { background: #EBECF0; }
+        code { background-color: #f4f4f4; color: #d63384; padding: 2px 4px; border-radius: 4px; }
+        pre { background-color: #272822; color: #f8f8f2; padding: 15px; border-radius: 4px; overflow-x: auto; }
+        .code-link { color: #0052CC; text-decoration: underline; cursor: pointer; }
+    </style>
+</head>
+<body>
+    <div class="sidebar">
+        <h2>Documentation</h2>
+        <a class="nav-item" href="index.html">Index</a>
+        <a class="nav-item" href="developer_manual.html">Developer Manual</a>
+        <a class="nav-item" href="system_admin_manual.html">System Admin Manual</a>
+        <a class="nav-item" href="user_manual.html">User Manual</a>
+        <a class="nav-item" href="risk_register.html">Risk Register</a>
+        <a class="nav-item" href="Mitigation.html">Mitigation</a>
+        <a class="nav-item" href="issues & fixes.html">Issues & Fixes</a>
+        <a class="nav-item" href="test_results.html">Test Results</a>
+        <a class="nav-item" href="future_recommendations.html">Future Recommendations</a>
+    </div>
+    <div class="main-content">
+        <h1>Developer Manual</h1>
+        <h2>Technical Explanation</h2>
+        <p>The Budol Ecosystem is a multi-project environment containing several microservices. This release addresses the configuration and dependency issues that prevented a smooth local startup.</p>
+
+        <h3>Key Changes</h3>
+        <ul>
+            <li><strong>Monorepo Dependency Linkage:</strong> Ran <code>npm install</code> in all sub-projects (budolID, budolpay, budolshap, budolAccounting) to ensure local packages like <code>@budolpay/database</code> are correctly linked.</li>
+            <li><strong>Workspace Name Correction:</strong> Corrected the admin workspace name in <a class="code-link" href="file:///d:/IT%20Projects/clone/budolEcosystem/budolpay-0.1.0/apps/admin/package.json">budolpay-0.1.0/apps/admin/package.json</a> from <code>admin</code> to <code>@budolpay/admin</code> to match the runner script.</li>
+            <li><strong>Prisma Schema Fix:</strong> Fixed the Prisma schema in <a class="code-link" href="file:///d:/IT%20Projects/clone/budolEcosystem/budolpay-0.1.0/services/api-gateway/prisma/schema.prisma">api-gateway</a> by adding the missing <code>url</code> parameter to the datasource block.</li>
+            <li><strong>Database Schema Isolation:</strong> Updated <a class="code-link" href="file:///d:/IT%20Projects/clone/budolEcosystem/budolshap-0.1.0/.env.connection.local">.env.connection.local</a> to use the <code>budolpay</code> schema locally, ensuring consistency with the production environment and avoiding collisions.</li>
+            <li><strong>Environment Path Fix:</strong> Corrected the <code>.env</code> path in <a class="code-link" href="file:///d:/IT%20Projects/clone/budolEcosystem/budolpay-0.1.0/services/payment-gateway-service/api/index.js">payment-gateway-service</a> to correctly point to the monorepo root's <code>.env</code> file.</li>
+        </ul>
+
+        <h2>Code References</h2>
+        <h3>Ecosystem Runner</h3>
+        <p>File: <a class="code-link" href="file:///d:/IT%20Projects/clone/budolEcosystem/start-ecosystem.js">start-ecosystem.js</a></p>
+        <pre><code>// Central runner for the ecosystem
+const apps = [
+    { name: 'budolID (SSO)', cwd: path.join(__dirname, 'budolID-0.1.0'), ... },
+    { name: 'budolPay (Admin)', cwd: path.join(__dirname, 'budolpay-0.1.0'), args: ['run', 'dev', '-w', '@budolpay/admin'], ... },
+    ...
+];</code></pre>
+
+        <h3>Database Isolation Logic</h3>
+        <p>File: <a class="code-link" href="file:///d:/IT%20Projects/clone/budolEcosystem/budolpay-0.1.0/packages/database/index.js">budolpay-0.1.0/packages/database/index.js</a></p>
+        <pre><code>const getIsolatingUrl = () => {
+  const url = process.env.DATABASE_URL;
+  ...
+  params.set('schema', 'budolpay');
+  return `${baseUrl}?${params.toString()}`;
+};</code></pre>
+
+        <h2>Dependencies</h2>
+        <ul>
+            <li>Node.js v20+</li>
+            <li>PostgreSQL 18</li>
+            <li>Prisma 5.x / 6.x</li>
+            <li>Flutter (for mobile app)</li>
+        </ul>
+    </div>
+</body>
+</html>

@@ -1,0 +1,79 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Budol Ecosystem v2 Issues & Fixes - 2026-04-09</title>
+    <style>
+        :root {
+            --primary: #0052CC;
+            --secondary: #172B4D;
+            --bg-sidebar: #F4F5F7;
+            --bg-main: #FFFFFF;
+            --text-main: #172B4D;
+            --text-subtle: #6B778C;
+            --border: #DFE1E6;
+        }
+        body { font-family: 'Inter', sans-serif; display: flex; min-height: 100vh; margin: 0; background: var(--bg-main); color: var(--text-main); }
+        .sidebar { width: 280px; background: var(--bg-sidebar); border-right: 1px solid var(--border); padding: 20px; }
+        .main-content { flex: 1; padding: 40px; }
+        h1 { color: var(--primary); border-bottom: 2px solid var(--primary); padding-bottom: 10px; }
+        .nav-item { display: block; padding: 10px; color: var(--text-main); text-decoration: none; border-radius: 4px; }
+        .nav-item:hover { background: #EBECF0; }
+        .issue-card { background: #f8d7da; border-left: 5px solid #dc3545; padding: 15px; margin-bottom: 20px; border-radius: 4px; }
+        .fix-card { background: #d4edda; border-left: 5px solid #28a745; padding: 15px; margin-bottom: 20px; border-radius: 4px; }
+    </style>
+</head>
+<body>
+    <div class="sidebar">
+        <h2>Documentation</h2>
+        <a class="nav-item" href="index.html">Index</a>
+        <a class="nav-item" href="developer_manual.html">Developer Manual</a>
+        <a class="nav-item" href="system_admin_manual.html">System Admin Manual</a>
+        <a class="nav-item" href="user_manual.html">User Manual</a>
+        <a class="nav-item" href="risk_register.html">Risk Register</a>
+        <a class="nav-item" href="Mitigation.html">Mitigation</a>
+        <a class="nav-item" href="issues & fixes.html">Issues & Fixes</a>
+        <a class="nav-item" href="test_results.html">Test Results</a>
+        <a class="nav-item" href="future_recommendations.html">Future Recommendations</a>
+    </div>
+    <div class="main-content">
+        <h1>Issues & Fixes</h1>
+        
+        <div class="issue-card">
+            <h3>Issue: Cannot find module '@budolpay/database'</h3>
+            <p><strong>Cause:</strong> Services were run using <code>node index.js</code> in their subdirectories without first linking the monorepo dependencies.</p>
+        </div>
+        <div class="fix-card">
+            <h3>Fix: Linked Monorepo Dependencies</h3>
+            <p><strong>Action:</strong> Ran <code>npm install</code> at the root of <code>budolpay-0.1.0</code> to ensure symlinks were created in <code>node_modules</code>.</p>
+        </div>
+
+        <div class="issue-card">
+            <h3>Issue: npm error No workspaces found: --workspace=@budolpay/admin</h3>
+            <p><strong>Cause:</strong> The workspace name in <code>apps/admin/package.json</code> was <code>admin</code>, but the runner script used <code>@budolpay/admin</code>.</p>
+        </div>
+        <div class="fix-card">
+            <h3>Fix: Standardized Workspace Naming</h3>
+            <p><strong>Action:</strong> Renamed the workspace in <code>apps/admin/package.json</code> to <code>@budolpay/admin</code> to match ecosystem standards.</p>
+        </div>
+
+        <div class="issue-card">
+            <h3>Issue: Prisma schema validation error in api-gateway</h3>
+            <p><strong>Cause:</strong> The <code>datasource db</code> block was missing the <code>url</code> parameter.</p>
+        </div>
+        <div class="fix-card">
+            <h3>Fix: Updated Prisma Schema</h3>
+            <p><strong>Action:</strong> Added <code>url = env("DATABASE_URL")</code> and corrected provider to <code>prisma-client-js</code>.</p>
+        </div>
+
+        <div class="issue-card">
+            <h3>Issue: Database Connection Failed in payment-gateway-service</h3>
+            <p><strong>Cause:</strong> Incorrect <code>.env</code> path reference (<code>../.env</code> instead of <code>../../../.env</code>) and local database tables were in <code>public</code> instead of <code>budolpay</code> schema.</p>
+        </div>
+        <div class="fix-card">
+            <h3>Fix: Corrected Path and Schema Isolation</h3>
+            <p><strong>Action:</strong> Updated <code>api/index.js</code> path reference and forced local environment to use <code>schema=budolpay</code> via <code>.env.connection.local</code>.</p>
+        </div>
+    </div>
+</body>
+</html>

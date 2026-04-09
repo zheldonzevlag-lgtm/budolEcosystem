@@ -1,0 +1,99 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Budol Ecosystem - Developer Manual</title>
+    <style>
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; line-height: 1.6; color: #333; margin: 0; display: flex; }
+        .sidebar { width: 250px; background: #f4f5f7; border-right: 1px solid #dfe1e6; height: 100vh; padding: 20px; position: fixed; }
+        .content { margin-left: 280px; padding: 40px; flex: 1; }
+        h1 { color: #172b4d; }
+        h2 { color: #0052cc; border-bottom: 2px solid #ebecf0; padding-bottom: 8px; margin-top: 40px; }
+        pre { background: #091e42; color: #fff; padding: 15px; border-radius: 5px; overflow-x: auto; }
+        .code-link { color: #0052cc; text-decoration: none; font-weight: bold; }
+        .code-link:hover { text-decoration: underline; }
+        .tag { display: inline-block; padding: 2px 8px; border-radius: 3px; font-size: 12px; font-weight: bold; margin-bottom: 10px; }
+        .tag-high { background: #ffebe6; color: #bf2600; }
+        .tag-med { background: #fff0b3; color: #172b4d; }
+    </style>
+</head>
+<body>
+    <div class="sidebar">
+        <h3>Navigation</h3>
+        <ul>
+            <li><a href="index.html">Version Index</a></li>
+            <li><a href="#architecture">Architecture</a></li>
+            <li><a href="#services">Services Registry</a></li>
+            <li><a href="#data-contracts">Data Contracts</a></li>
+        </ul>
+    </div>
+    <div class="content">
+        <h1>Developer Manual - BudolEcosystem v1.0.0</h1>
+        
+        <section id="architecture">
+            <h2>System Architecture</h2>
+            <p>The BudolEcosystem is a distributed microservices platform designed for high availability and modular scalability. Component interactions are facilitated through an API Gateway with mDNS service discovery for local environments.</p>
+            
+            <h3>Core Components</h3>
+            <ul>
+                <li><strong>budolID (SSO):</strong> Centralized identity provider using JWT and Prisma.</li>
+                <li><strong>budolShap:</strong> The primary e-commerce / marketplace storefront (Next.js).</li>
+                <li><strong>budolPay:</strong> Financial service mesh (Monorepo) comprising multiple sub-services (Auth, Wallet, TX, Gateway, Settlement).</li>
+                <li><strong>budolAccounting:</strong> Financial record-keeping and ledgering service.</li>
+            </ul>
+        </section>
+
+        <section id="services">
+            <h2>Service Registry</h2>
+            <table border="1" cellpadding="10" style="border-collapse: collapse; width: 100%;">
+                <tr style="background: #f4f5f7;">
+                    <th>Service</th>
+                    <th>Port</th>
+                    <th>Tech Stack</th>
+                    <th>Code Link</th>
+                </tr>
+                <tr>
+                    <td>BudolID (SSO)</td>
+                    <td>8000</td>
+                    <td>Node.js / Express / Prisma</td>
+                    <td><a href="file:///D:/IT%20Projects/clone/budolEcosystem/budolID-0.1.0/index.js" class="code-link">budolID/index.js</a></td>
+                </tr>
+                <tr>
+                    <td>BudolShap</td>
+                    <td>3001</td>
+                    <td>Next.js 16+</td>
+                    <td><a href="file:///D:/IT%20Projects/clone/budolEcosystem/budolshap-0.1.0/app/page.js" class="code-link">budolshap/page.js</a></td>
+                </tr>
+                <tr>
+                    <td>BudolPay Admin</td>
+                    <td>3000</td>
+                    <td>Next.js 14</td>
+                    <td><a href="file:///D:/IT%20Projects/clone/budolEcosystem/budolpay-0.1.0/apps/admin/package.json" class="code-link">budolpay/admin</a></td>
+                </tr>
+                <tr>
+                    <td>API Gateway</td>
+                    <td>8080</td>
+                    <td>Node.js / Multi-Proxy</td>
+                    <td><a href="file:///D:/IT%20Projects/clone/budolEcosystem/budolpay-0.1.0/services/api-gateway/index.js" class="code-link">api-gateway/index.js</a></td>
+                </tr>
+            </table>
+        </section>
+
+        <section id="data-contracts">
+            <h2>Data Contracts & Prisma Schemas</h2>
+            <p>Shared database structures are managed via Prisma. Primary databases include <code>budolpay</code>, <code>budolid</code>, <code>budolshap</code>, and <code>budolaccounting</code>.</p>
+            <h3>Transaction Entity Example</h3>
+            <pre>
+model Transaction {
+  id           String            @id @default(uuid())
+  amount       Decimal           @db.Decimal(18, 2)
+  type         TransactionType
+  status       TransactionStatus @default(PENDING)
+  referenceId  String            @unique
+  createdAt    DateTime          @default(now())
+}
+            </pre>
+        </section>
+    </div>
+</body>
+</html>

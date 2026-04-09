@@ -93,7 +93,7 @@ async function start() {
             name: 'budolPay (Admin)',
             cwd: path.join(__dirname, 'budolpay-0.1.0'),
             command: 'npm',
-            args: ['run', 'dev', '-w', 'admin'],
+            args: ['run', 'dev', '-w', '@budolpay/admin'],
             port: 3000,
             color: '\x1b[34m' // Blue
         },

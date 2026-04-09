@@ -108,8 +108,13 @@ if (fs.existsSync(sourceEnvPath)) {
                         // Propagate WebSocket URLs to all services
                         envMap.set(key, value);
                     } else {
-                        // Map all other variables as is
-                        envMap.set(key, value);
+                        // Map all other variables as is, but DO NOT overwrite DATABASE_URL if we are in a special service 
+                        // and this is a global DATABASE_URL key (which would have been matched above if it were allowed)
+                        if (key === 'DATABASE_URL' && (envPath.includes('budolID') || envPath.includes('budolshap') || envPath.includes('budolAccounting'))) {
+                             // Skip overwriting
+                        } else {
+                            envMap.set(key, value);
+                        }
                     }
                 }
             });

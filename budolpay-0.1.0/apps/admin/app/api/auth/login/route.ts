@@ -53,12 +53,8 @@ export async function POST(request: Request) {
 
         // 1. Authenticate against budolID API (Server-to-Server)
         const LOCAL_IP = process.env.LOCAL_IP || 'localhost';
-        const isProd = process.env.NODE_ENV === 'production' || process.env.VERCEL === '1';
-        
-        // Default to Render SSO URL in production if SSO_URL is not set
-        const defaultSsoUrl = isProd ? 'https://budol-id-sso.onrender.com' : `http://${LOCAL_IP}:8000`;
-        const ssoUrl = process.env.SSO_URL || defaultSsoUrl;
-        const apiKey = process.env.BUDOLID_API_KEY || 'bp_key_2025';
+        const ssoUrl = process.env.SSO_URL || `http://${LOCAL_IP}:8000`;
+        const apiKey = 'bp_key_2025'; // This should be in env
 
         console.log(`[Login API] Attempting SSO login via: ${ssoUrl}/auth/sso/login`);
         
@@ -125,7 +121,6 @@ export async function POST(request: Request) {
             });
 
             if (!localUser) {
-                console.log(`[Login API] Creating local user record for: ${ssoUser.email}`);
                 localUser = await prisma.user.create({
                     data: {
                         email: ssoUser.email,
@@ -133,19 +128,10 @@ export async function POST(request: Request) {
                         lastName: ssoUser.lastName || 'User',
                         passwordHash: 'SSO_MANAGED', // No password stored locally
                         phoneNumber: ssoUser.phoneNumber || `SSO_${Date.now()}`,
-                        role: ssoUser.role || 'STAFF', 
+                        role: 'STAFF', 
                         kycStatus: 'VERIFIED'
                     }
                 });
-            } else {
-                // Ensure local role matches SSO role if it changed
-                if (localUser.role !== ssoUser.role && ssoUser.role) {
-                    console.log(`[Login API] Updating local role for ${ssoUser.email} to ${ssoUser.role}`);
-                    localUser = await prisma.user.update({
-                        where: { id: localUser.id },
-                        data: { role: ssoUser.role }
-                    });
-                }
             }
 
             // 4. Set Session Cookie

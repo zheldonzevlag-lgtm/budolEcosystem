@@ -1,4 +1,4 @@
-const { triggerRealtimeEvent } = require('../../packages/audit/src/index');
+const { triggerRealtimeEvent } = require('../../../budolshap-0.1.0/lib/realtime');
 
 // Mock fetch
 global.fetch = jest.fn(() =>
@@ -20,15 +20,15 @@ describe('Realtime Trigger', () => {
     
     expect(fetch).toHaveBeenCalledWith(
       'http://localhost:8080/internal/notify',
-      expect.anything()
+      expect.objectContaining({
+        method: 'POST',
+        body: JSON.stringify({
+          event: 'TEST_EVENT',
+          data: { foo: 'bar' },
+          isAdmin: true
+        })
+      })
     );
-    
-    const callBody = JSON.parse(fetch.mock.calls[0][1].body);
-    expect(callBody).toEqual({
-      event: 'TEST_EVENT',
-      data: { foo: 'bar' },
-      isAdmin: true
-    });
   });
 
   it('should format user channel payload correctly', async () => {
@@ -36,14 +36,14 @@ describe('Realtime Trigger', () => {
     
     expect(fetch).toHaveBeenCalledWith(
       'http://localhost:8080/internal/notify',
-      expect.anything()
+      expect.objectContaining({
+        body: JSON.stringify({
+          event: 'USER_EVENT',
+          data: { hello: 'world' },
+          isAdmin: false,
+          userId: '123'
+        })
+      })
     );
-    
-    const callBody = JSON.parse(fetch.mock.calls[0][1].body);
-    expect(callBody).toEqual(expect.objectContaining({
-      event: 'USER_EVENT',
-      data: { hello: 'world' },
-      isAdmin: false
-    }));
   });
 });

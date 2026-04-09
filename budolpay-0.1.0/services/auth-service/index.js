@@ -99,11 +99,6 @@ const createAuditLog = async (req, userId, action, metadata = {}, entity = 'Secu
         const ipAddress = req.headers['x-forwarded-for'] || req.socket.remoteAddress;
         const userAgent = req.headers['user-agent'];
 
-        // BudolPay Forensic Audit Enhancement (v46.1):
-        // Inject actor identity into metadata to support Admin Dashboard fallbacks
-        let actorName = metadata.actorName || 'SYSTEM';
-        let actorEmail = metadata.actorEmail || 'system@budolpay.com';
-
         // Use centralized audit helper with proper metadata structure
         const auditLog = await createCentralizedAuditLog({
             action,
@@ -112,8 +107,6 @@ const createAuditLog = async (req, userId, action, metadata = {}, entity = 'Secu
             userId,
             metadata: {
                 ...metadata,
-                actorName,
-                actorEmail,
                 ipAddress,
                 userAgent,
                 device: req.body.deviceId || 'UNKNOWN_DEVICE',
@@ -890,9 +883,7 @@ app.post('/login/mobile/identify', async (req, res) => {
         // Audit: Mobile Identification (Phase 1)
         await createAuditLog(req, user.id, 'SECURITY_MOBILE_IDENTIFY_SUCCESS', {
             deviceId,
-            isDeviceTrusted,
-            actorName: `${user.firstName} ${user.lastName}`.trim(),
-            actorEmail: user.email
+            isDeviceTrusted
         }, 'Security', user.id);
 
         if (!isDeviceTrusted || !user.pinHash) {
@@ -994,12 +985,10 @@ app.post('/login/mobile/verify-pin', async (req, res) => {
         const token = jwt.sign({ userId: user.id, role: user.role, type: 'MOBILE' }, JWT_SECRET, { expiresIn: '30d' }); // Longer session for mobile
 
         // Audit: Mobile PIN Login
-        await createAuditLog(req, user.id, 'MOBILE_LOGIN_SUCCESS', {
+        await createAuditLog(req, user.id, 'SECURITY_MOBILE_LOGIN_PIN', {
             method: 'PIN',
             deviceId: deviceId,
             status: 'SUCCESS',
-            actorName: `${user.firstName} ${user.lastName}`.trim(),
-            actorEmail: user.email,
             timestamp: getLegacyManilaISO()
         }, 'Security', user.id);
 
@@ -1295,24 +1284,8 @@ app.post('/logout', async (req, res) => {
     try {
         if (userId) {
             // Audit: Logout
-            // BudolPay Forensic Audit Enhancement (v46.2): Standardize to USER_LOGOUT
-            // We try to find the user to get their name for the metadata fallback
-            let actorName = 'SYSTEM';
-            let actorEmail = 'system@budolpay.com';
-            try {
-                const user = await prisma.user.findUnique({ where: { id: userId } });
-                if (user) {
-                    actorName = `${user.firstName} ${user.lastName}`.trim();
-                    actorEmail = user.email;
-                }
-            } catch (e) {
-                console.error(`[Logout Audit] Failed to fetch user details: ${e.message}`);
-            }
-
-            await createAuditLog(req, userId, 'USER_LOGOUT', {
+            await createAuditLog(req, userId, 'SECURITY_LOGOUT', {
                 status: 'SUCCESS',
-                actorName,
-                actorEmail,
                 timestamp: getLegacyManilaISO()
             }, 'Security', userId);
         }

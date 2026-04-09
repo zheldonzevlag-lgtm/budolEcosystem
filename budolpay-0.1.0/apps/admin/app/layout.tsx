@@ -1,12 +1,16 @@
 import type { Metadata } from "next";
 import { Inter } from "next/font/google";
 import "./globals.css";
+import Sidebar from "@/components/Sidebar";
+import MainContent from "@/components/MainContent";
+import RealtimeProvider from "@/components/RealtimeProvider";
+import SessionProvider from "@/components/SessionProvider";
 
 const inter = Inter({ subsets: ["latin"] });
 
 export const metadata: Metadata = {
-  title: "BudolPay Admin Console",
-  description: "Next-generation secure fintech administration",
+title: "budol₱ay Admin",
+  description: "Administrative control panel for budol₱ay",
 };
 
 export default function RootLayout({
@@ -16,9 +20,15 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en">
-      <body className={inter.className}>
-        <div className="min-h-screen bg-[#F8FAFC]">
-          {children}
+      <body className={`${inter.className} bg-slate-50`}>
+        <div className="flex min-h-screen">
+          <RealtimeProvider />
+          <Sidebar />
+          <SessionProvider>
+            <MainContent>
+              {children}
+            </MainContent>
+          </SessionProvider>
         </div>
       </body>
     </html>
