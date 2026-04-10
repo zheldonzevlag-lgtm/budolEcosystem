@@ -61,17 +61,20 @@ export async function POST(request) {
         }
 
         // Resolve gateway base URL:
-        //   Production → PAYMENT_GATEWAY_URL env var (set in Vercel project settings)
-        //   Local dev   → http://localhost:8004
+        // Production fallback: If Vercel env is detected, use the vercel URL.
+        const isVercel = process.env.VERCEL === '1' || process.env.NODE_ENV === 'production';
+        const defaultProdUrl = 'https://payment-gateway-service-two.vercel.app';
+        const defaultLocalUrl = 'http://localhost:8004';
+        
         let GATEWAY_BASE_URL =
             process.env.PAYMENT_GATEWAY_URL ||
             process.env.NEXT_PUBLIC_PAYMENT_GATEWAY_URL ||
-            'http://localhost:8004';
+            (isVercel ? defaultProdUrl : defaultLocalUrl);
             
-        // FAILSAFE for local testing: Since Next.js caches env vars on start,
-        // if it still sees the stale DuckDNS URL, we force it to the local gateway.
+        // FAILSAFE: Override stale DuckDNS configuration
+        // If testing locally or building on Vercel with old env keys, force correct routing
         if (GATEWAY_BASE_URL.includes('duckdns.org')) {
-            GATEWAY_BASE_URL = 'http://192.168.1.2:8004';
+            GATEWAY_BASE_URL = isVercel ? defaultProdUrl : 'http://192.168.1.2:8004';
         }
 
         console.log(`[Payment Cancel Proxy] Cancelling | ref=${targetRef} | orderId=${orderId} | gateway=${GATEWAY_BASE_URL}`);

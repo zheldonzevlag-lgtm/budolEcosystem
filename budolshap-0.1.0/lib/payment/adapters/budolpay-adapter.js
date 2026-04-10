@@ -9,20 +9,20 @@ export class BudolPayAdapter extends BasePaymentAdapter {
         super();
         
         // --- AGGRESSIVE PRODUCTION MIRROR LOGIC ---
-        // 1. Get raw URL from environment
-        const rawUrl = process.env.PAYMENT_GATEWAY_URL || 'http://localhost:8080/pg';
+        // 1. Get raw URL from environment, fallback to the VERCEL PRODUCTION gateway
+        // This is critical because in Vercel, localhost falls into a void lambda.
+        const rawUrl = process.env.PAYMENT_GATEWAY_URL || 'https://payment-gateway-service-two.vercel.app';
         
         // 2. Determine if we must override
         const isVercel = process.env.VERCEL === '1' || !!process.env.NEXT_PUBLIC_VERCEL_ENV;
         const isStaleDuck = rawUrl.includes('duckdns.org');
         
         if (!process.env.PAYMENT_GATEWAY_URL && isVercel) {
-            console.warn('[BudolPay Adapter] ⚠️ CRITICAL: PAYMENT_GATEWAY_URL is not set in Vercel. Falling back to localhost (this will likely fail in production).');
+            console.warn('[BudolPay Adapter] ⚠️ Using fallback Vercel Gateway URL: ', rawUrl);
         }
 
-        if (isStaleDuck) {
-            console.log(`[BudolPay Adapter] 🏗️ Stale Gateway Detected. (URL: ${rawUrl})`);
-            this.gatewayUrl = rawUrl;
+        if (isStaleDuck || (isVercel && rawUrl.includes('localhost'))) {
+            this.gatewayUrl = 'https://payment-gateway-service-two.vercel.app';
         } else {
             this.gatewayUrl = rawUrl;
         }
