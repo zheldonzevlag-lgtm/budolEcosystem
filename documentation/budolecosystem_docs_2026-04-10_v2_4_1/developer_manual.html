@@ -1,0 +1,81 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>BudolPay v2.4.1 - Developer Manual</title>
+    <style>
+        body { font-family: 'Inter', system-ui, -apple-system, sans-serif; line-height: 1.6; color: #1e293b; max-width: 1200px; margin: 0 auto; padding: 40px; background: #f8fafc; }
+        .header { background: #0f172a; color: white; padding: 40px; rounded: 16px; margin-bottom: 40px; border-radius: 12px; }
+        .tag { background: #38bdf8; color: #0f172a; padding: 4px 12px; border-radius: 99px; font-size: 12px; font-weight: bold; text-transform: uppercase; }
+        .card { background: white; border: 1px border #e2e8f0; padding: 32px; border-radius: 16px; margin-bottom: 24px; box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1); }
+        code { background: #f1f5f9; padding: 2px 6px; border-radius: 4px; font-family: 'Fira Code', monospace; color: #e11d48; }
+        pre { background: #0f172a; color: #f8fafc; padding: 20px; border-radius: 12px; overflow-x: auto; font-size: 14px; }
+        h2 { color: #0f172a; border-bottom: 2px solid #38bdf8; padding-bottom: 8px; margin-top: 40px; }
+        .link-button { display: inline-block; background: #0f172a; color: white; padding: 10px 20px; border-radius: 8px; text-decoration: none; margin-top: 10px; font-size: 14px; transition: opacity 0.2s; }
+        .link-button:hover { opacity: 0.9; }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <span class="tag">System Integrity</span>
+        <h1>Developer Manual: Anomaly Detection Recovery</h1>
+        <p>Version 2.4.1 | Release Date: 2026-04-10</p>
+    </div>
+
+    <div class="card">
+        <h2>Technical Objective</h2>
+        <p>This release stabilizes the <strong>Behavioral Anomaly Detection Engine</strong> by resolving schema mismatches and scoping errors that prevented real-time risk scoring during high-velocity transaction flows.</p>
+    </div>
+
+    <div class="card">
+        <h2>Data Model Extensions</h2>
+        <p>The <code>Transaction</code> model has been extended to support institutional forensic tracking. These fields are essential for Phase 4 compliance reporting.</p>
+        <pre>
+model Transaction {
+  // ... existing fields
+  riskScore    Float?      // 0-100 Behavioral Anomaly Score
+  riskMetadata Json?       // Forensic traces (baseline, deviation, method)
+  status       TransactionStatus @default(PENDING)
+}
+
+enum TransactionStatus {
+  PENDING
+  COMPLETED
+  FAILED
+  CANCELLED
+  FLAGGED_REVIEW // New status for AI-Shield holds
+}</pre>
+        <a href="file:///d:/IT%20Projects/clone/budolEcosystem/budolpay-0.1.0/packages/database/prisma/schema.prisma" class="link-button">View schema.prisma</a>
+    </div>
+
+    <div class="card">
+        <h2>Logic Stabilization: EWMA Integration</h2>
+        <p>Resolved the <code>zScore is not defined</code> error in the <code>transaction-service</code> by properly bridging the asynchronous history retrieval with the synchronous risk engine.</p>
+        <pre>
+// Corrected Implementation (v2.4.1)
+const { score, baseline, deviation, method } = calculateAnomalyScore(amount, history);
+return { 
+    score, 
+    metadata: { 
+        baseline: Math.round(baseline * 100) / 100, 
+        deviation: Math.round(deviation * 100) / 100,
+        method 
+    } 
+};</pre>
+        <a href="file:///d:/IT%20Projects/clone/budolEcosystem/budolpay-0.1.0/services/transaction-service/index.js" class="link-button">View index.js</a>
+    </div>
+
+    <div class="card">
+        <h2>Manual Resolution State Machine</h2>
+        <p>A new <code>/resolve</code> endpoint allows administrators to manually override AI-triggered holds. This ensures that while the system prioritizes security, institutional agility is maintained for edge-case recoveries.</p>
+        <a href="file:///d:/IT%20Projects/clone/budolEcosystem/budolpay-0.1.0/services/transaction-service/index.js" class="link-button">View Resolution Logic</a>
+    </div>
+
+    <div class="card">
+        <h2>Forensic Testing Suite</h2>
+        <p>Verification is managed via Jest. The <code>anomaly.test.js</code> suite validates EWMA weighting, cold-start fallbacks, and tiered response thresholds (90+ Score = BLOCK).</p>
+        <pre>npm test</pre>
+        <a href="file:///d:/IT%20Projects/clone/budolEcosystem/budolpay-0.1.0/services/transaction-service/__tests__/anomaly.test.js" class="link-button">View Test Suite</a>
+    </div>
+</body>
+</html>

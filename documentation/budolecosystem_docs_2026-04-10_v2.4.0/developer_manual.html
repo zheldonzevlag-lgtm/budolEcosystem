@@ -1,0 +1,56 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Developer Manual - v2.4.0 Anomaly Detection</title>
+    <style>
+        body { font-family: 'Inter', sans-serif; line-height: 1.6; color: #334155; max-width: 900px; margin: 0 auto; padding: 40px; background: #fff; }
+        h1, h2 { color: #0f172a; font-weight: 800; }
+        h1 { border-bottom: 3px solid #f43f5e; padding-bottom: 10px; }
+        .code-block { background: #0f172a; color: #f8fafc; padding: 20px; border-radius: 12px; font-family: 'Fira Code', monospace; font-size: 0.85rem; overflow-x: auto; margin: 20px 0; border: 1px solid #1e293b; }
+        .file-link { color: #f43f5e; text-decoration: none; font-weight: 700; border-bottom: 1px dotted #f43f5e; }
+        .file-link:hover { background: #fff1f2; }
+        .math { font-style: italic; background: #f1f5f9; padding: 2px 6px; border-radius: 4px; }
+    </style>
+</head>
+<body>
+    <h1>Technical Developer Manual v2.4.0</h1>
+    
+    <p>This manual documents the integration of the <strong>Behavioral Baselining Engine (BBE)</strong> into the BudolPay transaction flow. The engine leverages smoothing algorithms to detect institutional risk in real-time.</p>
+
+    <h2>1. Core Algorithm: EWMA</h2>
+    <p>The system uses an <strong>Exponentially Weighted Moving Average (EWMA)</strong> with a smoothing factor <span class="math">α = 0.2</span>. This allows the system to prioritize recent behavior while maintaining a long-term memory of user habits.</p>
+    <div class="code-block">
+        Baseline<sub>t</sub> = (α * Amount<sub>t</sub>) + ((1 - α) * Baseline<sub>t-1</sub>)
+    </div>
+
+    <h2>2. Logic Implementation</h2>
+    <p>The core logic resides in a standalone module for high testability and isolation from business logic.</p>
+    <ul>
+        <li><strong>File:</strong> <a href="file:///d:/IT%20Projects/clone/budolEcosystem/budolpay-0.1.0/services/transaction-service/riskEngine.js" class="file-link">riskEngine.js</a></li>
+        <li><strong>Function:</strong> <code>calculateAnomalyScore(amount, history)</code></li>
+    </ul>
+    <div class="code-block" style="background: #1e293b;">
+// Score Calculation Logic
+let score = Math.round((deviation / 2.5) * 100);
+return Math.min(100, Math.max(0, score));
+    </div>
+
+    <h2>3. Integration Points</h2>
+    <p>The anomaly detection is integrated pre-emptively in the following routes:</p>
+    <ul>
+        <li><a href="file:///d:/IT%20Projects/clone/budolEcosystem/budolpay-0.1.0/services/transaction-service/index.js" class="file-link">index.js</a> -> <code>POST /transfer</code></li>
+        <li><a href="file:///d:/IT%20Projects/clone/budolEcosystem/budolpay-0.1.0/services/transaction-service/index.js" class="file-link">index.js</a> -> <code>POST /cash-in</code></li>
+        <li><a href="file:///d:/IT%20Projects/clone/budolEcosystem/budolpay-0.1.0/services/transaction-service/index.js" class="file-link">index.js</a> -> <code>POST /cash-out</code></li>
+    </ul>
+
+    <h2>4. Testing Protocol</h2>
+    <p>All algorithm changes must be verified using the formal behavioral test suite.</p>
+    <div class="code-block">
+npx jest __tests__/anomaly.test.js --verbose
+    </div>
+
+    <hr>
+    <p style="font-size: 0.8rem; color: #94a3b8;">© 2026 BudolPay Engineering | Institutional Compliance Series</p>
+</body>
+</html>

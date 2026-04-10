@@ -25,14 +25,15 @@ interface ComplianceAlert {
   action: string;
   entity: string;
   entityId: string;
-  newValue: {
-    flags: ComplianceFlag[];
-    transactionId: string;
-    referenceId: string;
-  };
+  flags: ComplianceFlag[];
+  transactionId: string;
+  referenceId: string;
+  riskScore?: number;
+  riskMetadata?: any;
   metadata: {
-    severity: 'HIGH' | 'MEDIUM';
+    severity: 'HIGH' | 'MEDIUM' | 'CRITICAL';
     rulesTriggered: string[];
+    aiWeightedScore?: number;
   };
   createdAt: string;
   user?: {
@@ -71,6 +72,30 @@ export default function ComplianceBoard() {
       setAlerts(prev => [newAlert, ...prev].slice(0, 50)); // Keep last 50
     });
 
+    const handleResolve = async (transactionId: string, action: 'APPROVE' | 'REJECT') => {
+      try {
+        const res = await fetch("/api/transactions/resolve", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ 
+            transactionId, 
+            action, 
+            reason: "Institutional Review: Behavior baseline override" 
+          })
+        });
+        
+        if (res.ok) {
+          // Remove from list or update local state
+          setAlerts(prev => prev.filter(a => a.newValue.transactionId !== transactionId));
+        } else {
+          const data = await res.json();
+          alert("Resolution failed: " + data.error);
+        }
+      } catch (err) {
+        console.error("Resolution error:", err);
+      }
+    };
+
     return () => unsubscribe();
   }, []);
 
@@ -90,22 +115,31 @@ export default function ComplianceBoard() {
         <div>
           <div className="flex items-center gap-2 mb-1">
             <ShieldAlert className="w-5 h-5 text-[#f43f5e]" />
-            <h3 className="font-black text-[#0f172a] text-lg tracking-tight">Compliance Monitoring Board</h3>
+            <h3 className="font-black text-[#0f172a] text-lg tracking-tight">Ecosystem Risk Intelligence</h3>
           </div>
-          <p className="text-[10px] text-slate-400 font-bold uppercase tracking-[0.2em]">Automated AML / BSP Circular 808 Enforcement</p>
+          <p className="text-[10px] text-slate-400 font-bold uppercase tracking-[0.2em]">AI-Driven DRS Engine (v2.4.0) · BSP Circular 808</p>
         </div>
-        <div className="flex items-center gap-3">
-          <div className="relative">
-            <input 
-              type="text" 
-              placeholder="Filter by ref..." 
-              className="pl-8 pr-4 py-1.5 text-[10px] border border-slate-200 rounded-full bg-white focus:outline-none focus:ring-2 focus:ring-[#f43f5e]/20"
-            />
-            <Search className="w-3.5 h-3.5 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
+        <div className="flex items-center gap-4">
+          <div className="flex items-center gap-2 px-3 py-1.5 bg-[#f43f5e]/5 border border-[#f43f5e]/10 rounded-xl">
+            <ShieldCheck className="w-4 h-4 text-[#f43f5e]" />
+            <div className="flex flex-col">
+              <span className="text-[8px] font-black text-[#f43f5e] uppercase tracking-wider leading-none">Institutional</span>
+              <span className="text-[9px] font-bold text-[#0f172a] uppercase leading-none mt-0.5">AI Shield Active</span>
+            </div>
           </div>
-          <button className="p-2 hover:bg-slate-200/50 rounded-full transition-colors">
-            <MoreHorizontal className="w-4 h-4 text-slate-400" />
-          </button>
+          <div className="flex items-center gap-3">
+            <div className="relative">
+              <input 
+                type="text" 
+                placeholder="Filter by ref..." 
+                className="pl-8 pr-4 py-1.5 text-[10px] border border-slate-200 rounded-full bg-white focus:outline-none focus:ring-2 focus:ring-[#f43f5e]/20"
+              />
+              <Search className="w-3.5 h-3.5 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
+            </div>
+            <button className="p-2 hover:bg-slate-200/50 rounded-full transition-colors">
+              <MoreHorizontal className="w-4 h-4 text-slate-400" />
+            </button>
+          </div>
         </div>
       </div>
 
@@ -122,13 +156,18 @@ export default function ComplianceBoard() {
             <div key={alert.id} className={`p-5 hover:bg-slate-50/80 transition-all group ${alert.metadata.severity === 'HIGH' ? 'bg-rose-50/30' : ''}`}>
               <div className="flex justify-between items-start mb-4">
                 <div className="flex items-center gap-3">
-                  <div className={`p-2.5 rounded-2xl ${alert.metadata.severity === 'HIGH' ? 'bg-[#f43f5e]/10 text-[#f43f5e]' : 'bg-amber-100 text-amber-600'}`}>
-                    <AlertTriangle size={20} />
+                  <div className={`p-2.5 rounded-2xl relative ${alert.newValue.riskScore && alert.newValue.riskScore >= 90 ? 'bg-[#f43f5e] text-white animate-pulse' : (alert.newValue.riskScore && alert.newValue.riskScore >= 75 ? 'bg-amber-500 text-white' : 'bg-slate-100 text-slate-600')}`}>
+                    {alert.newValue.riskScore ? (
+                      <span className="text-xs font-black">{alert.newValue.riskScore}</span>
+                    ) : (
+                      <AlertTriangle size={20} />
+                    )}
+                    {alert.newValue.riskScore && <div className="absolute -top-1 -right-1 w-2 h-2 bg-white rounded-full border border-slate-200" />}
                   </div>
                   <div>
                     <div className="flex items-center gap-2">
-                      <span className={`text-[9px] font-black tracking-widest px-2 py-0.5 rounded-md ${alert.metadata.severity === 'HIGH' ? 'bg-[#f43f5e] text-white' : 'bg-amber-500 text-white'}`}>
-                        {alert.metadata.severity} RISK
+                      <span className={`text-[9px] font-black tracking-widest px-2 py-0.5 rounded-md ${alert.newValue.riskScore && alert.newValue.riskScore >= 90 ? 'bg-[#0f172a] text-[#f43f5e]' : (alert.metadata.severity === 'HIGH' ? 'bg-[#f43f5e] text-white' : 'bg-amber-500 text-white')}`}>
+                        {alert.newValue.riskScore && alert.newValue.riskScore >= 90 ? 'CRITICAL ANOMALY' : `${alert.metadata.severity} RISK`}
                       </span>
                       <span className="text-[10px] font-mono text-slate-400 font-bold">{alert.newValue.referenceId}</span>
                     </div>
@@ -140,9 +179,27 @@ export default function ComplianceBoard() {
                     <Clock size={12} />
                     <span className="text-[10px] font-bold uppercase tracking-tighter">{new Date(alert.createdAt).toLocaleTimeString()}</span>
                   </div>
-                  <button className="flex items-center gap-1.5 text-[10px] font-black text-[#f43f5e] hover:underline uppercase bg-white px-2.5 py-1.5 rounded-lg border border-slate-100 shadow-sm mt-1">
-                    Review Transaction <ExternalLink size={12} />
-                  </button>
+                  <div className="flex gap-2">
+                    {alert.newValue.riskScore && alert.newValue.riskScore >= 90 && (
+                      <>
+                        <button 
+                          onClick={() => handleResolve(alert.newValue.transactionId, 'APPROVE')}
+                          className="px-2.5 py-1.5 bg-emerald-500 text-white text-[10px] font-black rounded-lg hover:bg-emerald-600 transition-colors uppercase"
+                        >
+                          Approve
+                        </button>
+                        <button 
+                          onClick={() => handleResolve(alert.newValue.transactionId, 'REJECT')}
+                          className="px-2.5 py-1.5 bg-slate-800 text-white text-[10px] font-black rounded-lg hover:bg-slate-900 transition-colors uppercase"
+                        >
+                          Reject
+                        </button>
+                      </>
+                    )}
+                    <button className="flex items-center gap-1.5 text-[10px] font-black text-[#f43f5e] hover:underline uppercase bg-white px-2.5 py-1.5 rounded-lg border border-slate-100 shadow-sm">
+                      Forensic Audit <ExternalLink size={12} />
+                    </button>
+                  </div>
                 </div>
               </div>
 
@@ -189,18 +246,18 @@ export default function ComplianceBoard() {
       <div className="p-4 bg-slate-900 text-white flex items-center justify-between">
         <div className="flex items-center gap-4">
           <div className="flex flex-col">
-            <span className="text-[10px] font-bold text-slate-500 uppercase tracking-widest">Active Flags</span>
-            <span className="text-lg font-black leading-tight">{alerts.length}</span>
+            <span className="text-[10px] font-bold text-slate-500 uppercase tracking-widest">Anomaly Flux</span>
+            <span className="text-lg font-black leading-tight">{alerts.filter(a => (a.newValue.riskScore || 0) > 75).length} High</span>
           </div>
           <div className="h-8 w-px bg-white/10 mx-2"></div>
           <div className="flex flex-col">
-            <span className="text-[10px] font-bold text-slate-500 uppercase tracking-widest">Platform Integrity</span>
-            <span className="text-lg font-black text-green-400 leading-tight">ACTIVE</span>
+            <span className="text-[10px] font-bold text-slate-500 uppercase tracking-widest">DRS Engine Status</span>
+            <span className="text-lg font-black text-blue-400 leading-tight">ACTIVE (EWMA)</span>
           </div>
         </div>
         <div className="text-right">
-          <p className="text-[9px] font-black text-slate-500 uppercase tracking-widest">Legal Standard</p>
-          <p className="text-[10px] font-bold text-[#f43f5e]">BSP CIRCULAR NO. 808</p>
+          <p className="text-[9px] font-black text-slate-500 uppercase tracking-widest">Institutional Compliance</p>
+          <p className="text-[10px] font-bold text-[#f43f5e]">AI-DRIVEN ANOMALY SHIELD v2.4.0</p>
         </div>
       </div>
     </div>
