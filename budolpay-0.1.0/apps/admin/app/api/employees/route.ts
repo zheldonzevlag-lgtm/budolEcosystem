@@ -49,12 +49,19 @@ export async function POST(request: Request) {
         data: { role: newRole as any }
       });
 
+      const actor = await prisma.user.findUnique({
+        where: { id: adminId },
+        select: { id: true, firstName: true, lastName: true, email: true }
+      });
+
       // Log the role update action
       await createAuditLog({
-        action: `ROLE_UPDATED_TO_${newRole} `,
+        action: `ROLE_UPDATED_TO_${newRole}`,
         entity: "User",
         entityId: userId,
         userId: adminId,
+        actorName: actor ? `${actor.firstName || ''} ${actor.lastName || ''}`.trim() || actor.email : undefined,
+        actorEmail: actor?.email,
         newValue: { role: newRole },
         ipAddress: "Internal System"
       });
@@ -169,6 +176,11 @@ export async function POST(request: Request) {
     }
 
     if (action === "RESET_PASSWORD") {
+      const actorInfo = await prisma.user.findUnique({
+        where: { id: adminId },
+        select: { id: true, firstName: true, lastName: true, email: true }
+      });
+
       // Compliance: Admin cannot reset their own password via the Admin Dashboard
       if (adminId === userId) {
         return NextResponse.json({ error: "Self-password reset is prohibited for compliance." }, { status: 403 });
@@ -198,6 +210,8 @@ export async function POST(request: Request) {
         entity: "User",
         entityId: userId,
         userId: adminId,
+        actorName: actorInfo ? `${actorInfo.firstName || ''} ${actorInfo.lastName || ''}`.trim() || actorInfo.email : undefined,
+        actorEmail: actorInfo?.email,
         newValue: { deliveryMethod, deliveryTarget } as any,
         ipAddress: "Internal System"
       });
@@ -214,6 +228,11 @@ export async function POST(request: Request) {
     }
 
     if (action === "DELETE_USER") {
+      const actorInfo = await prisma.user.findUnique({
+        where: { id: adminId },
+        select: { id: true, firstName: true, lastName: true, email: true }
+      });
+
       // Compliance: Admin cannot deactivate their own account
       if (adminId === userId) {
         return NextResponse.json({ error: "Self-deactivation is prohibited for compliance." }, { status: 403 });
@@ -233,6 +252,8 @@ export async function POST(request: Request) {
         entity: "User",
         entityId: userId,
         userId: adminId,
+        actorName: actorInfo ? `${actorInfo.firstName || ''} ${actorInfo.lastName || ''}`.trim() || actorInfo.email : undefined,
+        actorEmail: actorInfo?.email,
         ipAddress: "Internal System"
       });
 
@@ -240,7 +261,20 @@ export async function POST(request: Request) {
     }
 
     if (action === "PROVISION_ACCOUNT") {
-      const { email, firstName, lastName, role, phoneNumber } = await request.json();
+      const { email, firstName, lastName, role, phoneNumber, adminId } = body;
+
+      if (!adminId) {
+        return NextResponse.json({ error: "Admin ID is required for audit consistency." }, { status: 400 });
+      }
+
+      const actor = await prisma.user.findUnique({
+        where: { id: adminId },
+        select: { id: true, firstName: true, lastName: true, email: true }
+      });
+
+      if (!actor) {
+        return NextResponse.json({ error: "Authorized Actor not found in local system." }, { status: 403 });
+      }
 
       // We need to create the user in budolID first (since it's the central authority)
       // For now, we simulate this by creating in local budolPay DB as a placeholder
@@ -261,8 +295,15 @@ export async function POST(request: Request) {
         action: "ACCOUNT_PROVISIONED",
         entity: "User",
         entityId: newUser.id,
+        userId: actor.id,
+        actorName: `${actor.firstName || ''} ${actor.lastName || ''}`.trim() || actor.email,
+        actorEmail: actor.email,
         newValue: { email, role } as any,
-        ipAddress: "Internal System"
+        ipAddress: "Internal System",
+        metadata: {
+          compliance: "BSP Circular 808",
+          pci_dss: "10.2.2"
+        }
       });
 
       return NextResponse.json({ success: true, user: newUser });

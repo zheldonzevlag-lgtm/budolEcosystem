@@ -3,6 +3,7 @@
 import React, { useState, useEffect } from 'react';
 import { Shield, Loader2, AlertTriangle, Eye, EyeOff } from 'lucide-react';
 import { useRouter, useSearchParams } from 'next/navigation';
+import { Toaster, toast } from 'react-hot-toast';
 import MathCaptcha from '@/components/MathCaptcha';
 
 export default function LoginPage() {
@@ -70,7 +71,19 @@ export default function LoginPage() {
             const data = await res.json();
 
             if (!res.ok) {
-                throw new Error(data.error || 'Login failed');
+                const errorMsg = data.error || 'Login failed';
+                toast.error(errorMsg, {
+                    position: 'top-center',
+                    duration: 4000,
+                    style: {
+                        borderRadius: '10px',
+                        background: '#333',
+                        color: '#fff',
+                        fontWeight: 'bold'
+                    }
+                });
+                setError(errorMsg);
+                return;
             }
 
             if (data.otpRequired) {
@@ -81,7 +94,11 @@ export default function LoginPage() {
             }
 
         } catch (err: any) {
-            setError(err.message);
+            const errorMsg = err.message || 'An unexpected error occurred';
+            toast.error(errorMsg, {
+                position: 'top-center'
+            });
+            setError(errorMsg);
         } finally {
             setIsLoading(false);
         }
@@ -99,7 +116,9 @@ export default function LoginPage() {
             });
             const data = await res.json();
             if (!res.ok) {
-                throw new Error(data.error || 'OTP verification failed');
+                const errorMsg = data.error || 'OTP verification failed';
+                toast.error(errorMsg, { position: 'top-center' });
+                throw new Error(errorMsg);
             }
             router.push('/');
             router.refresh();
@@ -117,10 +136,13 @@ export default function LoginPage() {
             const res = await fetch('/api/auth/login/resend-otp', { method: 'POST' });
             const data = await res.json();
             if (!res.ok) {
-                throw new Error(data.error || 'Resend failed');
+                const errorMsg = data.error || 'Resend failed';
+                toast.error(errorMsg, { position: 'top-center' });
+                throw new Error(errorMsg);
             }
             setChallenge(data.challenge || null);
             setCooldown(60);
+            toast.success('OTP resent successfully', { position: 'top-center' });
         } catch (err: any) {
             setError(err.message);
         } finally {
@@ -130,6 +152,7 @@ export default function LoginPage() {
 
     return (
         <div className="min-h-screen bg-slate-900 flex items-center justify-center p-4">
+            <Toaster />
             <div className="max-w-md w-full bg-white rounded-2xl shadow-2xl overflow-hidden">
                 <div className="p-8">
                     <div className="flex justify-center mb-6">

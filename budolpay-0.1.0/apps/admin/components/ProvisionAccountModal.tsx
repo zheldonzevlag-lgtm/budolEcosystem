@@ -44,18 +44,25 @@ export default function ProvisionAccountModal({
         setIsSubmitting(true);
 
         try {
+            // Fetch current admin info for forensic attribution
+            const adminRes = await fetch('/api/auth/me');
+            const adminData = await adminRes.json();
+            const adminId = adminData.user?.id;
+
             // Internal API call
             const res = await fetch('/api/employees', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
                     action: 'PROVISION_ACCOUNT',
+                    adminId,
                     ...formData
                 })
             });
 
             if (!res.ok) {
-                throw new Error('Failed to provision account');
+                const errorData = await res.json();
+                throw new Error(errorData.error || 'Failed to provision account');
             }
 
             // Reset form

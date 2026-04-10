@@ -1,0 +1,46 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Developer Manual - Forensic Identity Resolution</title>
+    <style>
+        body { font-family: sans-serif; padding: 2rem; line-height: 1.5; color: #333; }
+        code { background: #f4f4f4; padding: 0.2rem 0.4rem; border-radius: 4px; }
+        pre { background: #1e1e1e; color: #d4d4d4; padding: 1.5rem; border-radius: 8px; overflow-x: auto; }
+        .file-link { color: #2563eb; font-weight: bold; text-decoration: none; }
+        .file-link:hover { text-decoration: underline; }
+    </style>
+</head>
+<body>
+    <h1>Developer Manual: Identity Resolution v45.2</h1>
+    <p>This document explains the code changes made to ensure consistent actor attribution across the Budol Ecosystem.</p>
+
+    <h2>1. Logout Identity Mapping Fix</h2>
+    <p>File: <a class="file-link" href="file:///d:/IT%20Projects/clone/budolEcosystem/budolpay-0.1.0/apps/admin/app/api/auth/logout/route.ts">budolpay-0.1.0/apps/admin/app/api/auth/logout/route.ts</a></p>
+    <p>Previously, the logout route used the <code>sub</code> claim from the SSO token directly. Because the SSO database and the Admin database had different UUIDs for the same emails, the lookup failed, resulting in fallback to the email address in the logs.</p>
+    <p>The fix implements a dual-lookup strategy:</p>
+    <pre><code>const user = await prisma.user.findFirst({
+    where: { 
+        OR: [
+            { id: ssoUserId },
+            { email: email }
+        ]
+    }
+});</code></pre>
+
+    <h2>2. SSO Callback Sync Upgrade</h2>
+    <p>File: <a class="file-link" href="file:///d:/IT%20Projects/clone/budolEcosystem/budolpay-0.1.0/apps/admin/app/api/auth/callback/route.ts">budolpay-0.1.0/apps/admin/app/api/auth/callback/route.ts</a></p>
+    <p>To prevent future mismatches, the sync logic now mirrors the SSO UUID during local account provisioning:</p>
+    <pre><code>localUser = await prisma.user.create({
+    data: {
+        id: ssoUser.id, // v45.2: Ecosystem synchronization
+        email: ssoUser.email,
+        ...
+    }
+});</code></pre>
+
+    <h2>3. Verification</h2>
+    <p>Run the centralized audit test to verify that the logic correctly resolves names:</p>
+    <code>node test-centralized-audit.js</code>
+</body>
+</html>

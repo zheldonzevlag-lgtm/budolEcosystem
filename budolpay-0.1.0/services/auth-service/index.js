@@ -1117,8 +1117,8 @@ app.post('/resend-otp', async (req, res) => {
     }
 });
 
-// Verify OTP
-app.post('/verify-otp', async (req, res) => {
+// Verify OTP (Universal Endpoint for Mobile & Web)
+app.post(['/verify-otp', '/login/mobile/verify-otp'], async (req, res) => {
     const { userId, otp, type, deviceId } = req.body; // type can be 'EMAIL', 'SMS', 'BOTH', 'KYC', or 'DEVICE'
     try {
         const user = await prisma.user.findUnique({ where: { id: userId } });
