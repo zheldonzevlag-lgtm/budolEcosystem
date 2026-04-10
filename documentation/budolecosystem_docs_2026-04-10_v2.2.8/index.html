@@ -1,0 +1,155 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>BudolEcosystem Docs v2.2.8 – Payment Cancellation Lifecycle Fix</title>
+<style>
+  :root { --primary:#4f46e5; --accent:#10b981; --warn:#f59e0b; --danger:#ef4444; --dark:#1e293b; --muted:#64748b; }
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{font-family:'Segoe UI',system-ui,sans-serif;background:#f8fafc;color:#334155}
+  header{background:var(--primary);color:#fff;padding:1.5rem 2rem;display:flex;justify-content:space-between;align-items:center}
+  header h1{font-size:1.4rem;font-weight:700}
+  header span{font-size:.85rem;background:rgba(255,255,255,.2);padding:.3rem .75rem;border-radius:9999px}
+  nav{display:flex;gap:.5rem;flex-wrap:wrap;padding:1.25rem 2rem;background:#fff;border-bottom:1px solid #e2e8f0}
+  nav a{padding:.45rem 1rem;border-radius:6px;text-decoration:none;font-size:.85rem;font-weight:500;background:#f1f5f9;color:var(--dark);transition:background .2s}
+  nav a:hover,nav a.active{background:var(--primary);color:#fff}
+  main{max-width:1100px;margin:2rem auto;padding:0 1.5rem}
+  .card{background:#fff;border:1px solid #e2e8f0;border-radius:12px;padding:1.5rem;margin-bottom:1.5rem}
+  .card h2{font-size:1.1rem;font-weight:700;color:var(--dark);margin-bottom:.75rem;display:flex;align-items:center;gap:.5rem}
+  .badge{font-size:.72rem;padding:.2rem .6rem;border-radius:9999px;font-weight:600;display:inline-block}
+  .badge-green{background:#d1fae5;color:#065f46}
+  .badge-blue{background:#dbeafe;color:#1e40af}
+  .badge-red{background:#fee2e2;color:#991b1b}
+  .badge-yellow{background:#fef3c7;color:#92400e}
+  ul{padding-left:1.5rem;margin-top:.5rem}
+  li{margin:.4rem 0;font-size:.9rem;color:var(--muted)}
+  table{width:100%;border-collapse:collapse;font-size:.875rem;margin-top:.75rem}
+  th{background:#f1f5f9;text-align:left;padding:.6rem .75rem;font-weight:600;color:var(--dark);border-bottom:2px solid #e2e8f0}
+  td{padding:.6rem .75rem;border-bottom:1px solid #f1f5f9;vertical-align:top}
+  .flow{display:flex;flex-direction:column;gap:.5rem;margin-top:.75rem}
+  .flow-step{display:flex;align-items:flex-start;gap:.75rem;padding:.75rem;background:#f8fafc;border-radius:8px;border-left:3px solid var(--primary)}
+  .flow-step .num{background:var(--primary);color:#fff;border-radius:50%;width:1.5rem;height:1.5rem;display:flex;align-items:center;justify-content:center;font-size:.75rem;font-weight:700;flex-shrink:0}
+  footer{text-align:center;padding:2rem;font-size:.8rem;color:var(--muted)}
+</style>
+</head>
+<body>
+<header>
+  <h1>🛡️ BudolEcosystem Documentation</h1>
+  <span>v2.2.8 · 2026-04-10</span>
+</header>
+<nav>
+  <a href="index.html" class="active">Index</a>
+  <a href="developer_manual.html">Developer Manual</a>
+  <a href="system_admin_manual.html">System Admin</a>
+  <a href="user_manual.html">User Manual</a>
+  <a href="risk_register.html">Risk Register</a>
+  <a href="mitigation.html">Mitigation</a>
+  <a href="issues_and_fixes.html">Issues &amp; Fixes</a>
+  <a href="test_results.html">Test Results</a>
+  <a href="future_recommendations.html">Future Recs</a>
+  <a href="../knowledgebase.html">Knowledgebase</a>
+</nav>
+<main>
+
+  <div class="card">
+    <h2>📋 Version Overview <span class="badge badge-blue">v2.2.8</span></h2>
+    <table>
+      <tr><th>Field</th><th>Value</th></tr>
+      <tr><td>Release Date</td><td>2026-04-10</td></tr>
+      <tr><td>Previous Version</td><td><a href="../budolecosystem_docs_2026-04-10_v2.2.7/index.html">v2.2.7</a></td></tr>
+      <tr><td>Scope</td><td>Payment Transaction Cancellation Lifecycle Fix</td></tr>
+      <tr><td>Services Affected</td><td>payment-gateway-service · budolshap (OrderSummary, QRCodeModal, API routes)</td></tr>
+      <tr><td>Compliance</td><td>PCI DSS 10.2.4 · BSP Circular No. 808 · NPC DPA 2012</td></tr>
+      <tr><td>Release Branch</td><td>release/v2.2.8</td></tr>
+      <tr><td>Author</td><td>Antigravity AI + Engineering Team</td></tr>
+    </table>
+  </div>
+
+  <div class="card">
+    <h2>🐛 Problem Statement</h2>
+    <p style="color:var(--muted);font-size:.9rem;line-height:1.6;margin-bottom:1rem">
+      When a user selected a QR-based payment method (budolPay, Maya, GrabPay, QRPh) and then cancelled by
+      clicking the <strong>X button</strong>, <strong>Cancel Payment link</strong>, or letting the <strong>10-minute timer expire</strong>,
+      the following happened:
+    </p>
+    <ul>
+      <li><span class="badge badge-green">✅ Order record (budolshap DB)</span> → correctly set to <code>CANCELLED</code></li>
+      <li><span class="badge badge-red">❌ Transaction record (budolPay gateway DB)</span> → remained <code>PENDING</code> indefinitely</li>
+    </ul>
+    <p style="color:var(--muted);font-size:.9rem;line-height:1.6;margin-top:.75rem">
+      This caused stale PENDING transactions to appear in the Admin Dashboard, skew financial reconciliation reports,
+      and violate BSP Circular No. 808 accurate ledger requirements.
+    </p>
+  </div>
+
+  <div class="card">
+    <h2>🔧 Changes Made</h2>
+    <table>
+      <tr><th>File</th><th>Change</th><th>Phase</th></tr>
+      <tr>
+        <td><code>payment-gateway-service/api/index.js</code></td>
+        <td>Added <code>POST /cancel/:referenceId</code> endpoint with guards, audit log, real-time notification</td>
+        <td><span class="badge badge-blue">Phase 2</span></td>
+      </tr>
+      <tr>
+        <td><code>payment-gateway-service/api/index.js</code></td>
+        <td>Checkout HTML page: wired close-btn and timer-expire to call <code>/cancel/:referenceId</code> before navigating away</td>
+        <td><span class="badge badge-blue">Phase 3</span></td>
+      </tr>
+      <tr>
+        <td><code>budolshap/app/api/payment/cancel/route.js</code> <span class="badge badge-green">NEW</span></td>
+        <td>Proxy route that forwards cancellation from budolshap frontend to the gateway service</td>
+        <td><span class="badge badge-blue">Phase 2</span></td>
+      </tr>
+      <tr>
+        <td><code>budolshap/components/OrderSummary.jsx</code></td>
+        <td><code>handleQRCancel</code> now calls both <code>/api/orders/{id}/cancel</code> AND <code>/api/payment/cancel</code></td>
+        <td><span class="badge badge-blue">Phase 3</span></td>
+      </tr>
+      <tr>
+        <td><code>budolshap/components/OrderSummary.jsx</code></td>
+        <td><code>qrData</code> state object now carries <code>referenceId</code> extracted from payment response</td>
+        <td><span class="badge badge-blue">Phase 3</span></td>
+      </tr>
+    </table>
+  </div>
+
+  <div class="card">
+    <h2>🔄 Cancellation Flow (After Fix)</h2>
+    <div class="flow">
+      <div class="flow-step"><div class="num">1</div><div>User clicks <strong>Cancel Payment</strong> or <strong>X</strong> in QRCodeModal (budolshap frontend)</div></div>
+      <div class="flow-step"><div class="num">2</div><div><code>handleQRCancel(orderId)</code> is called in <code>OrderSummary.jsx</code></div></div>
+      <div class="flow-step"><div class="num">3</div><div>Step A: <code>POST /api/orders/{orderId}/cancel</code> → Order record set to <code>CANCELLED</code> in budolshap DB</div></div>
+      <div class="flow-step"><div class="num">4</div><div>Step B: <code>POST /api/payment/cancel</code> with <code>referenceId</code> → proxied to gateway's <code>POST /cancel/:referenceId</code></div></div>
+      <div class="flow-step"><div class="num">5</div><div>Gateway: Transaction status updated to <code>CANCELLED</code>, audit log written, Admin notified via Realtime</div></div>
+      <div class="flow-step"><div class="num">6</div><div>QR Modal dismissed, user sees toast: "Payment cancelled. Your cart items are still saved."</div></div>
+    </div>
+  </div>
+
+  <div class="card">
+    <h2>🏦 Compliance</h2>
+    <table>
+      <tr><th>Standard</th><th>Requirement</th><th>Status</th></tr>
+      <tr><td>PCI DSS 10.2.4</td><td>Log all access to audit trails</td><td><span class="badge badge-green">✅ Implemented</span></td></tr>
+      <tr><td>BSP Circular No. 808</td><td>Financial Transaction Audit Standard – accurate ledger</td><td><span class="badge badge-green">✅ Implemented</span></td></tr>
+      <tr><td>NPC DPA 2012</td><td>Accurate record-keeping of processed personal data (payment sessions)</td><td><span class="badge badge-green">✅ Implemented</span></td></tr>
+    </table>
+  </div>
+
+  <div class="card">
+    <h2>📚 Document Navigation</h2>
+    <ul>
+      <li><a href="developer_manual.html">Developer Manual</a> – Code details, API contracts, data flow diagrams</li>
+      <li><a href="system_admin_manual.html">System Admin Manual</a> – Deployment, environment variables, monitoring</li>
+      <li><a href="risk_register.html">Risk Register</a> – Updated PENDING transaction risk entry</li>
+      <li><a href="issues_and_fixes.html">Issues &amp; Fixes</a> – Root cause analysis and resolution</li>
+      <li><a href="test_results.html">Test Results</a> – Manual test scenarios and outcomes</li>
+      <li><a href="future_recommendations.html">Future Recommendations</a></li>
+    </ul>
+  </div>
+
+</main>
+<footer>BudolEcosystem v2.2.8 · Payment Transaction Cancellation Lifecycle Fix · 2026-04-10</footer>
+</body>
+</html>

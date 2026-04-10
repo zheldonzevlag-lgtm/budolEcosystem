@@ -546,13 +546,19 @@ const OrderSummary = ({ totalPrice, items, hasOutOfStock = false, onProcessing }
                 }
 
                 // Prepare data for the modal
+                // WHY: referenceId is stored here so handleQRCancel can forward it
+                //      to the gateway's POST /cancel/:referenceId endpoint.
+                //      Without it, only the order is cancelled but the gateway
+                //      Transaction record remains PENDING.
                 const qrData = {
                     qrCode: normalizedQrCode,
                     paymentIntentId: paymentIntentId,
+                    referenceId: paymentData.referenceId || paymentData.reference || null,
                     paymentMethod: paymentMethod,
                     orderId: orderId,
                     amount: amountInCentavos
                 };
+
 
                 console.log('📱 [OrderSummary] Opening modal:', paymentIntentId);
                 
@@ -654,29 +660,78 @@ const OrderSummary = ({ totalPrice, items, hasOutOfStock = false, onProcessing }
 
     const handleQRCancel = async (orderId) => {
         if (!orderId) return;
-        
+
+        const token = getToken();
+
         try {
-            const token = getToken();
-            const response = await fetch(`/api/orders/${orderId}/cancel`, {
+            // ----------------------------------------------------------------
+            // STEP 1: Cancel the Order record in the budolshap database.
+            //         This sets order.status = 'CANCELLED'
+            // ----------------------------------------------------------------
+            const orderRes = await fetch(`/api/orders/${orderId}/cancel`, {
                 method: 'POST',
                 headers: {
                     ...(token ? { 'Authorization': `Bearer ${token}` } : {})
                 }
             });
-            
-            if (response.ok) {
+
+            if (orderRes.ok) {
                 console.log('✅ [OrderSummary] Order cancelled successfully');
-                toast.success("Payment cancelled. Your cart items have been restored.");
             } else {
-                console.error('❌ [OrderSummary] Failed to cancel order');
+                console.error('❌ [OrderSummary] Failed to cancel order in budolshap DB');
             }
         } catch (error) {
             console.error('❌ [OrderSummary] Error cancelling order:', error);
+        }
+
+        try {
+            // ----------------------------------------------------------------
+            // STEP 2: Cancel the Transaction record in the payment-gateway DB.
+            //         WHY: Without this step, the Transaction stays PENDING in
+            //         budolPay's ledger forever, polluting reports and the Admin
+            //         Dashboard. This explicitly marks it CANCELLED.
+            //
+            //         qrData.paymentIntentId  → the gateway's Transaction UUID  (id)
+            //         qrData.referenceId      → the gateway's referenceId field  (preferred key)
+            //
+            //         We try referenceId first because the gateway's cancel endpoint
+            //         uses referenceId as a URL param/WHERE clause.
+            // ----------------------------------------------------------------
+            const gatewayRef = qrData?.referenceId || qrData?.paymentIntentId;
+
+            if (gatewayRef) {
+                const cancelRes = await fetch('/api/payment/cancel', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        ...(token ? { 'Authorization': `Bearer ${token}` } : {})
+                    },
+                    body: JSON.stringify({
+                        referenceId: qrData?.referenceId,
+                        intentId: qrData?.paymentIntentId,
+                        reason: 'User cancelled payment from cart'
+                    })
+                });
+
+                if (cancelRes.ok) {
+                    console.log('✅ [OrderSummary] Gateway Transaction cancelled successfully');
+                } else {
+                    const errData = await cancelRes.json().catch(() => ({}));
+                    console.error('❌ [OrderSummary] Failed to cancel gateway transaction:', errData);
+                }
+            } else {
+                console.warn('⚠️ [OrderSummary] No gateway referenceId available – gateway transaction NOT cancelled.');
+            }
+        } catch (error) {
+            // Non-blocking: order is already cancelled; gateway is best-effort here
+            console.error('❌ [OrderSummary] Error cancelling gateway transaction:', error);
         } finally {
             setQrData(null);
             if (onProcessing) onProcessing(false);
+            toast.success('Payment cancelled. Your cart items are still saved.');
         }
     };
+
 
     return (
         <div className='w-full max-w-lg lg:max-w-[340px] bg-slate-50/30 border border-slate-200 text-slate-500 text-sm rounded-xl p-7'>

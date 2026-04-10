@@ -153,6 +153,109 @@ router.get('/status/:referenceId', async (req, res) => {
   }
 });
 
+/**
+ * Cancel a Payment Intent / Transaction
+ * WHY: When a user abandons checkout (clicks X, Cancel Payment, or timer expires),
+ *      the Transaction in the gateway DB must be explicitly set to CANCELLED.
+ *      Without this endpoint, records remain in PENDING forever, polluting the
+ *      ledger and the Admin Dashboard transaction list.
+ * WHAT: Accepts a referenceId, verifies the transaction is still PENDING,
+ *       updates its status to CANCELLED, creates an audit log, and notifies
+ *       the Admin in real-time.
+ * COMPLIANCE: PCI DSS Req 10.2.4  – Log Access to Audit Trails
+ *             BSP Circular No. 808 – Financial Transaction Audit Standard
+ */
+router.post('/cancel/:referenceId', async (req, res) => {
+  const { referenceId } = req.params;
+  // Optional: caller can supply a human-readable cancellation reason
+  const { reason = 'User cancelled payment' } = req.body || {};
+
+  try {
+    const tableName = getTxTableName();
+    let transaction;
+
+    // 1. Find existing transaction
+    if (process.env.VERCEL === '1') {
+      const results = await prisma.$queryRawUnsafe(
+        `SELECT id, status, type, metadata, "senderId", "receiverId", "referenceId" FROM ${tableName} WHERE "referenceId" = $1 LIMIT 1`,
+        referenceId
+      );
+      transaction = results && results.length > 0 ? results[0] : null;
+    } else {
+      transaction = await prisma.transaction.findUnique({
+        where: { referenceId }
+      });
+    }
+
+    if (!transaction) {
+      console.warn(`[Gateway] Cancel: Transaction not found for referenceId ${referenceId}`);
+      return res.status(404).json({ error: 'Transaction not found' });
+    }
+
+    // 2. Guard: only cancel PENDING transactions – do not reverse completed ones
+    if (transaction.status === 'COMPLETED') {
+      console.warn(`[Gateway] Cancel: Attempted to cancel a COMPLETED transaction ${referenceId}. Rejected.`);
+      return res.status(409).json({ error: 'Cannot cancel a completed transaction' });
+    }
+
+    if (transaction.status === 'CANCELLED') {
+      // Idempotent: already cancelled, just acknowledge
+      return res.status(200).json({ success: true, status: 'CANCELLED', message: 'Already cancelled' });
+    }
+
+    // 3. Update status to CANCELLED
+    if (process.env.VERCEL === '1') {
+      await prisma.$executeRawUnsafe(
+        `UPDATE ${tableName} SET status = 'CANCELLED' WHERE "referenceId" = $1`,
+        referenceId
+      );
+    } else {
+      await prisma.transaction.update({
+        where: { referenceId },
+        data: { status: 'CANCELLED' }
+      });
+    }
+
+    console.log(`[Gateway] ✅ Transaction ${referenceId} CANCELLED. Reason: ${reason}`);
+
+    // 4. Audit log (BSP 808 / PCI DSS 10.2)
+    createCentralizedAuditLog({
+      action: 'GATEWAY_PAYMENT_CANCELLED',
+      entity: 'Financial',
+      entityId: transaction.id,
+      userId: transaction.senderId || transaction.receiverId,
+      metadata: {
+        newValue: { referenceId, reason, type: transaction.type },
+        compliance: 'BSP Circular No. 808',
+        standard: 'Financial Transaction Audit',
+        ipAddress: req.headers['x-forwarded-for'] || req.socket?.remoteAddress
+      },
+      ipAddress: req.headers['x-forwarded-for'] || req.socket?.remoteAddress
+    }).catch(e => console.warn('[Gateway] Cancel audit log warning:', e.message));
+
+    // 5. Notify Admin Dashboard in real-time so the transaction tile updates immediately
+    notifyAdmin('transaction_cancelled', {
+      referenceId,
+      status: 'CANCELLED',
+      reason
+    });
+
+    // 6. Notify User if we know who they are
+    if (transaction.senderId) {
+      notifyUser(transaction.senderId, 'transaction_update', {
+        referenceId,
+        status: 'CANCELLED',
+        message: 'Your payment was cancelled.'
+      });
+    }
+
+    res.status(200).json({ success: true, status: 'CANCELLED' });
+  } catch (error) {
+    console.error('[Gateway] Cancel Transaction Error:', error.message);
+    res.status(500).json({ error: error.message });
+  }
+});
+
 // Create a Payment Intent (Standardized for budol ecosystem)
 router.post('/create-intent', async (req, res) => {
     const { amount, currency, description, metadata } = req.body;
@@ -552,6 +655,31 @@ router.get('/checkout/:referenceId', async (req, res) => {
             if (error) console.error(error);
           });
 
+          // WHY: The referenceId is embedded in the page so client-side JS 
+          //      can call the cancel endpoint without a round-trip to the store.
+          const referenceId = '${referenceId}';
+          const cancelUri   = '${metadata.cancelUri || ''}';
+          const redirectUri = '${metadata.redirectUri || ''}';
+
+          /**
+           * cancelTransaction
+           * WHAT: Calls the gateway's own /cancel endpoint so the Transaction
+           *       record is set to CANCELLED before navigating away.
+           *       This is the fix for stale PENDING transactions.
+           * @param {string} reason - Human-readable reason for the audit log
+           */
+          async function cancelTransaction(reason) {
+            try {
+              await fetch('/cancel/' + referenceId, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ reason })
+              });
+            } catch (e) {
+              console.error('Failed to cancel transaction on gateway:', e);
+            }
+          }
+
           // Timer logic
           let timeLeft = 600; // 10 minutes
           const timerElement = document.getElementById('timer');
@@ -565,10 +693,17 @@ router.get('/checkout/:referenceId', async (req, res) => {
               timerElement.classList.add('warning');
             }
             
+            // WHY: When the timer expires, cancel the transaction automatically
+            //      so it does not remain PENDING in the ledger.
             if (timeLeft <= 0) {
               clearInterval(timerInterval);
-              alert('Payment session expired. Please refresh the page.');
-              window.location.reload();
+              clearInterval(pollInterval);
+              cancelTransaction('Payment session expired').then(() => {
+                alert('Payment session expired. Please try again.');
+                const fallback = cancelUri || ('http://' + window.location.hostname + ':3001/cart');
+                window.location.href = fallback;
+              });
+              return;
             }
             timeLeft--;
           };
@@ -576,8 +711,17 @@ router.get('/checkout/:referenceId', async (req, res) => {
           const timerInterval = setInterval(updateTimer, 1000);
           updateTimer();
 
+          // WHY: When the user clicks the X or "Cancel Payment" button we must 
+          //      call /cancel before closing so the record is not left PENDING.
+          document.querySelector('.close-btn').addEventListener('click', async () => {
+            clearInterval(timerInterval);
+            clearInterval(pollInterval);
+            await cancelTransaction('User closed checkout page');
+            const fallback = cancelUri || ('http://' + window.location.hostname + ':3001/cart');
+            window.location.href = fallback;
+          });
+
           // Polling for transaction status
-          const referenceId = '${referenceId}';
           const checkStatus = async () => {
             try {
               const response = await fetch('/status/' + referenceId);
@@ -592,11 +736,14 @@ router.get('/checkout/:referenceId', async (req, res) => {
                 document.getElementById('success-view').style.display = 'block';
                 
                 setTimeout(() => {
-                  window.location.href = '${metadata.redirectUri}' || ('http://' + window.location.hostname + ':3000/payment-success');
+                  const dest = redirectUri || ('http://' + window.location.hostname + ':3001/payment-success');
+                  window.location.href = dest;
                 }, 2000);
               } else if (data.status === 'FAILED' || data.status === 'CANCELLED') {
-                alert('Payment ' + data.status.toLowerCase());
-                window.location.href = '${metadata.cancelUri}' || ('http://' + window.location.hostname + ':3000/payment-failed');
+                clearInterval(timerInterval);
+                clearInterval(pollInterval);
+                const dest = cancelUri || ('http://' + window.location.hostname + ':3001/cart');
+                window.location.href = dest;
               }
             } catch (err) {
               console.error('Error checking status:', err);
