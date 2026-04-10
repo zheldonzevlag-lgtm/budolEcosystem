@@ -658,10 +658,26 @@ const OrderSummary = ({ totalPrice, items, hasOutOfStock = false, onProcessing }
         router.push(`/payment/return?payment_intent_id=${intentId}&orderId=${orderId}&provider=${provider}`);
     };
 
-    const handleQRCancel = async (orderId) => {
+    // WHY this takes referenceId and paymentIntentId as explicit params:
+    //   handleQRCancel is async. React state (qrData) can be nulled by a re-render
+    //   or React batching BEFORE the async code in Step 2 runs. Reading qrData from
+    //   the closure inside an async function is unreliable — the stale closure may
+    //   already have qrData = null by the time the gateway cancel fetch runs.
+    //   Solution: capture the values AT CALL SITE (onClose/onTimeout) and pass them
+    //   as arguments, making the function independent of React state timing.
+    const handleQRCancel = async (orderId, referenceId, paymentIntentId) => {
         if (!orderId) return;
 
         const token = getToken();
+
+        // Diagnostic log – this will appear in the browser console when the user cancels.
+        // Confirms whether the gateway identifiers are populated before the cancel call.
+        console.log('🚫 [OrderSummary] handleQRCancel triggered:', {
+            orderId,
+            referenceId,
+            paymentIntentId,
+            qrDataSnapshot: qrData ? { referenceId: qrData.referenceId, paymentIntentId: qrData.paymentIntentId } : 'null'
+        });
 
         try {
             // ----------------------------------------------------------------
@@ -691,13 +707,18 @@ const OrderSummary = ({ totalPrice, items, hasOutOfStock = false, onProcessing }
             //         budolPay's ledger forever, polluting reports and the Admin
             //         Dashboard. This explicitly marks it CANCELLED.
             //
-            //         qrData.paymentIntentId  → the gateway's Transaction UUID  (id)
-            //         qrData.referenceId      → the gateway's referenceId field  (preferred key)
+            //         referenceId     → the gateway's human-readable reference (JON-xxx)
+            //         paymentIntentId → the gateway's internal UUID (fallback)
             //
-            //         We try referenceId first because the gateway's cancel endpoint
-            //         uses referenceId as a URL param/WHERE clause.
+            //         Both are passed as explicit parameters (not read from React state)
+            //         to avoid stale-closure bugs in async event handlers.
             // ----------------------------------------------------------------
-            const gatewayRef = qrData?.referenceId || qrData?.paymentIntentId;
+
+            // Use the explicit params first; fall back to current qrData state as last resort
+            const gatewayRef = referenceId || paymentIntentId ||
+                               qrData?.referenceId || qrData?.paymentIntentId;
+
+            console.log('🔌 [OrderSummary] Gateway cancel ref resolved to:', gatewayRef);
 
             if (gatewayRef) {
                 const cancelRes = await fetch('/api/payment/cancel', {
@@ -707,8 +728,8 @@ const OrderSummary = ({ totalPrice, items, hasOutOfStock = false, onProcessing }
                         ...(token ? { 'Authorization': `Bearer ${token}` } : {})
                     },
                     body: JSON.stringify({
-                        referenceId: qrData?.referenceId,
-                        intentId: qrData?.paymentIntentId,
+                        referenceId: referenceId || qrData?.referenceId,
+                        intentId: paymentIntentId || qrData?.paymentIntentId,
                         reason: 'User cancelled payment from cart'
                     })
                 });
@@ -720,7 +741,7 @@ const OrderSummary = ({ totalPrice, items, hasOutOfStock = false, onProcessing }
                     console.error('❌ [OrderSummary] Failed to cancel gateway transaction:', errData);
                 }
             } else {
-                console.warn('⚠️ [OrderSummary] No gateway referenceId available – gateway transaction NOT cancelled.');
+                console.warn('⚠️ [OrderSummary] No gateway referenceId or paymentIntentId – gateway transaction NOT cancelled. This is a data issue.');
             }
         } catch (error) {
             // Non-blocking: order is already cancelled; gateway is best-effort here
@@ -741,9 +762,12 @@ const OrderSummary = ({ totalPrice, items, hasOutOfStock = false, onProcessing }
                     paymentIntentId={qrData.paymentIntentId}
                     orderId={qrData.orderId}
                     paymentMethod={qrData.paymentMethod}
-                    onClose={() => handleQRCancel(qrData.orderId)}
+                    // WHY: Pass referenceId and paymentIntentId as explicit args (not read from state).
+                    // handleQRCancel is async — by the time Step 2 (gateway cancel) runs,
+                    // React may have already cleared qrData state. Explicit params are safe.
+                    onClose={() => handleQRCancel(qrData.orderId, qrData.referenceId, qrData.paymentIntentId)}
                     onSuccess={handleQRSuccess}
-                    onTimeout={() => handleQRCancel(qrData.orderId)}
+                    onTimeout={() => handleQRCancel(qrData.orderId, qrData.referenceId, qrData.paymentIntentId)}
                 />
             )}
             <h2 className='text-xl font-medium text-slate-600'>Payment Summary</h2>
