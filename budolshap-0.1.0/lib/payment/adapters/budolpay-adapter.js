@@ -8,26 +8,19 @@ export class BudolPayAdapter extends BasePaymentAdapter {
     constructor() {
         super();
         
-        // --- AGGRESSIVE PRODUCTION MIRROR LOGIC ---
-        // 1. Get raw URL from environment, fallback to the VERCEL PRODUCTION gateway
-        // This is critical because in Vercel, localhost falls into a void lambda.
-        const rawUrl = process.env.PAYMENT_GATEWAY_URL || 'https://payment-gateway-service-two.vercel.app';
-        
-        // 2. Determine if we must override
         const isVercel = process.env.VERCEL === '1' || !!process.env.NEXT_PUBLIC_VERCEL_ENV;
-        const isStaleDuck = rawUrl.includes('duckdns.org');
+        const defaultProdUrl = 'https://payment-gateway-service-two.vercel.app';
+        const defaultLocalUrl = 'http://192.168.1.2:8080/pg'; // API Gateway route for local
         
-        if (!process.env.PAYMENT_GATEWAY_URL && isVercel) {
-            console.warn('[BudolPay Adapter] ⚠️ Using fallback Vercel Gateway URL: ', rawUrl);
+        let rawUrl = process.env.PAYMENT_GATEWAY_URL || process.env.NEXT_PUBLIC_PAYMENT_GATEWAY_URL || (isVercel ? defaultProdUrl : defaultLocalUrl);
+        
+        if (rawUrl.includes('duckdns.org')) {
+            rawUrl = isVercel ? defaultProdUrl : defaultLocalUrl;
         }
 
-        if (isStaleDuck || (isVercel && rawUrl.includes('localhost'))) {
-            this.gatewayUrl = 'https://payment-gateway-service-two.vercel.app';
-        } else {
-            this.gatewayUrl = rawUrl;
-        }
+        this.gatewayUrl = rawUrl;
 
-        console.log(`[BudolPayAdapter] Initialized. Gateway: ${this.gatewayUrl} | Env Vercel: ${process.env.VERCEL}`);
+        console.log(`[BudolPayAdapter] Initialized. Gateway: ${this.gatewayUrl} | isVercel: ${isVercel}`);
         
         this.apiKey = process.env.BUDOLPAY_API_KEY || 'bs_key_2025';
         
