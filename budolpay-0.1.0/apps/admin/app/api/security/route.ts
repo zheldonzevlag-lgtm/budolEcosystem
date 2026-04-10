@@ -32,6 +32,16 @@ export async function GET(request: Request) {
           { action: { contains: "CASH_OUT" } }
         ]
       };
+    } else if (filter === "Compliance") {
+      where = {
+        OR: [
+          { entity: "Compliance" },
+          { action: { contains: "COMPLIANCE" } },
+          { action: { contains: "AML" } },
+          { action: { contains: "KYC" } },
+          { action: { contains: "FLAG" } }
+        ]
+      };
     } else if (filter === "System") {
       where = {
         OR: [

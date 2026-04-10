@@ -105,7 +105,8 @@ export default function RealtimeProvider() {
       if (timerRef.current) clearInterval(timerRef.current);
       cleanupPromise.then(unbind => unbind?.());
     };
-  }, [pathname, router]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [pathname]);
 
   return null;
 }

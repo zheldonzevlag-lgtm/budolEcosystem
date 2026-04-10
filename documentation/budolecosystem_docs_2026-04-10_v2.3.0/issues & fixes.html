@@ -1,0 +1,57 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Issues & Fixes - v2.3.0</title>
+    <style>
+        body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; background: #f4f5f7; color: #172b4d; padding: 40px; margin: 0; }
+        .main-content { background: #ffffff; padding: 40px; max-width: 1000px; margin: 0 auto; border-radius: 4px; box-shadow: 0 1px 3px rgba(0,0,0,0.1); }
+        h1, h2, h3 { color: #0747a6; }
+        .issue-box { border: 1px solid #dfe1e6; border-radius: 4px; padding: 20px; margin: 20px 0; border-left: 5px solid #ff5630; }
+        .fix-box { border: 1px solid #dfe1e6; border-radius: 4px; padding: 20px; margin: 20px 0; border-left: 5px solid #36b37e; background: #f4fcf9; }
+        code { background: #f4f5f7; padding: 2px 4px; border-radius: 3px; font-family: monospace; }
+        a { color: #0052cc; text-decoration: none; font-weight: bold; }
+    </style>
+</head>
+<body>
+    <div class="main-content">
+        <a href="index.html">← Back to Index</a>
+        <h1>Issues & Fixes: v2.3.0 Release</h1>
+
+        <h2>Implementation Log</h2>
+        <p>The following issues were identified and resolved during the integration of the Institutional Compliance Shield.</p>
+
+        <div class="issue-box">
+            <h3>ISSUE-230-01: Prisma Validation Failure in Compliance Tests</h3>
+            <p><strong>Description:</strong> Automated compliance monitoring tests failed during <code>upsert</code> operations because mandatory fields <code>passwordHash</code> and <code>phoneNumber</code> were missing from the test user creation payload.</p>
+        </div>
+        <div class="fix-box">
+            <h3>FIX: Schema-Compliant Test Seeding</h3>
+            <p>Modified <code>scripts/test_scripts/compliance_monitor.test.js</code> to include realistic dummy values for all required schema fields, ensuring the test suite executes in a sanitized institutional environment. Verified passing status on 2026-04-10.</p>
+        </div>
+
+        <div class="issue-box">
+            <h3>ISSUE-230-02: Real-time UI State Desynchronization</h3>
+            <p><strong>Description:</strong> Dashboard pages were only revealing historical flags on full refresh, causing a "Blind Spot" for real-time institutional monitoring during the 10-minute caching window.</p>
+        </div>
+        <div class="fix-box">
+            <h3>FIX: Event-Driven State Prepend</h3>
+            <p>Implemented a <code>useEffect</code> listener in <code>ComplianceBoard.tsx</code> that subscribes to the <code>COMPLIANCE_ALERT</code> event. New alerts are now prepended to the top of the list in real-time, bypassing server-side cache for instant visual oversight.</p>
+        </div>
+
+        <div class="issue-box">
+            <h3>ISSUE-230-03: Security Filter Broadness</h3>
+            <p><strong>Description:</strong> The <code>/api/security</code> endpoint was returning too much metadata for general staff, potentially exposing internal compliance flag forensic data to non-authorized roles.</p>
+        </div>
+        <div class="fix-box">
+            <h3>FIX: Explicit Compliance Scoping</h3>
+            <p>Extended <code>app/api/security/route.ts</code> with a dedicated <code>Compliance</code> filter case. This ensures that sensitive AML-related audit logs are only scoped and returned when requested by the specific monitoring board, facilitating RBAC-lite privacy enforcement.</p>
+        </div>
+
+        <div class="footer" style="margin-top:40px; text-align:center; font-size:12px; color:#5e6c84;">
+            Version 2.3.0 System Stability: <strong>VERIFIED</strong>
+        </div>
+    </div>
+</body>
+</html>

@@ -9,9 +9,11 @@ import {
   Activity,
   ShieldCheck,
   AlertCircle,
-  Shield
+  Shield,
+  Fingerprint
 } from "lucide-react";
 import { getNextAuditDate } from "@/lib/utils";
+import ComplianceBoard from "@/components/ComplianceBoard";
 
 export default async function DashboardPage() {
   const userCount = await prisma.user.count();
@@ -42,14 +44,28 @@ export default async function DashboardPage() {
     }
   });
 
+  const complianceAlertCount = await prisma.auditLog.count({
+    where: {
+      entity: 'Compliance',
+      createdAt: { gte: new Date(Date.now() - 24 * 60 * 60 * 1000) } // Last 24 hours
+    }
+  });
+
   const birStatus = unsyncedTransactions > 0 ? "SYNCING" : "ACTIVE";
   const birColor = unsyncedTransactions > 0 ? "text-amber-400" : "text-green-400";
   const birDot = unsyncedTransactions > 0 ? "bg-amber-400" : "bg-green-400";
 
   const stats = [
     { name: "Total Users", value: userCount, icon: Users, color: "text-blue-500", bg: "bg-blue-50" },
-    { name: "Transaction Volume", value: `PHP ${totalBalance.toLocaleString()}`, icon: Wallet, color: "text-[#f43f5e]", bg: "bg-rose-50" },
-    { name: "Operations Staff", value: staffCount, icon: ShieldCheck, color: "text-purple-500", bg: "bg-purple-50" },
+    { 
+      name: "Total Platform Assets", 
+      value: `PHP ${totalBalance.toLocaleString()}`, 
+      icon: Wallet, 
+      color: "text-[#f43f5e]", 
+      bg: "bg-rose-50",
+      tooltip: "The total amount of circulating funds currently resting in the central ASSET accounting ledger."
+    },
+    { name: "Compliance Health", value: complianceAlertCount === 0 ? "100%" : "WARNING", icon: Shield, color: complianceAlertCount === 0 ? "text-emerald-500" : "text-[#f43f5e]", bg: complianceAlertCount === 0 ? "bg-emerald-50" : "bg-rose-50" },
     { name: "System Uptime", value: "99.9%", icon: Activity, color: "text-green-500", bg: "bg-green-50" },
   ];
 
@@ -89,15 +105,26 @@ export default async function DashboardPage() {
                 </div>
               </div>
             </div>
-            <h3 className="text-slate-400 text-[10px] font-bold uppercase tracking-[0.15em] mb-1">{stat.name}</h3>
+            <div className="flex items-center gap-1.5 mb-1 group/tooltip">
+              <h3 className="text-slate-400 text-[10px] font-bold uppercase tracking-[0.15em]">{stat.name}</h3>
+              {stat.tooltip && (
+                <div className="relative flex items-center cursor-help">
+                  <span className="text-[9px] bg-slate-100 text-slate-400 rounded-full w-3.5 h-3.5 flex items-center justify-center font-bold border border-slate-200 group-hover/tooltip:bg-slate-200 group-hover/tooltip:text-slate-600 transition-colors">?</span>
+                  <div className="absolute bottom-full mb-2 left-1/2 -translate-x-1/2 w-48 bg-[#0f172a] text-slate-300 text-[10px] pt-2 px-3 pb-2.5 rounded-lg opacity-0 invisible group-hover/tooltip:opacity-100 group-hover/tooltip:visible transition-all duration-200 z-50 text-center leading-relaxed shadow-xl pointer-events-none normal-case font-medium tracking-normal border border-slate-700">
+                    {stat.tooltip}
+                    <div className="absolute top-full left-1/2 -translate-x-1/2 border-4 border-transparent border-t-[#0f172a]"></div>
+                  </div>
+                </div>
+              )}
+            </div>
             <p className="text-2xl font-black text-[#0f172a] tracking-tight">{stat.value}</p>
           </div>
         ))}
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-4 gap-8">
+      <div className="grid grid-cols-1 lg:grid-cols-6 gap-8">
         {/* Transaction Pulse */}
-        <div className="lg:col-span-3 bg-white rounded-2xl border border-slate-100 shadow-sm overflow-hidden flex flex-col min-h-[400px]">
+        <div className="lg:col-span-2 bg-white rounded-2xl border border-slate-100 shadow-sm overflow-hidden flex flex-col min-h-[400px]">
           <div className="p-5 border-b border-slate-50 flex justify-between items-center bg-slate-50/30">
             <div>
               <h3 className="font-black text-[#0f172a] text-base tracking-tight">Transaction Pulse</h3>
@@ -138,52 +165,48 @@ export default async function DashboardPage() {
           </div>
         </div>
 
-        {/* Compliance Shield */}
-        <div className="bg-[#0f172a] text-white rounded-3xl shadow-2xl p-6 flex flex-col border border-white/5 relative overflow-hidden group/shield">
-          <div className="absolute top-0 right-0 w-32 h-32 bg-[#f43f5e]/10 blur-[60px] rounded-full -mr-16 -mt-16 transition-all group-hover/shield:bg-[#f43f5e]/20"></div>
+        {/* Real-time Compliance Board */}
+        <div className="lg:col-span-4">
+          <ComplianceBoard />
+        </div>
+      </div>
+
+      {/* Institutional Overview */}
+      <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
+        <div className="lg:col-span-4 bg-[#0f172a] text-white rounded-3xl shadow-2xl p-6 flex flex-col md:flex-row items-center justify-between border border-white/5 relative overflow-hidden group/shield">
+          <div className="absolute top-0 right-0 w-64 h-64 bg-[#f43f5e]/5 blur-[80px] rounded-full -mr-32 -mt-32"></div>
           
-          <div className="flex items-center justify-between mb-6 relative z-10">
-            <div>
-              <h3 className="font-black text-white text-lg tracking-tight">Compliance Shield</h3>
-              <p className="text-[10px] text-slate-500 font-bold uppercase tracking-[0.2em] mt-1">Institutional Grade Security</p>
+          <div className="flex items-center gap-6 relative z-10">
+            <div className="p-4 bg-white/5 rounded-2xl border border-white/10 text-[#f43f5e]">
+              <Shield className="w-8 h-8" />
             </div>
-            <div className="p-2.5 bg-white/5 rounded-xl border border-white/10 text-[#f43f5e] group-hover/shield:scale-110 transition-transform">
-              <Shield className="w-5 h-5" />
+            <div>
+              <h3 className="font-black text-white text-xl tracking-tight">Compliance Shield Active</h3>
+              <p className="text-xs text-slate-500 font-bold uppercase tracking-[0.2em] mt-1">BSP Circular 808 / Institutional PCI DSS v4.0</p>
             </div>
           </div>
-          
-          <div className="space-y-3 flex-1 relative z-10">
+
+          <div className="flex flex-wrap gap-4 mt-6 md:mt-0 relative z-10">
             {[
-              { label: "PCI DSS v4.0 Encryption", status: "VERIFIED", color: "text-green-400", sub: "Data-at-rest & in-transit", dot: "bg-green-400" },
-              { label: "BSP Transaction Logs", status: "ACTIVE", color: "text-green-400", sub: "Circular No. 808 compliance", dot: "bg-green-400" },
-              { label: "BIR Tax Integration", status: birStatus, color: birColor, sub: "E-invoicing middleware", dot: birDot },
-              { label: "NPC Data Privacy", status: "SECURED", color: "text-green-400", sub: "DPA 2012 standards", dot: "bg-green-400" },
+              { label: "Encryption", status: "VERIFIED", dot: "bg-green-400" },
+              { label: "BSP Audit", status: "ACTIVE", dot: "bg-green-400" },
+              { label: "BIR Middleware", status: birStatus, dot: birDot },
+              { label: "NPC Data", status: "SECURED", dot: "bg-green-400" },
             ].map((item) => (
-              <div key={item.label} className="p-3 bg-white/[0.03] rounded-xl border border-white/10 hover:border-[#f43f5e]/40 hover:bg-white/[0.05] transition-all group/item">
-                <div className="flex items-center justify-between mb-1">
-                  <div className="flex items-center gap-2">
-                    <span className={`w-1 h-1 rounded-full ${item.dot} animate-pulse`}></span>
-                    <span className="text-[11px] font-bold text-slate-300 group-hover/item:text-white transition-colors">{item.label}</span>
-                  </div>
-                  <span className={`text-[8px] font-black tracking-widest ${item.color} bg-white/5 px-1.5 py-0.5 rounded`}>{item.status}</span>
-                </div>
-                <p className="text-[9px] text-slate-500 font-medium group-hover/item:text-slate-400 transition-colors pl-3">{item.sub}</p>
+              <div key={item.label} className="px-4 py-2 bg-white/5 rounded-xl border border-white/10 flex items-center gap-3">
+                <span className={`w-2 h-2 rounded-full ${item.dot} animate-pulse`}></span>
+                <span className="text-[10px] font-black tracking-widest text-slate-400 uppercase">{item.label}</span>
+                <span className="text-[10px] font-black text-white">{item.status}</span>
               </div>
             ))}
           </div>
 
-          <div className="mt-6 pt-5 border-t border-white/10 relative z-10">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-3 text-[9px] font-bold text-slate-400 uppercase tracking-widest">
-                <div className="w-7 h-7 rounded-full bg-white/5 flex items-center justify-center">
-                  <Activity className="w-3.5 h-3.5 text-[#f43f5e]" />
-                </div>
-                <span>Next Audit: {getNextAuditDate()}</span>
-              </div>
-              <div className="text-[9px] font-black text-green-500 bg-green-500/10 px-2.5 py-1 rounded-full">
-                V3.4.2-SECURE
-              </div>
+          <div className="hidden lg:flex items-center gap-4 pl-8 border-l border-white/10 relative z-10">
+            <div className="text-right">
+              <p className="text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-1">Audit Cycle</p>
+              <p className="text-xs font-black text-[#f43f5e]">{getNextAuditDate()}</p>
             </div>
+            <Fingerprint className="w-6 h-6 text-slate-600" />
           </div>
         </div>
       </div>

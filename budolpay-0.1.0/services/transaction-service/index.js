@@ -109,6 +109,82 @@ const createAuditLog = async (req, userId, action, metadata = {}, entity = 'Fina
     }
 };
 
+/**
+ * Automated Compliance Monitoring Engine (AML/BSP Shield)
+ * Checks for: High Value (500k), Velocity (5 tx/hr), and Aggregate (1M/day)
+ */
+const checkComplianceLimits = async (userId, transaction) => {
+    try {
+        const amount = parseFloat(transaction.amount);
+        const now = new Date();
+        const oneHourAgo = new Date(now.getTime() - 60 * 60 * 1000);
+        const twentyFourHoursAgo = new Date(now.getTime() - 24 * 60 * 60 * 1000);
+
+        const flags = [];
+
+        // 1. High Value Transaction (HVT) - BSP Standard
+        if (amount >= 500000) {
+            flags.push({ rule: 'HVT', severity: 'HIGH', message: 'Transaction exceeds PHP 500,000 threshold (BSP CTR).' });
+        }
+
+        // 2. Velocity Check (Potential Structured Small Transfers)
+        const recentTxCount = await prisma.transaction.count({
+            where: {
+                senderId: userId,
+                createdAt: { gte: oneHourAgo },
+                status: 'COMPLETED'
+            }
+        });
+        if (recentTxCount > 5) {
+            flags.push({ rule: 'VELOCITY', severity: 'MEDIUM', message: `High frequency activity: ${recentTxCount} transfers in 1 hour.` });
+        }
+
+        // 3. Daily Aggregate Limit
+        const dailyAgg = await prisma.transaction.aggregate({
+            where: {
+                senderId: userId,
+                createdAt: { gte: twentyFourHoursAgo },
+                status: 'COMPLETED'
+            },
+            _sum: { amount: true }
+        });
+        const totalDaily = parseFloat(dailyAgg._sum.amount || 0);
+        if (totalDaily >= 1000000) {
+            flags.push({ rule: 'AGGREGATE', severity: 'HIGH', message: `Cumulative daily volume (PHP ${totalDaily.toLocaleString()}) exceeds PHP 1M limit.` });
+        }
+
+        if (flags.length > 0) {
+            console.log(`[Compliance] ${flags.length} rules triggered for user ${userId}`);
+            
+            // Create Compliance-specific Audit Log
+            const complianceLog = await prisma.auditLog.create({
+                data: {
+                    userId,
+                    action: 'COMPLIANCE_FLAG_TRIGGERED',
+                    entity: 'Compliance',
+                    entityId: transaction.id,
+                    newValue: { flags, transactionId: transaction.id, referenceId: transaction.referenceId },
+                    metadata: {
+                        isComplianceFlag: true,
+                        rulesTriggered: flags.map(f => f.rule),
+                        severity: flags.some(f => f.severity === 'HIGH') ? 'HIGH' : 'MEDIUM'
+                    }
+                },
+                include: { user: { select: { email: true, firstName: true, lastName: true, kycTier: true } } }
+            });
+
+            // Notify Admin Board in Real-time
+            notifyAdmin('COMPLIANCE_ALERT', complianceLog);
+            return true;
+        }
+
+        return false;
+    } catch (err) {
+        console.error('[Compliance] Monitoring failure:', err.message);
+        return false;
+    }
+};
+
 // Health Check
 router.get('/health', (req, res) => {
     res.status(200).json({ status: 'Transaction Service is healthy', timestamp: getNowUTC() });
@@ -314,6 +390,9 @@ router.post('/transfer', async (req, res, next) => {
             referenceId
         }, 'Financial', completedTransaction.id);
 
+        // 9. Automated Compliance Check
+        await checkComplianceLimits(senderId, completedTransaction);
+
         res.json({ message: 'Transfer successful', transaction: completedTransaction });
     } catch (error) {
         if (error.response) {
@@ -502,6 +581,9 @@ router.post('/cash-in', async (req, res) => {
 
         // 6. Notify Admin in Real-time
         notifyAdmin('new_transaction', completedTransaction);
+
+        // 7. Automated Compliance Check
+        await checkComplianceLimits(userId, completedTransaction);
 
         res.json({ message: 'Cash in successful', transaction: completedTransaction });
     } catch (error) {
@@ -702,6 +784,9 @@ router.post('/cash-out', async (req, res) => {
 
         // 6. Notify Admin in Real-time
         notifyAdmin('new_transaction', completedTransaction);
+
+        // 7. Automated Compliance Check
+        await checkComplianceLimits(userId, completedTransaction);
 
         res.json({ message: 'Cash out successful', transaction: completedTransaction });
     } catch (error) {
