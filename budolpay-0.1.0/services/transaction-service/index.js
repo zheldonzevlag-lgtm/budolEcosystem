@@ -72,6 +72,29 @@ const notifyAdmin = async (event, data) => {
     }
 };
 
+// Helper to generate search variants for phone numbers (v2.4.2)
+const getPhoneVariants = (input) => {
+    if (!input || typeof input !== 'string') return [];
+    
+    // If it looks like an email, return as-is
+    if (input.includes('@')) return [input];
+    
+    const clean = input.replace(/\D/g, '');
+    
+    // Standard PH Mobile (10 digits after prefix)
+    if (clean.length === 10) { // e.g., 9484099400
+        return [`0${clean}`, `+63${clean}`];
+    }
+    if (clean.length === 11 && clean.startsWith('0')) { // e.g., 09484099400
+        return [clean, `+63${clean.slice(1)}`];
+    }
+    if (clean.length === 12 && clean.startsWith('63')) { // e.g., 639484099400
+        return [`0${clean.slice(2)}`, `+${clean}`, `+${clean}`];
+    }
+    
+    return [input, clean]; // Fallback
+};
+
 // Helper to create forensic audit logs using centralized audit helper
 const createAuditLog = async (req, userId, action, metadata = {}, entity = 'Financial', entityId = null) => {
     try {
@@ -263,16 +286,19 @@ router.post('/transfer', async (req, res, next) => {
         let resolvedReceiverId = receiverId;
         
         if (!resolvedReceiverId && recipient) {
+            const variants = getPhoneVariants(recipient);
+            
             const recipientUser = await prisma.user.findFirst({
                 where: {
                     OR: [
                         { email: recipient },
-                        { phoneNumber: recipient }
+                        { phoneNumber: { in: variants } }
                     ]
                 }
             });
             
             if (!recipientUser) {
+                console.warn(`[Transfer] Recipient not found for input: ${recipient} | Variants: ${variants.join(', ')}`);
                 throw new Error(`Recipient not found: ${recipient}`);
             }
             resolvedReceiverId = recipientUser.id;

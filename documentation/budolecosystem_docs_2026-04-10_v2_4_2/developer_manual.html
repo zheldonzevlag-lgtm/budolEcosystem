@@ -1,0 +1,54 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Developer Manual - v2.4.2</title>
+    <style>
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; line-height: 1.6; color: #333; max-width: 1000px; margin: 0 auto; padding: 20px; background: #fff; }
+        pre { background: #2d3436; color: #dfe6e9; padding: 15px; border-radius: 5px; overflow-x: auto; }
+        .back-link { display: block; margin-bottom: 20px; color: #d32f2f; text-decoration: none; }
+        .section { border-bottom: 1px solid #eee; padding-bottom: 20px; margin-bottom: 20px; }
+    </style>
+</head>
+<body>
+    <a href="index.html" class="back-link">⬅️ Back to Index</a>
+    <h1>Developer Manual: Phone Normalization Engine</h1>
+
+    <div class="section">
+        <h2>Rationale</h2>
+        <p>User registration in BudolPay allows for varying phone number inputs (e.g., 09xx, +63xx). During P2P transfers, if the sender enters a format different from the receiver's registration record, the lookup fails. v2.4.2 implements a <strong>Multi-Variant Search Pattern</strong> to eliminate this friction.</p>
+    </div>
+
+    <div class="section">
+        <h2>Core Implementation</h2>
+        <p>Location: <a href="file:///d:/IT%20Projects/clone/budolEcosystem/budolpay-0.1.0/services/transaction-service/index.js">transaction-service/index.js</a></p>
+        <pre><code>
+const getPhoneVariants = (input) => {
+    const clean = input.replace(/\D/g, '');
+    if (clean.length === 10) { // e.g., 9484099400
+        return [`0${clean}`, `+63${clean}`];
+    }
+    if (clean.length === 11 && clean.startsWith('0')) {
+        return [clean, `+63${clean.slice(1)}`];
+    }
+    // ... handles 63 and other variants
+};
+        </code></pre>
+    </div>
+
+    <div class="section">
+        <h2>Database Integration</h2>
+        <p>The lookup utilizes the Prisma <code>in</code> operator within an <code>OR</code> block to search for all potential matches in a single query, maintaining high performance.</p>
+        <pre><code>
+const recipientUser = await prisma.user.findFirst({
+    where: {
+        OR: [
+            { email: recipient },
+            { phoneNumber: { in: variants } }
+        ]
+    }
+});
+        </code></pre>
+    </div>
+</body>
+</html>
