@@ -730,6 +730,10 @@ const OrderSummary = ({ totalPrice, items, hasOutOfStock = false, onProcessing }
                     body: JSON.stringify({
                         referenceId: referenceId || qrData?.referenceId,
                         intentId: paymentIntentId || qrData?.paymentIntentId,
+                        // WHY orderId is included: cancel-by-order strategy in the gateway
+                        // searches transaction metadata for orderId — guaranteed to work
+                        // even when referenceId/intentId are null or stale.
+                        orderId: orderId,
                         reason: 'User cancelled payment from cart'
                     })
                 });

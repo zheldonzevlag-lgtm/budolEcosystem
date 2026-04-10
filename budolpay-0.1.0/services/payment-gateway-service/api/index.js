@@ -157,36 +157,38 @@ router.get('/status/:referenceId', async (req, res) => {
  * Cancel a Payment Intent / Transaction
  * WHY: When a user abandons checkout (clicks X, Cancel Payment, or timer expires),
  *      the Transaction in the gateway DB must be explicitly set to CANCELLED.
- *      Without this endpoint, records remain in PENDING forever, polluting the
- *      ledger and the Admin Dashboard transaction list.
- * WHAT: Accepts a referenceId (JON-xxx format) or UUID (Transaction.id) in the URL param.
- *       It first tries lookup by referenceId, then falls back to id (UUID).
- *       This dual-lookup is needed because the budolpay-adapter previously merged
- *       referenceId into paymentIntentId, causing upstream callers to send UUIDs.
- * COMPLIANCE: PCI DSS Req 10.2.4  – Log Access to Audit Trails
- *             BSP Circular No. 808 – Financial Transaction Audit Standard
+ *
+ * LOOKUP STRATEGY (in order of preference):
+ *   1. URL param referenceId → match WHERE "referenceId" = $1
+ *   2. URL param as UUID     → match WHERE id = $1
+ *   3. Body param orderId    → search metadata JSON for orderId (MOST RELIABLE)
+ *
+ * WHY THREE STRATEGIES:
+ *   Frontend identifier passing is fragile across async React state changes.
+ *   Searching by orderId in metadata is the most reliable approach since
+ *   orderId is always embedded in the transaction metadata at creation time.
+ *
+ * COMPLIANCE: PCI DSS Req 10.2.4 / BSP Circular No. 808
  */
 router.post('/cancel/:referenceId', async (req, res) => {
   const { referenceId } = req.params;
-  // Optional: caller can supply a human-readable cancellation reason
-  const { reason = 'User cancelled payment' } = req.body || {};
+  const { reason = 'User cancelled payment', orderId } = req.body || {};
 
   try {
     const tableName = getTxTableName();
     let transaction;
 
-    // 1. Find existing transaction – try referenceId first, then id (UUID) as fallback
-    //    WHY: The budolpay-adapter historically merged the two values; upstream callers
-    //    may send either form. Supporting both prevents 404s during the transition period.
+    console.log(`[Gateway] Cancel request: ref=${referenceId} | orderId=${orderId}`);
+
+    // --- LOOKUP STRATEGY 1: by referenceId (JON-xxx string) ---
     if (process.env.VERCEL === '1') {
-      // Try referenceId match first
       let results = await prisma.$queryRawUnsafe(
         `SELECT id, status, type, metadata, "senderId", "receiverId", "referenceId" FROM ${tableName} WHERE "referenceId" = $1 LIMIT 1`,
         referenceId
       );
       transaction = results && results.length > 0 ? results[0] : null;
 
-      // Fallback: try by UUID (id)
+      // --- LOOKUP STRATEGY 2: by UUID (id field) ---
       if (!transaction) {
         results = await prisma.$queryRawUnsafe(
           `SELECT id, status, type, metadata, "senderId", "receiverId", "referenceId" FROM ${tableName} WHERE id = $1 LIMIT 1`,
@@ -194,89 +196,166 @@ router.post('/cancel/:referenceId', async (req, res) => {
         );
         transaction = results && results.length > 0 ? results[0] : null;
       }
-    } else {
-      // Try by referenceId
-      transaction = await prisma.transaction.findUnique({
-        where: { referenceId }
-      });
 
-      // Fallback: try by UUID (id)
+      // --- LOOKUP STRATEGY 3: by orderId in metadata JSON ---
+      // WHY: Most reliable fallback. orderId is always embedded in metadata at creation.
+      //      This catches cases where referenceId/UUID were not correctly passed from frontend.
+      if (!transaction && orderId) {
+        const likePattern = `%"orderId":"${orderId}"%`;
+        results = await prisma.$queryRawUnsafe(
+          `SELECT id, status, type, metadata, "senderId", "receiverId", "referenceId" FROM ${tableName} WHERE status = 'PENDING' AND metadata LIKE $1 ORDER BY "createdAt" DESC LIMIT 1`,
+          likePattern
+        );
+        transaction = results && results.length > 0 ? results[0] : null;
+        if (transaction) console.log(`[Gateway] Cancel: Found via orderId metadata: ${transaction.referenceId}`);
+      }
+    } else {
+      // --- LOCAL DEV PATH ---
+      transaction = await prisma.transaction.findUnique({ where: { referenceId } });
+
       if (!transaction) {
-        transaction = await prisma.transaction.findUnique({
-          where: { id: referenceId }
+        transaction = await prisma.transaction.findUnique({ where: { id: referenceId } });
+      }
+
+      if (!transaction && orderId) {
+        // Search by orderId in metadata
+        transaction = await prisma.transaction.findFirst({
+          where: {
+            status: 'PENDING',
+            metadata: { contains: `"orderId":"${orderId}"` }
+          },
+          orderBy: { createdAt: 'desc' }
         });
+        if (transaction) console.log(`[Gateway] Cancel: Found via orderId metadata: ${transaction.referenceId}`);
       }
     }
 
     if (!transaction) {
-      console.warn(`[Gateway] Cancel: Transaction not found for referenceId/id: ${referenceId}`);
+      console.warn(`[Gateway] Cancel: No transaction found for ref=${referenceId} orderId=${orderId}`);
       return res.status(404).json({ error: 'Transaction not found' });
     }
 
-    // Use the actual referenceId from the transaction record for logs/updates
     const txRef = transaction.referenceId || referenceId;
 
-    // 2. Guard: only cancel PENDING transactions – do not reverse completed ones
     if (transaction.status === 'COMPLETED') {
-      console.warn(`[Gateway] Cancel: Attempted to cancel a COMPLETED transaction ${txRef}. Rejected.`);
       return res.status(409).json({ error: 'Cannot cancel a completed transaction' });
     }
 
     if (transaction.status === 'CANCELLED') {
-      // Idempotent: already cancelled, just acknowledge
-      console.log(`[Gateway] Cancel: Transaction ${txRef} is already CANCELLED. Acknowledging.`);
+      console.log(`[Gateway] Cancel: ${txRef} already CANCELLED (idempotent)`);
       return res.status(200).json({ success: true, status: 'CANCELLED', message: 'Already cancelled' });
     }
 
-    // 3. Update status to CANCELLED
+    // --- UPDATE status ---
     if (process.env.VERCEL === '1') {
       await prisma.$executeRawUnsafe(
         `UPDATE ${tableName} SET status = 'CANCELLED' WHERE id = $1`,
         transaction.id
       );
     } else {
-      await prisma.transaction.update({
-        where: { id: transaction.id },
-        data: { status: 'CANCELLED' }
-      });
+      await prisma.transaction.update({ where: { id: transaction.id }, data: { status: 'CANCELLED' } });
     }
 
     console.log(`[Gateway] ✅ Transaction ${txRef} CANCELLED. Reason: ${reason}`);
 
-    // 4. Audit log (BSP 808 / PCI DSS 10.2)
     createCentralizedAuditLog({
       action: 'GATEWAY_PAYMENT_CANCELLED',
       entity: 'Financial',
       entityId: transaction.id,
       userId: transaction.senderId || transaction.receiverId,
-      metadata: {
-        newValue: { referenceId: txRef, reason, type: transaction.type },
-        compliance: 'BSP Circular No. 808',
-        standard: 'Financial Transaction Audit',
-        ipAddress: req.headers['x-forwarded-for'] || req.socket?.remoteAddress
-      },
+      metadata: { newValue: { referenceId: txRef, reason, type: transaction.type }, compliance: 'BSP Circular No. 808' },
       ipAddress: req.headers['x-forwarded-for'] || req.socket?.remoteAddress
     }).catch(e => console.warn('[Gateway] Cancel audit log warning:', e.message));
 
-    // 5. Notify Admin Dashboard in real-time so the transaction tile updates immediately
-    notifyAdmin('transaction_cancelled', {
-      referenceId: txRef,
-      status: 'CANCELLED',
-      reason
-    });
+    notifyAdmin('transaction_cancelled', { referenceId: txRef, status: 'CANCELLED', reason });
 
-    // 6. Notify User if we know who they are
     if (transaction.senderId) {
-      notifyUser(transaction.senderId, 'transaction_update', {
-        referenceId: txRef,
-        status: 'CANCELLED',
-        message: 'Your payment was cancelled.'
+      notifyUser(transaction.senderId, 'transaction_update', { referenceId: txRef, status: 'CANCELLED', message: 'Your payment was cancelled.' });
+    }
+
+    res.status(200).json({ success: true, status: 'CANCELLED', referenceId: txRef });
+  } catch (error) {
+    console.error('[Gateway] Cancel Transaction Error:', error.message);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+/**
+ * Cancel ALL PENDING Transactions for a given orderId
+ * WHY: Bulletproof cancel that does not depend on referenceId/UUID being passed correctly.
+ *      Uses orderId (always in metadata) to find and cancel ALL PENDING transactions
+ *      for that order. Handles the case where a user retried payment multiple times,
+ *      leaving multiple PENDING records for the same order.
+ *
+ * Called by: budolshap /api/payment/cancel proxy (always alongside the referenceId cancel)
+ * COMPLIANCE: PCI DSS Req 10.2.4 / BSP Circular No. 808
+ */
+router.post('/cancel-by-order/:orderId', async (req, res) => {
+  const { orderId } = req.params;
+  const { reason = 'User cancelled payment' } = req.body || {};
+
+  if (!orderId || orderId === 'null' || orderId === 'undefined') {
+    return res.status(400).json({ error: 'orderId is required' });
+  }
+
+  try {
+    const tableName = getTxTableName();
+    const likePattern = `%"orderId":"${orderId}"%`;
+    let transactions = [];
+
+    if (process.env.VERCEL === '1') {
+      transactions = await prisma.$queryRawUnsafe(
+        `SELECT id, status, "referenceId" FROM ${tableName} WHERE status = 'PENDING' AND metadata LIKE $1`,
+        likePattern
+      );
+    } else {
+      transactions = await prisma.transaction.findMany({
+        where: {
+          status: 'PENDING',
+          metadata: { contains: `"orderId":"${orderId}"` }
+        },
+        select: { id: true, status: true, referenceId: true }
       });
     }
 
-    res.status(200).json({ success: true, status: 'CANCELLED' });
+    if (!transactions || transactions.length === 0) {
+      console.log(`[Gateway] cancel-by-order: No PENDING transactions found for orderId=${orderId}`);
+      return res.status(200).json({ success: true, cancelled: 0, message: 'No PENDING transactions found for this order' });
+    }
+
+    const ids = transactions.map(t => t.id);
+    console.log(`[Gateway] cancel-by-order: Cancelling ${ids.length} PENDING transaction(s) for orderId=${orderId}:`, ids);
+
+    // Bulk cancel all
+    if (process.env.VERCEL === '1') {
+      for (const tx of transactions) {
+        await prisma.$executeRawUnsafe(
+          `UPDATE ${tableName} SET status = 'CANCELLED' WHERE id = $1`,
+          tx.id
+        );
+        notifyAdmin('transaction_cancelled', { referenceId: tx.referenceId, status: 'CANCELLED', reason });
+        createCentralizedAuditLog({
+          action: 'GATEWAY_PAYMENT_CANCELLED',
+          entity: 'Financial',
+          entityId: tx.id,
+          metadata: { newValue: { referenceId: tx.referenceId, orderId, reason }, compliance: 'BSP Circular No. 808' },
+          ipAddress: req.headers['x-forwarded-for'] || req.socket?.remoteAddress
+        }).catch(() => {});
+      }
+    } else {
+      await prisma.transaction.updateMany({
+        where: { id: { in: ids } },
+        data: { status: 'CANCELLED' }
+      });
+      for (const tx of transactions) {
+        notifyAdmin('transaction_cancelled', { referenceId: tx.referenceId, status: 'CANCELLED', reason });
+      }
+    }
+
+    console.log(`[Gateway] ✅ cancel-by-order: Cancelled ${ids.length} transaction(s) for orderId=${orderId}`);
+    res.status(200).json({ success: true, cancelled: ids.length, referenceIds: transactions.map(t => t.referenceId) });
   } catch (error) {
-    console.error('[Gateway] Cancel Transaction Error:', error.message);
+    console.error('[Gateway] cancel-by-order Error:', error.message);
     res.status(500).json({ error: error.message });
   }
 });
