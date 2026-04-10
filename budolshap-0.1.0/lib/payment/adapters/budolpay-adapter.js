@@ -136,7 +136,15 @@ export class BudolPayAdapter extends BasePaymentAdapter {
                 }
             }
 
-            const paymentIntentId = data.referenceId || data.id || data.paymentIntentId || data.reference;
+            // WHY: The gateway returns two different identifiers:
+            //   data.referenceId  → JON-YYYYMMDD-XXXXX (human-readable reference, used in URLs)
+            //   data.id           → UUID (internal primary key, used in DB queries)
+            // Both must be preserved separately so the cancel flow can use the correct one.
+            // Previously this adapter stored referenceId as paymentIntentId, losing the UUID.
+            const gatewayReferenceId = data.referenceId || data.reference || null;
+            const gatewayIntentId = data.id || data.paymentIntentId || data.transactionId || gatewayReferenceId;
+
+            console.log(`[BudolPay Adapter] ✅ Intent created. UUID=${gatewayIntentId} | Ref=${gatewayReferenceId}`);
 
             return {
                 checkoutUrl: checkoutUrl,
@@ -146,12 +154,16 @@ export class BudolPayAdapter extends BasePaymentAdapter {
                         orderId: options.orderId,
                         amount: amount / 100,
                         storeName: options.storeName || 'budolShap Store',
-                        paymentIntentId: paymentIntentId
+                        paymentIntentId: gatewayIntentId,
+                        referenceId: gatewayReferenceId
                     }))}`,
                     amount: amount,
                     label: options.storeName || 'budolShap Store'
                 },
-                paymentIntentId: paymentIntentId,
+                paymentIntentId: gatewayIntentId,
+                // WHY: referenceId is the gateway's canonical cancel/status lookup key.
+                //      Exposing it here allows OrderSummary.jsx to pass it to /api/payment/cancel.
+                referenceId: gatewayReferenceId,
                 status: data.status || 'pending',
                 originalResponse: data
             };

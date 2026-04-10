@@ -9,15 +9,16 @@ import { NextResponse } from 'next/server';
  *   budolshap DB.  However the corresponding Transaction record in the
  *   budolPay payment-gateway is a SEPARATE DB entity and remains PENDING.
  *
- *   Stale PENDING transactions:
- *     • Appear in the Admin Dashboard under the wrong status
- *     • Skew financial reconciliation reports
- *     • Violate BSP Circular No. 808 accurate ledger requirements
+ *   Root cause of the original bug:
+ *     The budolpay-adapter.js was merging the gateway's `referenceId` field into
+ *     `paymentIntentId`, so the cancel handler received paymentIntentId = "JON-xxx"
+ *     but referenceId = null. This proxy would then call /cancel/null — which fails.
  *
- * WHAT THIS DOES:
- *   Acts as an authenticated proxy, receiving the referenceId (payment intent
- *   reference) from the frontend, forwarding it to the gateway's
- *   POST /cancel/:referenceId endpoint, and returning the result.
+ *   Fix applied in v2.2.8 (hotfix):
+ *     - budolpay-adapter.js now exposes both `paymentIntentId` (UUID) and
+ *       `referenceId` (JON-xxx string) as separate fields.
+ *     - This proxy prefers referenceId, falls back to intentId (UUID).
+ *     - Null/undefined guard prevents calling /cancel/null.
  *
  * COMPLIANCE:
  *   PCI DSS Req 10.2.4 – Log Access to Audit Trails
@@ -28,13 +29,25 @@ export async function POST(request) {
     try {
         const body = await request.json();
 
-        // referenceId – the gateway's referenceId stored on the transaction
-        // intentId    – optional, the internal UUID of the transaction (fallback lookup)
+        // referenceId – the gateway's human-readable reference (JON-YYYYMMDD-XXXXXXXX)
+        //               used as the URL param in /cancel/:referenceId
+        // intentId    – the gateway's internal UUID (Transaction.id), used as fallback
+        // reason      – optional human-readable cancellation reason for audit log
         const { referenceId, intentId, reason = 'User cancelled payment' } = body;
 
-        if (!referenceId && !intentId) {
+        // WHY: The gateway's cancel endpoint uses referenceId as the URL parameter.
+        //      intentId (UUID) is accepted as a fallback.
+        //      If both are absent or literally "null"/"undefined", reject early.
+        const targetRef = (referenceId && referenceId !== 'null' && referenceId !== 'undefined')
+            ? referenceId
+            : (intentId && intentId !== 'null' && intentId !== 'undefined')
+                ? intentId
+                : null;
+
+        if (!targetRef) {
+            console.error('[Payment Cancel Proxy] Cannot cancel: both referenceId and intentId are null/missing.', { referenceId, intentId });
             return NextResponse.json(
-                { error: 'referenceId or intentId is required' },
+                { error: 'A valid referenceId or intentId is required to cancel the transaction' },
                 { status: 400 }
             );
         }
@@ -47,30 +60,27 @@ export async function POST(request) {
             process.env.NEXT_PUBLIC_PAYMENT_GATEWAY_URL ||
             'http://localhost:8004';
 
-        // Use referenceId if provided; fall back to intentId
-        const targetRef = referenceId || intentId;
+        console.log(`[Payment Cancel Proxy] Forwarding cancel for ref: ${targetRef} | reason: ${reason} | gateway: ${GATEWAY_BASE_URL}`);
 
-        console.log(`[Payment Cancel Proxy] Forwarding cancel for ref: ${targetRef} | reason: ${reason}`);
-
-        const gatewayRes = await fetch(`${GATEWAY_BASE_URL}/cancel/${targetRef}`, {
+        const gatewayRes = await fetch(`${GATEWAY_BASE_URL}/cancel/${encodeURIComponent(targetRef)}`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ reason }),
-            // Short timeout – fire-and-forget is acceptable, but we prefer a confirmed response
+            // Short timeout – order is already cancelled; this is best-effort for the gateway record
             signal: AbortSignal.timeout(8000)
         });
 
-        // We handle both success and expected "not found" responses gracefully
+        // 404: transaction not found in gateway (may have already expired / been cleaned up)
         if (gatewayRes.status === 404) {
             console.warn(`[Payment Cancel Proxy] Gateway: transaction ${targetRef} not found. May have already expired.`);
             return NextResponse.json(
                 { success: true, status: 'NOT_FOUND', message: 'Transaction not found in gateway (may have already expired)' },
-                { status: 200 } // Return 200 to the client – the goal is already achieved
+                { status: 200 } // Return 200 – the cancellation goal is already achieved
             );
         }
 
+        // 409: transaction is already COMPLETED – do not overwrite
         if (gatewayRes.status === 409) {
-            // 409 = transaction was COMPLETED – do not overwrite, return the conflict
             const data = await gatewayRes.json().catch(() => ({}));
             console.warn(`[Payment Cancel Proxy] Cannot cancel COMPLETED transaction ${targetRef}.`);
             return NextResponse.json({ error: data.error || 'Cannot cancel a completed transaction' }, { status: 409 });
@@ -86,16 +96,16 @@ export async function POST(request) {
         }
 
         const data = await gatewayRes.json();
-        console.log(`[Payment Cancel Proxy] ✅ Transaction ${targetRef} cancelled on gateway. Response:`, data);
+        console.log(`[Payment Cancel Proxy] ✅ Transaction ${targetRef} cancelled on gateway.`);
 
         return NextResponse.json(data);
 
     } catch (error) {
-        // Network errors, timeouts, etc. – log but do not block the user
+        // Network errors, timeouts – log but do not block the user (order is already cancelled)
         if (error.name === 'TimeoutError' || error.name === 'AbortError') {
             console.error('[Payment Cancel Proxy] ⏰ Gateway request timed out. Transaction may still be PENDING.');
             return NextResponse.json(
-                { success: false, error: 'Gateway timeout – transaction may still be PENDING. It will be auto-expired by the cleanup job.' },
+                { success: false, error: 'Gateway timeout – transaction may still be PENDING.' },
                 { status: 504 }
             );
         }
