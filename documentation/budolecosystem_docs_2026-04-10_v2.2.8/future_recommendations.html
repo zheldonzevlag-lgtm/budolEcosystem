@@ -1,0 +1,120 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Future Recommendations v2.2.8</title>
+<style>
+  :root{--primary:#4f46e5;--accent:#10b981;--warn:#f59e0b;--muted:#64748b;--dark:#1e293b}
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{font-family:'Segoe UI',system-ui,sans-serif;background:#f8fafc;color:#334155}
+  header{background:var(--primary);color:#fff;padding:1.5rem 2rem;display:flex;justify-content:space-between;align-items:center}
+  header h1{font-size:1.4rem;font-weight:700}
+  header span{font-size:.85rem;background:rgba(255,255,255,.2);padding:.3rem .75rem;border-radius:9999px}
+  nav{display:flex;gap:.5rem;flex-wrap:wrap;padding:1.25rem 2rem;background:#fff;border-bottom:1px solid #e2e8f0}
+  nav a{padding:.45rem 1rem;border-radius:6px;text-decoration:none;font-size:.85rem;font-weight:500;background:#f1f5f9;color:var(--dark)}
+  nav a.active,nav a:hover{background:var(--primary);color:#fff}
+  main{max-width:1100px;margin:2rem auto;padding:0 1.5rem}
+  .card{background:#fff;border:1px solid #e2e8f0;border-radius:12px;padding:1.5rem;margin-bottom:1.5rem}
+  .card h2{font-size:1.1rem;font-weight:700;color:var(--dark);margin-bottom:.75rem}
+  .rec{display:flex;gap:.75rem;padding:.9rem;background:#f8fafc;border-radius:8px;border-left:4px solid var(--primary);margin-bottom:.75rem}
+  .rec-num{background:var(--primary);color:#fff;border-radius:50%;width:1.6rem;height:1.6rem;display:flex;align-items:center;justify-content:center;font-size:.75rem;font-weight:700;flex-shrink:0;margin-top:.1rem}
+  .rec-body h3{font-size:.9rem;font-weight:600;color:var(--dark);margin-bottom:.25rem}
+  .rec-body p{font-size:.85rem;color:var(--muted);line-height:1.6}
+  .badge{font-size:.72rem;padding:.2rem .6rem;border-radius:9999px;font-weight:600;display:inline-block;margin-top:.25rem}
+  .badge-high{background:#fee2e2;color:#991b1b}
+  .badge-med{background:#fef3c7;color:#92400e}
+  .badge-low{background:#dbeafe;color:#1e40af}
+  footer{text-align:center;padding:2rem;font-size:.8rem;color:var(--muted)}
+</style>
+</head>
+<body>
+<header>
+  <h1>🔭 Future Recommendations v2.2.8</h1>
+  <span>2026-04-10</span>
+</header>
+<nav>
+  <a href="index.html">Index</a>
+  <a href="developer_manual.html">Developer Manual</a>
+  <a href="system_admin_manual.html">System Admin</a>
+  <a href="user_manual.html">User Manual</a>
+  <a href="risk_register.html">Risk Register</a>
+  <a href="mitigation.html">Mitigation</a>
+  <a href="issues_and_fixes.html">Issues &amp; Fixes</a>
+  <a href="test_results.html">Test Results</a>
+  <a href="future_recommendations.html" class="active">Future Recs</a>
+</nav>
+<main>
+
+  <div class="card">
+    <h2>Payment Lifecycle – Next Phase Improvements</h2>
+
+    <div class="rec">
+      <div class="rec-num">1</div>
+      <div class="rec-body">
+        <h3>Implement CRON Job: Auto-expire stale PENDING transactions</h3>
+        <p>Any Transaction in PENDING status for more than 30 minutes should be automatically set to CANCELLED with reason = "Session expired (auto-cleanup)". This handles browser crashes, lost connections, and any other edge cases where the explicit cancel call did not complete.</p>
+        <span class="badge badge-high">Priority: HIGH</span>
+      </div>
+    </div>
+
+    <div class="rec">
+      <div class="rec-num">2</div>
+      <div class="rec-body">
+        <h3>Add <code>updatedAt</code> field to Transaction model</h3>
+        <p>The Transaction schema currently has <code>createdAt</code> and <code>completedAt</code> but no <code>updatedAt</code>. Adding it would allow the CRON cleanup job to precisely identify transactions that have been idle for &gt; 30 minutes, and improve audit trail accuracy.</p>
+        <span class="badge badge-high">Priority: HIGH</span>
+      </div>
+    </div>
+
+    <div class="rec">
+      <div class="rec-num">3</div>
+      <div class="rec-body">
+        <h3>Set <code>PAYMENT_GATEWAY_URL</code> in Vercel (budolshap project)</h3>
+        <p>The cancel proxy in budolshap falls back to <code>localhost:8004</code> when this env var is missing. In production, all cancel calls will silently fail until this is set. Risk R-005 in the risk register.</p>
+        <span class="badge badge-high">Priority: HIGH (pre-deploy blocker)</span>
+      </div>
+    </div>
+
+    <div class="rec">
+      <div class="rec-num">4</div>
+      <div class="rec-body">
+        <h3>Unify PaymentIntent identifiers across the adapter layer</h3>
+        <p>The budolpay-adapter previously conflated <code>referenceId</code> (JON-xxx) and <code>paymentIntentId</code> (UUID) into a single field, causing the cancel flow to send <code>null</code> to the gateway. A formal ValueObject or DTO for payment identities would prevent this class of bug in future adapters.</p>
+        <span class="badge badge-med">Priority: MEDIUM</span>
+      </div>
+    </div>
+
+    <div class="rec">
+      <div class="rec-num">5</div>
+      <div class="rec-body">
+        <h3>Add Jest integration tests to CI pipeline</h3>
+        <p>The cancel test suite in <code>scripts/test_scripts/payment_gateway/cancel.test.js</code> must run automatically on every pull request targeting <code>main</code>. This prevents regression of the PENDING→CANCELLED lifecycle fix.</p>
+        <span class="badge badge-med">Priority: MEDIUM</span>
+      </div>
+    </div>
+
+    <div class="rec">
+      <div class="rec-num">6</div>
+      <div class="rec-body">
+        <h3>Show real-time transaction status update in Admin Dashboard</h3>
+        <p>The gateway cancel endpoint already calls <code>notifyAdmin('transaction_cancelled', ...)</code>. The Admin Dashboard should subscribe to this event and update the transaction row's status badge without requiring a page refresh.</p>
+        <span class="badge badge-med">Priority: MEDIUM</span>
+      </div>
+    </div>
+
+    <div class="rec">
+      <div class="rec-num">7</div>
+      <div class="rec-body">
+        <h3>Expose a "Void / Manual Cancel" button in the Admin Dashboard transactions table</h3>
+        <p>For cases where a transaction is stuck in PENDING due to a gateway communication failure, administrators should be able to manually trigger a cancel via the Admin UI, which calls the new <code>POST /cancel/:referenceId</code> endpoint.</p>
+        <span class="badge badge-low">Priority: LOW</span>
+      </div>
+    </div>
+
+  </div>
+
+</main>
+<footer>BudolEcosystem v2.2.8 Future Recommendations · 2026-04-10</footer>
+</body>
+</html>

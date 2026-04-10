@@ -1,0 +1,106 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Risk Register v2.2.8</title>
+<style>
+  :root{--primary:#4f46e5;--danger:#ef4444;--warn:#f59e0b;--success:#10b981;--muted:#64748b;--dark:#1e293b}
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{font-family:'Segoe UI',system-ui,sans-serif;background:#f8fafc;color:#334155}
+  header{background:var(--primary);color:#fff;padding:1.5rem 2rem;display:flex;justify-content:space-between;align-items:center}
+  header h1{font-size:1.4rem;font-weight:700}
+  header span{font-size:.85rem;background:rgba(255,255,255,.2);padding:.3rem .75rem;border-radius:9999px}
+  nav{display:flex;gap:.5rem;flex-wrap:wrap;padding:1.25rem 2rem;background:#fff;border-bottom:1px solid #e2e8f0}
+  nav a{padding:.45rem 1rem;border-radius:6px;text-decoration:none;font-size:.85rem;font-weight:500;background:#f1f5f9;color:var(--dark)}
+  nav a.active,nav a:hover{background:var(--primary);color:#fff}
+  main{max-width:1100px;margin:2rem auto;padding:0 1.5rem}
+  .card{background:#fff;border:1px solid #e2e8f0;border-radius:12px;padding:1.5rem;margin-bottom:1.5rem}
+  .card h2{font-size:1.1rem;font-weight:700;color:var(--dark);margin-bottom:.75rem}
+  table{width:100%;border-collapse:collapse;font-size:.875rem}
+  th{background:#f1f5f9;text-align:left;padding:.6rem .75rem;font-weight:600;color:var(--dark);border-bottom:2px solid #e2e8f0}
+  td{padding:.6rem .75rem;border-bottom:1px solid #f1f5f9;vertical-align:top;line-height:1.5}
+  .risk-h{background:#fee2e2;color:#7f1d1d;font-weight:700;padding:.25rem .7rem;border-radius:9999px;font-size:.75rem}
+  .risk-m{background:#fef3c7;color:#78350f;font-weight:700;padding:.25rem .7rem;border-radius:9999px;font-size:.75rem}
+  .risk-l{background:#d1fae5;color:#065f46;font-weight:700;padding:.25rem .7rem;border-radius:9999px;font-size:.75rem}
+  .status-open{background:#fee2e2;color:#991b1b;padding:.2rem .6rem;border-radius:9999px;font-size:.72rem;font-weight:600}
+  .status-closed{background:#d1fae5;color:#065f46;padding:.2rem .6rem;border-radius:9999px;font-size:.72rem;font-weight:600}
+  footer{text-align:center;padding:2rem;font-size:.8rem;color:var(--muted)}
+</style>
+</head>
+<body>
+<header>
+  <h1>⚠️ Risk Register v2.2.8</h1>
+  <span>2026-04-10</span>
+</header>
+<nav>
+  <a href="index.html">Index</a>
+  <a href="developer_manual.html">Developer Manual</a>
+  <a href="system_admin_manual.html">System Admin</a>
+  <a href="user_manual.html">User Manual</a>
+  <a href="risk_register.html" class="active">Risk Register</a>
+  <a href="mitigation.html">Mitigation</a>
+  <a href="issues_and_fixes.html">Issues &amp; Fixes</a>
+  <a href="test_results.html">Test Results</a>
+  <a href="future_recommendations.html">Future Recs</a>
+</nav>
+<main>
+
+  <div class="card">
+    <h2>Risk Register – Payment Transaction Lifecycle</h2>
+    <table>
+      <tr>
+        <th>#</th><th>Risk</th><th>Likelihood</th><th>Impact</th><th>Rating</th><th>Mitigation</th><th>Status</th>
+      </tr>
+      <tr>
+        <td>R-001</td>
+        <td>Stale PENDING transactions polluting ledger when user cancels QR payment</td>
+        <td>High</td>
+        <td>High – Financial data integrity, BSP 808 violation</td>
+        <td><span class="risk-h">HIGH</span></td>
+        <td>Added POST /cancel/:referenceId endpoint with dual-lookup, audit log, and Admin notification</td>
+        <td><span class="status-closed">✅ CLOSED v2.2.8</span></td>
+      </tr>
+      <tr>
+        <td>R-002</td>
+        <td>Cancel proxy calling /cancel/null due to adapter identity field merge</td>
+        <td>High</td>
+        <td>High – Cancel silently fails, transaction stays PENDING</td>
+        <td><span class="risk-h">HIGH</span></td>
+        <td>Fixed budolpay-adapter.js to expose referenceId + paymentIntentId separately; added null guard in proxy</td>
+        <td><span class="status-closed">✅ CLOSED v2.2.8-hotfix</span></td>
+      </tr>
+      <tr>
+        <td>R-003</td>
+        <td>Gateway offline when user cancels – Transaction remains PENDING</td>
+        <td>Medium</td>
+        <td>Medium – Temporary data inaccuracy, auto-recoverable</td>
+        <td><span class="risk-m">MEDIUM</span></td>
+        <td>8-second timeout; cancel proxy returns 504 non-blocking; future: CRON cleanup job for stale PENDING transactions older than 30 min</td>
+        <td><span class="status-open">⚠️ OPEN (partial)</span></td>
+      </tr>
+      <tr>
+        <td>R-004</td>
+        <td>QR checkout page on gateway host navigated away without calling /cancel (browser crash, lost connectivity)</td>
+        <td>Low</td>
+        <td>Medium – Transaction stays PENDING until cleanup job runs</td>
+        <td><span class="risk-m">MEDIUM</span></td>
+        <td>Future: Add TTL expiry job; beforeunload event is unreliable on mobile browsers</td>
+        <td><span class="status-open">⚠️ OPEN</span></td>
+      </tr>
+      <tr>
+        <td>R-005</td>
+        <td>PAYMENT_GATEWAY_URL not set in Vercel budolshap env → cancel proxy falls back to localhost:8004</td>
+        <td>Medium</td>
+        <td>High – All cancel calls fail silently in production</td>
+        <td><span class="risk-h">HIGH</span></td>
+        <td>Must set PAYMENT_GATEWAY_URL in Vercel budolshap project settings before deploying v2.2.8</td>
+        <td><span class="status-open">⚠️ OPEN (pending deploy)</span></td>
+      </tr>
+    </table>
+  </div>
+
+</main>
+<footer>BudolEcosystem v2.2.8 Risk Register · 2026-04-10</footer>
+</body>
+</html>
