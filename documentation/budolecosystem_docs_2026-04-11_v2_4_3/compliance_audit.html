@@ -1,0 +1,54 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Compliance Audit - v2.4.3</title>
+    <link rel="stylesheet" href="docs_v1.css">
+</head>
+<body>
+    <div class="sidebar">
+        <h3>Institutional Resolvers</h3>
+        <ul>
+            <li><a href="index.html">🏠 v2.4.3 Overview</a></li>
+            <li><a href="developer_manual.html">📘 Developer Manual</a></li>
+            <li><a href="system_admin_manual.html">🛠️ System Admin Manual</a></li>
+            <li><a href="test_results.html">✅ Test Registry</a></li>
+            <li><a href="risk_register.html">⚠️ Risk Register</a></li>
+            <li><a href="future_recommendations.html">🚀 Future roadmap</a></li>
+        </ul>
+        <h3>System Tools</h3>
+        <ul>
+            <li><a href="tasks_2026_04_11.html">📋 Task List</a></li>
+            <li><a href="../../knowledgebase.html">🏛️ Archive</a></li>
+        </ul>
+    </div>
+
+    <div class="content">
+        <div class="header">
+            <h1>Institutional Compliance Audit: v2.4.3</h1>
+            <div class="metadata">
+                <span>Standard: BSP Circular 808/1213</span>
+                <span>Audit Date: 2026-04-11</span>
+            </div>
+        </div>
+
+        <div class="card">
+            <h2>1. Separation of Duties (Maker-Checker)</h2>
+            <p><strong>Requirement:</strong> Critical financial operations must require the involvement of at least two authorized individuals.</p>
+            <p><strong>Implementation:</strong> The <code>/resolve</code> endpoint enforces a state-machine where a transaction in <code>FLAGGED_REVIEW</u> cannot be finalized until it has both a <strong>Proposer</strong> (MANAGER) and an <strong>Authorizer</strong> (GENERAL_MANAGER). Identification is verified via session-backed role checks.</p>
+        </div>
+
+        <div class="card">
+            <h2>2. Forensic Audit Traceability</h2>
+            <p><strong>Requirement:</strong> All manual overrides of automated risk flags must be fully documented and attributable.</p>
+            <p><strong>Implementation:</strong> Audit logs capture the IDs of both the Maker and the Checker, the <code>Forensic Reason Code</code>, and the precise timestamp of both steps. These records are stored in the <code>AuditLog</code> table with a <code>system_resolution</code> category.</p>
+        </div>
+
+        <div class="card">
+            <h2>3. AML/TF Risk Mitigation</h2>
+            <p><strong>Requirement:</strong> Manual resolutions must not bypass systemic AML controls.</p>
+            <p><strong>Implementation:</strong> Only transactions explicitly moved to <code>FLAGGED_REVIEW</code> (due to HVT or Anomaly triggers) are eligible for resolution. Completion logic ensures that the transaction state is immutable once finalized, preventing double-resolution attacks.</p>
+        </div>
+    </div>
+</body>
+</html>

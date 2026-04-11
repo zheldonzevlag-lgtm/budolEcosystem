@@ -94,24 +94,36 @@ export default function MathCaptcha({ onSolve, primaryColor = 'blue' }: MathCapt
                     />
                 </div>
                 
-                {error && <p className="text-[10px] text-red-500 text-center font-bold uppercase tracking-wider animate-pulse">Incorrect answer. Please try again.</p>}
-                
+            {error && <p className="text-[10px] text-red-500 text-center font-bold uppercase tracking-wider animate-pulse">Incorrect answer. Please try again.</p>}
+            
+            <button
+                type="button"
+                onClick={(e) => {
+                    e.preventDefault();
+                    verifyAnswer();
+                }}
+                className={`w-full py-3 text-white text-sm font-bold rounded-xl transition-all transform active:scale-95 flex items-center justify-center gap-2 ${colorClasses[primaryColor] || colorClasses.blue}`}
+            >
+                Verify Challenge
+                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                </svg>
+            </button>
+
+            {/* v2.4.3: E2E Test Bypass (Development Only) */}
+            {process.env.NODE_ENV === 'development' && (
                 <button
                     type="button"
-                    onClick={(e) => {
-                        e.preventDefault();
-                        verifyAnswer();
-                    }}
-                    className={`w-full py-3 text-white text-sm font-bold rounded-xl transition-all transform active:scale-95 flex items-center justify-center gap-2 ${colorClasses[primaryColor] || colorClasses.blue}`}
+                    id="e2e-bypass-captcha"
+                    onClick={() => onSolve()}
+                    className="mt-4 w-full py-1 text-[8px] text-slate-400 font-bold uppercase tracking-[0.3em] hover:text-rose-500 transition-colors"
                 >
-                    Verify Challenge
-                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-                    </svg>
+                    [ Bypass for Automated Test ]
                 </button>
-            </div>
-            
-            <p className="text-[10px] text-slate-400 mt-4 text-center uppercase tracking-widest font-bold">Bot Protection Verified</p>
+            )}
+        </div>
+        
+        <p className="text-[10px] text-slate-400 mt-4 text-center uppercase tracking-widest font-bold">Bot Protection Verified</p>
         </div>
     );
 }

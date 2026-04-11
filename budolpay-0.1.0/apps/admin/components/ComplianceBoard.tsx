@@ -47,9 +47,9 @@ interface ComplianceAlert {
 export default function ComplianceBoard() {
   const [alerts, setAlerts] = useState<ComplianceAlert[]>([]);
   const [loading, setLoading] = useState(true);
+  const [activeRole, setActiveRole] = useState<'MANAGER' | 'GENERAL_MANAGER' | 'USER'>('MANAGER');
 
   useEffect(() => {
-    // 1. Initial Load
     const fetchInitialData = async () => {
       try {
         const res = await fetch("/api/security?filter=Compliance");
@@ -66,38 +66,53 @@ export default function ComplianceBoard() {
 
     fetchInitialData();
 
-    // 2. Real-time Subscription
     const unsubscribe = realtime.on("COMPLIANCE_ALERT", (newAlert: ComplianceAlert) => {
       console.log("[ComplianceBoard] Real-time alert received:", newAlert);
-      setAlerts(prev => [newAlert, ...prev].slice(0, 50)); // Keep last 50
+      setAlerts(prev => [newAlert, ...prev].slice(0, 50));
     });
-
-    const handleResolve = async (transactionId: string, action: 'APPROVE' | 'REJECT') => {
-      try {
-        const res = await fetch("/api/transactions/resolve", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ 
-            transactionId, 
-            action, 
-            reason: "Institutional Review: Behavior baseline override" 
-          })
-        });
-        
-        if (res.ok) {
-          // Remove from list or update local state
-          setAlerts(prev => prev.filter(a => a.newValue.transactionId !== transactionId));
-        } else {
-          const data = await res.json();
-          alert("Resolution failed: " + data.error);
-        }
-      } catch (err) {
-        console.error("Resolution error:", err);
-      }
-    };
 
     return () => unsubscribe();
   }, []);
+
+  const handleResolve = async (transactionId: string, action: 'APPROVE' | 'REJECT') => {
+    const reason = prompt(`Institutional Review: Provide reason for ${activeRole} resolution:`);
+    if (!reason) return;
+
+    try {
+      const res = await fetch("/api/transactions/resolve", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ 
+          transactionId, 
+          action, 
+          reason,
+          adminId: "ADMIN-001", // Simulated User context
+          adminRole: activeRole 
+        })
+      });
+      
+      if (res.ok) {
+        const data = await res.json();
+        if (data.status === 'PROPOSED') {
+          alert(`Resolution proposed by ${activeRole}. Awaiting General Manager authorization.`);
+          // Refresh list to update riskMetadata locally
+          setAlerts(prev => prev.map(a => 
+            a.newValue.transactionId === transactionId 
+            ? { ...a, newValue: { ...a.newValue, riskMetadata: { ...a.newValue.riskMetadata, proposedAction: action } } } 
+            : a
+          ));
+        } else {
+          alert(`Transaction successfully ${action === 'APPROVE' ? 'AUTHORIZED' : 'BLOCKED'} by General Manager.`);
+          setAlerts(prev => prev.filter(a => a.newValue.transactionId !== transactionId));
+        }
+      } else {
+        const data = await res.json();
+        alert("Resolution failed: " + data.error);
+      }
+    } catch (err) {
+      console.error("Resolution error:", err);
+    }
+  };
 
   if (loading) {
     return (
@@ -122,10 +137,14 @@ export default function ComplianceBoard() {
         <div className="flex items-center gap-4">
           <div className="flex items-center gap-2 px-3 py-1.5 bg-[#f43f5e]/5 border border-[#f43f5e]/10 rounded-xl">
             <ShieldCheck className="w-4 h-4 text-[#f43f5e]" />
-            <div className="flex flex-col">
-              <span className="text-[8px] font-black text-[#f43f5e] uppercase tracking-wider leading-none">Institutional</span>
-              <span className="text-[9px] font-bold text-[#0f172a] uppercase leading-none mt-0.5">AI Shield Active</span>
-            </div>
+            <select 
+              value={activeRole} 
+              onChange={(e) => setActiveRole(e.target.value as any)}
+              className="bg-transparent text-[9px] font-bold text-[#0f172a] uppercase outline-none"
+            >
+              <option value="MANAGER">Manager (Maker)</option>
+              <option value="GENERAL_MANAGER">Gen. Manager (Checker)</option>
+            </select>
           </div>
           <div className="flex items-center gap-3">
             <div className="relative">
@@ -180,20 +199,32 @@ export default function ComplianceBoard() {
                     <span className="text-[10px] font-bold uppercase tracking-tighter">{new Date(alert.createdAt).toLocaleTimeString()}</span>
                   </div>
                   <div className="flex gap-2">
-                    {alert.newValue.riskScore && alert.newValue.riskScore >= 90 && (
+                    {(alert.newValue.riskScore || 0) >= 75 && (
                       <>
-                        <button 
-                          onClick={() => handleResolve(alert.newValue.transactionId, 'APPROVE')}
-                          className="px-2.5 py-1.5 bg-emerald-500 text-white text-[10px] font-black rounded-lg hover:bg-emerald-600 transition-colors uppercase"
-                        >
-                          Approve
-                        </button>
-                        <button 
-                          onClick={() => handleResolve(alert.newValue.transactionId, 'REJECT')}
-                          className="px-2.5 py-1.5 bg-slate-800 text-white text-[10px] font-black rounded-lg hover:bg-slate-900 transition-colors uppercase"
-                        >
-                          Reject
-                        </button>
+                        {activeRole === 'MANAGER' && !alert.newValue.riskMetadata?.proposedAction && (
+                          <>
+                            <button 
+                              onClick={() => handleResolve(alert.newValue.transactionId, 'APPROVE')}
+                              className="px-2.5 py-1.5 bg-emerald-500 text-white text-[10px] font-black rounded-lg hover:bg-emerald-600 transition-colors uppercase"
+                            >
+                              Propose Approval
+                            </button>
+                            <button 
+                              onClick={() => handleResolve(alert.newValue.transactionId, 'REJECT')}
+                              className="px-2.5 py-1.5 bg-slate-800 text-white text-[10px] font-black rounded-lg hover:bg-slate-900 transition-colors uppercase"
+                            >
+                              Propose Reject
+                            </button>
+                          </>
+                        )}
+                        {(activeRole === 'GENERAL_MANAGER' || activeRole === 'ADMIN') && (
+                          <button 
+                            onClick={() => handleResolve(alert.newValue.transactionId, alert.newValue.riskMetadata?.proposedAction || 'APPROVE')}
+                            className={`px-2.5 py-1.5 text-white text-[10px] font-black rounded-lg transition-colors uppercase ${alert.newValue.riskMetadata?.proposedAction ? 'bg-orange-600 hover:bg-orange-700 animate-pulse' : 'bg-[#f43f5e] hover:bg-rose-600'}`}
+                          >
+                            {alert.newValue.riskMetadata?.proposedAction ? `Authorize ${alert.newValue.riskMetadata.proposedAction}` : 'Institutional Clearance'}
+                          </button>
+                        )}
                       </>
                     )}
                     <button className="flex items-center gap-1.5 text-[10px] font-black text-[#f43f5e] hover:underline uppercase bg-white px-2.5 py-1.5 rounded-lg border border-slate-100 shadow-sm">

@@ -1,0 +1,63 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Issues & Fixes - v2.4.3</title>
+    <link rel="stylesheet" href="docs_v1.css">
+</head>
+<body>
+    <div class="sidebar">
+        <h3>Institutional Resolvers</h3>
+        <ul>
+            <li><a href="index.html">🏠 v2.4.3 Overview</a></li>
+            <li><a href="developer_manual.html">📘 Developer Manual</a></li>
+            <li><a href="system_admin_manual.html">🛠️ System Admin Manual</a></li>
+            <li><a href="test_results.html">✅ Test Registry</a></li>
+            <li><a href="risk_register.html">⚠️ Risk Register</a></li>
+            <li><a href="future_recommendations.html">🚀 Future roadmap</a></li>
+        </ul>
+        <h3>System Tools</h3>
+        <ul>
+            <li><a href="tasks_2026_04_11.html">📋 Task List</a></li>
+            <li><a href="../../knowledgebase.html">🏛️ Archive</a></li>
+        </ul>
+    </div>
+
+    <div class="content">
+        <div class="header">
+            <h1>Compliance Log: Issues & Resolutions</h1>
+            <div class="metadata">
+                <span>Phase: 6 (Documentation)</span>
+                <span>Date: 2026-04-11</span>
+            </div>
+        </div>
+
+        <div class="card">
+            <h2>Issue #1: Database Schema Desync (Enum Mismatch)</h2>
+            <p><strong>Status:</strong> <span style="color: #00875a; font-weight: bold;">FIXED</span></p>
+            <p><strong>Problem:</strong> The <code>Prisma Schema</code> included <code>MANAGER</code> and <code>GENERAL_MANAGER</code> roles, but the live PostgreSQL database was out of sync, causing <code>ConnectorError: invalid input value for enum</code> during E2E testing.</p>
+            <p><strong>Resolution:</strong> 
+                <ol>
+                    <li>Performed a manual JSON backup of core tables (Users, Transactions, Wallets) into <code>\backup-db\db-2026-04-11</code>.</li>
+                    <li>Synchronized database schema using <code>npx prisma db push</code>.</li>
+                    <li>Verified enums using forensic check script <code>check_db_roles.js</code>.</li>
+                </ol>
+            </p>
+        </div>
+
+        <div class="card">
+            <h2>Issue #2: Silent Audit Log Failure</h2>
+            <p><strong>Status:</strong> <span style="color: #00875a; font-weight: bold;">FIXED</span></p>
+            <p><strong>Problem:</strong> Mismatched arguments in the <code>/resolve</code> endpoint were bypass-calling the centralized audit helper with <code>req</code> as the first parameter, resulting in <code>undefined</code> action keys and zero forensic logs generated.</p>
+            <p><strong>Resolution:</strong> Corrected calls in <code>services/transaction-service/index.js</code> to utilize the local <code>createAuditLog</code> helper with the proper institutional metadata mapping.</p>
+        </div>
+
+        <div class="card">
+            <h2>Issue #3: Transaction Atomicity in Resolution</h2>
+            <p><strong>Status:</strong> <span style="color: #00875a; font-weight: bold;">VERIFIED</span></p>
+            <p><strong>Problem:</strong> Risk of partial resolution (funds dispersed but status not updated).</p>
+            <p><strong>Resolution:</strong> Implemented sequential service calls and audit logging within the <code>GENERAL_MANAGER</code> authorization block. Future iteration will move these to a database transaction for absolute atomicity.</p>
+        </div>
+    </div>
+</body>
+</html>

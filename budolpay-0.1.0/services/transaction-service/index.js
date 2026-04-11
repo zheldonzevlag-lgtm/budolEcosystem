@@ -972,7 +972,7 @@ router.post('/cash-out', async (req, res) => {
 
 // Resolve Flagged Transaction (Manual Override)
 router.post('/resolve', async (req, res) => {
-    const { transactionId, action, reason } = req.body; // action: 'APPROVE' or 'REJECT'
+    const { transactionId, action, reason, adminId, adminRole } = req.body; // adminRole: 'MANAGER' or 'GENERAL_MANAGER'
     
     try {
         const tx = await prisma.transaction.findUnique({
@@ -984,47 +984,138 @@ router.post('/resolve', async (req, res) => {
             return res.status(400).json({ error: 'Transaction not in flagged state' });
         }
 
-        if (action === 'APPROVE') {
-            // 1. Process fund movement (Add to receiver or deduct from sender depending on type)
-            if (tx.type === 'CASH_IN') {
-                await axios.post(`${WALLET_SERVICE_URL}/update-balance`, {
-                    userId: tx.receiverId,
-                    amount: tx.amount,
-                    type: 'add'
-                });
-            } else if (tx.type === 'P2P') {
-                await axios.post(`${WALLET_SERVICE_URL}/update-balance`, {
-                    userId: tx.receiverId,
-                    amount: tx.amount,
-                    type: 'add'
-                });
-                // Sender was already deducted for P2P in my previous impl? 
-                // Wait, in P2P I held it BEFORE deduction. Let me check.
-            }
-
-            // 2. Update status
+        // INSTITUTIONAL CHECK: Four-Eyes Principle (Maker-Checker)
+        if (adminRole === 'MANAGER') {
+            // Maker Step: Propose Resolution
             await prisma.transaction.update({
                 where: { id: transactionId },
-                data: { 
-                    status: 'COMPLETED',
-                    completedAt: getLegacyManilaDate(),
-                    riskMetadata: { ...tx.riskMetadata, resolution: 'APPROVED', reason }
+                data: {
+                    riskMetadata: { 
+                        ...tx.riskMetadata, 
+                        proposedAction: action, 
+                        proposedBy: adminId, 
+                        proposedAt: new Date().toISOString(),
+                        resolutionNote: reason 
+                    }
                 }
             });
-        } else {
-            await prisma.transaction.update({
-                where: { id: transactionId },
-                data: { 
-                    status: 'FAILED',
-                    riskMetadata: { ...tx.riskMetadata, resolution: 'REJECTED', reason }
-                }
+
+            // Log Proposal
+            await createAuditLog(req, adminId, 'TX_RESOLUTION_PROPOSED', {
+                action,
+                reason,
+                proposedBy: adminId
+            }, 'Financial', transactionId);
+
+            return res.json({ 
+                message: `Resolution (${action}) proposed and awaiting General Manager authorization.`, 
+                status: 'PROPOSED' 
             });
         }
 
-        res.json({ message: `Transaction ${action} successfully` });
+        if (adminRole === 'GENERAL_MANAGER' || adminRole === 'ADMIN') {
+            // Checker Step: Finalize Resolution
+            if (action === 'APPROVE') {
+                // 1. Process fund movement (Critical: Must happen on authorization)
+                if (tx.type === 'P2P_TRANSFER' || tx.type === 'P2P') {
+                    // a) Subtract from sender (HELD_FOR_REVIEW didn't deduct yet)
+                    await axios.post(`${WALLET_SERVICE_URL}/update-balance`, {
+                        userId: tx.senderId,
+                        amount: tx.amount,
+                        type: 'subtract'
+                    });
+
+                    // b) Add to receiver
+                    await axios.post(`${WALLET_SERVICE_URL}/update-balance`, {
+                        userId: tx.receiverId,
+                        amount: tx.amount,
+                        type: 'add'
+                    });
+
+                    // c) Create Ledger Entries (Core Accounting Compliance)
+                    const walletAccount = await prisma.chartOfAccount.findUnique({ where: { code: '1010' } });
+                    if (walletAccount) {
+                        await prisma.ledgerEntry.createMany({
+                            data: [
+                                {
+                                    accountId: walletAccount.id,
+                                    transactionId: tx.id,
+                                    referenceId: tx.referenceId,
+                                    description: `P2P Resolved (Approved): ${tx.description}`,
+                                    debit: tx.amount,
+                                    credit: 0
+                                },
+                                {
+                                    accountId: walletAccount.id,
+                                    transactionId: tx.id,
+                                    referenceId: tx.referenceId,
+                                    description: `P2P Resolved (Approved): ${tx.description}`,
+                                    debit: 0,
+                                    credit: tx.amount
+                                }
+                            ]
+                        });
+                    }
+                } else if (tx.type === 'CASH_IN') {
+                    await axios.post(`${WALLET_SERVICE_URL}/update-balance`, {
+                        userId: tx.receiverId,
+                        amount: tx.amount,
+                        type: 'add'
+                    });
+                }
+
+                // 2. Update status to COMPLETED
+                await prisma.transaction.update({
+                    where: { id: transactionId },
+                    data: { 
+                        status: 'COMPLETED',
+                        completedAt: getLegacyManilaDate(),
+                        riskMetadata: { 
+                            ...tx.riskMetadata, 
+                            resolution: 'APPROVED', 
+                            authorizedBy: adminId, 
+                            authorizedAt: new Date().toISOString(),
+                            finalReason: reason || tx.riskMetadata?.resolutionNote
+                        }
+                    }
+                });
+
+                // Audit Final Clearance
+                await createAuditLog(req, adminId, 'TX_RESOLUTION_AUTHORIZED', {
+                    action: 'CLEARANCE_GRANTED',
+                    authorizedBy: adminId
+                }, 'Financial', transactionId);
+
+                return res.json({ message: "Transaction authorized and funds dispersed successfully." });
+            } else {
+                // REJECT Workflow
+                await prisma.transaction.update({
+                    where: { id: transactionId },
+                    data: { 
+                        status: 'FAILED',
+                        riskMetadata: { 
+                            ...tx.riskMetadata, 
+                            resolution: 'REJECTED', 
+                            authorizedBy: adminId,
+                            authorizedAt: new Date().toISOString(),
+                            finalReason: reason || tx.riskMetadata?.resolutionNote
+                        }
+                    }
+                });
+
+                await createAuditLog(req, adminId, 'TX_RESOLUTION_REJECTED', {
+                    action: 'BLOCK_FINALIZED',
+                    authorizedBy: adminId
+                }, 'Financial', transactionId);
+
+                return res.json({ message: "Transaction blocked and rejection finalized." });
+            }
+        }
+
+        return res.status(403).json({ error: 'Unauthorized: General Manager or ADMIN clearance required for final resolution.' });
     } catch (error) {
         console.error('[Transaction] Resolution Error:', error.message);
-        res.status(500).json({ error: 'Failed to resolve transaction' });
+        res.status(500).json({ error: 'Failed to resolve transaction: ' + error.message });
     }
 });
 

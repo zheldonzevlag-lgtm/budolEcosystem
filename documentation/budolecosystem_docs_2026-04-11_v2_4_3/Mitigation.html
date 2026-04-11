@@ -1,0 +1,55 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Technical Mitigations - v2.4.3</title>
+    <link rel="stylesheet" href="docs_v1.css">
+</head>
+<body>
+    <div class="sidebar">
+        <h3>Institutional Resolvers</h3>
+        <ul>
+            <li><a href="index.html">🏠 v2.4.3 Overview</a></li>
+            <li><a href="developer_manual.html">📘 Developer Manual</a></li>
+            <li><a href="system_admin_manual.html">🛠️ System Admin Manual</a></li>
+            <li><a href="test_results.html">✅ Test Registry</a></li>
+            <li><a href="risk_register.html">⚠️ Risk Register</a></li>
+            <li><a href="future_recommendations.html">🚀 Future roadmap</a></li>
+        </ul>
+        <h3>System Tools</h3>
+        <ul>
+            <li><a href="tasks_2026_04_11.html">📋 Task List</a></li>
+            <li><a href="../../knowledgebase.html">🏛️ Archive</a></li>
+        </ul>
+    </div>
+
+    <div class="content">
+        <div class="header">
+            <h1>Institutional Mitigations: Financial Integrity</h1>
+            <div class="metadata">
+                <span>Phase: 6 (Audit)</span>
+                <span>Classification: Internal Only</span>
+            </div>
+        </div>
+
+        <div class="card">
+            <h2>1. Forensic Reason Enforcement</h2>
+            <p><strong>Threat:</strong> Admins overriding alerts with generic or misleading reasons (e.g., "OK").</p>
+            <p><strong>Mitigation:</strong> The <code>/resolve</code> endpoint now mandates a minimum of 10 characters for the <code>reason</code> field and encourages the use of established <code>Institutional Reason Codes</code>. This ensures that a human-readable forensic trail exists for every override.</p>
+        </div>
+
+        <div class="card">
+            <h2>2. Anti-Collusion ID Comparison</h2>
+            <p><strong>Threat:</strong> A single user trying to both PROPOSE and AUTHORIZE a resolution.</p>
+            <p><strong>Mitigation:</strong> Hard-coded identity check in the transaction-service rejects any authorization attempt where the <code>adminId</code> matches the <code>proposedBy</code> ID stored in the risk metadata.</p>
+            <code>if (adminId === tx.riskMetadata.proposedBy) throw Error("Unilateral authorization blocked.");</code>
+        </div>
+
+        <div class="card">
+            <h2>3. Multi-Tiered Transaction Validation</h2>
+            <p><strong>Threat:</strong> Malicious resolution of an already failing transaction.</p>
+            <p><strong>Mitigation:</strong> The resolution logic verifies that the transaction is in <code>FLAGGED_REVIEW</code> before allowing any proposal or authorization. This prevents state-injection attacks on <code>PENDING</code> or <code>COMPLETED</code> transactions.</p>
+        </div>
+    </div>
+</body>
+</html>

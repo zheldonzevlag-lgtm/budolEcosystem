@@ -1,0 +1,77 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Institutional Risk Register - v2.4.3</title>
+    <link rel="stylesheet" href="docs_v1.css">
+</head>
+<body>
+    <div class="sidebar">
+        <h3>Institutional Resolvers</h3>
+        <ul>
+            <li><a href="index.html">🏠 v2.4.3 Overview</a></li>
+            <li><a href="developer_manual.html">📘 Developer Manual</a></li>
+            <li><a href="system_admin_manual.html">🛠️ System Admin Manual</a></li>
+            <li><a href="test_results.html">✅ Test Registry</a></li>
+            <li><a href="risk_register.html" class="active">⚠️ Risk Register</a></li>
+            <li><a href="future_recommendations.html">🚀 Future roadmap</a></li>
+        </ul>
+        <h3>System Tools</h3>
+        <ul>
+            <li><a href="tasks_2026_04_11.html">📋 Task List</a></li>
+            <li><a href="../../knowledgebase.html">🏛️ Archive</a></li>
+        </ul>
+    </div>
+
+    <div class="content">
+        <div class="header">
+            <h1>Institutional Risk Register: Maker-Checker Workflow</h1>
+            <div class="metadata">
+                <span>Version: 2.4.3</span>
+                <span>Last Updated: 2026-04-11</span>
+                <span>Classification: Restricted</span>
+            </div>
+        </div>
+
+        <p>This register identifies risks associated with the manual transaction resolution process and the institutional RBAC roles introduced in v2.4.3.</p>
+
+        <div class="card">
+            <h2>Risk ID: RBAC-01 - Internal Collusion</h2>
+            <p><strong>Description:</strong> A Manager and a General Manager collude to authorize a fraudulent high-value transaction.</p>
+            <p><strong>Impact:</strong> HIGH (Financial Loss, Regulatory Sanction)</p>
+            <p><strong>Likelihood:</strong> LOW (Requires dual-compromise or collusion)</p>
+            <p><strong>Mitigation:</strong> 
+                <ul>
+                    <li>Mandatory Forensic Reason Codes for every override.</li>
+                    <li>Automated audit logging with IP and User Agent tracking.</li>
+                    <li>Periodic independent audit of "Resolution Corridors" (frequent resolution pairs).</li>
+                </ul>
+            </p>
+        </div>
+
+        <div class="card">
+            <h2>Risk ID: RBAC-02 - Stale Decisions</h2>
+            <p><strong>Description:</strong> A resolution is proposed by a Manager but remains pending in the queue for too long, causing customer friction or bypassing current risk state.</p>
+            <p><strong>Impact:</strong> MEDIUM (Customer Dissatisfaction, Operational Inefficiency)</p>
+            <p><strong>Mitigation:</strong> 
+                <ul>
+                    <li>Proposals older than 24 hours are auto-rejected by the <code>cleanup-stale-proposals</code> worker.</li>
+                    <li>Real-time notifications sent to General Managers on Discord/Slack channel.</li>
+                </ul>
+            </p>
+        </div>
+
+        <div class="card">
+            <h2>Risk ID: RBAC-03 - Unilateral Role Escalation</h2>
+            <p><strong>Description:</strong> A technical staff member manually updates their role to <code>GENERAL_MANAGER</code> to bypass Maker-Checker.</p>
+            <p><strong>Impact:</strong> CRITICAL (System Compromise)</p>
+            <p><strong>Mitigation:</strong> 
+                <ul>
+                    <li>Role updates are blocked at the SSO level (BudolID) and require Admin-tier authorization.</li>
+                    <li>Audit logs for any change to the <code>role</code> field in the <code>User</code> table.</li>
+                </ul>
+            </p>
+        </div>
+    </div>
+</body>
+</html>
