@@ -1,11 +1,11 @@
 import { prisma } from "@/lib/prisma";
 export const dynamic = 'force-dynamic';
 
-import { 
-  Users, 
-  Wallet, 
-  ArrowUpRight, 
-  ArrowDownLeft, 
+import {
+  Users,
+  Wallet,
+  ArrowUpRight,
+  ArrowDownLeft,
   Activity,
   ShieldCheck,
   AlertCircle,
@@ -18,7 +18,7 @@ import ComplianceBoard from "@/components/ComplianceBoard";
 export default async function DashboardPage() {
   const userCount = await prisma.user.count();
   const staffCount = await prisma.user.count({ where: { role: { in: ['ADMIN', 'STAFF'] } } });
-  
+
   // Get total ledger balance (Assets)
   const assetAccount = await prisma.chartOfAccount.findFirst({
     where: { type: 'ASSET' },
@@ -28,7 +28,7 @@ export default async function DashboardPage() {
   const totalBalance = assetAccount?.ledgerEntries.reduce((acc, entry) => {
     return acc + (Number(entry.debit) - Number(entry.credit));
   }, 0) || 0;
-  
+
   // Get recent transactions
   const recentTransactions = await prisma.transaction.findMany({
     take: 10,
@@ -57,19 +57,19 @@ export default async function DashboardPage() {
 
   const stats = [
     { name: "Total Users", value: userCount, icon: Users, color: "text-blue-500", bg: "bg-blue-50" },
-    { 
-      name: "Total Platform Assets", 
-      value: `PHP ${totalBalance.toLocaleString()}`, 
-      icon: Wallet, 
-      color: "text-[#f43f5e]", 
+    {
+      name: "Total Platform Assets",
+      value: `PHP ${totalBalance.toLocaleString()}`,
+      icon: Wallet,
+      color: "text-[#f43f5e]",
       bg: "bg-rose-50",
       tooltip: "The total amount of circulating funds currently resting in the central ASSET accounting ledger."
     },
-    { 
-      name: "Ecosystem Integrity", 
-      value: complianceAlertCount === 0 ? "SECURE" : "ANOMALY", 
-      icon: Shield, 
-      color: complianceAlertCount === 0 ? "text-emerald-500" : "text-[#f43f5e]", 
+    {
+      name: "Ecosystem Integrity",
+      value: complianceAlertCount === 0 ? "SECURE" : "ANOMALY",
+      icon: Shield,
+      color: complianceAlertCount === 0 ? "text-emerald-500" : "text-[#f43f5e]",
       bg: complianceAlertCount === 0 ? "bg-emerald-50" : "bg-rose-50",
       tooltip: "Calculated via AI-Driven Behavioral Baselining (EWMA). 'ANOMALY' indicates detections requiring manual institutional review."
     },
@@ -139,9 +139,9 @@ export default async function DashboardPage() {
             </div>
             <a href="/transactions" className="text-[10px] text-[#f43f5e] font-black uppercase tracking-wider hover:underline px-3 py-1.5 bg-rose-50 rounded-lg transition-colors">View Analytics</a>
           </div>
-          
+
           <div className="flex-1 flex flex-col divide-y divide-slate-50 overflow-y-auto max-h-[400px] scrollbar-thin scrollbar-thumb-slate-200 scrollbar-track-transparent">
-             <div className="flex flex-col divide-y divide-slate-50">
+            <div className="flex flex-col divide-y divide-slate-50">
               {recentTransactions.map((tx) => (
                 <div key={tx.id} className="px-5 py-3.5 hover:bg-slate-50/80 transition-all flex items-center justify-between group">
                   <div className="flex items-center gap-4">
@@ -155,9 +155,8 @@ export default async function DashboardPage() {
                   </div>
                   <div className="text-right">
                     <p className="font-black text-[#0f172a] text-sm">₱{Number(tx.amount).toLocaleString()}</p>
-                    <span className={`text-[7.5px] font-black tracking-widest px-2 py-0.5 rounded-md mt-1 inline-block ${
-                      tx.status === 'COMPLETED' ? 'bg-green-100 text-green-700' : 'bg-amber-100 text-amber-700'
-                    }`}>
+                    <span className={`text-[7.5px] font-black tracking-widest px-2 py-0.5 rounded-md mt-1 inline-block ${tx.status === 'COMPLETED' ? 'bg-green-100 text-green-700' : 'bg-amber-100 text-amber-700'
+                      }`}>
                       {tx.status}
                     </span>
                   </div>
@@ -170,7 +169,7 @@ export default async function DashboardPage() {
         {/* Top Tier: Institutional AI Shield (NARROWER - 1/3) */}
         <div className="lg:col-span-1 bg-[#0f172a] text-white rounded-3xl shadow-2xl p-6 flex flex-col border border-white/5 relative overflow-hidden group/shield h-full min-h-[400px]">
           <div className="absolute top-0 right-0 w-32 h-32 bg-[#f43f5e]/5 blur-[60px] rounded-full -mr-16 -mt-16"></div>
-          
+
           <div className="flex flex-col items-center text-center gap-4 mb-8 relative z-10">
             <div className="p-4 bg-white/5 rounded-2xl border border-white/10 text-[#f43f5e] shadow-inner mb-1">
               <Shield className="w-8 h-8" />
