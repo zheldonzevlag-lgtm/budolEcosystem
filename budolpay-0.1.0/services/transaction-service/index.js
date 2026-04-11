@@ -137,6 +137,41 @@ const createAuditLog = async (req, userId, action, metadata = {}, entity = 'Fina
  * Behavioral Scoring Engine (v2.4.0)
  * Integrates with riskEngine for dynamic baselining.
  */
+/**
+ * Monthly Cumulative Volume Tracker (v2.4.4)
+ * WHY: This code exists to enforce BSP-compliant tiered limits for BASIC accounts, ensuring that non-verified users operate within established regulatory ceilings.
+ * WHAT: Calculates the total volume of COMPLETED transactions for a user within the current calendar month by performing a Prisma aggregate sum.
+ * TODO: Integrate with a caching layer (Redis) if transaction volume scales to avoid frequent DB aggregation.
+ * @param {string} userId - The user ID to check.
+ * @param {string} type - 'INBOUND' (Received) or 'OUTBOUND' (Sent).
+ * @returns {Promise<number>} - The total amount as a float.
+ */
+const getMonthlyCumulativeVolume = async (userId, type) => {
+    try {
+        const startOfMonth = new Date();
+        startOfMonth.setDate(1);
+        startOfMonth.setHours(0, 0, 0, 0);
+
+        const filter = type === 'OUTBOUND' 
+            ? { senderId: userId } 
+            : { receiverId: userId };
+
+        const agg = await prisma.transaction.aggregate({
+            where: {
+                ...filter,
+                status: 'COMPLETED',
+                createdAt: { gte: startOfMonth }
+            },
+            _sum: { amount: true }
+        });
+
+        return parseFloat(agg._sum.amount || 0);
+    } catch (err) {
+        console.error(`[Compliance] Monthly volume calculation failed for ${userId}:`, err.message);
+        return 0;
+    }
+};
+
 const calculateRiskScore = async (userId, currentAmount) => {
     try {
         const amount = parseFloat(currentAmount);
@@ -326,9 +361,17 @@ router.post('/transfer', async (req, res, next) => {
 
         if (!sender) throw new Error('Sender not found');
 
-        // Enforcement of tiered limits
+        // Enforcement of tiered limits (Aligned with GCash Basic - v2.4.4)
+        // WHY: Prevents high-volume outbound P2P transfers from non-verified accounts to mitigate money laundering risks (AML Compliance).
+        // WHAT: Checks the cumulative monthly outbound volume against a PHP 5,000 ceiling for Users in the 'BASIC' KYC tier.
+        // TODO: Move the PHP 5,000 threshold to an environmental variable or dynamic config table.
         if (sender.kycTier === 'BASIC') {
-            throw new Error('Verification required: BASIC accounts cannot send money P2P. Please upgrade to FULLY VERIFIED.');
+            const monthlyOutbound = await getMonthlyCumulativeVolume(senderId, 'OUTBOUND');
+            const newTotal = monthlyOutbound + parseFloat(amount);
+            
+            if (newTotal > 5000) {
+                throw new Error(`Limit Exceeded: BASIC accounts have a PHP 5,000 monthly outbound limit. Current Month: ₱${monthlyOutbound}. Requested: ₱${amount}. Please upgrade to FULLY VERIFIED for higher limits.`);
+            }
         }
 
         const transaction = await prisma.transaction.create({
@@ -565,13 +608,23 @@ router.post('/cash-in', async (req, res) => {
 
         if (!user) throw new Error('User not found');
 
-        // Enforcement of BASIC limits (₱5,000 max balance)
+        // Enforcement of BASIC limits (Aligned with GCash Basic - v2.4.4)
+        // Wallet Ceiling: ₱10,000 | Monthly Influx: ₱5,000
         if (user.kycTier === 'BASIC') {
             const currentBalance = user.wallet ? parseFloat(user.wallet.balance) : 0;
-            const newBalance = currentBalance + parseFloat(amount);
+            const newBalanceValue = currentBalance + parseFloat(amount);
             
-            if (newBalance > 5000) {
-                throw new Error(`Limit Exceeded: BASIC accounts have a maximum wallet balance of ₱5,000. Current: ₱${currentBalance}. Requested: ₱${amount}.`);
+            // 1. Check Wallet Ceiling (10k)
+            if (newBalanceValue > 10000) {
+                throw new Error(`Wallet Limit Exceeded: BASIC accounts have a maximum balance of ₱10,000. Current: ₱${currentBalance}. Requested: ₱${amount}.`);
+            }
+
+            // 2. Check Monthly Inbound Flow (5k)
+            const monthlyInbound = await getMonthlyCumulativeVolume(userId, 'INBOUND');
+            const newInboundTotal = monthlyInbound + parseFloat(amount);
+
+            if (newInboundTotal > 5000) {
+                throw new Error(`Incoming Limit Exceeded: BASIC accounts have a PHP 5,000 monthly cash-in limit. Current Month: ₱${monthlyInbound}. Requested: ₱${amount}.`);
             }
         }
 

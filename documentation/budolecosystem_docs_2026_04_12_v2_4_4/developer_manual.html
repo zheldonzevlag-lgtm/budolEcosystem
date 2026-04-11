@@ -1,0 +1,76 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Developer Manual - BudolPay v2.4.4</title>
+    <link rel="stylesheet" href="docs_v1.css">
+</head>
+<body>
+    <div class="sidebar">
+        <h2>BudolPay Docs</h2>
+        <ul>
+            <li><a href="index.html">Index</a></li>
+            <li><a href="developer_manual.html" class="active">Developer Manual</a></li>
+            <li><a href="system_admin_manual.html">System Admin Manual</a></li>
+            <li><a href="user_manual.html">User Manual</a></li>
+            <li><a href="risk_register.html">Risk Register</a></li>
+            <li><a href="test_results.html">Test Results</a></li>
+            <li><a href="tasks_2026_04_12.html">Task List</a></li>
+        </ul>
+    </div>
+    <div class="main-content">
+        <h1>Developer Manual: Tiered Limits & Volume Tracking</h1>
+        
+        <section>
+            <h2>Technical Overview</h2>
+            <p>The system now utilizes a <code>getMonthlyCumulativeVolume</code> helper to track transaction flow on a per-user, per-month basis. This allows for fine-grained control over "Basic" tiers without hard-blocking features.</p>
+        </section>
+
+        <section>
+            <h2>Key Implementation Details</h2>
+            <h3>1. Monthly Volume Calculation</h3>
+            <p>Calculates the sum of COMPLETED transactions from the 1st of the current month to the current timestamp.</p>
+            <pre><code>const getMonthlyCumulativeVolume = async (userId, type) => {
+    const startOfMonth = new Date();
+    startOfMonth.setDate(1);
+    startOfMonth.setHours(0, 0, 0, 0);
+
+    const filter = type === 'OUTBOUND' ? { senderId: userId } : { receiverId: userId };
+    const agg = await prisma.transaction.aggregate({
+        where: { ...filter, status: 'COMPLETED', createdAt: { gte: startOfMonth } },
+        _sum: { amount: true }
+    });
+    return parseFloat(agg._sum.amount || 0);
+};</code></pre>
+            <p><a href="file:///d:/IT%20Projects/clone/budolEcosystem/budolpay-0.1.0/services/transaction-service/index.js">View in index.js</a></p>
+        </section>
+
+        <section>
+            <h2>Logic Flow Changes</h2>
+            <h3>P2P Transfer (/transfer)</h3>
+            <p>Previously, BASIC accounts were blocked via simple equality check. Now, they are permitted if their month-to-date (MTD) outbound volume + current amount is &le; 5,000.</p>
+            
+            <h3>Cash-In (/cash-in)</h3>
+            <p>Enforces two distinct checks for BASIC users:</p>
+            <ul>
+                <li><strong>Static Ceiling</strong>: Total balance cannot exceed ₱10,000.</li>
+                <li><strong>Dynamic Flow</strong>: Cumulative monthly inbound cannot exceed ₱5,000.</li>
+            </ul>
+        </section>
+
+        <section>
+            <h2>Dependencies</h2>
+            <ul>
+                <li><strong>Prisma ORM</strong>: Used for efficient aggregation queries.</li>
+                <li><strong>CommonJS</strong>: Backend service utilizes CJS for compatibility with legacy monitoring hooks.</li>
+            </ul>
+        </section>
+
+        <nav class="doc-nav">
+            <a href="index.html">Previous: Index</a> | 
+            <a href="system_admin_manual.html">Next: System Admin Manual</a>
+        </nav>
+    </div>
+</body>
+</html>
