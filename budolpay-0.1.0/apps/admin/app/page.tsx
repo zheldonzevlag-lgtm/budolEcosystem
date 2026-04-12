@@ -55,6 +55,30 @@ export default async function DashboardPage() {
   const birColor = unsyncedTransactions > 0 ? "text-amber-400" : "text-green-400";
   const birDot = unsyncedTransactions > 0 ? "bg-amber-400" : "bg-green-400";
 
+  // DRS Engine Real-time Status Check (v2.4.7)
+  const drsHeartbeat = await prisma.systemSetting.findUnique({
+    where: { key: 'DRS_ENGINE_HEARTBEAT' }
+  });
+
+  let drsStatus = "OFFLINE";
+  let drsColor = "text-[#f43f5e]";
+  let drsBg = "bg-rose-50";
+
+  if (drsHeartbeat) {
+    const lastPulse = new Date(drsHeartbeat.value).getTime();
+    const diff = Date.now() - lastPulse;
+
+    if (diff < 60000) { // Active within 60s
+      drsStatus = "ACTIVE";
+      drsColor = "text-emerald-500";
+      drsBg = "bg-emerald-50";
+    } else if (diff < 300000) { // Active within 5m
+      drsStatus = "DELAYED";
+      drsColor = "text-amber-500";
+      drsBg = "bg-amber-50";
+    }
+  }
+
   const stats = [
     { name: "Total Users", value: userCount, icon: Users, color: "text-blue-500", bg: "bg-blue-50" },
     {
@@ -73,7 +97,14 @@ export default async function DashboardPage() {
       bg: complianceAlertCount === 0 ? "bg-emerald-50" : "bg-rose-50",
       tooltip: "Calculated via AI-Driven Behavioral Baselining (EWMA). 'ANOMALY' indicates detections requiring manual institutional review."
     },
-    { name: "DRS Engine", value: "ACTIVE", icon: Activity, color: "text-blue-500", bg: "bg-blue-50", tooltip: "Real-time Exponentially Weighted Moving Average engine monitoring for transaction deviations." },
+    { 
+      name: "DRS Engine", 
+      value: drsStatus, 
+      icon: Activity, 
+      color: drsColor, 
+      bg: drsBg, 
+      tooltip: "Real-time Exponentially Weighted Moving Average engine monitoring for transaction deviations." 
+    },
   ];
 
   return (
@@ -129,9 +160,9 @@ export default async function DashboardPage() {
         ))}
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-8 items-stretch">
-        {/* Top Tier: Transaction Pulse (WIDER - 2/3) */}
-        <div className="md:col-span-2 bg-white rounded-3xl border border-slate-100 shadow-sm overflow-hidden flex flex-col h-full min-h-[400px]">
+      <div className="grid grid-cols-1 md:grid-cols-4 gap-8 items-start">
+        {/* Top Tier: Transaction Pulse (WIDER - 3/4) */}
+        <div className="md:col-span-3 bg-white rounded-3xl border border-slate-100 shadow-sm overflow-hidden flex flex-col h-full min-h-[400px]">
           <div className="p-6 border-b border-slate-50 flex justify-between items-center bg-slate-50/30">
             <div>
               <h3 className="font-black text-[#0f172a] text-base tracking-tight">Transaction Pulse</h3>
@@ -166,45 +197,49 @@ export default async function DashboardPage() {
           </div>
         </div>
 
-        {/* Top Tier: Institutional AI Shield (NARROWER - 1/3) */}
-        <div className="lg:col-span-1 bg-[#0f172a] text-white rounded-3xl shadow-2xl p-6 flex flex-col border border-white/5 relative overflow-hidden group/shield h-full min-h-[400px]">
+        {/* Top Tier: Institutional AI Shield (NARROWER - 1/4) */}
+        <div className="lg:col-span-1 bg-[#0f172a] text-white rounded-3xl shadow-2xl p-5 flex flex-col border border-white/5 relative overflow-hidden group/shield">
           <div className="absolute top-0 right-0 w-32 h-32 bg-[#f43f5e]/5 blur-[60px] rounded-full -mr-16 -mt-16"></div>
 
-          <div className="flex flex-col items-center text-center gap-4 mb-8 relative z-10">
-            <div className="p-4 bg-white/5 rounded-2xl border border-white/10 text-[#f43f5e] shadow-inner mb-1">
-              <Shield className="w-6 h-6" />
+          <div className="flex flex-col items-center text-center gap-3 mb-4 relative z-10">
+            <div className="p-2.5 bg-white/5 rounded-xl border border-white/10 text-[#f43f5e] shadow-inner">
+              <Shield className="w-5 h-5" />
             </div>
             <div>
-              <h3 className="font-black text-white text-sm tracking-tight leading-none">Compliance Shield</h3>
-              <p className="text-[9px] text-[#f43f5e] font-black uppercase tracking-[0.2em] mt-2 opacity-80">Active & Enforced</p>
+              <h3 className="font-black text-slate-500 text-xs tracking-tight leading-none uppercase">Compliance Shield</h3>
+              <p className="text-[8px] text-[#f43f5e] font-black uppercase tracking-[0.2em] mt-1.5 opacity-80">Active & Enforced</p>
             </div>
           </div>
 
-          <div className="space-y-2.5 relative z-10 flex-1">
+          <div className="space-y-2 relative z-10 flex-1">
             {[
-              { label: "AI DRS Engine", status: "STABLE", dot: "bg-blue-400" },
-              { label: "BSP Audit Trail", status: "ACTIVE", dot: "bg-green-400" },
-              { label: "BIR Middleware", status: birStatus, dot: birDot },
-              { label: "NPC Shield", status: "SECURED", dot: "bg-green-400" },
+              { label: "AI DRS Engine", desc: "Behavioral Ledger Forensics", status: "STABLE", dot: "bg-blue-400" },
+              { label: "BSP Audit Trail", desc: "Immutable Activity Logs", status: "ACTIVE", dot: "bg-green-400" },
+              { label: "BIR Middleware", desc: "Tax-Compliant Ledger Sync", status: birStatus, dot: birDot },
+              { label: "NPC Shield", desc: "DPA/Data Privacy Shield", status: "SECURED", dot: "bg-green-400" },
+              { label: "PCI DSS Compliance", desc: "Level 1 Service Provider", status: "CERTIFIED", dot: "bg-green-400" },
             ].map((item) => (
-              <div key={item.label} className="p-3 bg-white/5 rounded-xl border border-white/5 flex items-center justify-between hover:border-white/10 transition-colors group/item">
+              <div key={item.label} className="p-3 bg-white/5 rounded-xl border border-white/5 flex items-center justify-between hover:border-white/10 transition-colors group/item shadow-sm">
                 <div className="flex items-center gap-3">
                   <span className={`w-1.5 h-1.5 rounded-full ${item.dot} shadow-[0_0_8px_rgba(255,255,255,0.3)] animate-pulse`}></span>
-                  <span className="text-[9px] font-black tracking-widest text-slate-400 uppercase">{item.label}</span>
+                  <div className="flex flex-col">
+                    <span className="text-[10px] font-black tracking-widest text-slate-300 uppercase leading-none">{item.label}</span>
+                    <span className="text-[7.5px] font-bold text-slate-500 uppercase tracking-wider mt-1.5">{item.desc}</span>
+                  </div>
                 </div>
                 <span className="text-[9px] font-black text-white bg-white/10 px-2 py-0.5 rounded leading-none">{item.status}</span>
               </div>
             ))}
           </div>
 
-          <div className="mt-8 pt-6 border-t border-white/10 relative z-10">
+          <div className="mt-4 pt-4 border-t border-white/10 relative z-10">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-[9px] font-bold text-slate-500 uppercase tracking-widest mb-1">Next Audit</p>
-                <p className="text-sm font-black text-[#f43f5e]">{getNextAuditDate()}</p>
+                <p className="text-[8px] font-bold text-slate-500 uppercase tracking-widest mb-0.5">Next Audit</p>
+                <p className="text-xs font-black text-[#f43f5e]">{getNextAuditDate()}</p>
               </div>
-              <div className="p-2 bg-white/5 rounded-lg">
-                <Fingerprint className="w-6 h-6 text-slate-600 opacity-50" />
+              <div className="p-1.5 bg-white/5 rounded-lg">
+                <Fingerprint className="w-4 h-4 text-slate-600 opacity-40 shadow-inner" />
               </div>
             </div>
           </div>

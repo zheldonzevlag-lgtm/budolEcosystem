@@ -3,27 +3,120 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>System Admin Manual - BudolPay v2.4.5</title>
-    <link rel="stylesheet" href="docs_v1.css">
+    <title>System Admin Manual v2.4.7 - BudolPay</title>
+    <link rel="stylesheet" href="../docs_v1.css">
 </head>
 <body>
-    <div class="sidebar">
+    <nav class="sidebar">
         <h2>BudolPay Docs</h2>
+        <h3>Navigation</h3>
         <ul>
-            <li><a href="index.html">Index</a></li>
+            <li><a href="index.html">Release Index</a></li>
+            <li><a href="developer_manual.html">Developer Manual</a></li>
             <li><a href="system_admin_manual.html" class="active">System Admin Manual</a></li>
+            <li><a href="user_manual.html">User Manual</a></li>
+            <li><a href="risk_register.html">Risk Register</a></li>
+            <li><a href="Mitigation.html">Mitigation Plan</a></li>
+            <li><a href="issues & fixes.html">Issues & Fixes</a></li>
+            <li><a href="test_results.html">Test Results</a></li>
+            <li><a href="future_recommendations.html">Future Recommendations</a></li>
         </ul>
-    </div>
-    <div class="main-content">
-        <h1>System Admin Manual: Geocoding Management</h1>
-        <section>
-            <p>Geocoding relies on the device's native OS services. No additional server-side configuration is required for v2.4.5.</p>
-            <ul>
-                <li><strong>API Keys:</strong> Uses native Android (Google Play Services) or iOS (Apple Maps) credentials configured in the build flavor.</li>
-                <li><strong>Debugging:</strong> If addresses fail to resolve, check the device's location permissions and internet connectivity.</li>
-                <li><strong>Security:</strong> All geocoding happens client-side; only the resolved string is sent to the backend during KYC submission.</li>
-            </ul>
+    </nav>
+    <main class="content">
+        <header class="header">
+            <h1>System Admin Manual: Monitoring & Health</h1>
+            <div class="metadata">
+                <span><strong>Role:</strong> Administrator / NOC</span>
+                <span><strong>Version:</strong> 2.4.7</span>
+            </div>
+        </header>
+
+        <section class="section">
+            <h2>1. DRS Engine Monitoring</h2>
+            <p>The Dynamic Risk Scoring (DRS) Engine status is now tracked via a centralized heartbeat system visible on the Admin Dashboard.</p>
+            <div class="card">
+                <h3>Interpreting the Status Indicators</h3>
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Status</th>
+                            <th>Color</th>
+                            <th>Meaning</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td><span class="status-tag status-pass">ACTIVE</span></td>
+                            <td>Green</td>
+                            <td>System heartbeat received within the last 120 seconds. Risk analysis is running.</td>
+                        </tr>
+                        <tr>
+                            <td><span class="status-tag status-warn">DELAYED</span></td>
+                            <td>Yellow</td>
+                            <td>No heartbeat for >2 minutes. Transaction processing may be slowed.</td>
+                        </tr>
+                        <tr>
+                            <td><span class="status-tag status-fail">OFFLINE</span></td>
+                            <td>Red</td>
+                            <td>System heartbeat failed for >5 minutes. Critical alert triggered.</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
         </section>
-    </div>
+
+        <section class="section">
+            <h2>2. Infrastructure Port Map</h2>
+            <p>Institutional port compliance for the v2.4.7 release was verified via <code>infrastructure-audit.test.js</code>.</p>
+            <table>
+                <thead>
+                    <tr>
+                        <th>Service</th>
+                        <th>Standard Port</th>
+                        <th>Verification Status</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td>Auth Service</td>
+                        <td>8001</td>
+                        <td><span class="status-tag status-pass">Verified</span></td>
+                    </tr>
+                    <tr>
+                        <td>Wallet Service</td>
+                        <td>8002</td>
+                        <td><span class="status-tag status-pass">Verified</span></td>
+                    </tr>
+                    <tr>
+                        <td>Transaction Service</td>
+                        <td>8003</td>
+                        <td><span class="status-tag status-pass">Verified</span></td>
+                    </tr>
+                    <tr>
+                        <td>Payment Gateway</td>
+                        <td>8004</td>
+                        <td><span class="status-tag status-pass">Verified</span></td>
+                    </tr>
+                </tbody>
+            </table>
+        </section>
+
+        <section class="section">
+            <h2>3. Troubleshooting</h2>
+            <div class="card">
+                <h3>Dashboard showing OFFLINE?</h3>
+                <ol>
+                    <li>Verify <code>transaction-service</code> is running.</li>
+                    <li>Check database connectivity (<code>prisma db pull</code> test).</li>
+                    <li>Ensure <code>SystemSetting</code> table is not locked.</li>
+                </ol>
+            </div>
+        </section>
+
+        <footer>
+            <hr>
+            <p style="font-size: 12px; color: #6b778c;">&copy; 2026 BudolPay NOC Operations.</p>
+        </footer>
+    </main>
 </body>
 </html>

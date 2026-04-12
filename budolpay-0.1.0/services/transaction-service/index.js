@@ -1218,8 +1218,33 @@ app.use((err, req, res, next) => {
     });
 });
 
+const startDrsHeartbeat = () => {
+    console.log('[DRS Engine] Initializing Pulse Heartbeat...');
+    const heartbeat = setInterval(async () => {
+        try {
+            await prisma.systemSetting.upsert({
+                where: { key: 'DRS_ENGINE_HEARTBEAT' },
+                update: { value: new Date().toISOString() },
+                create: { 
+                    key: 'DRS_ENGINE_HEARTBEAT', 
+                    value: new Date().toISOString(),
+                    group: 'SYSTEM_HEALTH',
+                    description: 'Last reported heartbeat from the Transaction/DRS Service'
+                }
+            });
+            // console.debug('[DRS Engine] Pulse updated.');
+        } catch (err) {
+            console.error('[DRS Engine] Heartbeat failure:', err.message);
+        }
+    }, 30000); // 30 seconds
+    
+    // Ensure the heartbeat does not block process exit (especially in tests)
+    if (heartbeat.unref) heartbeat.unref();
+};
+
 app.listen(PORT, '0.0.0.0', () => {
     console.log(`[Transaction] Service running on http://0.0.0.0:${PORT} (LAN-accessible)`);
+    startDrsHeartbeat();
 });
 
 module.exports = { app, calculateRiskScore, checkComplianceLimits };

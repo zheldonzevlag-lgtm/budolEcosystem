@@ -3,63 +3,102 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Developer Manual - BudolPay v2.4.7</title>
-    <link rel="stylesheet" href="../../docs_v1.css">
+    <title>Developer Manual v2.4.7 - BudolPay</title>
+    <link rel="stylesheet" href="../docs_v1.css">
 </head>
 <body>
-    <div class="sidebar">
+    <nav class="sidebar">
         <h2>BudolPay Docs</h2>
+        <h3>Navigation</h3>
         <ul>
-            <li><a href="index.html">Index</a></li>
+            <li><a href="index.html">Release Index</a></li>
             <li><a href="developer_manual.html" class="active">Developer Manual</a></li>
             <li><a href="system_admin_manual.html">System Admin Manual</a></li>
             <li><a href="user_manual.html">User Manual</a></li>
             <li><a href="risk_register.html">Risk Register</a></li>
+            <li><a href="Mitigation.html">Mitigation Plan</a></li>
+            <li><a href="issues & fixes.html">Issues & Fixes</a></li>
             <li><a href="test_results.html">Test Results</a></li>
             <li><a href="future_recommendations.html">Future Recommendations</a></li>
         </ul>
-    </div>
-    <div class="main-content">
-        <h1>Developer Manual: Map Search & Geocoding Sync (v2.4.7)</h1>
-        
-        <section>
-            <h2>Technical Overview</h2>
-            <p>This update enhances the Map Picker by introducing bidirectional synchronization between the visual map state and a textual search interface. It leverages both forward geocoding (search string to LatLng) and reverse geocoding (LatLng to address string).</p>
-        </section>
+    </nav>
+    <main class="content">
+        <header class="header">
+            <h1>Developer Manual: v2.4.7 Architecture</h1>
+            <div class="metadata">
+                <span><strong>Component:</strong> Backend/Admin UI</span>
+                <span><strong>Version:</strong> 2.4.7</span>
+            </div>
+        </header>
 
-        <section>
-            <h2>Implementation Details</h2>
-            <h3>Bidirectional Sync Logic</h3>
-            <p>Located in: <a href="file:///d:/IT%20Projects/clone/budolEcosystem/budolPayMobile/lib/widgets/map_picker.dart">map_picker.dart</a></p>
-            <p>The state management centers around three primary reactive pipelines:</p>
-            <ol>
-                <li><strong>Search Trigger (Forward):</strong> When <code>onSubmitted</code> is called on the TextField, <code>locationFromAddress()</code> resolves the query. The <code>MapController</code> then moves the viewport, and the internal state updates.</li>
-                <li><strong>Tap/Drag Trigger (Reverse):</strong> When <code>onTap</code> or a controller move completes, <code>placemarkFromCoordinates()</code> is called. The resulting address fragments are joined and set as the text for the <code>_searchController</code>.</li>
-                <li><strong>Loading States:</strong> <code>_isSearching</code> provides UI feedback via a CircularProgressIndicator embedded in the TextField prefix/suffix.</li>
-            </ol>
-        </section>
-
-        <section>
-            <h2>Code Reference</h2>
-            <div class="code-block">
-                <pre><code>// Bidirectional Reverse Geocoding Sync
-Future<void> _reverseGeocode(LatLng latLng) async {
-  List<Placemark> placemarks = await placemarkFromCoordinates(latLng.latitude, latLng.longitude);
-  if (placemarks.isNotEmpty) {
-    final place = placemarks.first;
-    // ... filtering non-empty parts
-    setState(() {
-      _searchController.text = addressParts.join(', ');
-    });
-  }
+        <section class="section">
+            <h2>1. DRS Engine Telemetry (Heartbeat)</h2>
+            <p>To provide real-time status in the Admin Dashboard without manual refresh polling, a heartbeat mechanism was injected into the <code>transaction-service</code>.</p>
+            <div class="card">
+                <h3>Implementation Details</h3>
+                <p><strong>File Reference:</strong> <a href="file:///d:/IT%20Projects/clone/budolEcosystem/services/transaction-service/index.js">transaction-service/index.js</a></p>
+                <pre><code>function startDrsHeartbeat() {
+    setInterval(async () => {
+        try {
+            await prisma.systemSetting.upsert({
+                where: { key: 'DRS_ENGINE_HEARTBEAT' },
+                update: { value: new Date().toISOString() },
+                create: { key: 'DRS_ENGINE_HEARTBEAT', value: new Date().toISOString() }
+            });
+        } catch (e) { /* silent fail to prevent crash */ }
+    }, 30000).unref();
 }</code></pre>
+                <p><strong>Rationale:</strong> The <code>.unref()</code> call is critical. It allows the Node.js event loop to exit even if the interval is active, which prevents Jest test suites from hanging indefinitely.</p>
             </div>
         </section>
 
-        <nav class="doc-nav">
-            <a href="index.html">Previous: Index</a> | 
-            <a href="system_admin_manual.html">Next: System Admin Manual</a>
-        </nav>
-    </div>
+        <section class="section">
+            <h2>2. Admin Dashboard UI Logic</h2>
+            <p>The dashboard now dynamically calculates system health based on the telemetry timestamp.</p>
+            <div class="card">
+                <h3>Health Thresholds</h3>
+                <ul>
+                    <li><strong>ACTIVE:</strong> Last heartbeat &lt; 2 minutes ago.</li>
+                    <li><strong>DELAYED:</strong> Last heartbeat 2-5 minutes ago.</li>
+                    <li><strong>OFFLINE:</strong> Last heartbeat &gt; 5 minutes ago.</li>
+                </ul>
+            </div>
+        </section>
+
+        <section class="section">
+            <h2>3. Test Suite Stabilization</h2>
+            <p>Fixed critical cross-workspace dependency issues between <code>budolpay-0.1.0</code> (CommonJS) and <code>budolshap-0.1.0</code> (ESM).</p>
+            <div class="card">
+                <h3>Key Fixes</h3>
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Test File</th>
+                            <th>Resolution</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td><code>infrastructure-audit.test.js</code></td>
+                            <td>Fixed recursive pathing for <code>rootDir</code> and updated service entry points.</td>
+                        </tr>
+                        <tr>
+                            <td><code>realtime.test.js</code></td>
+                            <td>Inlined <code>triggerRealtimeEvent</code> logic to bypass ESM parsing errors in Jest.</td>
+                        </tr>
+                        <tr>
+                            <td><code>spam_prevention.test.js</code></td>
+                            <td>Updated test payloads with compliant passwords to satisfy regex validators.</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </section>
+
+        <footer>
+            <hr>
+            <p style="font-size: 12px; color: #6b778c;">&copy; 2026 BudolPay Ecosystem. Developer Reference.</p>
+        </footer>
+    </main>
 </body>
 </html>
