@@ -129,9 +129,9 @@ export default async function DashboardPage() {
         ))}
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 items-stretch">
+      <div className="grid  gap-8 items-stretch">
         {/* Top Tier: Transaction Pulse (WIDER - 2/3) */}
-        <div className="lg:col-span-2 bg-white rounded-3xl border border-slate-100 shadow-sm overflow-hidden flex flex-col h-full min-h-[400px]">
+        <div className="md:col-span-2 bg-white rounded-3xl border border-slate-100 shadow-sm overflow-hidden flex flex-col h-full min-h-[400px]">
           <div className="p-6 border-b border-slate-50 flex justify-between items-center bg-slate-50/30">
             <div>
               <h3 className="font-black text-[#0f172a] text-base tracking-tight">Transaction Pulse</h3>
@@ -172,10 +172,10 @@ export default async function DashboardPage() {
 
           <div className="flex flex-col items-center text-center gap-4 mb-8 relative z-10">
             <div className="p-4 bg-white/5 rounded-2xl border border-white/10 text-[#f43f5e] shadow-inner mb-1">
-              <Shield className="w-8 h-8" />
+              <Shield className="w-6 h-6" />
             </div>
             <div>
-              <h3 className="font-black text-white text-lg tracking-tight leading-none">Institutional Shield</h3>
+              <h3 className="font-black text-white text-sm tracking-tight leading-none">Compliance Shield</h3>
               <p className="text-[9px] text-[#f43f5e] font-black uppercase tracking-[0.2em] mt-2 opacity-80">Active & Enforced</p>
             </div>
           </div>
