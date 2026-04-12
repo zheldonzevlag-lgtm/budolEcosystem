@@ -1,0 +1,65 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Developer Manual - BudolPay v2.4.7</title>
+    <link rel="stylesheet" href="../../docs_v1.css">
+</head>
+<body>
+    <div class="sidebar">
+        <h2>BudolPay Docs</h2>
+        <ul>
+            <li><a href="index.html">Index</a></li>
+            <li><a href="developer_manual.html" class="active">Developer Manual</a></li>
+            <li><a href="system_admin_manual.html">System Admin Manual</a></li>
+            <li><a href="user_manual.html">User Manual</a></li>
+            <li><a href="risk_register.html">Risk Register</a></li>
+            <li><a href="test_results.html">Test Results</a></li>
+            <li><a href="future_recommendations.html">Future Recommendations</a></li>
+        </ul>
+    </div>
+    <div class="main-content">
+        <h1>Developer Manual: Map Search & Geocoding Sync (v2.4.7)</h1>
+        
+        <section>
+            <h2>Technical Overview</h2>
+            <p>This update enhances the Map Picker by introducing bidirectional synchronization between the visual map state and a textual search interface. It leverages both forward geocoding (search string to LatLng) and reverse geocoding (LatLng to address string).</p>
+        </section>
+
+        <section>
+            <h2>Implementation Details</h2>
+            <h3>Bidirectional Sync Logic</h3>
+            <p>Located in: <a href="file:///d:/IT%20Projects/clone/budolEcosystem/budolPayMobile/lib/widgets/map_picker.dart">map_picker.dart</a></p>
+            <p>The state management centers around three primary reactive pipelines:</p>
+            <ol>
+                <li><strong>Search Trigger (Forward):</strong> When <code>onSubmitted</code> is called on the TextField, <code>locationFromAddress()</code> resolves the query. The <code>MapController</code> then moves the viewport, and the internal state updates.</li>
+                <li><strong>Tap/Drag Trigger (Reverse):</strong> When <code>onTap</code> or a controller move completes, <code>placemarkFromCoordinates()</code> is called. The resulting address fragments are joined and set as the text for the <code>_searchController</code>.</li>
+                <li><strong>Loading States:</strong> <code>_isSearching</code> provides UI feedback via a CircularProgressIndicator embedded in the TextField prefix/suffix.</li>
+            </ol>
+        </section>
+
+        <section>
+            <h2>Code Reference</h2>
+            <div class="code-block">
+                <pre><code>// Bidirectional Reverse Geocoding Sync
+Future<void> _reverseGeocode(LatLng latLng) async {
+  List<Placemark> placemarks = await placemarkFromCoordinates(latLng.latitude, latLng.longitude);
+  if (placemarks.isNotEmpty) {
+    final place = placemarks.first;
+    // ... filtering non-empty parts
+    setState(() {
+      _searchController.text = addressParts.join(', ');
+    });
+  }
+}</code></pre>
+            </div>
+        </section>
+
+        <nav class="doc-nav">
+            <a href="index.html">Previous: Index</a> | 
+            <a href="system_admin_manual.html">Next: System Admin Manual</a>
+        </nav>
+    </div>
+</body>
+</html>

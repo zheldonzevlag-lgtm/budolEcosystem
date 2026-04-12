@@ -129,7 +129,7 @@ export default async function DashboardPage() {
         ))}
       </div>
 
-      <div className="grid  gap-8 items-stretch">
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-8 items-stretch">
         {/* Top Tier: Transaction Pulse (WIDER - 2/3) */}
         <div className="md:col-span-2 bg-white rounded-3xl border border-slate-100 shadow-sm overflow-hidden flex flex-col h-full min-h-[400px]">
           <div className="p-6 border-b border-slate-50 flex justify-between items-center bg-slate-50/30">
