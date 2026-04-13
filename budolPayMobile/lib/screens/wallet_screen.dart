@@ -201,8 +201,8 @@ class _WalletScreenState extends State<WalletScreen> {
   }
 
   Widget _buildLimitProgress(String label, double progress, String detail) {
-    const slate600 = Color(0xFF475569);
-    const slate400 = Color(0xFF94A3B8);
+    final onSurface = Theme.of(context).colorScheme.onSurface;
+    final onSurfaceVariant = Theme.of(context).colorScheme.onSurfaceVariant;
     const fontSize = 13.0;
 
     return Column(
@@ -213,17 +213,17 @@ class _WalletScreenState extends State<WalletScreen> {
           children: [
             Text(
               label,
-              style: const TextStyle(
+              style: TextStyle(
                 fontSize: fontSize,
-                color: slate400,
+                color: onSurfaceVariant,
                 fontWeight: FontWeight.w500,
               ),
             ),
             Text(
               detail,
-              style: const TextStyle(
+              style: TextStyle(
                 fontSize: fontSize,
-                color: slate600,
+                color: onSurface,
                 fontWeight: FontWeight.w600,
               ),
             ),
@@ -232,8 +232,8 @@ class _WalletScreenState extends State<WalletScreen> {
         const SizedBox(height: 8),
         LinearProgressIndicator(
           value: progress,
-          backgroundColor: const Color(0xFFF1F5F9), // Slate 100
-          valueColor: const AlwaysStoppedAnimation<Color>(BrandColors.primary),
+          backgroundColor: Theme.of(context).colorScheme.surfaceContainerHighest,
+          valueColor: AlwaysStoppedAnimation<Color>(Theme.of(context).colorScheme.primary),
           minHeight: 8,
           borderRadius: BorderRadius.circular(4),
         ),
@@ -242,8 +242,8 @@ class _WalletScreenState extends State<WalletScreen> {
   }
 
   Widget _buildLinkedItem(IconData icon, String name, String detail) {
-    const slate600 = Color(0xFF475569);
-    const slate400 = Color(0xFF94A3B8);
+    final onSurface = Theme.of(context).colorScheme.onSurface;
+    final onSurfaceVariant = Theme.of(context).colorScheme.onSurfaceVariant;
     const fontSize = 13.0;
 
     return ListTile(
@@ -251,27 +251,27 @@ class _WalletScreenState extends State<WalletScreen> {
       leading: Container(
         padding: const EdgeInsets.all(10),
         decoration: BoxDecoration(
-          color: const Color(0xFFF1F5F9), // Slate 100
+          color: Theme.of(context).colorScheme.surfaceContainerHighest,
           borderRadius: BorderRadius.circular(10),
         ),
-        child: Icon(icon, color: slate600),
+        child: Icon(icon, color: onSurfaceVariant),
       ),
       title: Text(
         name,
-        style: const TextStyle(
+        style: TextStyle(
           fontSize: fontSize,
-          color: slate600,
+          color: onSurface,
           fontWeight: FontWeight.w600,
         ),
       ),
       subtitle: Text(
         detail,
-        style: const TextStyle(
+        style: TextStyle(
           fontSize: fontSize - 1,
-          color: slate400,
+          color: onSurfaceVariant,
         ),
       ),
-      trailing: const Icon(Icons.chevron_right, color: slate400, size: 20),
+      trailing: Icon(Icons.chevron_right, color: onSurfaceVariant, size: 20),
     );
   }
 }

@@ -169,7 +169,7 @@ class _SendMoneyScreenState extends State<SendMoneyScreen> {
                 ),
                 UIUtils.formatBudolPayText(
                   'Reference: $reference',
-                  baseStyle: const TextStyle(fontSize: 12, color: BrandColors.textSecondary)
+                  baseStyle: TextStyle(fontSize: 12, color: BrandColors.textSecondary)
                 ),
               ],
             ),
@@ -200,10 +200,10 @@ class _SendMoneyScreenState extends State<SendMoneyScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: BrandColors.background,
+      backgroundColor: Theme.of(context).colorScheme.surface,
       appBar: AppBar(
         title: const Text('Send Money'),
-        backgroundColor: BrandColors.primary,
+        backgroundColor: Theme.of(context).colorScheme.primary,
         foregroundColor: Colors.white,
       ),
       body: _isLoading 

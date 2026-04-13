@@ -428,7 +428,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
     return Scaffold(
       appBar: AppBar(
         title: const Text('Settings'),
-        backgroundColor: BrandColors.primary,
+        backgroundColor: Theme.of(context).colorScheme.primary,
         foregroundColor: Colors.white,
       ),
       body: Stack(
@@ -439,7 +439,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                 // Profile Header
                 Container(
                   padding: const EdgeInsets.all(24),
-                  color: Colors.white,
+                  color: Theme.of(context).colorScheme.surface,
                   child: Row(
                     children: [
                       const CircleAvatar(
@@ -454,11 +454,11 @@ class _SettingsScreenState extends State<SettingsScreen> {
                           children: [
                             Text(
                               userName,
-                              style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+                              style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: Theme.of(context).colorScheme.onSurface),
                             ),
                             Text(
                               email,
-                              style: TextStyle(color: Colors.grey[600]),
+                              style: TextStyle(color: Theme.of(context).colorScheme.onSurfaceVariant),
                             ),
                             const SizedBox(height: 8),
                             Container(
@@ -545,6 +545,59 @@ class _SettingsScreenState extends State<SettingsScreen> {
                   ),
                 ]),
 
+                _buildSettingsGroup('Appearance', [
+                  _buildSettingsTile(
+                    Icons.palette_outlined, 
+                    'Theme Mode', 
+                    apiService.themeMode.toUpperCase(), 
+                    null,
+                    trailing: SegmentedButton<String>(
+                      segments: const [
+                        ButtonSegment(value: 'light', label: Text('Light', style: TextStyle(fontSize: 10))),
+                        ButtonSegment(value: 'dark', label: Text('Dark', style: TextStyle(fontSize: 10))),
+                        ButtonSegment(value: 'auto', label: Text('Auto', style: TextStyle(fontSize: 10))),
+                      ],
+                      selected: {apiService.themeMode},
+                      onSelectionChanged: (Set<String> selection) {
+                        apiService.setThemeMode(selection.first);
+                      },
+                      showSelectedIcon: false,
+                      style: SegmentedButton.styleFrom(
+                        visualDensity: VisualDensity.compact,
+                        padding: EdgeInsets.zero,
+                      ),
+                    ),
+                  ),
+                  _buildSettingsTile(
+                    Icons.view_agenda_outlined, 
+                    'Greeting Layout', 
+                    apiService.greetingLayout.toUpperCase(), 
+                    null,
+                    trailing: SegmentedButton<String>(
+                      segments: const [
+                        ButtonSegment(value: 'vertical', label: Text('Vertical', style: TextStyle(fontSize: 10))),
+                        ButtonSegment(value: 'horizontal', label: Text('Classic', style: TextStyle(fontSize: 10))),
+                      ],
+                      selected: {apiService.greetingLayout},
+                      onSelectionChanged: (Set<String> selection) {
+                        apiService.setGreetingLayout(selection.first);
+                      },
+                      showSelectedIcon: false,
+                      style: SegmentedButton.styleFrom(
+                        visualDensity: VisualDensity.compact,
+                        padding: EdgeInsets.zero,
+                      ),
+                    ),
+                  ),
+                  Padding(
+                    padding: const EdgeInsets.fromLTRB(24, 0, 24, 8),
+                    child: Text(
+                      'Auto mode switches precisely at 6:00 AM/PM.',
+                      style: TextStyle(fontSize: 11, color: Theme.of(context).colorScheme.onSurfaceVariant),
+                    ),
+                  ),
+                ]),
+
                 _buildSettingsGroup('General', [
                   _buildSettingsTile(Icons.notifications, 'Notifications', 'Manage alerts', () {}),
                   _buildSettingsTile(Icons.language, 'Language', 'English', () {}),
@@ -582,8 +635,8 @@ class _SettingsScreenState extends State<SettingsScreen> {
           if (_showDebugWindow)
             Positioned.fill(
               child: Container(
-                decoration: const BoxDecoration(
-                  color: Color(0xFF1E293B), // Professional dark background
+                decoration: BoxDecoration(
+                  color: Theme.of(context).colorScheme.surface, 
                 ),
                 child: SafeArea(
                   child: Column(
@@ -726,11 +779,11 @@ class _SettingsScreenState extends State<SettingsScreen> {
           padding: const EdgeInsets.fromLTRB(24, 16, 24, 8),
           child: Text(
             title,
-            style: const TextStyle(fontSize: 14, fontWeight: FontWeight.bold, color: Colors.grey),
+            style: TextStyle(fontSize: 14, fontWeight: FontWeight.bold, color: Theme.of(context).colorScheme.primary),
           ),
         ),
         Container(
-          color: Colors.white,
+          color: Theme.of(context).colorScheme.surface,
           child: Column(children: children),
         ),
       ],

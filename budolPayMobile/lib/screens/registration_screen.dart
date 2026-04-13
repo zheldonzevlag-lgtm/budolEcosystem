@@ -218,7 +218,7 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
         backgroundColor: Colors.transparent,
         elevation: 0,
         leading: IconButton(
-          icon: const Icon(Icons.arrow_back, color: BrandColors.textPrimary),
+          icon: Icon(Icons.arrow_back, color: Theme.of(context).colorScheme.onSurface),
           onPressed: () {
             if (_currentStep > 0) {
               _pageController.previousPage(duration: const Duration(milliseconds: 300), curve: Curves.easeInOut);
@@ -229,7 +229,7 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
         ),
         title: GestureDetector(
           onLongPress: () => Navigator.pushNamed(context, Routes.debugConsole),
-          child: const Text('Create Account', style: TextStyle(color: BrandColors.textPrimary)),
+          child: Text('Create Account', style: TextStyle(color: Theme.of(context).colorScheme.onSurface)),
         ),
       ),
       body: Column(
@@ -262,7 +262,7 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
               height: 4,
               margin: const EdgeInsets.symmetric(horizontal: 4),
               decoration: BoxDecoration(
-                color: index <= _currentStep ? BrandColors.primary : const Color(0xFF334155),
+                color: index <= _currentStep ? Theme.of(context).colorScheme.primary : Theme.of(context).colorScheme.outlineVariant,
                 borderRadius: BorderRadius.circular(2),
               ),
             ),
@@ -345,7 +345,6 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
               FilteringTextInputFormatter.digitsOnly,
               LengthLimitingTextInputFormatter(11),
             ],
-            style: const TextStyle(color: Colors.white),
             decoration: _inputDecoration(
               'Phone Number', 
               Icons.phone_android,
@@ -420,21 +419,18 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
           TextField(
             controller: _firstNameController,
             textCapitalization: TextCapitalization.words,
-            style: const TextStyle(color: BrandColors.textPrimary),
             decoration: _inputDecoration('First Name', Icons.person),
           ),
           const SizedBox(height: 16),
           TextField(
             controller: _lastNameController,
             textCapitalization: TextCapitalization.words,
-            style: const TextStyle(color: BrandColors.textPrimary),
             decoration: _inputDecoration('Last Name', Icons.person_outline),
           ),
           const SizedBox(height: 16),
           TextField(
             controller: _emailController,
             keyboardType: TextInputType.emailAddress,
-            style: const TextStyle(color: BrandColors.textPrimary),
             decoration: _inputDecoration(
               'Email', 
               Icons.email,
@@ -452,7 +448,6 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
           TextField(
             controller: _passwordController,
             obscureText: _obscurePassword,
-            style: const TextStyle(color: BrandColors.textPrimary),
             decoration: _inputDecoration(
               'Password', 
               Icons.lock,
@@ -469,7 +464,6 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
           TextField(
             controller: _confirmPasswordController,
             obscureText: _obscureConfirmPassword,
-            style: const TextStyle(color: BrandColors.textPrimary),
             decoration: _inputDecoration(
               'Confirm Password', 
               Icons.lock_outline,
@@ -501,7 +495,7 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
             keyboardType: TextInputType.number,
             obscureText: true,
             maxLength: 6,
-            style: const TextStyle(color: BrandColors.textPrimary, letterSpacing: 8, fontSize: 24),
+            style: TextStyle(letterSpacing: 8, fontSize: 24, color: Theme.of(context).colorScheme.onSurface),
             textAlign: TextAlign.center,
             decoration: _inputDecoration('PIN', Icons.lock),
           ),
@@ -511,7 +505,7 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
             keyboardType: TextInputType.number,
             obscureText: true,
             maxLength: 6,
-            style: const TextStyle(color: BrandColors.textPrimary, letterSpacing: 8, fontSize: 18),
+            style: TextStyle(letterSpacing: 8, fontSize: 18, color: Theme.of(context).colorScheme.onSurface),
             textAlign: TextAlign.center,
             decoration: _inputDecoration('Confirm PIN', Icons.lock_outline),
           ),
@@ -534,9 +528,9 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(title, style: const TextStyle(color: BrandColors.textPrimary, fontSize: 28, fontWeight: FontWeight.bold)),
+          Text(title, style: TextStyle(color: Theme.of(context).colorScheme.onSurface, fontSize: 28, fontWeight: FontWeight.bold)),
           const SizedBox(height: 8),
-          Text(subtitle, style: const TextStyle(color: BrandColors.textSecondary, fontSize: 16)),
+          Text(subtitle, style: TextStyle(color: Theme.of(context).colorScheme.onSurfaceVariant, fontSize: 16)),
           const SizedBox(height: 32),
           content,
           const Spacer(),
@@ -553,7 +547,7 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
                 shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
               ),
               child: _isLoading 
-                ? const CircularProgressIndicator(color: BrandColors.textPrimary)
+                ? CircularProgressIndicator(color: BrandColors.textPrimary)
                 : Text(buttonText, style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
             ),
           ),
@@ -565,23 +559,10 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
   InputDecoration _inputDecoration(String label, IconData icon, {Widget? suffixIcon, String? errorText}) {
     return InputDecoration(
       labelText: label,
-      prefixIcon: Icon(icon, color: BrandColors.textSecondary),
+      prefixIcon: Icon(icon, color: Theme.of(context).colorScheme.primary),
       suffixIcon: suffixIcon,
       errorText: errorText,
-      errorStyle: const TextStyle(color: Colors.redAccent),
-      labelStyle: const TextStyle(color: BrandColors.textSecondary),
-      filled: true,
-      fillColor: Colors.white.withValues(alpha: 0.1),
-      border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
-      focusedBorder: OutlineInputBorder(
-        borderRadius: BorderRadius.circular(12),
-        borderSide: const BorderSide(color: BrandColors.primary),
-      ),
-      enabledBorder: OutlineInputBorder(
-        borderRadius: BorderRadius.circular(12),
-        borderSide: BorderSide(color: errorText != null ? Colors.redAccent : Colors.white24),
-      ),
-      counterStyle: const TextStyle(color: BrandColors.textSecondary),
+      // WHY: Allow global theme to set decoration details.
     );
   }
 }

@@ -43,7 +43,7 @@ class _DebugConsoleScreenState extends State<DebugConsoleScreen> {
           if (_showSystemInfo) _buildSystemInfo(apiService),
           Expanded(
             child: logs.isEmpty
-                ? const Center(
+                ? Center(
                     child: Text(
                       'No logs captured yet.\nTry performing some actions.',
                       textAlign: TextAlign.center,
@@ -94,7 +94,7 @@ class _DebugConsoleScreenState extends State<DebugConsoleScreen> {
             child: Text(label, style: const TextStyle(color: Colors.white38, fontSize: 12, fontWeight: FontWeight.bold)),
           ),
           Expanded(
-            child: SelectableText(value, style: const TextStyle(color: BrandColors.textSecondary, fontSize: 12, fontFamily: 'monospace')),
+            child: SelectableText(value, style: TextStyle(color: BrandColors.textSecondary, fontSize: 12, fontFamily: 'monospace')),
           ),
         ],
       ),

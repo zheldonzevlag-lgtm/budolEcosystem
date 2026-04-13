@@ -2,88 +2,131 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <title>Developer Manual - BudolPay v2.5.0</title>
-    <link rel="stylesheet" href="docs_style.css">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>BudolPay v2.5.0 - Developer Manual</title>
+    <style>
+        :root {
+            --primary: #F63049;
+            --code-bg: #282C34;
+            --border: #DFE1E6;
+            --text: #172B4D;
+        }
+        body { font-family: 'Segoe UI', sans-serif; margin: 0; display: flex; color: var(--text); }
+        .sidebar { width: 260px; height: 100vh; background: #F4F5F7; border-right: 1px solid var(--border); position: fixed; padding: 20px; }
+        .main-content { margin-left: 300px; padding: 40px; max-width: 1000px; width: 100%; }
+        pre { background: var(--code-bg); color: #ABB2BF; padding: 16px; border-radius: 8px; overflow-x: auto; font-size: 0.9rem; }
+        .code-link { color: var(--primary); text-decoration: none; font-weight: bold; font-family: monospace; }
+        .code-link:hover { text-decoration: underline; }
+        .section { margin-bottom: 40px; border-bottom: 1px solid var(--border); padding-bottom: 20px; }
+        .keyword { color: #C678DD; }
+        .function { color: #61AFEF; }
+        .comment { color: #5C6370; font-style: italic; }
+    </style>
 </head>
 <body>
-    <div class="sidebar">
-        <div class="brand-header">
-            <div class="brand-logo"></div>
-            <strong style="font-size: 20px;">Budol Ecosystem</strong>
-        </div>
-        <nav>
-            <a href="index.html" class="nav-item">Overview</a>
-            <a href="task.html" class="nav-item">Task List</a>
-            <a href="workflow.html" class="nav-item">Workflow</a>
-            <a href="developer_manual.html" class="nav-item active">Developer Manual</a>
-            <a href="system_admin_manual.html" class="nav-item">System Admin Manual</a>
-            <a href="user_manual.html" class="nav-item">User Manual</a>
-            <a href="risk_register.html" class="nav-item">Risk Register</a>
-            <a href="Mitigation.html" class="nav-item">Mitigation Plan</a>
-            <a href="issues & fixes.html" class="nav-item">Issues & Fixes</a>
-            <a href="test_results.html" class="nav-item">Test Results</a>
-            <a href="future_recommendations.html" class="nav-item">Future Recommendations</a>
-            <hr style="margin: 20px 0; border: none; border-top: 1px solid rgba(0,0,0,0.05);">
-            <a href="../../knowledgebase.html" class="nav-item">Archive / Knowledge Base</a>
-        </nav>
-    </div>
-    <div class="main-content">
-        <h1>Developer Manual: Brand Identity Refresh</h1>
-        
-        <div class="metadata">
-            <span><strong>Tech Stack:</strong> Flutter, Dart</span>
-            <span><strong>Version:</strong> v2.5.0</span>
-        </div>
+    <nav class="sidebar">
+        <h2>Developer</h2>
+        <ul style="list-style: none; padding: 0;">
+            <li><a href="index.html" style="text-decoration: none; color: var(--text);">🏠 Home</a></li>
+            <li><a href="task.html" style="text-decoration: none; color: var(--text);">✅ Task List</a></li>
+            <li><a href="developer_manual.html" style="text-decoration: none; color: var(--primary); font-weight: bold;">🛠 Developer Manual</a></li>
+        </ul>
+    </nav>
 
-        <div class="card">
-            <h2>Design System Integration</h2>
-            <p>The core of this release is the <code>BrandColors</code> class. Developers MUST utilize this class for all UI components to ensure systemic consistency.</p>
-            
-            <h3>Code Reference: BrandColors Utility</h3>
-            <p>Path: <a href="file:///D:/IT%20Projects/clone/budolEcosystem/budolPayMobile/lib/utils/brand_colors.dart" class="code-link">lib/utils/brand_colors.dart</a></p>
+    <main class="main-content">
+        <h1>Developer Manual - v2.5.0</h1>
+        
+        <div class="section">
+            <h2>1. Adaptive Greeting Logic</h2>
+            <p><strong>File:</strong> <a class="code-link" href="file:///d:/IT%20Projects/clone/budolPayMobile/lib/screens/home_screen.dart">home_screen.dart</a></p>
+            <p>Implemented a conditional renderer that swaps between Column (Vertical) and Row (Classic) layouts based on user preference.</p>
             <pre>
-class BrandColors {
-  static const Color primary = Color(0xFFBC1C44);     // Deep Ruby
-  static const Color background = Color(0xFFFFF0E5);  // Cream Foundation
-  static const Color textPrimary = Color(0xFF1E293B); // Dark Slate
-  // ...
+<span class="comment">/// WHY: Adaptive UI allows users to prioritize visibility or density.</span>
+<span class="keyword">Widget</span> <span class="function">_buildAdaptiveGreeting</span>(BuildContext context, ApiService api, String name) {
+  <span class="keyword">final</span> isVertical = api.greetingLayout == <span class="string">'vertical'</span>;
+  
+  <span class="keyword">if</span> (isVertical) {
+    <span class="keyword">return</span> Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(<span class="string">'Good Morning,'</span>, style: TextStyle(color: Colors.white70)),
+        Text(name, style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold)),
+      ],
+    );
+  } <span class="keyword">else</span> {
+    <span class="keyword">return</span> Row(
+      children: [
+        Text(<span class="string">'Hi, '</span> + name, style: TextStyle(fontWeight: FontWeight.bold)),
+      ],
+    );
+  }
 }
             </pre>
         </div>
 
-        <div class="card">
-            <h2>Screen Implementation Notes</h2>
-            <p>Below are key screens migrated to the Ruby & Cream system. Implementation details focus on the transition from the legacy Rose theme to the new premium palette.</p>
-
-            <h3>1. Splash & Auth Foundation</h3>
-            <ul>
-                <li><strong>File:</strong> <a href="file:///D:/IT%20Projects/clone/budolEcosystem/budolPayMobile/lib/screens/splash_screen.dart" class="code-link">splash_screen.dart</a></li>
-                <li><strong>Change:</strong> Transformed background from Dark Indigo to Cream, updating the logo transition to Ruby.</li>
-            </ul>
-
-            <h3>2. Financial Transaction UI</h3>
-            <ul>
-                <li><strong>File:</strong> <a href="file:///D:/IT%20Projects/clone/budolEcosystem/budolPayMobile/lib/screens/add_money_screen.dart" class="code-link">add_money_screen.dart</a></li>
-                <li><strong>Change:</strong> Updated all primary action buttons and input highlights to <code>BrandColors.primary</code>.</li>
-                <li><strong>File:</strong> <a href="file:///D:/IT%20Projects/clone/budolEcosystem/budolPayMobile/lib/screens/qr_scanner_screen.dart" class="code-link">qr_scanner_screen.dart</a></li>
-                <li><strong>Change:</strong> Refactored CustomPainter logic to use Ruby guides and scanning laser.</li>
-            </ul>
-
-            <h3>3. Identity Verification (KYC)</h3>
-            <ul>
-                <li><strong>File:</strong> <a href="file:///D:/IT%20Projects/clone/budolEcosystem/budolPayMobile/lib/screens/kyc_verification_screen.dart" class="code-link">kyc_verification_screen.dart</a></li>
-                <li><strong>Change:</strong> Migrated the multi-step progress indicator and all verification tooltips to the Ruby palette.</li>
-            </ul>
+        <div class="section">
+            <h2>2. Profile Completeness Algorithm</h2>
+            <p><strong>File:</strong> <a class="code-link" href="file:///d:/IT%20Projects/clone/budolPayMobile/lib/services/api_service.dart">api_service.dart</a></p>
+            <p>Calculates completion weight based on verified data points. Weights: Name (25%), Email (25%), PIN (25%), KYC (25%).</p>
+            <pre>
+<span class="keyword">double get</span> <span class="function">profileCompletion</span> {
+  <span class="keyword">double</span> progress = <span class="constant">0.0</span>;
+  <span class="keyword">if</span> (user[<span class="string">'firstName'</span>] != <span class="keyword">null</span>) progress += <span class="constant">0.25</span>;
+  <span class="keyword">if</span> (user[<span class="string">'email'</span>] != <span class="keyword">null</span>) progress += <span class="constant">0.25</span>;
+  <span class="keyword">if</span> (user[<span class="string">'pinHash'</span>] != <span class="keyword">null</span>) progress += <span class="constant">0.25</span>;
+  <span class="keyword">if</span> (user[<span class="string">'kycStatus'</span>] == <span class="string">'VERIFIED'</span>) progress += <span class="constant">0.25</span>;
+  <span class="keyword">return</span> progress;
+}
+            </pre>
         </div>
 
-        <div class="card">
-            <h2>Best Practices</h2>
-            <ol>
-                <li><strong>Never use hardcoded hex:</strong> Use <code>BrandColors.primary</code> instead of <code>Color(0xFFBC1C44)</code>.</li>
-                <li><strong>Backgrounds:</strong> Always wrap main screen content in a <code>Scaffold</code> with <code>backgroundColor: BrandColors.background</code>.</li>
-                <li><strong>Typography:</strong> Use <code>BrandColors.textPrimary</code> for standard reading and <code>BrandColors.primary</code> for emphasized call-to-actions.</li>
-            </ol>
+        <div class="section">
+            <h2>3. Semantic Theme Integration</h2>
+            <p><strong>File:</strong> <a class="code-link" href="file:///d:/IT%20Projects/clone/budolPayMobile/lib/utils/brand_colors.dart">brand_colors.dart</a></p>
+            <p>Centralized <code>ColorScheme</code> generation to ensure all UI elements respond to global <code>Brightness</code> changes.</p>
+            <pre>
+<span class="keyword">static</span> ThemeData <span class="function">getTheme</span>(Brightness brightness) {
+  <span class="comment">// ... seed from primary ruby ...</span>
+  <span class="keyword">return</span> ThemeData(
+    colorScheme: ColorScheme.fromSeed(
+      seedColor: primary,
+      brightness: brightness,
+      surface: isDark ? darkSurface : lightSurface,
+      onSurface: isDark ? darkText : lightText,
+    ),
+  );
+}
+            </pre>
+        <div class="section">
+            <h2>4. Dependency & Software Rationale (Phase 8)</h2>
+            <p>The following core dependencies were selected for the v2.5.0 Adaptive UI release to balance performance, security, and developer experience:</p>
+            <table style="width: 100%; border-collapse: collapse; margin-top: 10px;">
+                <tr style="background: #F4F5F7;">
+                    <th style="border: 1px solid var(--border); padding: 8px; text-align: left;">Dependency</th>
+                    <th style="border: 1px solid var(--border); padding: 8px; text-align: left;">Rationale</th>
+                </tr>
+                <tr>
+                    <td style="border: 1px solid var(--border); padding: 8px;"><code>provider</code></td>
+                    <td style="border: 1px solid var(--border); padding: 8px;">Optimized for high-frequency UI updates (e.g.,MPIN masking) with minimal rebuilding overhead.</td>
+                </tr>
+                <tr>
+                    <td style="border: 1px solid var(--border); padding: 8px;"><code>mobile_scanner</code></td>
+                    <td style="border: 1px solid var(--border); padding: 8px;">Selected for robust QR 2.0 support and haptic feedback integration, essential for retail point-of-sale efficiency.</td>
+                </tr>
+                <tr>
+                    <td style="border: 1px solid var(--border); padding: 8px;"><code>tflite_flutter</code></td>
+                    <td style="border: 1px solid var(--border); padding: 8px;">Enables on-device FaceNet biometric verification, ensuring PCI DSS compliance by avoiding PII transmission to cloud servers.</td>
+                </tr>
+                <tr>
+                    <td style="border: 1px solid var(--border); padding: 8px;"><code>shared_preferences</code></td>
+                    <td style="border: 1px solid var(--border); padding: 8px;">Used for lightweight UI state persistence (Greeting Layout, Theme preference) without requiring SQL overhead.</td>
+                </tr>
+            </table>
         </div>
-    </div>
+
+        <div style="margin-top: 40px; text-align: right;">
+            <a href="user_manual.html" style="background: var(--primary); color: white; padding: 12px 24px; border-radius: 6px; text-decoration: none; font-weight: bold;">Next: User Manual &rarr;</a>
+        </div>
+    </main>
 </body>
 </html>

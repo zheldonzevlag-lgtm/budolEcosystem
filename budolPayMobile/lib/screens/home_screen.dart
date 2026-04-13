@@ -9,7 +9,6 @@ import '../constants/routes.dart';
 import '../utils/ui_utils.dart';
 import '../utils/js_helper.dart';
 import '../utils/formatters.dart' as budol_format;
-import '../utils/brand_colors.dart';
 import 'dart:async';
 
 class HomeScreen extends StatefulWidget {
@@ -265,7 +264,7 @@ class _HomeScreenState extends State<HomeScreen> {
             color: Colors.white,
           ),
         ),
-        backgroundColor: BrandColors.primary,
+        backgroundColor: Theme.of(context).colorScheme.primary,
         foregroundColor: Colors.white,
         actions: [
           // Connection status indicator
@@ -304,8 +303,8 @@ class _HomeScreenState extends State<HomeScreen> {
               Container(
                 padding: const EdgeInsets.all(24),
                 width: double.infinity,
-                decoration: const BoxDecoration(
-                  color: BrandColors.primary,
+                decoration: BoxDecoration(
+                  color: Theme.of(context).colorScheme.primary,
                   borderRadius: BorderRadius.only(
                     bottomLeft: Radius.circular(32),
                     bottomRight: Radius.circular(32),
@@ -314,52 +313,7 @@ class _HomeScreenState extends State<HomeScreen> {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Row(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Expanded(
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Text(
-                                _greeting,
-                                style: TextStyle(
-                                  color: Colors.white.withValues(alpha: 0.8),
-                                  fontSize: 14,
-                                  fontWeight: FontWeight.w400,
-                                ),
-                              ),
-                              const SizedBox(height: 4),
-                              Text(
-                                _isNameVisible ? userName : '•' * (userName.length > 15 ? 15 : userName.length),
-                                style: const TextStyle(
-                                  color: Colors.white,
-                                  fontSize: 22,
-                                  fontWeight: FontWeight.bold,
-                                ),
-                                overflow: TextOverflow.ellipsis,
-                              ),
-                            ],
-                          ),
-                        ),
-                        const SizedBox(width: 8),
-                        GestureDetector(
-                          onTap: () {
-                            setState(() {
-                              _isNameVisible = !_isNameVisible;
-                            });
-                          },
-                          child: Container(
-                            margin: const EdgeInsets.only(top: 24), // Align with the bottom of the name line
-                            child: Icon(
-                              _isNameVisible ? Icons.visibility : Icons.visibility_off,
-                              color: Colors.white70,
-                              size: 18,
-                            ),
-                          ),
-                        ),
-                      ],
-                    ),
+                    _buildAdaptiveGreeting(context, apiService, userName),
                     const SizedBox(height: 16),
                     const Text(
                       'Available Balance',
@@ -427,6 +381,10 @@ class _HomeScreenState extends State<HomeScreen> {
                 ),
               ),
               
+              // Profile Completeness Widget
+              if (apiService.profileCompletion < 1.0)
+                _buildProfileCompleteness(context, apiService),
+              
               // Services Grid
               Padding(
                 padding: const EdgeInsets.all(24.0),
@@ -435,7 +393,7 @@ class _HomeScreenState extends State<HomeScreen> {
                   children: [
                     const Text(
                       'Services',
-                      style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Color(0xFF334155)), // Slate 700
+                      style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
                     ),
                     const SizedBox(height: 16),
                     GridView.count(
@@ -460,7 +418,7 @@ class _HomeScreenState extends State<HomeScreen> {
                               style: TextStyle(
                                 fontSize: 24,
                                 fontWeight: FontWeight.bold,
-                                color: Color(0xFFF43F5E),
+                                color: Colors.black,
                                 height: 1.0,
                               ),
                             ),
@@ -485,7 +443,7 @@ class _HomeScreenState extends State<HomeScreen> {
                       children: [
                         const Text(
                           'Recent Transactions',
-                          style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Color(0xFF334155)), // Slate 700
+                          style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
                         ),
                         TextButton(
                           onPressed: () {
@@ -592,6 +550,178 @@ class _HomeScreenState extends State<HomeScreen> {
   );
 }
 
+  /// WHY: Provides conditional layout for the greeting (Vertical vs Horizontal).
+  /// WHAT: Supports v2.5.0 requirement for UI flexibility.
+  Widget _buildAdaptiveGreeting(BuildContext context, ApiService apiService, String userName) {
+    final isVertical = apiService.greetingLayout == 'vertical';
+    final nameLabel = _isNameVisible ? userName : '•' * (userName.length > 15 ? 15 : userName.length);
+
+    if (isVertical) {
+      return Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  _greeting,
+                  style: TextStyle(
+                    color: Colors.white.withValues(alpha: 0.8),
+                    fontSize: 14,
+                    fontWeight: FontWeight.w400,
+                  ),
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  nameLabel,
+                  style: const TextStyle(
+                    color: Colors.white,
+                    fontSize: 22,
+                    fontWeight: FontWeight.bold,
+                  ),
+                  overflow: TextOverflow.ellipsis,
+                ),
+              ],
+            ),
+          ),
+          _buildVisibilityToggle(),
+        ],
+      );
+    } else {
+      // Horizontal Classic Layout
+      return Row(
+        children: [
+          Expanded(
+            child: Text.rich(
+              TextSpan(
+                children: [
+                  TextSpan(
+                    text: _greeting,
+                    style: TextStyle(
+                      color: Colors.white.withValues(alpha: 0.8),
+                      fontSize: 18,
+                      fontWeight: FontWeight.w400,
+                    ),
+                  ),
+                  TextSpan(
+                    text: nameLabel,
+                    style: const TextStyle(
+                      color: Colors.white,
+                      fontSize: 18,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                ],
+              ),
+              overflow: TextOverflow.ellipsis,
+            ),
+          ),
+          _buildVisibilityToggle(),
+        ],
+      );
+    }
+  }
+
+  Widget _buildVisibilityToggle() {
+    return GestureDetector(
+      onTap: () {
+        setState(() {
+          _isNameVisible = !_isNameVisible;
+        });
+      },
+      child: Container(
+        margin: const EdgeInsets.only(top: 8),
+        child: Icon(
+          _isNameVisible ? Icons.visibility : Icons.visibility_off,
+          color: Colors.white70,
+          size: 18,
+        ),
+      ),
+    );
+  }
+
+  /// WHY: Encourages users to complete profile data for better system compliance.
+  /// WHAT: Shows a premium progress bar card.
+  Widget _buildProfileCompleteness(BuildContext context, ApiService apiService) {
+    final progress = apiService.profileCompletion;
+    final color = Theme.of(context).colorScheme.primary;
+
+    return Container(
+      margin: const EdgeInsets.symmetric(horizontal: 24, vertical: 8),
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: Theme.of(context).colorScheme.surface,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: Theme.of(context).colorScheme.outlineVariant.withAlpha(51)),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withAlpha(13),
+            blurRadius: 10,
+            offset: const Offset(0, 4),
+          ),
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Text(
+                'Profile Status',
+                style: TextStyle(
+                  fontSize: 14,
+                  fontWeight: FontWeight.w600,
+                  color: Theme.of(context).colorScheme.onSurface,
+                ),
+              ),
+              Text(
+                '${(progress * 100).toInt()}%',
+                style: TextStyle(
+                  fontSize: 14,
+                  fontWeight: FontWeight.bold,
+                  color: color,
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 12),
+          ClipRRect(
+            borderRadius: BorderRadius.circular(4),
+            child: LinearProgressIndicator(
+              value: progress,
+              backgroundColor: color.withAlpha(26),
+              valueColor: AlwaysStoppedAnimation<Color>(color),
+              minHeight: 8,
+            ),
+          ),
+          const SizedBox(height: 12),
+          InkWell(
+            onTap: () => Navigator.pushNamed(context, Routes.editProfile),
+            child: Row(
+              children: [
+                Text(
+                  'Complete your profile for a better experience',
+                  style: TextStyle(
+                    fontSize: 12,
+                    color: Theme.of(context).colorScheme.onSurfaceVariant,
+                  ),
+                ),
+                const Spacer(),
+                Icon(
+                  Icons.arrow_forward_ios,
+                  size: 12,
+                  color: color,
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
   Widget _buildBalanceAction(BuildContext context, IconData icon, String label, VoidCallback onTap) {
     return GestureDetector(
       onTap: onTap,
@@ -621,8 +751,8 @@ class _HomeScreenState extends State<HomeScreen> {
           height: 32,
           width: 32,
           child: icon is IconData 
-              ? Icon(icon, color: const Color(0xFFF43F5E), size: 32)
-              : (icon is Widget ? icon : const Icon(Icons.error, color: Color(0xFFF43F5E), size: 32)),
+              ? Icon(icon, color: Theme.of(context).colorScheme.primary, size: 32)
+              : (icon is Widget ? icon : Icon(Icons.error, color: Theme.of(context).colorScheme.primary, size: 32)),
         ),
         const SizedBox(height: 8),
         UIUtils.formatBudolPayText(
@@ -635,21 +765,22 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   Widget _buildTransactionItem(String title, String amount, String date, Color amountColor) {
-    const slate600 = Color(0xFF475569);
+    final onSurface = Theme.of(context).colorScheme.onSurface;
+    final onSurfaceVariant = Theme.of(context).colorScheme.onSurfaceVariant;
     const fontSize = 13.0;
     
     return ListTile(
       contentPadding: EdgeInsets.zero,
-      leading: const CircleAvatar(
-        backgroundColor: Color(0xFFF1F5F9), // Slate 100
-        child: Icon(Icons.payment, color: Color(0xFFF43F5E), size: 20),
+      leading: CircleAvatar(
+        backgroundColor: Theme.of(context).colorScheme.surfaceContainerHighest,
+        child: Icon(Icons.payment, color: Theme.of(context).colorScheme.primary, size: 20),
       ),
       title: UIUtils.formatBudolPayText(
         title, 
-        baseStyle: const TextStyle(
+        baseStyle: TextStyle(
           fontWeight: FontWeight.w600, 
           fontSize: fontSize,
-          color: slate600,
+          color: onSurface,
         )
       ),
       subtitle: null,
@@ -668,9 +799,9 @@ class _HomeScreenState extends State<HomeScreen> {
           const SizedBox(height: 2),
           Text(
             date,
-            style: const TextStyle(
+            style: TextStyle(
               fontSize: 11,
-              color: Color(0xFF94A3B8), // Slate 400
+              color: onSurfaceVariant,
             ),
           ),
         ],

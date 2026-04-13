@@ -763,7 +763,7 @@ class _LoginScreenState extends State<LoginScreen> with WidgetsBindingObserver {
         elevation: 0,
         actions: [
           IconButton(
-            icon: const Icon(Icons.settings, color: BrandColors.textPrimary),
+            icon: Icon(Icons.settings, color: Theme.of(context).colorScheme.onSurface),
             onPressed: () => UIUtils.showHostConfigDialog(context),
             tooltip: 'API Configuration',
           ),
@@ -794,7 +794,7 @@ class _LoginScreenState extends State<LoginScreen> with WidgetsBindingObserver {
               if (_currentStep != LoginStep.phone)
                 TextButton(
                   onPressed: () => setState(() => _currentStep = LoginStep.phone),
-                  child: const Text('Back to Login', 
+                  child: Text('Back to Login', 
                     style: TextStyle(color: BrandColors.textPrimary)),
                 ),
               const SizedBox(height: 12),
@@ -833,7 +833,7 @@ class _LoginScreenState extends State<LoginScreen> with WidgetsBindingObserver {
           const SizedBox(height: 0),
           Text(
             context.watch<ApiService>().appVersion,
-            style: const TextStyle(color: Colors.white38, fontSize: 14),
+            style: TextStyle(color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.38), fontSize: 14),
           ),
         ],
       ),
@@ -848,7 +848,7 @@ class _LoginScreenState extends State<LoginScreen> with WidgetsBindingObserver {
 
     return Column(
       children: [
-        const Text('Login to continue', 
+        Text('Login to continue', 
           style: TextStyle(color: BrandColors.textPrimary)),
         const SizedBox(height: 24),
         _buildMethodToggle(),
@@ -857,7 +857,6 @@ class _LoginScreenState extends State<LoginScreen> with WidgetsBindingObserver {
           TextField(
             controller: _phoneController,
             keyboardType: TextInputType.phone,
-            style: const TextStyle(color: Colors.white),
             decoration: _inputDecoration(
               'Mobile Number', 
               Icons.phone_android, 
@@ -874,7 +873,6 @@ class _LoginScreenState extends State<LoginScreen> with WidgetsBindingObserver {
           TextField(
             controller: _emailController,
             keyboardType: TextInputType.emailAddress,
-            style: const TextStyle(color: Colors.white),
             decoration: _inputDecoration(
               'Email Address', 
               Icons.email_outlined, 
@@ -891,7 +889,6 @@ class _LoginScreenState extends State<LoginScreen> with WidgetsBindingObserver {
           TextField(
             controller: _passwordController,
             obscureText: _obscurePassword,
-            style: const TextStyle(color: Colors.white),
             decoration: _inputDecoration(
               'Password', 
               Icons.lock_outline,
@@ -1006,16 +1003,16 @@ class _LoginScreenState extends State<LoginScreen> with WidgetsBindingObserver {
   Widget _buildOtpStep() {
     return Column(
       children: [
-        const Text('Enter the 6-digit OTP sent to your phone', 
-          style: TextStyle(color: BrandColors.textPrimary)),
+        Text('Enter the 6-digit OTP sent to your phone', 
+          style: TextStyle(color: Theme.of(context).colorScheme.onSurfaceVariant)),
         const SizedBox(height: 24),
         TextField(
           controller: _otpController,
           keyboardType: TextInputType.number,
           maxLength: 6,
-          style: const TextStyle(color: Colors.white, letterSpacing: 8, fontSize: 24),
+          style: TextStyle(color: Theme.of(context).colorScheme.onSurface, letterSpacing: 8, fontSize: 24),
           textAlign: TextAlign.center,
-          decoration: _inputDecoration('OTP', Icons.lock_clock),
+          decoration: _inputDecoration('Enter 6-digit OTP', Icons.security),
           onChanged: (value) {
             if (value.length == 6 && !_isLoading) {
               _handleVerifyOtp();
@@ -1026,13 +1023,13 @@ class _LoginScreenState extends State<LoginScreen> with WidgetsBindingObserver {
         Row(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            const Text('Didn\'t receive the code?', style: TextStyle(color: BrandColors.textSecondary, fontSize: 14)),
+            Text('Didn\'t receive the code?', style: TextStyle(color: Theme.of(context).colorScheme.onSurfaceVariant, fontSize: 14)),
             TextButton(
               onPressed: _resendCountdown > 0 ? null : _handleResendOtp,
               child: Text(
                 _resendCountdown > 0 ? 'Resend in ${_resendCountdown}s' : 'Resend Now',
                 style: TextStyle(
-                  color: _resendCountdown > 0 ? Colors.white24 : BrandColors.primary,
+                  color: _resendCountdown > 0 ? Theme.of(context).colorScheme.outline : Theme.of(context).colorScheme.primary,
                   fontWeight: FontWeight.bold,
                   fontSize: 14,
                 ),
@@ -1059,7 +1056,7 @@ class _LoginScreenState extends State<LoginScreen> with WidgetsBindingObserver {
           onPressed: _handleBiometricLogin,
           icon: Icon(
             Icons.fingerprint,
-            color: _isBiometricEnabled ? Colors.white70 : Colors.white24,
+            color: _isBiometricEnabled ? Theme.of(context).colorScheme.onSurface : Theme.of(context).colorScheme.outline,
             size: 28,
           ),
           tooltip: 'Login with Fingerprint',
@@ -1074,7 +1071,7 @@ class _LoginScreenState extends State<LoginScreen> with WidgetsBindingObserver {
           onPressed: _handleFaceRecognitionLogin,
           icon: Icon(
             Icons.face,
-            color: (_isBiometricEnabled || _hasFaceTemplate) ? Colors.white70 : Colors.white24,
+            color: (_isBiometricEnabled || _hasFaceTemplate) ? Theme.of(context).colorScheme.onSurface : Theme.of(context).colorScheme.outline,
             size: 28,
           ),
           tooltip: 'Login with Face Recognition',
@@ -1091,7 +1088,7 @@ class _LoginScreenState extends State<LoginScreen> with WidgetsBindingObserver {
           onPressed: _handleBiometricLogin,
           icon: Icon(
             Icons.fingerprint,
-            color: _isBiometricEnabled ? Colors.white70 : Colors.white24,
+            color: _isBiometricEnabled ? Theme.of(context).colorScheme.onSurface : Theme.of(context).colorScheme.outline,
             size: 28,
           ),
           tooltip: 'Login with Biometrics',
@@ -1113,18 +1110,18 @@ class _LoginScreenState extends State<LoginScreen> with WidgetsBindingObserver {
   Widget _buildPinStep() {
     return Column(
       children: [
-        const Text('Enter your 6-digit PIN', 
-          style: TextStyle(color: BrandColors.textPrimary)),
+        Text('Enter your 6-digit PIN', 
+          style: TextStyle(color: Theme.of(context).colorScheme.onSurfaceVariant)),
         const SizedBox(height: 24),
         TextField(
           controller: _pinController,
           keyboardType: TextInputType.number,
           obscureText: true,
           maxLength: 6,
-          style: const TextStyle(color: Colors.white, letterSpacing: 8, fontSize: 24),
+          style: TextStyle(color: Theme.of(context).colorScheme.onSurface, letterSpacing: 8, fontSize: 24),
           textAlign: TextAlign.center,
           decoration: _inputDecoration(
-            'PIN', 
+            'Enter 6-digit PIN', 
             Icons.password,
             suffixIcon: _buildBiometricSuffixIcons(),
           ),
@@ -1152,10 +1149,10 @@ class _LoginScreenState extends State<LoginScreen> with WidgetsBindingObserver {
   Widget _buildPinSetupStep() {
     return Column(
       children: [
-        const Text('Set your 6-digit PIN', 
+        Text('Set your 6-digit PIN', 
           style: TextStyle(color: BrandColors.textPrimary)),
         const SizedBox(height: 8),
-        const Text('This will be used for all transactions and logins.', 
+        Text('This will be used for all transactions and logins.', 
           style: TextStyle(color: BrandColors.textSecondary, fontSize: 12)),
         const SizedBox(height: 24),
         TextField(
@@ -1163,7 +1160,6 @@ class _LoginScreenState extends State<LoginScreen> with WidgetsBindingObserver {
           keyboardType: TextInputType.number,
           obscureText: true,
           maxLength: 6,
-          style: const TextStyle(color: Colors.white, letterSpacing: 8, fontSize: 24),
           textAlign: TextAlign.center,
           decoration: _inputDecoration('Create PIN', Icons.lock_outline),
           onChanged: (value) {
@@ -1181,17 +1177,10 @@ class _LoginScreenState extends State<LoginScreen> with WidgetsBindingObserver {
   InputDecoration _inputDecoration(String label, IconData icon, {Color? iconColor, String? errorText, Widget? suffixIcon}) {
     return InputDecoration(
       labelText: label,
-      prefixIcon: Icon(icon, color: iconColor ?? BrandColors.textSecondary),
+      prefixIcon: Icon(icon, color: iconColor ?? Theme.of(context).colorScheme.primary),
       suffixIcon: suffixIcon,
       errorText: errorText,
-      labelStyle: const TextStyle(color: BrandColors.textPrimary),
-      filled: true,
-      fillColor: Colors.white,
-      border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
-      focusedBorder: OutlineInputBorder(
-        borderRadius: BorderRadius.circular(12),
-        borderSide: const BorderSide(color: Color(0xFFF43F5E)),
-      ),
+      // WHY: Allow global theme to set label and hint styles for better contrast.
     );
   }
 

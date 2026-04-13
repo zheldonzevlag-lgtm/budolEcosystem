@@ -385,7 +385,7 @@ class _MarketingAdsScreenState extends State<MarketingAdsScreen> {
           const SizedBox(height: 24),
           UIUtils.formatBudolPayText(
             slide['description'],
-            baseStyle: const TextStyle(
+            baseStyle: TextStyle(
               fontSize: 18,
               color: BrandColors.textSecondary,
               height: 1.5,

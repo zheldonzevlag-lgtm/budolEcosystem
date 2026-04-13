@@ -5,7 +5,6 @@ import '../utils/js_helper.dart';
 import '../services/api_service.dart';
 import '../constants/routes.dart';
 import '../utils/ui_utils.dart';
-import '../utils/brand_colors.dart';
 
 class SplashScreen extends StatefulWidget {
   const SplashScreen({super.key});
@@ -84,7 +83,7 @@ class _SplashScreenState extends State<SplashScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: BrandColors.background,
+      backgroundColor: Theme.of(context).colorScheme.surface,
       body: Stack(
         children: [
           Center(
@@ -100,8 +99,8 @@ class _SplashScreenState extends State<SplashScreen> {
                 const SizedBox(height: 16),
                 Text(
                   _navStatus,
-                  style: const TextStyle(
-                    color: BrandColors.textSecondary,
+                  style: TextStyle(
+                    color: Theme.of(context).colorScheme.onSurfaceVariant,
                     fontSize: 12,
                     letterSpacing: 0.5,
                   ),
@@ -119,8 +118,8 @@ class _SplashScreenState extends State<SplashScreen> {
               children: [
                 Text(
                   'budolPay v${context.read<ApiService>().appVersion}',
-                  style: const TextStyle(
-                    color: BrandColors.textSecondary,
+                  style: TextStyle(
+                    color: Theme.of(context).colorScheme.onSurfaceVariant,
                     fontSize: 10,
                     letterSpacing: 1.0,
                   ),
@@ -135,14 +134,14 @@ class _SplashScreenState extends State<SplashScreen> {
                           context.read<ApiService>().resetAdsStatus();
                           Navigator.pushReplacementNamed(context, Routes.marketing);
                         },
-                        child: const Text('FORCE ADS', style: TextStyle(color: BrandColors.textSecondary, fontSize: 10)),
+                        child: Text('FORCE ADS', style: TextStyle(color: Theme.of(context).colorScheme.onSurfaceVariant, fontSize: 10)),
                       ),
                       const SizedBox(width: 20),
                       TextButton(
                         onPressed: () {
                           Navigator.pushReplacementNamed(context, Routes.login);
                         },
-                        child: const Text('FORCE LOGIN', style: TextStyle(color: BrandColors.textSecondary, fontSize: 10)),
+                        child: Text('FORCE LOGIN', style: TextStyle(color: Theme.of(context).colorScheme.onSurfaceVariant, fontSize: 10)),
                       ),
                     ],
                   ),
@@ -161,7 +160,7 @@ class _SplashScreenState extends State<SplashScreen> {
         Container(
           padding: const EdgeInsets.all(20),
           decoration: BoxDecoration(
-            color: BrandColors.primary.withValues(alpha: 0.15),
+            color: Theme.of(context).colorScheme.primary.withValues(alpha: 0.15),
             shape: BoxShape.circle,
           ),
           child: const Text(
