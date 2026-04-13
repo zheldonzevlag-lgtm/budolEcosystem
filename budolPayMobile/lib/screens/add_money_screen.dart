@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../utils/formatters.dart';
+import '../utils/brand_colors.dart';
 
 class AddMoneyScreen extends StatefulWidget {
   const AddMoneyScreen({super.key});
@@ -94,9 +95,10 @@ class _AddMoneyScreenState extends State<AddMoneyScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      backgroundColor: BrandColors.background,
       appBar: AppBar(
         title: const Text('Add Money'),
-        backgroundColor: const Color(0xFFF43F5E),
+        backgroundColor: BrandColors.primary,
         foregroundColor: Colors.white,
       ),
       body: SingleChildScrollView(

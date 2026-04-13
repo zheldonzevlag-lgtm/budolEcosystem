@@ -8,6 +8,7 @@ import 'package:provider/provider.dart';
 import '../services/api_service.dart';
 import '../utils/ui_utils.dart';
 import '../utils/formatters.dart';
+import '../utils/brand_colors.dart';
 import 'payment_status_screen.dart';
 
 class QRScannerScreen extends StatefulWidget {
@@ -280,7 +281,7 @@ class PaymentSummaryScreen extends StatelessWidget {
                         child: Icon(
                           Icons.account_balance_wallet_rounded,
                           size: 48,
-                          color: Color(0xFFF43F5E),
+                          color: BrandColors.primary,
                         ),
                       ),
                       const SizedBox(height: 12),
@@ -321,7 +322,7 @@ class PaymentSummaryScreen extends StatelessWidget {
                               style: const TextStyle(
                                 fontSize: 20,
                                 fontWeight: FontWeight.bold,
-                                color: Color(0xFFF43F5E),
+                                color: BrandColors.primary,
                                 letterSpacing: -0.5,
                               ),
                             ),
@@ -362,7 +363,7 @@ class PaymentSummaryScreen extends StatelessWidget {
                   ElevatedButton(
                     onPressed: () => _handlePayment(context),
                     style: ElevatedButton.styleFrom(
-                      backgroundColor: const Color(0xFFF43F5E),
+                      backgroundColor: BrandColors.primary,
                       foregroundColor: Colors.white,
                       padding: const EdgeInsets.symmetric(vertical: 14),
                       elevation: 0,
@@ -481,7 +482,7 @@ class QRScannerOverlayPainter extends CustomPainter {
 
     // Draw frame corners (Techno style)
     final Paint cornerPaint = Paint()
-      ..color = const Color(0xFFF43F5E) // BudolPay Pink
+      ..color = BrandColors.primary // BudolPay Ruby
       ..style = PaintingStyle.stroke
       ..strokeWidth = 3.0
       ..strokeCap = StrokeCap.round;
@@ -534,9 +535,9 @@ class QRScannerOverlayPainter extends CustomPainter {
     final Paint laserPaint = Paint()
       ..shader = LinearGradient(
         colors: [
-          const Color(0xFFF43F5E).withAlpha(0),
-          const Color(0xFFF43F5E),
-          const Color(0xFFF43F5E).withAlpha(0),
+          BrandColors.primary.withAlpha(0),
+          BrandColors.primary,
+          BrandColors.primary.withAlpha(0),
         ],
       ).createShader(Rect.fromLTWH(left, laserTop - 2, scanWidth, 4));
 
@@ -544,7 +545,7 @@ class QRScannerOverlayPainter extends CustomPainter {
     
     // Add glowing effect to the laser
     final Paint glowPaint = Paint()
-      ..color = const Color(0xFFF43F5E).withAlpha(76) // ~0.3 opacity
+      ..color = BrandColors.primary.withAlpha(76) // ~0.3 opacity
       ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 8);
     canvas.drawRect(Rect.fromLTWH(left + 5, laserTop - 2, scanWidth - 10, 4), glowPaint);
   }

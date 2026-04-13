@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../services/api_service.dart';
 import '../utils/formatters.dart';
+import '../utils/brand_colors.dart';
 
 class CashInScreen extends StatefulWidget {
   const CashInScreen({super.key});
@@ -120,9 +121,10 @@ class _CashInScreenState extends State<CashInScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      backgroundColor: BrandColors.background,
       appBar: AppBar(
         title: const Text('Cash In'),
-        backgroundColor: const Color(0xFFF43F5E),
+        backgroundColor: BrandColors.primary,
         foregroundColor: Colors.white,
       ),
       body: SingleChildScrollView(
@@ -218,7 +220,7 @@ class _CashInScreenState extends State<CashInScreen> {
               child: ElevatedButton(
                 onPressed: _isLoading ? null : _handleCashIn,
                 style: ElevatedButton.styleFrom(
-                  backgroundColor: const Color(0xFFF43F5E),
+                  backgroundColor: BrandColors.primary,
                   foregroundColor: Colors.white,
                   shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(8),

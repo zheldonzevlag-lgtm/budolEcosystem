@@ -2,6 +2,7 @@ import 'dart:io';
 import 'package:camera/camera.dart';
 import 'package:flutter/material.dart';
 import 'package:path_provider/path_provider.dart';
+import '../utils/brand_colors.dart';
 // import 'package:path/path.dart' as path; // Removed to avoid dependency issue if not in pubspec
 
 enum KYCCaptureType { face, idCard }
@@ -143,7 +144,7 @@ class _KYCCaptureScreenState extends State<KYCCaptureScreen> with WidgetsBinding
     if (!_isReady || _controller == null) {
       return const Scaffold(
         backgroundColor: Colors.black,
-        body: Center(child: CircularProgressIndicator(color: Color(0xFFF43F5E))),
+        body: Center(child: CircularProgressIndicator(color: BrandColors.primary)),
       );
     }
 
@@ -271,7 +272,7 @@ class _KYCCaptureScreenState extends State<KYCCaptureScreen> with WidgetsBinding
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.all(Radius.elliptical(140, 190)),
-        border: Border.all(color: const Color(0xFFF43F5E), width: 3),
+        border: Border.all(color: BrandColors.primary, width: 3),
       ),
     );
   }
@@ -283,7 +284,7 @@ class _KYCCaptureScreenState extends State<KYCCaptureScreen> with WidgetsBinding
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: const Color(0xFFF43F5E), width: 3),
+        border: Border.all(color: BrandColors.primary, width: 3),
       ),
     );
   }
@@ -301,7 +302,7 @@ class _KYCCaptureScreenState extends State<KYCCaptureScreen> with WidgetsBinding
           width: 70,
           height: 70,
           decoration: const BoxDecoration(
-            color: Color(0xFFF43F5E),
+            color: BrandColors.primary,
             shape: BoxShape.circle,
           ),
           child: _isCapturing

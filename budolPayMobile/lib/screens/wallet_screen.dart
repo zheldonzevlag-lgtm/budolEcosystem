@@ -4,6 +4,7 @@ import 'package:intl/intl.dart';
 import '../services/api_service.dart';
 import '../services/realtime_service.dart';
 import '../constants/routes.dart';
+import '../utils/brand_colors.dart';
 import 'dart:async';
 
 class WalletScreen extends StatefulWidget {
@@ -78,7 +79,7 @@ class _WalletScreenState extends State<WalletScreen> {
     return Scaffold(
       appBar: AppBar(
         title: const Text('Wallet'),
-        backgroundColor: const Color(0xFFF43F5E),
+        backgroundColor: BrandColors.primary,
         foregroundColor: Colors.white,
       ),
       body: SingleChildScrollView(
@@ -88,7 +89,7 @@ class _WalletScreenState extends State<WalletScreen> {
             Container(
               padding: const EdgeInsets.all(24),
               width: double.infinity,
-              color: const Color(0xFFF43F5E),
+              color: BrandColors.primary,
               child: Column(
                 children: [
                   const Text(
@@ -165,8 +166,8 @@ class _WalletScreenState extends State<WalletScreen> {
                     icon: const Icon(Icons.add),
                     label: const Text('Link New Account'),
                     style: OutlinedButton.styleFrom(
-                      foregroundColor: const Color(0xFFF43F5E),
-                      side: const BorderSide(color: Color(0xFFF43F5E)),
+                      foregroundColor: BrandColors.primary,
+                      side: const BorderSide(color: BrandColors.primary),
                       minimumSize: const Size(double.infinity, 50),
                     ),
                   ),
@@ -232,7 +233,7 @@ class _WalletScreenState extends State<WalletScreen> {
         LinearProgressIndicator(
           value: progress,
           backgroundColor: const Color(0xFFF1F5F9), // Slate 100
-          valueColor: const AlwaysStoppedAnimation<Color>(Color(0xFFF43F5E)),
+          valueColor: const AlwaysStoppedAnimation<Color>(BrandColors.primary),
           minHeight: 8,
           borderRadius: BorderRadius.circular(4),
         ),

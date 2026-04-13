@@ -5,6 +5,7 @@ import '../services/api_service.dart';
 import '../utils/formatters.dart';
 import '../utils/phone_utils.dart';
 import '../utils/ui_utils.dart';
+import '../utils/brand_colors.dart';
 
 class SendMoneyScreen extends StatefulWidget {
   final String? initialRecipient;
@@ -168,7 +169,7 @@ class _SendMoneyScreenState extends State<SendMoneyScreen> {
                 ),
                 UIUtils.formatBudolPayText(
                   'Reference: $reference',
-                  baseStyle: const TextStyle(fontSize: 12, color: Colors.white70)
+                  baseStyle: const TextStyle(fontSize: 12, color: BrandColors.textSecondary)
                 ),
               ],
             ),
@@ -199,9 +200,10 @@ class _SendMoneyScreenState extends State<SendMoneyScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      backgroundColor: BrandColors.background,
       appBar: AppBar(
         title: const Text('Send Money'),
-        backgroundColor: const Color(0xFFF43F5E),
+        backgroundColor: BrandColors.primary,
         foregroundColor: Colors.white,
       ),
       body: _isLoading 
@@ -279,7 +281,7 @@ class _SendMoneyScreenState extends State<SendMoneyScreen> {
                 ),
                 focusedBorder: OutlineInputBorder(
                   borderRadius: BorderRadius.circular(8),
-                  borderSide: const BorderSide(color: Color(0xFFF43F5E), width: 2),
+                  borderSide: const BorderSide(color: BrandColors.primary, width: 2),
                 ),
               ),
               style: const TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
@@ -307,7 +309,7 @@ class _SendMoneyScreenState extends State<SendMoneyScreen> {
               child: ElevatedButton(
                 onPressed: _isLoading ? null : _handleTransfer,
                 style: ElevatedButton.styleFrom(
-                  backgroundColor: const Color(0xFFF43F5E),
+                  backgroundColor: BrandColors.primary,
                   foregroundColor: Colors.white,
                   shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(8),

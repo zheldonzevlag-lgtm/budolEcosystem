@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import '../utils/ui_utils.dart';
 import '../utils/formatters.dart' as budol_format;
 import 'package:intl/intl.dart';
+import '../utils/brand_colors.dart';
 import 'package:provider/provider.dart';
 import '../services/api_service.dart';
 
@@ -105,9 +106,10 @@ class _TransactionDetailsScreenState extends State<TransactionDetailsScreen> {
                            widget.transaction['receiverId'] != null;
 
     return Scaffold(
+      backgroundColor: BrandColors.background,
       appBar: AppBar(
         title: const Text('Transaction Details'),
-        backgroundColor: const Color(0xFFF43F5E),
+        backgroundColor: BrandColors.primary,
         foregroundColor: Colors.white,
       ),
       body: SingleChildScrollView(

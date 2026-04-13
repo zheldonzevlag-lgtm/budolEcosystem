@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../services/api_service.dart';
+import '../utils/brand_colors.dart';
 
 class ChangeMpinScreen extends StatefulWidget {
   const ChangeMpinScreen({super.key});
@@ -67,10 +68,10 @@ class _ChangeMpinScreenState extends State<ChangeMpinScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color(0xFFF8FAFC),
+      backgroundColor: BrandColors.background,
       appBar: AppBar(
         title: const Text('Change MPIN', style: TextStyle(color: Colors.white)),
-        backgroundColor: const Color(0xFFF43F5E),
+        backgroundColor: BrandColors.primary,
         iconTheme: const IconThemeData(color: Colors.white),
         elevation: 0,
       ),

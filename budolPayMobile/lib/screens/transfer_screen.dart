@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../utils/formatters.dart';
+import '../utils/brand_colors.dart';
 
 class TransferScreen extends StatefulWidget {
   const TransferScreen({super.key});
@@ -18,9 +19,10 @@ class _TransferScreenState extends State<TransferScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      backgroundColor: BrandColors.background,
       appBar: AppBar(
         title: const Text('Bank Transfer'),
-        backgroundColor: const Color(0xFFF43F5E),
+        backgroundColor: BrandColors.primary,
         foregroundColor: Colors.white,
       ),
       body: SingleChildScrollView(
@@ -98,7 +100,7 @@ class _TransferScreenState extends State<TransferScreen> {
                 _showSuccessDialog(amount);
               },
               style: ElevatedButton.styleFrom(
-                backgroundColor: const Color(0xFFF43F5E),
+                backgroundColor: BrandColors.primary,
                 foregroundColor: Colors.white,
                 minimumSize: const Size(double.infinity, 56),
                 shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
@@ -134,7 +136,7 @@ class _TransferScreenState extends State<TransferScreen> {
                 Navigator.pop(context);
               },
               style: ElevatedButton.styleFrom(
-                backgroundColor: const Color(0xFFF43F5E),
+                backgroundColor: BrandColors.primary,
                 foregroundColor: Colors.white,
                 minimumSize: const Size(double.infinity, 48),
                 shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),

@@ -9,6 +9,7 @@ import '../constants/routes.dart';
 import '../services/biometric_service.dart';
 import '../services/face_embedding_service.dart';
 import '../utils/ui_utils.dart';
+import '../utils/brand_colors.dart';
 import 'kyc_verification_screen.dart';
 
 class SettingsScreen extends StatefulWidget {
@@ -242,10 +243,10 @@ class _SettingsScreenState extends State<SettingsScreen> {
                 Container(
                   padding: const EdgeInsets.all(16),
                   decoration: BoxDecoration(
-                    color: const Color(0xFFF43F5E).withAlpha(26),
+                    color: BrandColors.primary.withAlpha(26),
                     shape: BoxShape.circle,
                   ),
-                  child: const Icon(Icons.lock_outline, color: Color(0xFFF43F5E), size: 40),
+                  child: const Icon(Icons.lock_outline, color: BrandColors.primary, size: 40),
                 ),
                 const SizedBox(height: 24),
                 const Text(
@@ -299,7 +300,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                           }
                         },
                         style: ElevatedButton.styleFrom(
-                          backgroundColor: const Color(0xFFF43F5E),
+                          backgroundColor: BrandColors.primary,
                           padding: const EdgeInsets.symmetric(vertical: 16),
                           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
                         ),
@@ -330,10 +331,10 @@ class _SettingsScreenState extends State<SettingsScreen> {
               Container(
                 padding: const EdgeInsets.all(16),
                 decoration: BoxDecoration(
-                  color: const Color(0xFFF43F5E).withAlpha(26),
+                  color: BrandColors.primary.withAlpha(26),
                   shape: BoxShape.circle,
                 ),
-                child: const Icon(Icons.logout, color: Color(0xFFF43F5E), size: 40),
+                child: const Icon(Icons.logout, color: BrandColors.primary, size: 40),
               ),
               const SizedBox(height: 24),
               const Text(
@@ -387,7 +388,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                         }
                       },
                       style: ElevatedButton.styleFrom(
-                        backgroundColor: const Color(0xFFF43F5E),
+                        backgroundColor: BrandColors.primary,
                         padding: const EdgeInsets.symmetric(vertical: 16),
                         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
                       ),
@@ -427,7 +428,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
     return Scaffold(
       appBar: AppBar(
         title: const Text('Settings'),
-        backgroundColor: const Color(0xFFF43F5E),
+        backgroundColor: BrandColors.primary,
         foregroundColor: Colors.white,
       ),
       body: Stack(
@@ -481,7 +482,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                         ),
                       ),
                       IconButton(
-                        icon: const Icon(Icons.edit, color: Color(0xFFF43F5E)),
+                        icon: const Icon(Icons.edit, color: BrandColors.primary),
                         onPressed: () {
                           Navigator.pushNamed(context, Routes.editProfile);
                         },
@@ -565,7 +566,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                     icon: const Icon(Icons.logout, color: Colors.white),
                     label: const Text('Logout Account', style: TextStyle(color: Colors.white, fontSize: 16, fontWeight: FontWeight.bold)),
                     style: ElevatedButton.styleFrom(
-                      backgroundColor: const Color(0xFFF43F5E),
+                      backgroundColor: BrandColors.primary,
                       padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 32),
                       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
                       elevation: 0,
@@ -739,7 +740,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
   Widget _buildSettingsTile(IconData icon, String title, String subtitle, VoidCallback? onTap, {Widget? trailing}) {
     return ListTile(
       onTap: onTap,
-      leading: Icon(icon, color: const Color(0xFFF43F5E)),
+      leading: Icon(icon, color: BrandColors.primary),
       title: Text(title, style: const TextStyle(fontWeight: FontWeight.w500)),
       subtitle: subtitle.isNotEmpty ? Text(subtitle) : null,
       trailing: trailing ?? (onTap != null ? const Icon(Icons.chevron_right) : null),

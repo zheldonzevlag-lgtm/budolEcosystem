@@ -9,6 +9,7 @@ import '../constants/routes.dart';
 import '../utils/ui_utils.dart';
 import '../utils/js_helper.dart';
 import '../utils/formatters.dart' as budol_format;
+import '../utils/brand_colors.dart';
 import 'dart:async';
 
 class HomeScreen extends StatefulWidget {
@@ -264,7 +265,7 @@ class _HomeScreenState extends State<HomeScreen> {
             color: Colors.white,
           ),
         ),
-        backgroundColor: const Color(0xFFF43F5E),
+        backgroundColor: BrandColors.primary,
         foregroundColor: Colors.white,
         actions: [
           // Connection status indicator
@@ -304,7 +305,7 @@ class _HomeScreenState extends State<HomeScreen> {
                 padding: const EdgeInsets.all(24),
                 width: double.infinity,
                 decoration: const BoxDecoration(
-                  color: Color(0xFFF43F5E),
+                  color: BrandColors.primary,
                   borderRadius: BorderRadius.only(
                     bottomLeft: Radius.circular(32),
                     bottomRight: Radius.circular(32),

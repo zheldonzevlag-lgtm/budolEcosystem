@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
 import 'dart:io';
+import '../utils/brand_colors.dart';
 
 class ChangePhoneNumberScreen extends StatefulWidget {
   const ChangePhoneNumberScreen({super.key});
@@ -72,7 +73,7 @@ class _ChangePhoneNumberScreenState extends State<ChangePhoneNumberScreen> {
               Navigator.pop(context); // Close dialog
               Navigator.pop(context); // Return to settings
             },
-            child: const Text('OK', style: TextStyle(color: Color(0xFFF43F5E))),
+            child: const Text('OK', style: TextStyle(color: BrandColors.primary)),
           ),
         ],
       ),
@@ -82,9 +83,10 @@ class _ChangePhoneNumberScreenState extends State<ChangePhoneNumberScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      backgroundColor: BrandColors.background,
       appBar: AppBar(
         title: const Text('Change Phone Number'),
-        backgroundColor: const Color(0xFFF43F5E),
+        backgroundColor: BrandColors.primary,
         foregroundColor: Colors.white,
       ),
       body: SingleChildScrollView(
@@ -128,7 +130,7 @@ class _ChangePhoneNumberScreenState extends State<ChangePhoneNumberScreen> {
                   ? const Column(
                       mainAxisAlignment: MainAxisAlignment.center,
                       children: [
-                        Icon(Icons.camera_alt, size: 40, color: Color(0xFFF43F5E)),
+                        Icon(Icons.camera_alt, size: 40, color: BrandColors.primary),
                         SizedBox(height: 12),
                         Text('Capture ID Photo', style: TextStyle(fontWeight: FontWeight.bold)),
                       ],
@@ -176,7 +178,7 @@ class _ChangePhoneNumberScreenState extends State<ChangePhoneNumberScreen> {
             ),
             focusedBorder: OutlineInputBorder(
               borderRadius: BorderRadius.circular(12),
-              borderSide: const BorderSide(color: Color(0xFFF43F5E)),
+              borderSide: const BorderSide(color: BrandColors.primary),
             ),
             contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
           ),

@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../services/api_service.dart';
+import '../utils/brand_colors.dart';
 import 'send_money_screen.dart';
 
 class FavoritesScreen extends StatefulWidget {
@@ -63,9 +64,10 @@ class _FavoritesScreenState extends State<FavoritesScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      backgroundColor: BrandColors.background,
       appBar: AppBar(
         title: const Text('Favorite Recipients'),
-        backgroundColor: const Color(0xFFF43F5E),
+        backgroundColor: BrandColors.primary,
         foregroundColor: Colors.white,
       ),
       body: _isLoading
@@ -133,7 +135,7 @@ class _FavoritesScreenState extends State<FavoritesScreen> {
                             mainAxisSize: MainAxisSize.min,
                             children: [
                               IconButton(
-                                icon: const Icon(Icons.send_outlined, color: Color(0xFFF43F5E), size: 20),
+                                icon: const Icon(Icons.send_outlined, color: BrandColors.primary, size: 20),
                                 onPressed: () {
                                   Navigator.push(
                                     context,

@@ -7,6 +7,7 @@ import '../services/realtime_service.dart';
 import '../constants/routes.dart';
 import '../utils/ui_utils.dart';
 import '../utils/formatters.dart' as budol_format;
+import '../utils/brand_colors.dart';
 import 'dart:async';
 
 class TransactionHistoryScreen extends StatefulWidget {
@@ -111,7 +112,7 @@ class _TransactionHistoryScreenState extends State<TransactionHistoryScreen> {
     return Scaffold(
       appBar: AppBar(
         title: const Text('Transaction History'),
-        backgroundColor: const Color(0xFFF43F5E),
+        backgroundColor: BrandColors.primary,
         foregroundColor: Colors.white,
         actions: [
           IconButton(
@@ -178,7 +179,7 @@ class _TransactionHistoryScreenState extends State<TransactionHistoryScreen> {
                         backgroundColor: const Color(0xFFF1F5F9), // Slate 100
                         child: Icon(
                           isIncome ? Icons.arrow_downward : Icons.arrow_upward,
-                          color: isIncome ? Colors.green : const Color(0xFFF43F5E),
+                          color: isIncome ? Colors.green : BrandColors.primary,
                           size: 20,
                         ),
                       ),

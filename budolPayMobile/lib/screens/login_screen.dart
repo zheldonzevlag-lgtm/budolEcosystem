@@ -12,6 +12,7 @@ import '../services/api_service.dart';
 import '../services/biometric_service.dart';
 import '../constants/routes.dart';
 import '../utils/ui_utils.dart';
+import '../utils/brand_colors.dart';
 
 enum LoginStep { phone, otp, pin, pinSetup }
 enum LoginMethod { mobile, email }
@@ -755,14 +756,14 @@ class _LoginScreenState extends State<LoginScreen> with WidgetsBindingObserver {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color(0xFF0F172A),
+      backgroundColor: BrandColors.background,
       extendBodyBehindAppBar: true,
       appBar: AppBar(
         backgroundColor: Colors.transparent,
         elevation: 0,
         actions: [
           IconButton(
-            icon: const Icon(Icons.settings, color: Colors.white70),
+            icon: const Icon(Icons.settings, color: BrandColors.textPrimary),
             onPressed: () => UIUtils.showHostConfigDialog(context),
             tooltip: 'API Configuration',
           ),
@@ -794,7 +795,7 @@ class _LoginScreenState extends State<LoginScreen> with WidgetsBindingObserver {
                 TextButton(
                   onPressed: () => setState(() => _currentStep = LoginStep.phone),
                   child: const Text('Back to Login', 
-                    style: TextStyle(color: Colors.white70)),
+                    style: TextStyle(color: BrandColors.textPrimary)),
                 ),
               const SizedBox(height: 12),
               Text(
@@ -817,7 +818,7 @@ class _LoginScreenState extends State<LoginScreen> with WidgetsBindingObserver {
           Container(
             padding: const EdgeInsets.all(20),
             decoration: BoxDecoration(
-              color: const Color(0xFFF43F5E).withValues(alpha: 0.15),
+              color: BrandColors.primary.withValues(alpha: 0.15),
               shape: BoxShape.circle,
             ),
             child: const Text('₱',
@@ -848,7 +849,7 @@ class _LoginScreenState extends State<LoginScreen> with WidgetsBindingObserver {
     return Column(
       children: [
         const Text('Login to continue', 
-          style: TextStyle(color: Colors.white70)),
+          style: TextStyle(color: BrandColors.textPrimary)),
         const SizedBox(height: 24),
         _buildMethodToggle(),
         const SizedBox(height: 24),
@@ -860,9 +861,9 @@ class _LoginScreenState extends State<LoginScreen> with WidgetsBindingObserver {
             decoration: _inputDecoration(
               'Mobile Number', 
               Icons.phone_android, 
-              iconColor: const Color(0xFFF43F5E),
+              iconColor: BrandColors.primary,
               suffixIcon: _checkingIdentifier 
-                ? const SizedBox(width: 20, height: 20, child: Padding(padding: EdgeInsets.all(12), child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white70)))
+                ? const SizedBox(width: 20, height: 20, child: Padding(padding: EdgeInsets.all(12), child: CircularProgressIndicator(strokeWidth: 2, color: BrandColors.textPrimary)))
                 : !_identifierExists 
                   ? const Icon(Icons.error_outline, color: Colors.redAccent)
                   : _isPhoneValid ? const Icon(Icons.check_circle_outline, color: Colors.greenAccent) : null,
@@ -877,9 +878,9 @@ class _LoginScreenState extends State<LoginScreen> with WidgetsBindingObserver {
             decoration: _inputDecoration(
               'Email Address', 
               Icons.email_outlined, 
-              iconColor: const Color(0xFFF43F5E),
+              iconColor: BrandColors.primary,
               suffixIcon: _checkingIdentifier 
-                ? const SizedBox(width: 20, height: 20, child: Padding(padding: EdgeInsets.all(12), child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white70)))
+                ? const SizedBox(width: 20, height: 20, child: Padding(padding: EdgeInsets.all(12), child: CircularProgressIndicator(strokeWidth: 2, color: BrandColors.textPrimary)))
                 : !_identifierExists 
                   ? const Icon(Icons.error_outline, color: Colors.redAccent)
                   : _isEmailValid ? const Icon(Icons.check_circle_outline, color: Colors.greenAccent) : null,
@@ -894,7 +895,7 @@ class _LoginScreenState extends State<LoginScreen> with WidgetsBindingObserver {
             decoration: _inputDecoration(
               'Password', 
               Icons.lock_outline,
-              iconColor: const Color(0xFFF43F5E),
+              iconColor: BrandColors.primary,
               suffixIcon: IconButton(
                 icon: Icon(
                   _obscurePassword ? Icons.visibility_off : Icons.visibility,
@@ -943,7 +944,7 @@ class _LoginScreenState extends State<LoginScreen> with WidgetsBindingObserver {
                 padding: const EdgeInsets.symmetric(vertical: 12),
                 decoration: BoxDecoration(
                   color: _loginMethod == LoginMethod.mobile 
-                    ? const Color(0xFFF43F5E) 
+                    ? BrandColors.primary 
                     : Colors.transparent,
                   borderRadius: BorderRadius.circular(10),
                 ),
@@ -981,7 +982,7 @@ class _LoginScreenState extends State<LoginScreen> with WidgetsBindingObserver {
                 padding: const EdgeInsets.symmetric(vertical: 12),
                 decoration: BoxDecoration(
                   color: _loginMethod == LoginMethod.email 
-                    ? const Color(0xFFF43F5E) 
+                    ? BrandColors.primary 
                     : Colors.transparent,
                   borderRadius: BorderRadius.circular(10),
                 ),
@@ -1006,7 +1007,7 @@ class _LoginScreenState extends State<LoginScreen> with WidgetsBindingObserver {
     return Column(
       children: [
         const Text('Enter the 6-digit OTP sent to your phone', 
-          style: TextStyle(color: Colors.white70)),
+          style: TextStyle(color: BrandColors.textPrimary)),
         const SizedBox(height: 24),
         TextField(
           controller: _otpController,
@@ -1025,13 +1026,13 @@ class _LoginScreenState extends State<LoginScreen> with WidgetsBindingObserver {
         Row(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            const Text('Didn\'t receive the code?', style: TextStyle(color: Colors.white54, fontSize: 14)),
+            const Text('Didn\'t receive the code?', style: TextStyle(color: BrandColors.textSecondary, fontSize: 14)),
             TextButton(
               onPressed: _resendCountdown > 0 ? null : _handleResendOtp,
               child: Text(
                 _resendCountdown > 0 ? 'Resend in ${_resendCountdown}s' : 'Resend Now',
                 style: TextStyle(
-                  color: _resendCountdown > 0 ? Colors.white24 : const Color(0xFFF43F5E),
+                  color: _resendCountdown > 0 ? Colors.white24 : BrandColors.primary,
                   fontWeight: FontWeight.bold,
                   fontSize: 14,
                 ),
@@ -1113,7 +1114,7 @@ class _LoginScreenState extends State<LoginScreen> with WidgetsBindingObserver {
     return Column(
       children: [
         const Text('Enter your 6-digit PIN', 
-          style: TextStyle(color: Colors.white70)),
+          style: TextStyle(color: BrandColors.textPrimary)),
         const SizedBox(height: 24),
         TextField(
           controller: _pinController,
@@ -1152,10 +1153,10 @@ class _LoginScreenState extends State<LoginScreen> with WidgetsBindingObserver {
     return Column(
       children: [
         const Text('Set your 6-digit PIN', 
-          style: TextStyle(color: Colors.white70)),
+          style: TextStyle(color: BrandColors.textPrimary)),
         const SizedBox(height: 8),
         const Text('This will be used for all transactions and logins.', 
-          style: TextStyle(color: Colors.white54, fontSize: 12)),
+          style: TextStyle(color: BrandColors.textSecondary, fontSize: 12)),
         const SizedBox(height: 24),
         TextField(
           controller: _pinController,
@@ -1180,12 +1181,12 @@ class _LoginScreenState extends State<LoginScreen> with WidgetsBindingObserver {
   InputDecoration _inputDecoration(String label, IconData icon, {Color? iconColor, String? errorText, Widget? suffixIcon}) {
     return InputDecoration(
       labelText: label,
-      prefixIcon: Icon(icon, color: iconColor ?? Colors.white70),
+      prefixIcon: Icon(icon, color: iconColor ?? BrandColors.textSecondary),
       suffixIcon: suffixIcon,
       errorText: errorText,
-      labelStyle: const TextStyle(color: Colors.white70),
+      labelStyle: const TextStyle(color: BrandColors.textPrimary),
       filled: true,
-      fillColor: Colors.white.withValues(alpha: 0.1),
+      fillColor: Colors.white,
       border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
       focusedBorder: OutlineInputBorder(
         borderRadius: BorderRadius.circular(12),
@@ -1201,9 +1202,9 @@ class _LoginScreenState extends State<LoginScreen> with WidgetsBindingObserver {
       child: ElevatedButton(
         onPressed: (_isLoading || !isEnabled) ? null : onPressed,
         style: ElevatedButton.styleFrom(
-          backgroundColor: const Color(0xFFF43F5E),
+          backgroundColor: BrandColors.primary,
           foregroundColor: Colors.white,
-          disabledBackgroundColor: const Color(0xFFF43F5E).withValues(alpha: 0.5),
+          disabledBackgroundColor: BrandColors.primary.withValues(alpha: 0.5),
           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
           elevation: _isLoading ? 0 : 2,
         ),
