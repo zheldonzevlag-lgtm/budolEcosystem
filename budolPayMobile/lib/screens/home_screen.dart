@@ -314,25 +314,29 @@ class _HomeScreenState extends State<HomeScreen> {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Row(
+                      crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Flexible(
-                          child: Row(
-                            mainAxisSize: MainAxisSize.min,
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
                               Text(
                                 _greeting,
-                                style: const TextStyle(color: Colors.white, fontSize: 16, fontWeight: FontWeight.w500),
-                              ),
-                              Flexible(
-                                child: Text(
-                                  _isNameVisible ? userName : '•' * userName.length,
-                                  style: const TextStyle(
-                                    color: Colors.white,
-                                    fontSize: 18,
-                                    fontWeight: FontWeight.w500,
-                                  ),
-                                  overflow: TextOverflow.ellipsis,
+                                style: TextStyle(
+                                  color: Colors.white.withValues(alpha: 0.8),
+                                  fontSize: 14,
+                                  fontWeight: FontWeight.w400,
                                 ),
+                              ),
+                              const SizedBox(height: 4),
+                              Text(
+                                _isNameVisible ? userName : '•' * (userName.length > 15 ? 15 : userName.length),
+                                style: const TextStyle(
+                                  color: Colors.white,
+                                  fontSize: 22,
+                                  fontWeight: FontWeight.bold,
+                                ),
+                                overflow: TextOverflow.ellipsis,
                               ),
                             ],
                           ),
@@ -344,10 +348,13 @@ class _HomeScreenState extends State<HomeScreen> {
                               _isNameVisible = !_isNameVisible;
                             });
                           },
-                          child: Icon(
-                            _isNameVisible ? Icons.visibility : Icons.visibility_off,
-                            color: Colors.white70,
-                            size: 16,
+                          child: Container(
+                            margin: const EdgeInsets.only(top: 24), // Align with the bottom of the name line
+                            child: Icon(
+                              _isNameVisible ? Icons.visibility : Icons.visibility_off,
+                              color: Colors.white70,
+                              size: 18,
+                            ),
                           ),
                         ),
                       ],
