@@ -145,14 +145,7 @@ class _TransactionHistoryScreenState extends State<TransactionHistoryScreen> {
                     final bool isIncome = tx['receiverId'] == userId;
                     
                     // Safe parsing of amount
-                    double amount = 0.0;
-                    if (tx['amount'] != null) {
-                      if (tx['amount'] is num) {
-                        amount = (tx['amount'] as num).toDouble();
-                      } else {
-                        amount = double.tryParse(tx['amount'].toString()) ?? 0.0;
-                      }
-                    }
+                    double amount = budol_format.AmountUtils.toDouble(tx['amount']);
 
                     final String amountStr = '${isIncome ? '+' : '-'} PHP ${NumberFormat('#,##0.00').format(amount)}';
                     final Color amountColor = isIncome ? Colors.green : Colors.red;

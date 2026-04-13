@@ -1210,9 +1210,9 @@ class ApiService extends ChangeNotifier {
     if (response.statusCode == 200) {
       final data = _safeDecode(response, context: 'getBalance');
       if (data is Map && data.containsKey('balance')) {
-        return (data['balance'] ?? 0.0).toDouble();
+        return AmountUtils.toDouble(data['balance']);
       }
-      return (data ?? 0.0).toDouble();
+      return AmountUtils.toDouble(data);
     } else {
       throw Exception('Failed to fetch balance');
     }

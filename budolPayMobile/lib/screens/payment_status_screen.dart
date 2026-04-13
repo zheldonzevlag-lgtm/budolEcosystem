@@ -3,6 +3,7 @@ import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
 import '../constants/routes.dart';
 import '../services/realtime_service.dart';
+import '../utils/formatters.dart';
 import 'dart:async';
 
 enum PaymentStatus { verifying, success, failed }
@@ -247,14 +248,7 @@ class _PaymentStatusScreenState extends State<PaymentStatusScreen> with SingleTi
     final data = _updatedTransactionData!;
     
     // Safe parsing of amount
-    double amount = 0.0;
-    if (data['amount'] != null) {
-      if (data['amount'] is num) {
-        amount = (data['amount'] as num).toDouble();
-      } else {
-        amount = double.tryParse(data['amount'].toString()) ?? 0.0;
-      }
-    }
+    double amount = AmountUtils.toDouble(data['amount']);
 
     final merchant = data['storeName'] ?? data['merchant'] ?? 'Merchant';
     

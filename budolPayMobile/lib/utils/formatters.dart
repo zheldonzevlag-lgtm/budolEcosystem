@@ -66,6 +66,19 @@ class AmountUtils {
     return NumberFormat('###0.00', 'en_US').format(amount);
   }
 
+  static double toDouble(dynamic value) {
+    if (value == null) return 0.0;
+    if (value is double) return value;
+    if (value is int) return value.toDouble();
+    if (value is String) {
+      if (value.isEmpty) return 0.0;
+      // Remove commas if any (common in formatted strings)
+      final clean = value.replaceAll(',', '');
+      return double.tryParse(clean) ?? 0.0;
+    }
+    return 0.0;
+  }
+
   static double parse(String text) {
     if (text.isEmpty) return 0.0;
     // Remove commas added by the CurrencyInputFormatter

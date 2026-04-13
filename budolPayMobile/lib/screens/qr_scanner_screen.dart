@@ -7,6 +7,7 @@ import 'package:mobile_scanner/mobile_scanner.dart';
 import 'package:provider/provider.dart';
 import '../services/api_service.dart';
 import '../utils/ui_utils.dart';
+import '../utils/formatters.dart';
 import 'payment_status_screen.dart';
 
 class QRScannerScreen extends StatefulWidget {
@@ -241,14 +242,7 @@ class PaymentSummaryScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     // Safe parsing of amount
-    double amount = 0.0;
-    if (paymentData['amount'] != null) {
-      if (paymentData['amount'] is num) {
-        amount = (paymentData['amount'] as num).toDouble();
-      } else {
-        amount = double.tryParse(paymentData['amount'].toString()) ?? 0.0;
-      }
-    }
+    double amount = AmountUtils.toDouble(paymentData['amount']);
 
     final storeName = paymentData['storeName'] ?? paymentData['merchant'] ?? 'Unknown Merchant';
     final orderId = paymentData['orderId'] ?? 'N/A';

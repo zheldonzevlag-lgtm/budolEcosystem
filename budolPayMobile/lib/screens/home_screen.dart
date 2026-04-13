@@ -506,13 +506,8 @@ class _HomeScreenState extends State<HomeScreen> {
                           final String title = tx['description'] ?? (isIncome ? 'Money Received' : 'Money Sent');
                           
                           // Safe parsing of amount
-                          double amount = 0.0;
                           if (tx['amount'] != null) {
-                            if (tx['amount'] is num) {
-                              amount = (tx['amount'] as num).toDouble();
-                            } else {
-                              amount = double.tryParse(tx['amount'].toString()) ?? 0.0;
-                            }
+                            amount = budol_format.AmountUtils.toDouble(tx['amount']);
                           }
                           
                           final String amountStr = '${isIncome ? '+' : '-'} PHP ${NumberFormat('#,##0.00').format(amount)}';

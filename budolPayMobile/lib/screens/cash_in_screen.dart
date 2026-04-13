@@ -51,8 +51,8 @@ class _CashInScreenState extends State<CashInScreen> {
     final apiService = Provider.of<ApiService>(context, listen: false);
     final user = apiService.currentUser;
     if (user != null && user['kycTier'] == 'BASIC') {
-      final double monthlyReceived = (user['monthlyReceived'] ?? 0).toDouble();
-      final double walletBalance = (user['walletBalance'] ?? 0).toDouble();
+      final double monthlyReceived = AmountUtils.toDouble(user['monthlyReceived']);
+      final double walletBalance = AmountUtils.toDouble(user['walletBalance']);
       final double incomingRemaining = 5000.0 - monthlyReceived;
       final double walletRemaining = 10000.0 - walletBalance;
       
@@ -171,8 +171,8 @@ class _CashInScreenState extends State<CashInScreen> {
                   builder: (context, apiService, _) {
                     final user = apiService.currentUser;
                     if (user != null && user['kycTier'] == 'BASIC') {
-                      final double monthlyReceived = (user['monthlyReceived'] ?? 0).toDouble();
-                      final double walletBalance = (user['walletBalance'] ?? 0).toDouble();
+                      final double monthlyReceived = AmountUtils.toDouble(user['monthlyReceived']);
+                      final double walletBalance = AmountUtils.toDouble(user['walletBalance']);
                       final double incomingRemaining = 5000.0 - monthlyReceived;
                       final double walletRemaining = 10000.0 - walletBalance;
                       final double allowed = incomingRemaining < walletRemaining ? incomingRemaining : walletRemaining;

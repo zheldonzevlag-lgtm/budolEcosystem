@@ -479,39 +479,24 @@ router.post('/transfer', async (req, res, next) => {
             }
         });
 
-        // 5.1 Create Compliance Audit Log (BSP Circular 808)
-        const auditLog = await prisma.auditLog.create({
-            data: {
-                userId: senderId,
-                action: 'P2P_TRANSFER_COMPLETED',
-                entity: 'Financial',
-                entityId: completedTransaction.id,
-                newValue: {
-                    amount: completedTransaction.amount,
-                    referenceId: completedTransaction.referenceId,
-                    type: completedTransaction.type,
-                    receiverId: completedTransaction.receiverId
-                },
-                metadata: {
-                    compliance: 'BSP Circular No. 808',
-                    standard: 'Financial Transaction Audit',
-                    timestamp: new Date().toISOString()
-                }
-            },
-            include: {
-                user: {
-                    select: {
-                        id: true,
-                        firstName: true,
-                        lastName: true,
-                        email: true
-                    }
-                }
-            }
-        });
+        // 5.1 WHY: Only ONE audit log is created here using the centralized createAuditLog() helper.
+        //      The previous direct prisma.auditLog.create() call was REMOVED because it duplicated
+        //      the audit entry — both writes used action: 'P2P_TRANSFER_COMPLETED' for the same
+        //      transaction, causing double entries in the Forensic Audit Trail.
+        //      createAuditLog() is the canonical path (includes IP, device, compliance metadata).
+        const completedAuditLog = await createAuditLog(req, senderId, 'P2P_TRANSFER_COMPLETED', {
+            transactionId: completedTransaction.id,
+            receiverId: resolvedReceiverId,
+            amount,
+            referenceId,
+            type: completedTransaction.type,
+            compliance: 'BSP Circular No. 808'
+        }, 'Financial', completedTransaction.id);
 
-        // 5.2 Notify Admin in Real-time (AUDIT_LOG_CREATED)
-        notifyAdmin('AUDIT_LOG_CREATED', auditLog);
+        // 5.2 Notify Admin in Real-time with the single audit log entry
+        if (completedAuditLog) {
+            notifyAdmin('AUDIT_LOG_CREATED', completedAuditLog);
+        }
 
         // 6. Notify Parties in Real-time
         const receiverName = `${completedTransaction.receiver.firstName || ''} ${completedTransaction.receiver.lastName || ''}`.trim() || completedTransaction.receiver.email;
@@ -528,14 +513,6 @@ router.post('/transfer', async (req, res, next) => {
 
         // 7. Notify Admin in Real-time
         notifyAdmin('new_transaction', completedTransaction);
-
-        // 8. Create forensic audit log for completion
-        await createAuditLog(req, senderId, 'P2P_TRANSFER_COMPLETED', {
-            transactionId: completedTransaction.id,
-            receiverId: resolvedReceiverId,
-            amount,
-            referenceId
-        }, 'Financial', completedTransaction.id);
 
         // 9. Static thresholds check (already handled by refined engine above in Step 3)
         // Leaving as placeholder for future route-specific rules

@@ -113,7 +113,7 @@ class _SendMoneyScreenState extends State<SendMoneyScreen> {
     final apiService = Provider.of<ApiService>(context, listen: false);
     final user = apiService.currentUser;
     if (user != null && user['kycTier'] == 'BASIC') {
-      final double monthlySent = (user['monthlySent'] ?? 0).toDouble();
+      final double monthlySent = AmountUtils.toDouble(user['monthlySent']);
       final double remaining = 5000.0 - monthlySent;
       if (amount > remaining) {
         ScaffoldMessenger.of(context).showSnackBar(
@@ -244,7 +244,7 @@ class _SendMoneyScreenState extends State<SendMoneyScreen> {
                   builder: (context, apiService, _) {
                     final user = apiService.currentUser;
                     if (user != null && user['kycTier'] == 'BASIC') {
-                      final double monthlySent = (user['monthlySent'] ?? 0).toDouble();
+                      final double monthlySent = AmountUtils.toDouble(user['monthlySent']);
                       final double remaining = 5000.0 - monthlySent;
                        return Text(
                         'Remaining limit: ₱${remaining.toStringAsFixed(2)}',
