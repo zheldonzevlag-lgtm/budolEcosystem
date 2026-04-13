@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:flutter/foundation.dart';
 import 'package:intl/intl.dart';
+import '../utils/brand_colors.dart';
 import '../services/api_service.dart';
 import '../services/socket_service.dart';
 import '../services/realtime_service.dart';
@@ -257,14 +258,26 @@ class _HomeScreenState extends State<HomeScreen> {
         automaticallyImplyLeading: false,
         title: UIUtils.formatBudolPayText(
           'budol₱ay',
-          useColors: false,
+          useColors: true,
           baseStyle: const TextStyle(
-            fontSize: 20,
+            fontSize: 22,
             fontWeight: FontWeight.bold,
-            color: Colors.white,
           ),
         ),
-        backgroundColor: Theme.of(context).colorScheme.primary,
+        backgroundColor: Colors.transparent,
+        elevation: 0,
+        flexibleSpace: Container(
+          decoration: BoxDecoration(
+            gradient: LinearGradient(
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
+              colors: [
+                BrandColors.primary,
+                const Color(0xFF991B1B), // Deep Ruby
+              ],
+            ),
+          ),
+        ),
         foregroundColor: Colors.white,
         actions: [
           // Connection status indicator
@@ -299,86 +312,28 @@ class _HomeScreenState extends State<HomeScreen> {
           physics: const AlwaysScrollableScrollPhysics(),
           child: Column(
             children: [
-              // Balance Card
-              Container(
-                padding: const EdgeInsets.all(24),
-                width: double.infinity,
-                decoration: BoxDecoration(
-                  color: Theme.of(context).colorScheme.primary,
-                  borderRadius: BorderRadius.only(
-                    bottomLeft: Radius.circular(32),
-                    bottomRight: Radius.circular(32),
+              Stack(
+                children: [
+                  Container(
+                    height: 180,
+                    width: double.infinity,
+                    decoration: BoxDecoration(
+                      gradient: LinearGradient(
+                        begin: Alignment.topLeft,
+                        end: Alignment.bottomRight,
+                        colors: [
+                          BrandColors.primary,
+                          const Color(0xFF991B1B).withValues(alpha: 0.9), // Deep Ruby
+                        ],
+                      ),
+                      borderRadius: const BorderRadius.only(
+                        bottomLeft: Radius.circular(40),
+                        bottomRight: Radius.circular(40),
+                      ),
+                    ),
                   ),
-                ),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    _buildAdaptiveGreeting(context, apiService, userName),
-                    const SizedBox(height: 16),
-                    const Text(
-                      'Available Balance',
-                      style: TextStyle(color: Colors.white70, fontSize: 14),
-                    ),
-                    const SizedBox(height: 8),
-                    _isLoading
-                        ? const SizedBox(
-                            height: 30,
-                            child: Center(child: CircularProgressIndicator(color: Colors.white)),
-                          )
-                        : Row(
-                            crossAxisAlignment: CrossAxisAlignment.center,
-                            children: [
-                              Text(
-                                _isBalanceVisible ? _balance : '₱ ••••••',
-                                style: const TextStyle(
-                                  color: Colors.white,
-                                  fontSize: 22,
-                                  fontWeight: FontWeight.bold,
-                                ),
-                              ),
-                              const SizedBox(width: 8),
-                              IconButton(
-                                constraints: const BoxConstraints(),
-                                padding: EdgeInsets.zero,
-                                iconSize: 20,
-                                icon: Icon(
-                                  _isBalanceVisible ? Icons.visibility : Icons.visibility_off,
-                                  color: Colors.white70,
-                                ),
-                                onPressed: () {
-                                  setState(() {
-                                    _isBalanceVisible = !_isBalanceVisible;
-                                  });
-                                },
-                              ),
-                            ],
-                          ),
-                    const SizedBox(height: 24),
-                    Row(
-                      children: [
-                        _buildBalanceAction(context, Icons.add_circle, 'Cash In', () async {
-                          await Navigator.pushNamed(context, Routes.cashIn);
-                          _fetchData();
-                        }),
-                        const SizedBox(width: 16),
-                        _buildBalanceAction(context, Icons.send, 'Send', () async {
-                          await Navigator.pushNamed(context, Routes.sendMoney);
-                          _fetchData();
-                        }),
-                        const SizedBox(width: 16),
-                        _buildBalanceAction(context, Icons.favorite, 'Favorites', () async {
-                          await Navigator.pushNamed(context, Routes.favorites);
-                          _fetchData();
-                        }),
-                        const SizedBox(width: 16),
-                        _buildBalanceAction(context, Icons.qr_code_scanner, 'Scan QR', () async {
-                          await Navigator.pushNamed(context, Routes.qrScanner);
-                          _fetchData(); // Refresh balance after returning from scanner
-                        }),
-                      ],
-                    ),
-                  ],
-                ),
+                  _buildBalanceCard(context, apiService, userName),
+                ],
               ),
               
               // Profile Completeness Widget
@@ -413,12 +368,16 @@ class _HomeScreenState extends State<HomeScreen> {
                             width: 32,
                             height: 32,
                             alignment: Alignment.center,
+                            decoration: BoxDecoration(
+                              color: BrandColors.accent.withValues(alpha: 0.1),
+                              shape: BoxShape.circle,
+                            ),
                             child: const Text(
                               '₱',
                               style: TextStyle(
-                                fontSize: 24,
-                                fontWeight: FontWeight.bold,
-                                color: Colors.black,
+                                fontSize: 18,
+                                fontWeight: FontWeight.w900,
+                                color: BrandColors.accent,
                                 height: 1.0,
                               ),
                             ),
@@ -567,7 +526,7 @@ class _HomeScreenState extends State<HomeScreen> {
                 Text(
                   _greeting,
                   style: TextStyle(
-                    color: Colors.white.withValues(alpha: 0.8),
+                    color: Theme.of(context).colorScheme.onPrimary.withValues(alpha: 0.8),
                     fontSize: 14,
                     fontWeight: FontWeight.w400,
                   ),
@@ -575,8 +534,8 @@ class _HomeScreenState extends State<HomeScreen> {
                 const SizedBox(height: 4),
                 Text(
                   nameLabel,
-                  style: const TextStyle(
-                    color: Colors.white,
+                  style: TextStyle(
+                    color: Theme.of(context).colorScheme.onPrimary,
                     fontSize: 22,
                     fontWeight: FontWeight.bold,
                   ),
@@ -599,15 +558,15 @@ class _HomeScreenState extends State<HomeScreen> {
                   TextSpan(
                     text: _greeting,
                     style: TextStyle(
-                      color: Colors.white.withValues(alpha: 0.8),
+                      color: Theme.of(context).colorScheme.onPrimary.withValues(alpha: 0.8),
                       fontSize: 18,
                       fontWeight: FontWeight.w400,
                     ),
                   ),
                   TextSpan(
                     text: nameLabel,
-                    style: const TextStyle(
-                      color: Colors.white,
+                    style: TextStyle(
+                      color: Theme.of(context).colorScheme.onPrimary,
                       fontSize: 18,
                       fontWeight: FontWeight.bold,
                     ),
@@ -634,7 +593,7 @@ class _HomeScreenState extends State<HomeScreen> {
         margin: const EdgeInsets.only(top: 8),
         child: Icon(
           _isNameVisible ? Icons.visibility : Icons.visibility_off,
-          color: Colors.white70,
+          color: Theme.of(context).colorScheme.onPrimary.withValues(alpha: 0.7),
           size: 18,
         ),
       ),
@@ -723,21 +682,31 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   Widget _buildBalanceAction(BuildContext context, IconData icon, String label, VoidCallback onTap) {
-    return GestureDetector(
-      onTap: onTap,
-      child: Column(
-        children: [
-          Container(
-            padding: const EdgeInsets.all(12),
-            decoration: BoxDecoration(
-              color: Colors.white.withAlpha(51),
-              shape: BoxShape.circle,
-            ),
-            child: Icon(icon, color: Colors.white, size: 24),
+    return Expanded(
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(16),
+        child: Container(
+          padding: const EdgeInsets.symmetric(vertical: 12),
+          decoration: BoxDecoration(
+            color: Colors.white.withValues(alpha: 0.1),
+            borderRadius: BorderRadius.circular(16),
+            border: Border.all(color: Colors.white.withValues(alpha: 0.15)),
           ),
-          const SizedBox(height: 8),
-          Text(label, style: const TextStyle(color: Colors.white, fontSize: 12)),
-        ],
+          child: Column(
+            children: [
+              Icon(icon, color: Colors.white, size: 24),
+              const SizedBox(height: 8),
+              Text(
+                label,
+                style: const TextStyle(color: Colors.white, fontSize: 11, fontWeight: FontWeight.w600),
+                textAlign: TextAlign.center,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+              ),
+            ],
+          ),
+        ),
       ),
     );
   }
@@ -747,43 +716,149 @@ class _HomeScreenState extends State<HomeScreen> {
       mainAxisSize: MainAxisSize.min,
       mainAxisAlignment: MainAxisAlignment.center,
       children: [
-        SizedBox(
-          height: 32,
-          width: 32,
-          child: icon is IconData 
-              ? Icon(icon, color: Theme.of(context).colorScheme.primary, size: 32)
-              : (icon is Widget ? icon : Icon(Icons.error, color: Theme.of(context).colorScheme.primary, size: 32)),
+        Container(
+          width: 56,
+          height: 56,
+          decoration: BoxDecoration(
+            color: Theme.of(context).colorScheme.surface,
+            borderRadius: BorderRadius.circular(16),
+            border: Border.all(color: Theme.of(context).colorScheme.outline.withValues(alpha: 0.1)),
+            boxShadow: [
+              BoxShadow(
+                color: Theme.of(context).colorScheme.shadow.withValues(alpha: 0.05),
+                blurRadius: 10,
+                offset: const Offset(0, 4),
+              ),
+            ],
+          ),
+          child: Center(
+            child: icon is IconData 
+                ? Icon(icon, color: Theme.of(context).colorScheme.primary, size: 28)
+                : (icon is Widget ? icon : Icon(Icons.error, color: Theme.of(context).colorScheme.primary, size: 28)),
+          ),
         ),
         const SizedBox(height: 8),
         UIUtils.formatBudolPayText(
           label,
-          baseStyle: const TextStyle(fontSize: 12),
+          baseStyle: TextStyle(
+            fontSize: 12, 
+            fontWeight: FontWeight.w600,
+            color: Theme.of(context).colorScheme.onSurface,
+          ),
           textAlign: TextAlign.center,
         ),
       ],
     );
   }
 
+  Widget _buildBalanceCard(BuildContext context, ApiService apiService, String userName) {
+    return Container(
+      margin: const EdgeInsets.fromLTRB(20, 10, 20, 0),
+      padding: const EdgeInsets.all(24),
+      decoration: BoxDecoration(
+        color: Colors.white.withValues(alpha: 0.05),
+        borderRadius: BorderRadius.circular(32),
+        border: Border.all(color: Colors.white.withValues(alpha: 0.1), width: 1.5),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.2),
+            blurRadius: 20,
+            offset: const Offset(0, 10),
+          ),
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          _buildAdaptiveGreeting(context, apiService, userName),
+          const SizedBox(height: 16),
+          Text(
+            'Available Balance',
+            style: TextStyle(color: Colors.white.withValues(alpha: 0.7), fontSize: 13, fontWeight: FontWeight.w500),
+          ),
+          const SizedBox(height: 8),
+          _isLoading
+              ? const SizedBox(
+                  height: 34,
+                  child: Center(child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2)),
+                )
+              : Row(
+                  crossAxisAlignment: CrossAxisAlignment.center,
+                  children: [
+                    Text(
+                      _isBalanceVisible ? _balance : '₱ ••••••',
+                      style: const TextStyle(
+                        color: Colors.white,
+                        fontSize: 28,
+                        fontWeight: FontWeight.bold,
+                        letterSpacing: 0.5,
+                      ),
+                    ),
+                    const SizedBox(width: 8),
+                    IconButton(
+                      constraints: const BoxConstraints(),
+                      padding: EdgeInsets.zero,
+                      iconSize: 22,
+                      icon: Icon(
+                        _isBalanceVisible ? Icons.visibility_outlined : Icons.visibility_off_outlined,
+                        color: Colors.white.withValues(alpha: 0.6),
+                      ),
+                      onPressed: () {
+                        setState(() {
+                          _isBalanceVisible = !_isBalanceVisible;
+                        });
+                      },
+                    ),
+                  ],
+                ),
+          const SizedBox(height: 28),
+          Row(
+            children: [
+              _buildBalanceAction(context, Icons.add_circle_outline, 'Cash In', () async {
+                await Navigator.pushNamed(context, Routes.cashIn);
+                _fetchData();
+              }),
+              const SizedBox(width: 12),
+              _buildBalanceAction(context, Icons.send_outlined, 'Send', () async {
+                await Navigator.pushNamed(context, Routes.sendMoney);
+                _fetchData();
+              }),
+              const SizedBox(width: 12),
+              _buildBalanceAction(context, Icons.qr_code_scanner, 'Scan QR', () async {
+                await Navigator.pushNamed(context, Routes.qrScanner);
+                _fetchData();
+              }),
+              const SizedBox(width: 12),
+              _buildBalanceAction(context, Icons.more_horiz, 'History', () async {
+                await Navigator.pushNamed(context, Routes.transactionHistory);
+                _fetchData();
+              }),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+
   Widget _buildTransactionItem(String title, String amount, String date, Color amountColor) {
-    final onSurface = Theme.of(context).colorScheme.onSurface;
-    final onSurfaceVariant = Theme.of(context).colorScheme.onSurfaceVariant;
-    const fontSize = 13.0;
-    
     return ListTile(
       contentPadding: EdgeInsets.zero,
-      leading: CircleAvatar(
-        backgroundColor: Theme.of(context).colorScheme.surfaceContainerHighest,
-        child: Icon(Icons.payment, color: Theme.of(context).colorScheme.primary, size: 20),
+      leading: Container(
+        padding: const EdgeInsets.all(12),
+        decoration: BoxDecoration(
+          color: BrandColors.primary.withValues(alpha: 0.08),
+          shape: BoxShape.circle,
+        ),
+        child: Icon(Icons.receipt_long_outlined, color: BrandColors.primary, size: 22),
       ),
       title: UIUtils.formatBudolPayText(
         title, 
         baseStyle: TextStyle(
           fontWeight: FontWeight.w600, 
-          fontSize: fontSize,
-          color: onSurface,
+          fontSize: 14,
+          color: Theme.of(context).colorScheme.onSurface,
         )
       ),
-      subtitle: null,
       trailing: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         crossAxisAlignment: CrossAxisAlignment.end,
@@ -793,15 +868,15 @@ class _HomeScreenState extends State<HomeScreen> {
             style: TextStyle(
               color: amountColor, 
               fontWeight: FontWeight.bold,
-              fontSize: fontSize,
+              fontSize: 14,
             ),
           ),
-          const SizedBox(height: 2),
+          const SizedBox(height: 4),
           Text(
             date,
             style: TextStyle(
               fontSize: 11,
-              color: onSurfaceVariant,
+              color: Theme.of(context).colorScheme.onSurfaceVariant.withValues(alpha: 0.5),
             ),
           ),
         ],

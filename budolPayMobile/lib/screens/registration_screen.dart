@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'dart:ui';
 import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 import 'dart:async';
@@ -232,20 +233,26 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
           child: Text('Create Account', style: TextStyle(color: Theme.of(context).colorScheme.onSurface)),
         ),
       ),
-      body: Column(
+      body: Stack(
         children: [
-          _buildProgressIndicator(),
-          Expanded(
-            child: PageView(
-              controller: _pageController,
-              physics: const NeverScrollableScrollPhysics(),
-              onPageChanged: (i) => setState(() => _currentStep = i),
-              children: [
-                _buildPhoneStep(),
-                _buildProfileStep(),
-                _buildPinStep(),
-              ],
-            ),
+          _buildMeshBackground(),
+          _buildGlassOverlay(),
+          Column(
+            children: [
+              _buildProgressIndicator(),
+              Expanded(
+                child: PageView(
+                  controller: _pageController,
+                  physics: const NeverScrollableScrollPhysics(),
+                  onPageChanged: (i) => setState(() => _currentStep = i),
+                  children: [
+                    _buildPhoneStep(),
+                    _buildProfileStep(),
+                    _buildPinStep(),
+                  ],
+                ),
+              ),
+            ],
           ),
         ],
       ),
@@ -262,7 +269,7 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
               height: 4,
               margin: const EdgeInsets.symmetric(horizontal: 4),
               decoration: BoxDecoration(
-                color: index <= _currentStep ? Theme.of(context).colorScheme.primary : Theme.of(context).colorScheme.outlineVariant,
+                color: index <= _currentStep ? BrandColors.accent : Theme.of(context).colorScheme.outlineVariant.withValues(alpha: 0.2),
                 borderRadius: BorderRadius.circular(2),
               ),
             ),
@@ -284,8 +291,9 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
           Container(
             padding: const EdgeInsets.all(4),
             decoration: BoxDecoration(
-              color: const Color(0xFF1E293B),
-              borderRadius: BorderRadius.circular(12),
+              color: Theme.of(context).colorScheme.surface.withValues(alpha: 0.5),
+              borderRadius: BorderRadius.circular(16),
+              border: Border.all(color: Theme.of(context).colorScheme.outline.withValues(alpha: 0.1)),
             ),
             child: Row(
               children: [
@@ -295,15 +303,15 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
                     child: Container(
                       padding: const EdgeInsets.symmetric(vertical: 8),
                       decoration: BoxDecoration(
-                        color: !_isQuickReg ? Colors.white.withValues(alpha: 0.1) : Colors.transparent,
-                        borderRadius: BorderRadius.circular(8),
+                        color: !_isQuickReg ? Theme.of(context).colorScheme.primary : Colors.transparent,
+                        borderRadius: BorderRadius.circular(12),
                       ),
                       alignment: Alignment.center,
                       child: Text(
                         'Standard',
                         maxLines: 1,
                         style: TextStyle(
-                          color: !_isQuickReg ? Colors.white : Colors.white60,
+                          color: !_isQuickReg ? Theme.of(context).colorScheme.onPrimary : Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6),
                           fontWeight: FontWeight.bold,
                           fontSize: 13,
                         ),
@@ -317,8 +325,8 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
                     child: Container(
                       padding: const EdgeInsets.symmetric(vertical: 8),
                       decoration: BoxDecoration(
-                        color: _isQuickReg ? const Color(0xFF10B981) : Colors.transparent,
-                        borderRadius: BorderRadius.circular(8),
+                        color: _isQuickReg ? BrandColors.accent : Colors.transparent,
+                        borderRadius: BorderRadius.circular(12),
                       ),
                       alignment: Alignment.center,
                       child: Text(
@@ -326,7 +334,7 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
                         style: TextStyle(
-                          color: _isQuickReg ? Colors.white : Colors.white60,
+                          color: _isQuickReg ? BrandColors.primaryDark : Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6),
                           fontWeight: FontWeight.bold,
                           fontSize: 13,
                         ),
@@ -452,7 +460,7 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
               'Password', 
               Icons.lock,
               suffixIcon: IconButton(
-                icon: Icon(_obscurePassword ? Icons.visibility : Icons.visibility_off, color: Colors.white70),
+                icon: Icon(_obscurePassword ? Icons.visibility : Icons.visibility_off, color: Theme.of(context).colorScheme.onSurfaceVariant),
                 onPressed: () => setState(() => _obscurePassword = !_obscurePassword),
               ),
               errorText: (_passwordController.text.isNotEmpty && !_isPasswordComplex) 
@@ -468,7 +476,7 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
               'Confirm Password', 
               Icons.lock_outline,
               suffixIcon: IconButton(
-                icon: Icon(_obscureConfirmPassword ? Icons.visibility : Icons.visibility_off, color: Colors.white70),
+                icon: Icon(_obscureConfirmPassword ? Icons.visibility : Icons.visibility_off, color: Theme.of(context).colorScheme.onSurfaceVariant),
                 onPressed: () => setState(() => _obscureConfirmPassword = !_obscureConfirmPassword),
               ),
               errorText: (_confirmPasswordController.text.isNotEmpty && !_passwordsMatch)
@@ -516,6 +524,55 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
     );
   }
 
+  Widget _buildMeshBackground() {
+    return Container(
+      color: const Color(0xFF0F172A), // Midnight Base
+      child: Stack(
+        children: [
+          _buildBlob(
+            color: BrandColors.primary.withValues(alpha: 0.1),
+            top: -100,
+            right: -50,
+            size: 350,
+          ),
+          _buildBlob(
+            color: const Color(0xFF991B1B).withValues(alpha: 0.08),
+            bottom: -150,
+            left: -100,
+            size: 500,
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildBlob({required Color color, double? top, double? left, double? right, double? bottom, required double size}) {
+    return Positioned(
+      top: top,
+      left: left,
+      right: right,
+      bottom: bottom,
+      child: Container(
+        width: size,
+        height: size,
+        decoration: BoxDecoration(
+          shape: BoxShape.circle,
+          gradient: RadialGradient(
+            colors: [color, color.withValues(alpha: 0)],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildGlassOverlay() {
+    return Container(
+      decoration: BoxDecoration(
+        color: Colors.black.withValues(alpha: 0.1),
+      ),
+    );
+  }
+
   Widget _stepContainer({
     required String title,
     required String subtitle,
@@ -523,35 +580,53 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
     VoidCallback? onNext,
     String buttonText = 'Continue',
   }) {
-    return Padding(
+    return SingleChildScrollView(
+      physics: const BouncingScrollPhysics(),
       padding: const EdgeInsets.all(24),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(title, style: TextStyle(color: Theme.of(context).colorScheme.onSurface, fontSize: 28, fontWeight: FontWeight.bold)),
-          const SizedBox(height: 8),
-          Text(subtitle, style: TextStyle(color: Theme.of(context).colorScheme.onSurfaceVariant, fontSize: 16)),
-          const SizedBox(height: 32),
-          content,
-          const Spacer(),
-          SizedBox(
-            width: double.infinity,
-            height: 56,
-            child: ElevatedButton(
-              onPressed: (_isLoading || onNext == null) ? null : onNext,
-              style: ElevatedButton.styleFrom(
-                backgroundColor: BrandColors.primary,
-                foregroundColor: Colors.white,
-                disabledBackgroundColor: const Color(0xFF334155),
-                disabledForegroundColor: Colors.white38,
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-              ),
-              child: _isLoading 
-                ? CircularProgressIndicator(color: BrandColors.textPrimary)
-                : Text(buttonText, style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+      child: ClipRRect(
+        borderRadius: BorderRadius.circular(32),
+        child: BackdropFilter(
+          filter: ImageFilter.blur(sigmaX: 10, sigmaY: 10),
+          child: Container(
+            padding: const EdgeInsets.all(32),
+            decoration: BoxDecoration(
+              color: Colors.white.withValues(alpha: 0.02),
+              borderRadius: BorderRadius.circular(32),
+              border: Border.all(color: Colors.white.withValues(alpha: 0.1), width: 1.5),
+            ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Text(title, style: TextStyle(color: Theme.of(context).colorScheme.onSurface, fontSize: 24, fontWeight: FontWeight.bold)),
+                const SizedBox(height: 8),
+                Text(subtitle, style: TextStyle(color: Theme.of(context).colorScheme.onSurfaceVariant.withValues(alpha: 0.8), fontSize: 14)),
+                const SizedBox(height: 32),
+                content,
+                const SizedBox(height: 48),
+                SizedBox(
+                  width: double.infinity,
+                  height: 56,
+                  child: ElevatedButton(
+                    onPressed: (_isLoading || onNext == null) ? null : onNext,
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: Theme.of(context).colorScheme.primary,
+                      foregroundColor: Theme.of(context).colorScheme.onPrimary,
+                      disabledBackgroundColor: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.12),
+                      disabledForegroundColor: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.38),
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                      elevation: _isLoading ? 0 : 4,
+                      shadowColor: Theme.of(context).colorScheme.primary.withValues(alpha: 0.3),
+                    ),
+                    child: _isLoading 
+                      ? const CircularProgressIndicator(color: Colors.white, strokeWidth: 3)
+                      : Text(buttonText, style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+                  ),
+                ),
+              ],
             ),
           ),
-        ],
+        ),
       ),
     );
   }

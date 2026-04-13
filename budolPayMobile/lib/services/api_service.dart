@@ -68,7 +68,7 @@ class ApiService extends ChangeNotifier {
   String _themeMode = 'auto'; // light, dark, auto
   String _greetingLayout = 'vertical'; // vertical, horizontal
   Timer? _themeTimer;
-  String _appVersion = '1.3.85+187'; // v1.3.85+187 - Adaptive Theme Release
+  String _appVersion = '1.3.91+191'; // v1.3.91+191 - Modern Ruby Branding Restoration
 
   String get appVersion => _appVersion;
   Future<void>? _initFuture;

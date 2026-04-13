@@ -92,8 +92,8 @@ class _SplashScreenState extends State<SplashScreen> {
               children: [
                 _buildLogo(),
                 const SizedBox(height: 24),
-                const CircularProgressIndicator(
-                  valueColor: AlwaysStoppedAnimation<Color>(Color(0xFFF43F5E)),
+                CircularProgressIndicator(
+                  valueColor: AlwaysStoppedAnimation<Color>(Theme.of(context).colorScheme.primary),
                   strokeWidth: 2,
                 ),
                 const SizedBox(height: 16),
@@ -163,10 +163,10 @@ class _SplashScreenState extends State<SplashScreen> {
             color: Theme.of(context).colorScheme.primary.withValues(alpha: 0.15),
             shape: BoxShape.circle,
           ),
-          child: const Text(
+          child: Text(
             '₱',
             style: TextStyle(
-              color: Color(0xFFF43F5E),
+              color: Theme.of(context).colorScheme.primary,
               fontSize: 70,
               fontWeight: FontWeight.bold,
             ),
