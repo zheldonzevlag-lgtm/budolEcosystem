@@ -23,6 +23,7 @@ export default function LoginPage() {
         email: '',
         password: ''
     });
+    const [systemStatus, setSystemStatus] = useState({ status: 'LOADING', color: 'slate' });
 
     // Prevent usage of 0.0.0.0 which is a bind address, not a visitable address
     useEffect(() => {
@@ -53,7 +54,19 @@ export default function LoginPage() {
                 setCooldown(60);
             }
         };
+
+        const fetchSystemStatus = async () => {
+            try {
+                const res = await fetch('/api/system/status');
+                const data = await res.json();
+                setSystemStatus(data);
+            } catch (err) {
+                setSystemStatus({ status: 'UNKNOWN', color: 'slate' });
+            }
+        };
+
         initPendingChallenge();
+        fetchSystemStatus();
     }, [searchParams]);
 
     const handleLogin = async (e: React.FormEvent) => {
@@ -308,9 +321,13 @@ export default function LoginPage() {
                 
                 <div className="bg-slate-50 p-4 border-t border-slate-100">
                     <div className="flex items-center justify-center gap-2">
-                        <span className="w-2 h-2 rounded-full bg-rose-500 animate-pulse"></span>
+                        <span className={`w-2 h-2 rounded-full animate-pulse ${
+                            systemStatus.color === 'emerald' ? 'bg-emerald-500' : 
+                            systemStatus.color === 'rose' ? 'bg-rose-500' : 
+                            systemStatus.color === 'amber' ? 'bg-amber-500' : 'bg-slate-400'
+                        }`}></span>
                         <p className="text-[10px] font-bold text-slate-500 uppercase tracking-widest">
-                            System Status: Operational
+                            System Status: {systemStatus.status}
                         </p>
                     </div>
                 </div>

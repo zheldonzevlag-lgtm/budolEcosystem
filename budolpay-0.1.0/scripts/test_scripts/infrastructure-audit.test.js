@@ -18,7 +18,7 @@ const EXPECTED_PORTS = {
     'Socket.io Server': { port: 4000, path: 'websocket-server/server.js' }
 };
 
-const rootDir = 'd:/IT Projects/clone/budolEcosystem';
+const rootDir = path.resolve(__dirname, '../../../');
 
 describe('Infrastructure Port Audit', () => {
     Object.entries(EXPECTED_PORTS).forEach(([name, info]) => {

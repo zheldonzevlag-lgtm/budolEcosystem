@@ -17,55 +17,91 @@
             <li><a href="user_manual.html">User Manual</a></li>
             <li><a href="risk_register.html">Risk Register</a></li>
             <li><a href="Mitigation.html">Mitigation Plan</a></li>
-            <li><a href="issues & fixes.html">Issues & Fixes</a></li>
+            <li><a href="issues & fixes.html">Issues &amp; Fixes</a></li>
             <li><a href="test_results.html">Test Results</a></li>
             <li><a href="future_recommendations.html" class="active">Future Recommendations</a></li>
         </ul>
     </nav>
     <main class="content">
         <header class="header">
-            <h1>Strategic Roadmap & Recommendations: v2.4.7</h1>
+            <h1>Future Recommendations: Consolidated Roadmap</h1>
             <div class="metadata">
-                <span><strong>Priority:</strong> Medium-Long Term</span>
-                <span><strong>Date:</strong> 2026-04-12</span>
+                <span><strong>Last Updated:</strong> v2.4.7 (2026-04-13)</span>
+                <span><strong>Next Milestone:</strong> v2.4.8</span>
             </div>
         </header>
 
         <section class="section">
-            <h2>1. Technical Debt & ESM Migration</h2>
+            <h2>Short Term (v2.4.8 — Next Sprint)</h2>
+
             <div class="card">
-                <h3>Dual-Emission for budolshap</h3>
-                <p>The current workaround for <code>realtime.test.js</code> inlines logic to bypass ESM parsing issues in CommonJS Jest environments. For v2.5.0, we recommend configuring <code>budolshap</code> to build both ESM and CJS modules, ensuring standard import/export functionality across the ecosystem without brittle inlining.</p>
+                <h3>🔧 FRec-001: Docker Compose Integration Test Environment</h3>
+                <p><strong>Rationale:</strong> The <code>payment-security.test.js</code> suite requires a live payment gateway. Currently it skips in offline environments, meaning it never runs in CI. A Docker Compose setup would start all services before Jest runs.</p>
+                <p><strong>Implementation:</strong> Create <code>budolpay-0.1.0/docker-compose.test.yml</code> with all 5 microservices. Add a <code>test:e2e</code> npm script that runs <code>docker-compose up -d</code> then Jest.</p>
+                <p><strong>Compliance:</strong> PCI DSS Req 11.3 (Penetration Testing), BSP MORB Sec. 114</p>
+            </div>
+
+            <div class="card">
+                <h3>🔧 FRec-002: PayMongo / Xendit Live Sandbox Integration</h3>
+                <p><strong>Rationale:</strong> The payment-gateway-service already has provider routing logic for PayMongo and Xendit, but uses placeholder checkout URLs. The gateway needs real API keys for end-to-end payment testing.</p>
+                <p><strong>Implementation:</strong> Add <code>PAYMONGO_SECRET_KEY</code> and <code>XENDIT_SECRET_KEY</code> environment variables. Update <code>/create-intent</code> to call the real provider APIs in production.</p>
+                <p><strong>Compliance:</strong> BSP Circ. No. 1033 (E-Money Issuance), PCI DSS Req 4.2 (Encrypted Transmission)</p>
+            </div>
+
+            <div class="card">
+                <h3>🔧 FRec-003: Prometheus / Grafana Health Monitoring</h3>
+                <p><strong>Rationale:</strong> The DRS Heartbeat writes to PostgreSQL, but there is no active alerting if the heartbeat stops. Prometheus + Grafana would enable real-time dashboards and PagerDuty integration.</p>
+                <p><strong>Implementation:</strong> Expose a <code>/metrics</code> endpoint on each service returning Prometheus-compatible counters. Deploy Grafana on the same VPS.</p>
+            </div>
+
+            <div class="card">
+                <h3>🔧 FRec-004: KYC Address Reverse-Geocoding (Mobile)</h3>
+                <p><strong>Rationale:</strong> The BudolPay mobile app displays raw GPS coordinates for pinned KYC locations. Users need human-readable addresses. The <code>geocoding</code> and <code>connectivity_plus</code> packages have been identified as the correct solution (see conversation 0d82d865).</p>
+                <p><strong>Implementation:</strong> Integrate <code>geocoding</code> Flutter package. Add connectivity check to prevent pinning without network access. Show full address string below the map pin.</p>
             </div>
         </section>
 
         <section class="section">
-            <h2>2. UI/UX Evolution</h2>
+            <h2>Medium Term (v2.5.0)</h2>
+
             <div class="card">
-                <h3>Adaptive Density Mode</h3>
-                <p>While the 10px high-density layout satisfies technical audits, users without high-resolution displays may experience eye strain. We recommend implementing a "Toggle Density" feature (Institutional vs. Standard) to improve accessibility while maintaining compliance when required.</p>
+                <h3>🔮 FRec-005: AI Anti-Spam Admin Override Endpoint</h3>
+                <p><strong>Rationale:</strong> Legitimate users with unusual email patterns (e.g., academic or government addresses) may be incorrectly blocked by the EWMA spam engine. Admins need a whitelist management interface.</p>
+                <p><strong>Implementation:</strong> Add <code>POST /admin/spam-whitelist</code> endpoint requiring <code>GENERAL_MANAGER</code> role. Store whitelisted email patterns in <code>SystemSetting</code> table.</p>
+            </div>
+
+            <div class="card">
+                <h3>🔮 FRec-006: BIR e-Receipts Integration</h3>
+                <p><strong>Rationale:</strong> BSP and BIR require fintech platforms to issue official electronic receipts for all transactions. budolShap transactions currently lack BIR-compliant receipt numbers.</p>
+                <p><strong>Implementation:</strong> Integrate with BIR's eSales/eSERV API to generate official receipt numbers for each completed MERCHANT_PAYMENT transaction.</p>
+                <p><strong>Compliance:</strong> BIR RR 8-2022 (Electronic Official Receipts)</p>
+            </div>
+
+            <div class="card">
+                <h3>🔮 FRec-007: BlitzXpress Foundation Completion</h3>
+                <p><strong>Rationale:</strong> The BlitzXpress platform was initialized (conversation cf043dc8) but not completed. The Next.js web app, Express backend, and Flutter driver need to be wired together.</p>
+                <p><strong>Implementation:</strong> Continue from the BlitzXpress implementation plan. Priority: Express backend routes, then Next.js dashboard, then Flutter integration.</p>
             </div>
         </section>
 
         <section class="section">
-            <h2>3. Advanced Telemetry</h2>
+            <h2>Long Term (v3.x)</h2>
             <div class="card">
-                <h3>Push-Based Health Monitoring</h3>
-                <p>The current 30-second heartbeat uses a polling mechanism in the dashboard. Transitioning to a WebSocket-based push (via the already implemented Realtime Channel) would provide sub-second latency for "Offline" alerts, improving the RTO (Recovery Time Objective) for the NOC team.</p>
-            </div>
-        </section>
-
-        <section class="section">
-            <h2>4. Security & Compliance</h2>
-            <div class="card">
-                <h3>Automated Penetration Testing</h3>
-                <p>Building on the <code>spam_prevention.test.js</code> success, we recommend integrating an automated OWASP ZAP scan into the CI/CD pipeline to detect surface-level vulnerabilities before they reach the "Release Gate."</p>
+                <table>
+                    <thead><tr><th>Item</th><th>Description</th><th>Compliance Driver</th></tr></thead>
+                    <tbody>
+                        <tr><td>AMLA Reporting</td><td>Automated SAR (Suspicious Activity Report) generation for flagged transactions</td><td>RA 9160 (AMLA)</td></tr>
+                        <tr><td>BSP EMI License</td><td>Prepare documentation package for Electronic Money Issuer license application</td><td>BSP Circ. No. 649</td></tr>
+                        <tr><td>ISO 27001 Readiness</td><td>Gap analysis and controls implementation for ISO 27001 certification</td><td>PCI DSS Req 12</td></tr>
+                        <tr><td>Multi-currency Support</td><td>USD/SGD/HKD wallets for OFW remittance use case</td><td>BSP Circ. No. 471 (FX)</td></tr>
+                    </tbody>
+                </table>
             </div>
         </section>
 
         <footer>
             <hr>
-            <p style="font-size: 12px; color: #6b778c;">&copy; 2026 BudolPay Innovation & Strategy. Confidential.</p>
+            <p style="font-size: 12px; color: #6b778c;">&copy; 2026 BudolPay Ecosystem. Consolidated across all versions. | <a href="index.html">← Back to Index</a> | <a href="../knowledgebase.html">Master KB</a></p>
         </footer>
     </main>
 </body>

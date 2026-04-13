@@ -1218,9 +1218,10 @@ app.use((err, req, res, next) => {
     });
 });
 
-const startDrsHeartbeat = () => {
+const startDrsHeartbeat = async () => {
     console.log('[DRS Engine] Initializing Pulse Heartbeat...');
-    const heartbeat = setInterval(async () => {
+    
+    const sendPulse = async () => {
         try {
             await prisma.systemSetting.upsert({
                 where: { key: 'DRS_ENGINE_HEARTBEAT' },
@@ -1232,11 +1233,16 @@ const startDrsHeartbeat = () => {
                     description: 'Last reported heartbeat from the Transaction/DRS Service'
                 }
             });
-            // console.debug('[DRS Engine] Pulse updated.');
+            console.log(`[DRS Engine] Pulse updated at ${new Date().toLocaleTimeString()}`);
         } catch (err) {
             console.error('[DRS Engine] Heartbeat failure:', err.message);
         }
-    }, 30000); // 30 seconds
+    };
+
+    // Trigger immediately on startup
+    await sendPulse();
+
+    const heartbeat = setInterval(sendPulse, 30000); // 30 seconds
     
     // Ensure the heartbeat does not block process exit (especially in tests)
     if (heartbeat.unref) heartbeat.unref();

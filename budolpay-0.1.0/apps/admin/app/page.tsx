@@ -79,6 +79,34 @@ export default async function DashboardPage() {
     }
   }
 
+  // Institutional Compliance Calculations (v2.4.7)
+  const bspAuditCount = await prisma.auditLog.count({
+    where: {
+      entity: { in: ['Financial', 'Compliance', 'Security'] },
+      createdAt: { gte: new Date(Date.now() - 24 * 60 * 60 * 1000) }
+    }
+  });
+  const bspStatus = bspAuditCount > 0 ? "ACTIVE" : "WAITING";
+  const bspDot = bspAuditCount > 0 ? "bg-green-400" : "bg-amber-400";
+
+  const npcAuditCount = await prisma.auditLog.count({
+    where: {
+      entity: 'Security',
+      createdAt: { gte: new Date(Date.now() - 24 * 60 * 60 * 1000) }
+    }
+  });
+  const npcStatus = npcAuditCount > 0 ? "SECURED" : "PENDING_AUDIT";
+  const npcDot = npcAuditCount > 0 ? "bg-green-400" : "bg-amber-400";
+
+  const pciAuditCount = await prisma.auditLog.count({
+    where: {
+      action: { contains: 'OTP' } as any,
+      createdAt: { gte: new Date(Date.now() - 24 * 60 * 60 * 1000) }
+    }
+  });
+  const pciStatus = pciAuditCount > 0 ? "CERTIFIED" : "REVIEW_REQD";
+  const pciDot = pciAuditCount > 0 ? "bg-green-400" : "bg-rose-400";
+
   const stats = [
     { name: "Total Users", value: userCount, icon: Users, color: "text-blue-500", bg: "bg-blue-50" },
     {
@@ -213,17 +241,58 @@ export default async function DashboardPage() {
 
           <div className="space-y-2 relative z-10 flex-1">
             {[
-              { label: "AI DRS Engine", desc: "Behavioral Ledger Forensics", status: "STABLE", dot: "bg-blue-400" },
-              { label: "BSP Audit Trail", desc: "Immutable Activity Logs", status: "ACTIVE", dot: "bg-green-400" },
-              { label: "BIR Middleware", desc: "Tax-Compliant Ledger Sync", status: birStatus, dot: birDot },
-              { label: "NPC Shield", desc: "DPA/Data Privacy Shield", status: "SECURED", dot: "bg-green-400" },
-              { label: "PCI DSS Compliance", desc: "Level 1 Service Provider", status: "CERTIFIED", dot: "bg-green-400" },
+              { 
+                label: "AI DRS Engine", 
+                desc: "Behavioral Ledger Forensics", 
+                status: drsStatus, 
+                dot: drsStatus === 'ACTIVE' ? "bg-green-400" : (drsStatus === 'DELAYED' ? "bg-amber-400" : "bg-rose-400"),
+                tooltip: "Live behavioral analysis engine monitoring all transactions for fraud markers using EWMA models."
+              },
+              { 
+                label: "BSP Audit Trail", 
+                desc: "Immutable Activity Logs", 
+                status: bspStatus, 
+                dot: bspStatus === 'ACTIVE' ? "bg-green-400" : "bg-amber-400",
+                tooltip: "Immutable transaction logs and administrative activity records adhering to Bangko Sentral ng Pilipinas reporting standards."
+              },
+              { 
+                label: "BIR Middleware", 
+                desc: "Tax-Compliant Ledger Sync", 
+                status: birStatus, 
+                dot: birDot,
+                tooltip: "Automated tax reconciliation and ledger synchronization engine for BIR secondary-book compliance."
+              },
+              { 
+                label: "NPC Shield", 
+                desc: "DPA/Data Privacy Shield", 
+                status: npcStatus, 
+                dot: npcDot,
+                tooltip: "National Privacy Commission (DPA 2012) enforcement monitor, ensuring secure handling of all PII data."
+              },
+              { 
+                label: "PCI DSS Compliance", 
+                desc: "Level 1 Service Provider", 
+                status: pciStatus, 
+                dot: pciDot,
+                tooltip: "Security standards enforcement for Level 1 Service Provider status, including active MFA and encryption audits."
+              },
             ].map((item) => (
-              <div key={item.label} className="p-3 bg-white/5 rounded-xl border border-white/5 flex items-center justify-between hover:border-white/10 transition-colors group/item shadow-sm">
+              <div key={item.label} className="p-3 bg-white/5 rounded-xl border border-white/5 flex items-center justify-between hover:border-white/10 transition-colors group/item shadow-sm relative overflow-visible">
                 <div className="flex items-center gap-3">
                   <span className={`w-1.5 h-1.5 rounded-full ${item.dot} shadow-[0_0_8px_rgba(255,255,255,0.3)] animate-pulse`}></span>
                   <div className="flex flex-col">
-                    <span className="text-[10px] font-black tracking-widest text-slate-300 uppercase leading-none">{item.label}</span>
+                    <div className="flex items-center gap-1.5 group/tooltip">
+                      <span className="text-[10px] font-black tracking-widest text-slate-300 uppercase leading-none">{item.label}</span>
+                      {item.tooltip && (
+                        <div className="relative flex items-center cursor-help">
+                          <span className="text-[7.5px] bg-white/10 text-slate-500 rounded-full w-2.5 h-2.5 flex items-center justify-center font-bold border border-white/5 group-hover/tooltip:bg-[#f43f5e] group-hover/tooltip:text-white transition-colors">?</span>
+                          <div className="absolute bottom-full mb-2 left-0 w-48 bg-[#1e293b] text-slate-300 text-[9px] pt-1.5 px-2.5 pb-2 rounded-lg opacity-0 invisible group-hover/tooltip:opacity-100 group-hover/tooltip:visible transition-all duration-200 z-50 leading-relaxed shadow-2xl pointer-events-none normal-case font-medium tracking-normal border border-white/10 backdrop-blur-md">
+                            {item.tooltip}
+                            <div className="absolute top-full left-2 border-4 border-transparent border-t-[#1e293b]"></div>
+                          </div>
+                        </div>
+                      )}
+                    </div>
                     <span className="text-[7.5px] font-bold text-slate-500 uppercase tracking-wider mt-1.5">{item.desc}</span>
                   </div>
                 </div>

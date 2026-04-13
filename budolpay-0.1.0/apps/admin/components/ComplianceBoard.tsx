@@ -48,6 +48,7 @@ export default function ComplianceBoard() {
   const [alerts, setAlerts] = useState<ComplianceAlert[]>([]);
   const [loading, setLoading] = useState(true);
   const [activeRole, setActiveRole] = useState<'MANAGER' | 'GENERAL_MANAGER' | 'USER'>('MANAGER');
+  const [searchQuery, setSearchQuery] = useState("");
 
   useEffect(() => {
     const fetchInitialData = async () => {
@@ -114,6 +115,15 @@ export default function ComplianceBoard() {
     }
   };
 
+  const filteredAlerts = alerts.filter(alert => {
+    const searchLow = searchQuery.toLowerCase();
+    const refId = (alert?.newValue?.referenceId || alert?.referenceId || "").toLowerCase();
+    const action = (alert?.action || "").toLowerCase();
+    const email = (alert?.user?.email || "").toLowerCase();
+    
+    return refId.includes(searchLow) || action.includes(searchLow) || email.includes(searchLow);
+  });
+
   if (loading) {
     return (
       <div className="flex items-center justify-center p-12 text-slate-400">
@@ -151,6 +161,8 @@ export default function ComplianceBoard() {
               <input
                 type="text"
                 placeholder="Filter by ref..."
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
                 className="pl-8 pr-4 py-1.5 text-[10px] border border-slate-200 rounded-full bg-white focus:outline-none focus:ring-2 focus:ring-[#f43f5e]/20"
               />
               <Search className="w-3.5 h-3.5 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
@@ -164,112 +176,132 @@ export default function ComplianceBoard() {
 
       {/* Alert List */}
       <div className="flex-1 overflow-y-auto max-h-[600px] divide-y divide-slate-50">
-        {alerts.length === 0 ? (
+        {filteredAlerts.length === 0 ? (
           <div className="flex flex-col items-center justify-center py-24 text-slate-300">
             <ShieldCheck className="w-12 h-12 mb-4 opacity-10" />
             <p className="text-xs font-bold tracking-widest uppercase">Ecosystem Integrity: 100%</p>
-            <p className="text-[10px] opacity-70 mt-1">No active compliance flags detected.</p>
+            <p className="text-[10px] opacity-70 mt-1">{searchQuery ? "No results match your search." : "No active compliance flags detected."}</p>
           </div>
         ) : (
-          alerts.map((alert) => (
-            <div key={alert.id} className={`p-5 hover:bg-slate-50/80 transition-all group ${alert.metadata.severity === 'HIGH' ? 'bg-rose-50/30' : ''}`}>
-              <div className="flex justify-between items-start mb-4">
-                <div className="flex items-center gap-3">
-                  <div className={`p-2.5 rounded-2xl relative ${alert.newValue.riskScore && alert.newValue.riskScore >= 90 ? 'bg-[#f43f5e] text-white animate-pulse' : (alert.newValue.riskScore && alert.newValue.riskScore >= 75 ? 'bg-amber-500 text-white' : 'bg-slate-100 text-slate-600')}`}>
+          filteredAlerts.map((alert) => {
+            const isHighRisk = (alert.newValue.riskScore || 0) >= 75;
+            const isCritical = (alert.newValue.riskScore || 0) >= 90;
+            const scoreColor = isCritical ? 'bg-[#f43f5e] text-white ring-4 ring-rose-100' : isHighRisk ? 'bg-amber-500 text-white ring-4 ring-amber-50' : 'bg-slate-100 text-slate-500 ring-4 ring-slate-50';
+            const severityLabel = isCritical ? 'CRITICAL' : alert.metadata.severity;
+            
+            return (
+            <div key={alert.id} className={`p-4 border-b border-slate-50 hover:bg-slate-50/80 transition-all flex flex-col md:flex-row gap-4 items-start md:items-center relative group hover:z-50`}>
+               {/* Left: Score Badge */}
+               <div className="flex-shrink-0 w-16 flex flex-col items-center justify-center">
+                  <div className={`w-10 h-10 rounded-2xl flex items-center justify-center font-black ${scoreColor} ${isCritical ? 'animate-pulse' : ''} shadow-sm relative group/score cursor-help`}>
                     {alert.newValue.riskScore ? (
-                      <span className="text-xs font-black">{alert.newValue.riskScore}</span>
+                      <span className="text-sm tracking-tighter">{alert.newValue.riskScore}</span>
                     ) : (
-                      <AlertTriangle size={16} />
+                      <AlertTriangle size={18} />
                     )}
-                    {alert.newValue.riskScore && <div className="absolute -top-1 -right-1 w-2 h-2 bg-white rounded-full border border-slate-200" />}
-                  </div>
-                  <div>
-                    <div className="flex items-center gap-2">
-                      <span className={`text-[9px] font-black tracking-widest px-2 py-0.5 rounded-md ${alert.newValue.riskScore && alert.newValue.riskScore >= 90 ? 'bg-[#0f172a] text-[#f43f5e]' : (alert.metadata.severity === 'HIGH' ? 'bg-[#f43f5e] text-white' : 'bg-amber-500 text-white')}`}>
-                        {alert.newValue.riskScore && alert.newValue.riskScore >= 90 ? 'CRITICAL ANOMALY' : `${alert.metadata.severity} RISK`}
-                      </span>
-                      <span className="text-[10px] font-mono text-slate-400 font-bold">{alert.newValue.referenceId}</span>
+                    
+                    {/* Layman Terms Tooltip */}
+                    <div className="absolute left-full top-1/2 -translate-y-1/2 ml-3 w-52 p-3 bg-slate-900 border border-slate-700 rounded-xl shadow-2xl opacity-0 group-hover/score:opacity-100 group-hover/score:translate-x-1 pointer-events-none transition-all duration-200 z-[100]">
+                      <div className="absolute top-1/2 -translate-y-1/2 -left-1.5 w-3 h-3 bg-slate-900 border-b border-l border-slate-700 transform rotate-45"></div>
+                      <div className="relative z-10 text-left">
+                        <span className="block font-black text-white text-[9px] uppercase tracking-widest border-b border-slate-700 pb-1 mb-1.5">Layman's Terms</span>
+                        <p className="text-[10px] font-medium text-slate-300 leading-relaxed">
+                          {(alert.newValue.riskScore || 0) >= 90 ? "🔴 Critical anomaly! This looks exactly like fraud or a severe policy breach. The transaction is blocked immediately." :
+                           (alert.newValue.riskScore || 0) >= 75 ? "🟠 Highly suspicious! Something is very unusual, like a massive sudden transfer. Needs manual approval from management." :
+                           (alert.newValue.riskScore || 0) >= 40 ? "🟡 Slightly unusual. Could be a new device or an uncharacteristic transfer, but it's not bad enough to block. We are monitoring it." : 
+                           "🟢 Normal transaction. The AI hasn't detected any strange behavior."}
+                        </p>
+                      </div>
                     </div>
-                    <h4 className="font-black text-slate-900 text-[10px] mt-1 group-hover:text-[#f43f5e] transition-colors uppercase leading-tight">{alert.action.replace(/_/g, ' ')}</h4>
                   </div>
-                </div>
-                <div className="text-right">
-                  <div className="flex items-center gap-1.5 justify-end text-slate-400 mb-1">
-                    <Clock size={12} />
-                    <span className="text-[10px] font-bold uppercase tracking-tighter">{new Date(alert.createdAt).toLocaleTimeString()}</span>
-                  </div>
-                  <div className="flex gap-2">
-                    {(alert.newValue.riskScore || 0) >= 75 && (
+                  <span className={`text-[7.5px] font-black tracking-[0.15em] uppercase mt-2.5 text-center ${isCritical ? 'text-[#f43f5e]' : isHighRisk ? 'text-amber-500' : 'text-slate-400'}`}>
+                    {severityLabel}
+                  </span>
+               </div>
+               
+               {/* Middle: Event & Rules */}
+               <div className="flex-grow flex flex-col gap-1.5 min-w-0 py-1">
+                 <div className="flex items-center gap-2">
+                   <h4 className="font-black text-[#0f172a] text-[13px] uppercase tracking-tight truncate group-hover:text-[#f43f5e] transition-colors">
+                     {alert.action.replace(/_/g, ' ')}
+                   </h4>
+                   <span className="text-[9px] font-mono font-bold text-slate-400 bg-slate-100 px-1.5 py-0.5 rounded">
+                     {alert.newValue.referenceId}
+                   </span>
+                 </div>
+                 
+                 <div className="flex items-center gap-2.5 text-slate-500">
+                   <div className="flex items-center gap-1.5">
+                     <User size={11} className="text-slate-400" />
+                     <span className="text-[10px] font-bold text-slate-600 truncate">
+                       {alert.user ? `${alert.user.firstName} ${alert.user.lastName}` : "System Entity"}
+                     </span>
+                     {alert.user?.kycTier && (
+                       <span className="text-[7.5px] font-black px-1.5 py-0.5 rounded bg-slate-200/50 text-slate-500 tracking-wider uppercase">
+                         {alert.user.kycTier}
+                       </span>
+                     )}
+                   </div>
+                   <span className="text-slate-300">•</span>
+                   <div className="flex items-center gap-1 text-slate-400">
+                     <Clock size={10} />
+                     <span className="text-[9px] font-bold uppercase tracking-tighter">{new Date(alert.createdAt).toLocaleTimeString()}</span>
+                   </div>
+                 </div>
+                 
+                 {/* Flag Chips */}
+                 {alert.newValue.flags.length > 0 && (
+                   <div className="flex flex-wrap gap-1.5 mt-1.5">
+                     {alert.newValue.flags.map((flag, idx) => (
+                       <div key={idx} className="flex items-center gap-1 bg-rose-50 text-rose-600 px-2 py-0.5 rounded border border-rose-100 shadow-sm">
+                         <Flag size={8} className="text-rose-400" />
+                         <span className="text-[8px] font-black tracking-widest uppercase">{flag.rule}:</span>
+                         <span className="text-[8.5px] font-medium truncate max-w-[250px]">{flag.message}</span>
+                       </div>
+                     ))}
+                   </div>
+                 )}
+               </div>
+               
+               {/* Right: Actions */}
+               <div className="flex-shrink-0 flex flex-col md:items-end gap-2 mt-4 md:mt-0 ml-auto">
+                  <div className="flex items-center gap-2">
+                    {isHighRisk && (
                       <>
                         {activeRole === 'MANAGER' && !alert.newValue.riskMetadata?.proposedAction && (
-                          <>
+                          <div className="flex gap-1.5">
                             <button
                               onClick={() => handleResolve(alert.newValue.transactionId, 'APPROVE')}
-                              className="px-2.5 py-1.5 bg-emerald-500 text-white text-[10px] font-black rounded-lg hover:bg-emerald-600 transition-colors uppercase"
+                              className="px-3 py-1.5 bg-white text-emerald-600 hover:bg-emerald-50 border border-emerald-200 hover:border-emerald-500 text-[9px] font-black rounded-lg transition-all uppercase tracking-widest shadow-sm"
                             >
-                              Propose Approval
+                              Approve
                             </button>
                             <button
                               onClick={() => handleResolve(alert.newValue.transactionId, 'REJECT')}
-                              className="px-2.5 py-1.5 bg-slate-800 text-white text-[10px] font-black rounded-lg hover:bg-slate-900 transition-colors uppercase"
+                              className="px-3 py-1.5 bg-white text-slate-600 hover:bg-slate-50 border border-slate-200 hover:border-slate-800 text-[9px] font-black rounded-lg transition-all uppercase tracking-widest shadow-sm"
                             >
-                              Propose Reject
+                              Reject
                             </button>
-                          </>
+                          </div>
                         )}
                         {(activeRole === 'GENERAL_MANAGER' || activeRole === 'ADMIN') && (
                           <button
                             onClick={() => handleResolve(alert.newValue.transactionId, alert.newValue.riskMetadata?.proposedAction || 'APPROVE')}
-                            className={`px-2.5 py-1.5 text-white text-[10px] font-black rounded-lg transition-colors uppercase ${alert.newValue.riskMetadata?.proposedAction ? 'bg-orange-600 hover:bg-orange-700 animate-pulse' : 'bg-[#f43f5e] hover:bg-rose-600'}`}
+                            className={`px-3 py-1.5 text-white text-[9px] font-black rounded-lg transition-all uppercase tracking-widest shadow-sm ${alert.newValue.riskMetadata?.proposedAction ? 'bg-orange-500 hover:bg-orange-600 ring-4 ring-orange-500/20 animate-pulse' : 'bg-[#f43f5e] hover:bg-rose-600'}`}
                           >
-                            {alert.newValue.riskMetadata?.proposedAction ? `Authorize ${alert.newValue.riskMetadata.proposedAction}` : 'Institutional Clearance'}
+                            {alert.newValue.riskMetadata?.proposedAction ? `Auth ${alert.newValue.riskMetadata.proposedAction}` : 'Clearance'}
                           </button>
                         )}
                       </>
                     )}
-                    <button className="flex items-center gap-1.5 text-[10px] font-black text-[#f43f5e] hover:underline uppercase bg-white px-2.5 py-1.5 rounded-lg border border-slate-100 shadow-sm">
-                      Forensic Audit <ExternalLink size={12} />
+                    <button className="flex items-center justify-center p-2 text-slate-400 hover:text-[#f43f5e] hover:bg-rose-50 rounded-lg transition-colors border border-slate-200 hover:border-rose-200 bg-white" title="View Forensic Audit">
+                      <ExternalLink size={14} />
                     </button>
                   </div>
-                </div>
-              </div>
-
-              {/* Rules Triggered */}
-              <div className="space-y-2 mb-4">
-                {alert.newValue.flags.map((flag, idx) => (
-                  <div key={idx} className="flex gap-3 items-start p-3 bg-white border border-slate-100 rounded-xl shadow-sm">
-                    <div className="p-1.5 bg-slate-50 rounded-lg text-slate-400 mt-0.5">
-                      <Flag size={8} />
-                    </div>
-                    <div>
-                      <p className="text-[8px] font-black text-slate-500 uppercase tracking-wide">Rule: {flag.rule}</p>
-                      <p className="text-[9px] text-slate-500 leading-relaxed font-medium mt-0.5">{flag.message}</p>
-                    </div>
-                  </div>
-                ))}
-              </div>
-
-              {/* User Context */}
-              <div className="flex items-center justify-between p-3 bg-slate-50 border border-slate-200/50 rounded-2xl">
-                <div className="flex items-center gap-3">
-                  <div className="w-8 h-8 rounded-full bg-slate-200 flex items-center justify-center border-2 border-white shadow-sm overflow-hidden">
-                    <User size={10} className="text-slate-500" />
-                  </div>
-                  <div>
-                    <p className="text-[8px] font-black text-slate-800">
-                      {alert.user ? `${alert.user.firstName} ${alert.user.lastName}` : "System Entity"}
-                    </p>
-                    <p className="text-[9px] text-slate-500 font-medium">{alert.user?.email || "internal@budolecosystem.com"}</p>
-                  </div>
-                </div>
-                <div className="flex items-center gap-2">
-                  <span className={`text-[8px] font-black px-2 py-1 rounded bg-[#0f172a] text-white tracking-widest uppercase`}>
-                    KYC: {alert.user?.kycTier || "NONE"}
-                  </span>
-                </div>
-              </div>
+               </div>
             </div>
-          ))
+            );
+          })
         )}
       </div>
 
@@ -281,9 +313,23 @@ export default function ComplianceBoard() {
             <span className="text-[10px] font-black leading-tight">{alerts.filter(a => (a.newValue.riskScore || 0) > 75).length} High</span>
           </div>
           <div className="h-4 w-px bg-gray-600 mx-2"></div>
-          <div className="flex flex-col">
+          <div className="flex flex-col relative group/ewma cursor-help">
             <span className="text-[8px] font-semibold text-slate-500 uppercase tracking-widest">DRS Status</span>
-            <span className="text-[10px] font-black text-blue-400 leading-tight tracking-tighter">ACTIVE (EWMA)</span>
+            <span className="text-[10px] font-black text-blue-400 leading-tight tracking-tighter hover:text-blue-300 transition-colors">ACTIVE (EWMA)</span>
+            
+            {/* EWMA Tooltip */}
+            <div className="absolute bottom-full left-0 mb-3 w-64 p-3 bg-slate-900 border border-slate-700 rounded-xl shadow-2xl opacity-0 group-hover/ewma:opacity-100 group-hover/ewma:-translate-y-1 pointer-events-none transition-all duration-200 z-[100]">
+              <div className="absolute -bottom-1.5 left-4 w-3 h-3 bg-slate-900 border-b border-r border-slate-700 transform rotate-45"></div>
+              <div className="relative z-10">
+                <span className="block font-black text-slate-200 text-[10px] uppercase tracking-widest border-b border-slate-700 pb-1 mb-1.5 flex items-center justify-between">
+                  EWMA Algorithm
+                  <span className="text-[7px] text-blue-400 bg-blue-400/10 px-1 py-0.5 rounded">AUTO-TUNING</span>
+                </span>
+                <p className="text-[10px] font-medium text-slate-400 leading-relaxed">
+                  <span className="text-white font-bold">Exponentially Weighted Moving Average.</span> This mathematical model allows the DRS Engine to prioritize <span className="text-blue-300 font-bold">recent</span> behaviors while still remembering historical baselines. It enables the AI to rapidly detect sudden fraud spikes without triggering false positives for gradual, normal changes in user spending.
+                </p>
+              </div>
+            </div>
           </div>
         </div>
         <div className="text-right">

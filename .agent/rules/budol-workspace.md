@@ -9,6 +9,7 @@ You include the task list in the documentation
 You interlink with the index, previous and next version of  the documentation
 You do not allow undocumented or untested changes.
 You backup first all the databases if there will be changes in the schema or need to wipe out the databases records. Save the database backup in \backup-db\db-date (date is the system date)
+When implementing/fixing always ask the user wheter it will be production environment or local dev environment
 
 add comments explaining:
 - why the code exist 
@@ -48,6 +49,8 @@ DOCUMENTATION:
 All versions must be stored in /documentation/budolecosystem_docs_YYYY-MM-DD_vX
 Each must include:
 index.html
+task.html
+workflow.html
 developer_manual.html
 system_admin_manual.html
 user_manual.html
@@ -72,17 +75,13 @@ before build run flutter analyze and fix the errors.
 
 Design\review a Confluence-style layout with sidebar, main content, and metadata
 Update knowledgebase.html with professional styling (Atlassian-inspired) and structured sections
-Integrate Sidebar navigation and Table of Contents for improved accessibility
+Integrate Sidebar navigation and Table of Contents for improved accessibility.
+
+Ensure that when fixing or implementing production environment the local dev environment will not be broken.
+Ensure fixes or implementation on either production or local dev environment will not broke either one.
 
 SYSTEM START:
 npm start
 
 FINAL GATE:
 No release unless tests pass, docs created, version incremented, compliance verified, and risk register updated.
-
-
-
-
-
-
-

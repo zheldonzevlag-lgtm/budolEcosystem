@@ -17,105 +17,123 @@
             <li><a href="user_manual.html">User Manual</a></li>
             <li><a href="risk_register.html">Risk Register</a></li>
             <li><a href="Mitigation.html">Mitigation Plan</a></li>
-            <li><a href="issues & fixes.html">Issues & Fixes</a></li>
+            <li><a href="issues & fixes.html">Issues &amp; Fixes</a></li>
             <li><a href="test_results.html">Test Results</a></li>
             <li><a href="future_recommendations.html">Future Recommendations</a></li>
         </ul>
     </nav>
     <main class="content">
         <header class="header">
-            <h1>System Admin Manual: Monitoring & Health</h1>
+            <h1>System Admin Manual: v2.4.7</h1>
             <div class="metadata">
-                <span><strong>Role:</strong> Administrator / NOC</span>
-                <span><strong>Version:</strong> 2.4.7</span>
+                <span><strong>Version:</strong> v2.4.7</span>
+                <span><strong>Date:</strong> 2026-04-13</span>
+                <span><strong>Audience:</strong> System Administrators / DevOps</span>
             </div>
         </header>
 
         <section class="section">
-            <h2>1. DRS Engine Monitoring</h2>
-            <p>The Dynamic Risk Scoring (DRS) Engine status is now tracked via a centralized heartbeat system visible on the Admin Dashboard.</p>
+            <h2>Service Start Procedure</h2>
             <div class="card">
-                <h3>Interpreting the Status Indicators</h3>
+                <p>All services are started from the ecosystem root using the unified start script:</p>
+                <pre><code>cd D:\IT Projects\clone\budolEcosystem
+npm start</code></pre>
+                <p>This runs all microservices concurrently. Verify each service starts on its designated port (see architecture table in Developer Manual).</p>
+            </div>
+        </section>
+
+        <section class="section">
+            <h2>DRS Engine Heartbeat Monitoring</h2>
+            <div class="card">
+                <p>The DRS (Dynamic Risk Scoring) Engine Heartbeat is a background telemetry process running in <code>transaction-service</code>. It writes a health pulse to the <code>SystemSetting</code> table every 30 seconds.</p>
+                <h3>Verifying Heartbeat is Active</h3>
+                <pre><code>-- Run in PostgreSQL console
+SELECT key, value, "updatedAt"
+FROM "SystemSetting"
+WHERE key = 'drs_heartbeat_last_ping'
+ORDER BY "updatedAt" DESC LIMIT 1;</code></pre>
+                <p>Expected: <code>updatedAt</code> should be within the last 60 seconds. If older than 2 minutes, the transaction-service may have crashed.</p>
+                <h3>Restarting the Heartbeat</h3>
+                <pre><code>cd budolpay-0.1.0/services/transaction-service
+node index.js</code></pre>
+            </div>
+        </section>
+
+        <section class="section">
+            <h2>Payment Gateway Service</h2>
+            <div class="card">
+                <h3>Starting the Service</h3>
+                <pre><code>cd budolpay-0.1.0/services/payment-gateway-service
+node api/index.js</code></pre>
+                <h3>Health Check</h3>
+                <pre><code>curl http://127.0.0.1:8004/health</code></pre>
+                <p>Expected response: <code>{"status":"Payment Gateway Service is healthy","timestamp":"..."}</code></p>
+                <h3>Important: body-parser Configuration (v2.4.7)</h3>
+                <p>In v2.4.7, the body-parser was updated to accept <code>application/json</code> with any charset. If upgrading manually, ensure <code>api/index.js</code> uses:</p>
+                <pre><code>router.use(bodyParser.json({
+  type: (req) => req.headers['content-type']?.startsWith('application/json')
+}));</code></pre>
+            </div>
+        </section>
+
+        <section class="section">
+            <h2>Running Integration Tests</h2>
+            <div class="card">
+                <h3>Unit / Offline Tests (no services required)</h3>
+                <pre><code>cd budolpay-0.1.0/scripts/test_scripts
+npx jest --forceExit</code></pre>
+                <p>Expected: 16 pass, 1 skip (payment-security, requires live gateway)</p>
+
+                <h3>Full Integration Tests (all services must be running)</h3>
+                <pre><code># 1. Start all services
+npm start
+
+# 2. Run tests
+cd budolpay-0.1.0/scripts/test_scripts
+npx jest --forceExit</code></pre>
+                <p>Expected with all services up: 17 pass, 0 skip, 0 fail</p>
+            </div>
+        </section>
+
+        <section class="section">
+            <h2>Admin Dashboard Configuration</h2>
+            <div class="card">
+                <h3>Build &amp; Start (Local Dev)</h3>
+                <pre><code>cd budolpay-0.1.0/apps/admin
+npm install
+npm run dev</code></pre>
+                <p>Note: <code>prebuild</code> now uses standard <code>prisma generate</code> without the legacy <code>/tmp/prisma_cache</code> hack removed in v2.4.7.</p>
+                <h3>Environment Variables Required</h3>
                 <table>
-                    <thead>
-                        <tr>
-                            <th>Status</th>
-                            <th>Color</th>
-                            <th>Meaning</th>
-                        </tr>
-                    </thead>
+                    <thead><tr><th>Variable</th><th>Description</th></tr></thead>
                     <tbody>
-                        <tr>
-                            <td><span class="status-tag status-pass">ACTIVE</span></td>
-                            <td>Green</td>
-                            <td>System heartbeat received within the last 120 seconds. Risk analysis is running.</td>
-                        </tr>
-                        <tr>
-                            <td><span class="status-tag status-warn">DELAYED</span></td>
-                            <td>Yellow</td>
-                            <td>No heartbeat for >2 minutes. Transaction processing may be slowed.</td>
-                        </tr>
-                        <tr>
-                            <td><span class="status-tag status-fail">OFFLINE</span></td>
-                            <td>Red</td>
-                            <td>System heartbeat failed for >5 minutes. Critical alert triggered.</td>
-                        </tr>
+                        <tr><td>DATABASE_URL</td><td>PostgreSQL connection string for the budolpay schema</td></tr>
+                        <tr><td>JWT_SECRET</td><td>Shared JWT signing secret across all services</td></tr>
+                        <tr><td>BUDOLID_SSO_URL</td><td>URL to the BudolID SSO service (default: http://localhost:8000)</td></tr>
+                        <tr><td>LOCAL_IP</td><td>LAN IP address for service inter-communication</td></tr>
                     </tbody>
                 </table>
             </div>
         </section>
 
         <section class="section">
-            <h2>2. Infrastructure Port Map</h2>
-            <p>Institutional port compliance for the v2.4.7 release was verified via <code>infrastructure-audit.test.js</code>.</p>
-            <table>
-                <thead>
-                    <tr>
-                        <th>Service</th>
-                        <th>Standard Port</th>
-                        <th>Verification Status</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    <tr>
-                        <td>Auth Service</td>
-                        <td>8001</td>
-                        <td><span class="status-tag status-pass">Verified</span></td>
-                    </tr>
-                    <tr>
-                        <td>Wallet Service</td>
-                        <td>8002</td>
-                        <td><span class="status-tag status-pass">Verified</span></td>
-                    </tr>
-                    <tr>
-                        <td>Transaction Service</td>
-                        <td>8003</td>
-                        <td><span class="status-tag status-pass">Verified</span></td>
-                    </tr>
-                    <tr>
-                        <td>Payment Gateway</td>
-                        <td>8004</td>
-                        <td><span class="status-tag status-pass">Verified</span></td>
-                    </tr>
-                </tbody>
-            </table>
-        </section>
-
-        <section class="section">
-            <h2>3. Troubleshooting</h2>
+            <h2>Compliance Controls</h2>
             <div class="card">
-                <h3>Dashboard showing OFFLINE?</h3>
-                <ol>
-                    <li>Verify <code>transaction-service</code> is running.</li>
-                    <li>Check database connectivity (<code>prisma db pull</code> test).</li>
-                    <li>Ensure <code>SystemSetting</code> table is not locked.</li>
-                </ol>
+                <table>
+                    <thead><tr><th>Control</th><th>Regulation</th><th>Implementation</th></tr></thead>
+                    <tbody>
+                        <tr><td>Audit Logging</td><td>PCI DSS Req 10.2</td><td>Centralized AuditLog via /logs endpoint on auth-service</td></tr>
+                        <tr><td>OTP Verification</td><td>BSP Circ. No. 982</td><td>Admin login enforces OTP second factor</td></tr>
+                        <tr><td>RBAC Maker-Checker</td><td>BSP AMLA</td><td>MANAGER → GENERAL_MANAGER resolution workflow</td></tr>
+                        <tr><td>Data Encryption</td><td>NPC Data Privacy Act</td><td>Passwords stored as bcrypt hashes; PII masked in logs</td></tr>
+                    </tbody>
+                </table>
             </div>
         </section>
 
         <footer>
             <hr>
-            <p style="font-size: 12px; color: #6b778c;">&copy; 2026 BudolPay NOC Operations.</p>
+            <p style="font-size: 12px; color: #6b778c;">&copy; 2026 BudolPay Ecosystem. | <a href="index.html">← Back to Index</a> | <a href="risk_register.html">Risk Register →</a></p>
         </footer>
     </main>
 </body>

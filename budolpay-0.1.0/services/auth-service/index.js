@@ -1296,25 +1296,71 @@ app.post('/logout', async (req, res) => {
     }
 });
 
-// Legacy Login (Internal)
+// Legacy Login (Internal) & Proxied Mobile Login
 app.post('/login', async (req, res) => {
     const { email, password } = req.body;
     try {
         const user = await prisma.user.findUnique({ where: { email } });
-        if (!user || !(await bcrypt.compare(password, user.passwordHash))) {
+        if (!user) {
             return res.status(401).json({ error: 'Invalid credentials' });
         }
+
+        let isPasswordValid = false;
+
+        // If user is managed by BudolID, verify their credentials via SSO Proxy
+        if (user.passwordHash === 'SSO_MANAGED' || user.passwordHash === 'QUICK_REG_PENDING') {
+            try {
+                // Use NEXT_PUBLIC_SSO_URL from env or 127.0.0.1 (not localhost) to avoid Node 18 IPv6 fetch issues
+                const budolIdUrl = process.env.BUDOL_ID_URL || process.env.NEXT_PUBLIC_SSO_URL || 'http://127.0.0.1:8000';
+                
+                // Use native fetch to proxy the login request
+                const response = await fetch(`${budolIdUrl}/auth/sso/login`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        email,
+                        password,
+                        apiKey: 'bp_key_2025' // Core ecosystem key
+                    })
+                });
+
+                if (response.ok) {
+                    const data = await response.json();
+                    if (data.token) {
+                        isPasswordValid = true;
+                    } else {
+                        return res.status(401).json({ error: 'SSO Proxy: No token in response', data });
+                    }
+                } else {
+                    const errText = await response.text();
+                    console.error(`[SSO Proxy] BudolID rejected login for ${email} with status ${response.status}`, errText);
+                    return res.status(401).json({ error: `SSO Proxy Rejected: ${response.status} - ${errText}`, budolIdUrl });
+                }
+            } catch (err) {
+                console.error(`[SSO Proxy] Failed to connect to BudolID for ${email}:`, err.message);
+                return res.status(500).json({ error: `SSO Proxy Fetch Failed: ${err.message}`, budolIdUrl: process.env.BUDOL_ID_URL || process.env.NEXT_PUBLIC_SSO_URL || 'http://127.0.0.1:8000' });
+            }
+        } else {
+            // Standard bcrypt check for local BudolPay users
+            isPasswordValid = await bcrypt.compare(password, user.passwordHash);
+        }
+
+        if (!isPasswordValid) {
+            return res.status(401).json({ error: 'Invalid credentials' });
+        }
+
         const token = jwt.sign({ userId: user.id, role: user.role }, JWT_SECRET, { expiresIn: '24h' });
 
-        // Audit: Standard Web Login
+        // Audit: Standard Web/Mobile Login
         await createAuditLog(req, user.id, 'WEB_LOGIN', {
-            method: 'PASSWORD',
+            method: user.passwordHash === 'SSO_MANAGED' ? 'SSO_MANAGED_PROXY' : 'PASSWORD',
             status: 'SUCCESS',
             timestamp: getLegacyManilaISO()
         });
 
         res.json({ token, user: { id: user.id, email: maskPII(user.email), role: user.role } });
     } catch (error) {
+        console.error('[Login Error]', error);
         res.status(500).json({ error: error.message });
     }
 });

@@ -44,15 +44,18 @@ const createCentralizedAuditLog = async (data) => {
  * Date Utilities for Asia/Manila Standard
  */
 const getNowUTC = () => new Date();
-const getLegacyManilaISO = () => new Date().toISOString();
-const getLegacyManilaDate = () => new Date();
+const { generateSecureReferenceId, getLegacyManilaISO, getLegacyManilaDate } = require('./utils');
 
 const app = express();
 const PORT = process.env.PORT || 8004;
 
 // Vercel Support: Handle API prefix
 const router = express.Router();
-router.use(bodyParser.json());
+// WHY: The default body-parser only accepts 'application/json' strictly.
+//      Passing a custom 'type' function allows it to also accept variants like
+//      'application/json; charset=UTF-8' (sent by some clients/reverse proxies),
+//      preventing spurious HTTP 415 Unsupported Media Type rejections.
+router.use(bodyParser.json({ type: (req) => req.headers['content-type']?.startsWith('application/json') }));
 app.use('/api/payment-gw', router);
 app.use('/', router); // Fallback for direct calls
 
@@ -66,17 +69,19 @@ const IS_DEV = process.env.NODE_ENV !== 'production';
 const GATEWAY_URL = IS_DEV ? `http://${LOCAL_IP || 'localhost'}:8080` : (process.env.GATEWAY_URL || 'https://api.budolpay.com');
 
 // --- STARTUP DIAGNOSTIC (v27.2) ---
-(async () => {
-    console.log('[Payment-Gateway] 🔍 Running Startup Diagnostic...');
-    try {
-        const userCount = await prisma.user.count();
-        console.log(`[Payment-Gateway] ✅ Database Connected. Found ${userCount} users in 'budolpay' schema.`);
-    } catch (err) {
-        console.error('[Payment-Gateway] ❌ CRITICAL: Database Connection Failed during startup!');
-        console.error(`[Payment-Gateway] Error Details: ${err.message}`);
-        console.error(`[Payment-Gateway] Configured URL: ${process.env.DATABASE_URL ? (process.env.DATABASE_URL.split('@')[1] || 'hidden') : 'MISSING'}`);
-    }
-})();
+if (process.env.NODE_ENV !== 'test') {
+  (async () => {
+      console.log('[Payment-Gateway] 🔍 Running Startup Diagnostic...');
+      try {
+          const userCount = await prisma.user.count();
+          console.log(`[Payment-Gateway] ✅ Database Connected. Found ${userCount} users in 'budolpay' schema.`);
+      } catch (err) {
+          console.error('[Payment-Gateway] ❌ CRITICAL: Database Connection Failed during startup!');
+          console.error(`[Payment-Gateway] Error Details: ${err.message}`);
+          console.error(`[Payment-Gateway] Configured URL: ${process.env.DATABASE_URL ? (process.env.DATABASE_URL.split('@')[1] || 'hidden') : 'MISSING'}`);
+      }
+  })();
+}
 
 const notifyAdmin = async (event, data) => {
   try {
@@ -103,19 +108,6 @@ const notifyUser = async (userId, event, data) => {
     console.error(`[Gateway] Failed to notify User (${event}): ${err.message}`);
   }
 };
-
-/**
- * Generate a secure, unique reference ID for transactions
- * Format: JON-YYYYMMDDHHMMSS-RANDOM (8 chars)
- */
-function generateSecureReferenceId() {
-  const timestamp = getLegacyManilaISO()
-    .replace(/[-T:.Z]/g, '') // Remove separators
-    .slice(0, 14); // Keep YYYYMMDDHHMMSS
-  
-  const randomBytes = crypto.randomBytes(4).toString('hex').toUpperCase();
-  return `JON-${timestamp}-${randomBytes}`;
-}
 
 // Health Check
 router.get('/health', (req, res) => {
