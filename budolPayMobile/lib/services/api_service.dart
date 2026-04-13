@@ -9,6 +9,7 @@ import '../utils/js_helper.dart';
 import '../utils/timezone_utils.dart';
 import '../utils/phone_utils.dart';
 import 'discovery_service.dart';
+import '../utils/formatters.dart';
 
 import 'package:package_info_plus/package_info_plus.dart';
 

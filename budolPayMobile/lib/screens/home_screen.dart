@@ -235,8 +235,9 @@ class _HomeScreenState extends State<HomeScreen> {
     String userName = 'User';
     if (user != null) {
       final firstName = user['firstName']?.toString() ?? '';
-      userName = firstName.trim();
-      if (userName.isEmpty) userName = user['email']?.toString() ?? 'User';
+      final lastName = user['lastName']?.toString() ?? '';
+      final fullName = '$firstName $lastName'.trim();
+      userName = fullName.isNotEmpty ? fullName : (user['email']?.toString() ?? 'User');
     }
 
     return PopScope(
@@ -506,9 +507,9 @@ class _HomeScreenState extends State<HomeScreen> {
                           final String title = tx['description'] ?? (isIncome ? 'Money Received' : 'Money Sent');
                           
                           // Safe parsing of amount
-                          if (tx['amount'] != null) {
-                            amount = budol_format.AmountUtils.toDouble(tx['amount']);
-                          }
+                          final double amount = tx['amount'] != null 
+                              ? budol_format.AmountUtils.toDouble(tx['amount'])
+                              : 0.0;
                           
                           final String amountStr = '${isIncome ? '+' : '-'} PHP ${NumberFormat('#,##0.00').format(amount)}';
                           final Color amountColor = isIncome ? Colors.green : Colors.red;
