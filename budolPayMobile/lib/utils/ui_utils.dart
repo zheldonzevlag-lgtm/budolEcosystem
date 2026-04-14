@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../services/api_service.dart';
-import 'brand_colors.dart';
 
 class UIUtils {
   static void showHostConfigDialog(BuildContext context) {
@@ -139,7 +138,7 @@ class UIUtils {
         suffixColor = baseStyle?.color ?? Colors.black;
       } else {
         if (suffixLower.contains('pay') || suffixLower.contains('₱ay')) {
-          suffixColor = BrandColors.primary; // Ruby Red (v2.5.0)
+          suffixColor = const Color(0xFFF43F5E); // Rose Red
         } else if (suffixLower.contains('shap')) {
           suffixColor = const Color(0xFF10B981); // Emerald
         } else if (suffixLower.contains('care')) {
@@ -153,7 +152,7 @@ class UIUtils {
         } else if (suffixLower.contains('akawntng')) {
           suffixColor = const Color(0xFFA855F7); // Purple
         } else {
-          suffixColor = BrandColors.primary; // Default to Budol Ruby
+          suffixColor = const Color(0xFFF43F5E); // Default to budolPay color
         }
       }
 

@@ -15,7 +15,6 @@ import '../widgets/map_picker.dart';
 import 'kyc_capture_screen.dart';
 import 'package:geocoding/geocoding.dart';
 import 'package:connectivity_plus/connectivity_plus.dart';
-import '../utils/brand_colors.dart';
 
 
 class KYCVerificationScreen extends StatefulWidget {
@@ -64,8 +63,8 @@ class _KYCVerificationScreenState extends State<KYCVerificationScreen> {
       builder: (context, child) {
         return Theme(
           data: Theme.of(context).copyWith(
-            colorScheme: ColorScheme.light(
-              primary: BrandColors.primary,
+            colorScheme: const ColorScheme.light(
+              primary: Color(0xFFF43F5E),
               onPrimary: Colors.white,
               onSurface: Colors.black,
             ),
@@ -149,7 +148,7 @@ class _KYCVerificationScreenState extends State<KYCVerificationScreen> {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text('Failed to resolve address: $e'),
-            backgroundColor: BrandColors.primary,
+            backgroundColor: const Color(0xFFF43F5E),
           ),
         );
       }
@@ -437,7 +436,7 @@ class _KYCVerificationScreenState extends State<KYCVerificationScreen> {
                 Navigator.pop(context); // Return to settings
               },
               style: ElevatedButton.styleFrom(
-                backgroundColor: Theme.of(context).colorScheme.primary,
+                backgroundColor: const Color(0xFFF43F5E),
                 minimumSize: const Size(double.infinity, 50),
                 shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
               ),
@@ -452,10 +451,9 @@ class _KYCVerificationScreenState extends State<KYCVerificationScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: Theme.of(context).colorScheme.surface,
       appBar: AppBar(
         title: const Text('Account Verification'),
-        backgroundColor: Theme.of(context).colorScheme.primary,
+        backgroundColor: const Color(0xFFF43F5E),
         foregroundColor: Colors.white,
       ),
       body: Column(
@@ -493,7 +491,7 @@ class _KYCVerificationScreenState extends State<KYCVerificationScreen> {
             child: ElevatedButton(
               onPressed: (_isUploading || _isProcessingML) ? null : _nextStep,
               style: ElevatedButton.styleFrom(
-                backgroundColor: Theme.of(context).colorScheme.primary,
+                backgroundColor: const Color(0xFFF43F5E),
                 minimumSize: const Size(double.infinity, 56),
                 shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
               ),
@@ -516,19 +514,17 @@ class _KYCVerificationScreenState extends State<KYCVerificationScreen> {
 
   Widget _buildStepIndicator(int step, String label) {
     bool isActive = _currentStep >= step;
-    final onSurfaceVariant = Theme.of(context).colorScheme.onSurfaceVariant;
-    
     return Column(
       children: [
         CircleAvatar(
           radius: 15,
-          backgroundColor: isActive ? Theme.of(context).colorScheme.primary : Theme.of(context).colorScheme.surfaceContainerHighest,
+          backgroundColor: isActive ? const Color(0xFFF43F5E) : Colors.grey[300],
           child: isActive && _currentStep > step
               ? const Icon(Icons.check, size: 16, color: Colors.white)
-              : Text('${step + 1}', style: TextStyle(color: isActive ? Colors.white : onSurfaceVariant, fontSize: 12)),
+              : Text('${step + 1}', style: TextStyle(color: isActive ? Colors.white : Colors.grey, fontSize: 12)),
         ),
         const SizedBox(height: 4),
-        Text(label, style: TextStyle(fontSize: 10, color: isActive ? Theme.of(context).colorScheme.primary : onSurfaceVariant)),
+        Text(label, style: TextStyle(fontSize: 10, color: isActive ? const Color(0xFFF43F5E) : Colors.grey)),
       ],
     );
   }
@@ -538,7 +534,7 @@ class _KYCVerificationScreenState extends State<KYCVerificationScreen> {
       child: Container(
         height: 2,
         margin: const EdgeInsets.only(bottom: 15),
-        color: Theme.of(context).colorScheme.surfaceContainerHighest,
+        color: Colors.grey[300],
       ),
     );
   }
@@ -551,7 +547,7 @@ class _KYCVerificationScreenState extends State<KYCVerificationScreen> {
         children: [
           const Text('Personal Information', style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold)),
           const SizedBox(height: 8),
-          Text('Please ensure your details match your government ID.', style: TextStyle(color: Theme.of(context).colorScheme.onSurfaceVariant)),
+          const Text('Please ensure your details match your government ID.', style: TextStyle(color: Colors.grey)),
           const SizedBox(height: 32),
           _buildTextField('Full Name', 'Enter your full name', _nameController),
           const SizedBox(height: 20),
@@ -560,7 +556,7 @@ class _KYCVerificationScreenState extends State<KYCVerificationScreen> {
             'MM-DD-YYYY',
             _dobController,
             suffixIcon: IconButton(
-              icon: Icon(Icons.calendar_today, color: Theme.of(context).colorScheme.primary),
+              icon: const Icon(Icons.calendar_today, color: Color(0xFFF43F5E)),
               onPressed: () => _selectDate(context),
             ),
             keyboardType: TextInputType.datetime,
@@ -574,8 +570,8 @@ class _KYCVerificationScreenState extends State<KYCVerificationScreen> {
             _addressController,
             suffixIcon: TextButton.icon(
               onPressed: _pinAddress,
-              icon: Icon(Icons.location_on, size: 18, color: Theme.of(context).colorScheme.primary),
-              label: Text('Pin', style: TextStyle(color: Theme.of(context).colorScheme.primary)),
+              icon: const Icon(Icons.location_on, size: 18, color: Color(0xFFF43F5E)),
+              label: const Text('Pin', style: TextStyle(color: Color(0xFFF43F5E))),
             ),
           ),
         ],
@@ -599,10 +595,10 @@ class _KYCVerificationScreenState extends State<KYCVerificationScreen> {
               width: double.infinity,
               height: 200,
               decoration: BoxDecoration(
-                color: Theme.of(context).colorScheme.surfaceContainerHighest.withAlpha(51),
+                color: Colors.grey[100],
                 borderRadius: BorderRadius.circular(16),
                 border: Border.all(
-                  color: _idFrontImage != null ? Theme.of(context).colorScheme.primary : Theme.of(context).colorScheme.outlineVariant,
+                  color: _idFrontImage != null ? const Color(0xFFF43F5E) : Colors.grey[300]!,
                   style: BorderStyle.solid,
                   width: _idFrontImage != null ? 2 : 1,
                 ),
@@ -611,13 +607,13 @@ class _KYCVerificationScreenState extends State<KYCVerificationScreen> {
                     : null,
               ),
               child: _idFrontImage == null
-                  ? Column(
+                  ? const Column(
                       mainAxisAlignment: MainAxisAlignment.center,
                       children: [
-                        Icon(Icons.camera_alt, size: 48, color: Theme.of(context).colorScheme.primary),
-                        const SizedBox(height: 16),
-                        const Text('Front of ID Card', style: TextStyle(fontWeight: FontWeight.bold)),
-                        Text('Tap to capture', style: TextStyle(color: Theme.of(context).colorScheme.primary)),
+                        Icon(Icons.camera_alt, size: 48, color: Color(0xFFF43F5E)),
+                        SizedBox(height: 16),
+                        Text('Front of ID Card', style: TextStyle(fontWeight: FontWeight.bold)),
+                        Text('Tap to capture', style: TextStyle(color: Color(0xFFF43F5E))),
                       ],
                     )
                   : Container(
@@ -693,10 +689,10 @@ class _KYCVerificationScreenState extends State<KYCVerificationScreen> {
                     width: 200,
                     height: 200,
                     decoration: BoxDecoration(
-                      color: Theme.of(context).colorScheme.surfaceContainerHighest.withAlpha(51),
+                      color: Colors.grey[100],
                       shape: BoxShape.circle,
                       border: Border.all(
-                        color: _selfieImage != null ? Theme.of(context).colorScheme.primary : Theme.of(context).colorScheme.outlineVariant,
+                        color: _selfieImage != null ? const Color(0xFFF43F5E) : Colors.grey[300]!,
                         width: 2,
                       ),
                       image: _selfieImage != null
@@ -704,14 +700,14 @@ class _KYCVerificationScreenState extends State<KYCVerificationScreen> {
                           : null,
                     ),
                     child: _selfieImage == null
-                        ? Icon(Icons.person, size: 100, color: Theme.of(context).colorScheme.onSurfaceVariant)
+                        ? const Icon(Icons.person, size: 100, color: Colors.grey)
                         : null,
                   ),
                   Positioned(
                     bottom: 0,
                     right: 0,
                     child: CircleAvatar(
-                      backgroundColor: Theme.of(context).colorScheme.primary,
+                      backgroundColor: const Color(0xFFF43F5E),
                       child: IconButton(
                         icon: Icon(_selfieImage == null ? Icons.camera_alt : Icons.edit, color: Colors.white),
                         onPressed: () => _pickImage(ImageSource.camera, true),
@@ -757,7 +753,7 @@ class _KYCVerificationScreenState extends State<KYCVerificationScreen> {
             ),
             focusedBorder: OutlineInputBorder(
               borderRadius: BorderRadius.circular(12),
-              borderSide: const BorderSide(color: BrandColors.primary),
+              borderSide: const BorderSide(color: Color(0xFFF43F5E)),
             ),
             contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
           ),

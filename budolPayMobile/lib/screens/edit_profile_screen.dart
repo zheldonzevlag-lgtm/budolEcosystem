@@ -2,7 +2,6 @@ import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../services/api_service.dart';
-import '../utils/brand_colors.dart';
 import 'kyc_capture_screen.dart';
 
 class EditProfileScreen extends StatefulWidget {
@@ -190,10 +189,10 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
     final bool isFullyVerified = user?['kycTier'] == 'FULLY_VERIFIED';
 
     return Scaffold(
-      backgroundColor: BrandColors.background,
+      backgroundColor: const Color(0xFFF8FAFC),
       appBar: AppBar(
         title: const Text('Edit Profile', style: TextStyle(color: Colors.white)),
-        backgroundColor: BrandColors.primary,
+        backgroundColor: const Color(0xFFF43F5E),
         iconTheme: const IconThemeData(color: Colors.white),
         elevation: 0,
       ),

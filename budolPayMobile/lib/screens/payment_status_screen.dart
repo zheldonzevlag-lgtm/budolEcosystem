@@ -3,9 +3,7 @@ import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
 import '../constants/routes.dart';
 import '../services/realtime_service.dart';
-import '../utils/formatters.dart';
 import 'dart:async';
-import '../utils/brand_colors.dart';
 
 enum PaymentStatus { verifying, success, failed }
 
@@ -135,7 +133,7 @@ class _PaymentStatusScreenState extends State<PaymentStatusScreen> with SingleTi
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: BrandColors.background,
+      backgroundColor: Colors.white,
       body: SafeArea(
         child: Column(
           children: [
@@ -182,13 +180,13 @@ class _PaymentStatusScreenState extends State<PaymentStatusScreen> with SingleTi
         width: 100,
         height: 100,
         decoration: BoxDecoration(
-          color: isSuccess ? BrandColors.primary.withValues(alpha: 0.1) : BrandColors.primary.withValues(alpha: 0.1),
+          color: isSuccess ? const Color(0xFFF43F5E).withValues(alpha: 0.1) : const Color(0xFFF43F5E).withValues(alpha: 0.1),
           shape: BoxShape.circle,
         ),
         child: Icon(
           isSuccess ? Icons.check_circle_rounded : Icons.error_rounded,
           size: 80,
-          color: isSuccess ? BrandColors.primary : BrandColors.primary,
+          color: isSuccess ? const Color(0xFFF43F5E) : const Color(0xFFF43F5E),
         ),
       ),
     );
@@ -207,12 +205,12 @@ class _PaymentStatusScreenState extends State<PaymentStatusScreen> with SingleTi
       case PaymentStatus.success:
         title = 'Payment Successful!';
         subtitle = 'Your transaction has been completed.';
-        titleColor = BrandColors.primary;
+        titleColor = const Color(0xFFF43F5E);
         break;
       case PaymentStatus.failed:
         title = 'Payment Failed';
         subtitle = _errorMessage ?? 'Something went wrong. Please try again.';
-        titleColor = BrandColors.primary;
+        titleColor = const Color(0xFFF43F5E);
         break;
     }
 
@@ -249,7 +247,14 @@ class _PaymentStatusScreenState extends State<PaymentStatusScreen> with SingleTi
     final data = _updatedTransactionData!;
     
     // Safe parsing of amount
-    double amount = AmountUtils.toDouble(data['amount']);
+    double amount = 0.0;
+    if (data['amount'] != null) {
+      if (data['amount'] is num) {
+        amount = (data['amount'] as num).toDouble();
+      } else {
+        amount = double.tryParse(data['amount'].toString()) ?? 0.0;
+      }
+    }
 
     final merchant = data['storeName'] ?? data['merchant'] ?? 'Merchant';
     
@@ -326,8 +331,8 @@ class _PaymentStatusScreenState extends State<PaymentStatusScreen> with SingleTi
             fontSize: 8,
             fontFamily: isMonospace ? 'monospace' : null,
             color: isStatus 
-              ? (isSuccess ? BrandColors.primary : const Color(0xFFEF4444))
-              : (isHighlighted ? BrandColors.primary : const Color(0xFF1E293B)),
+              ? (isSuccess ? const Color(0xFFF43F5E) : const Color(0xFFEF4444))
+              : (isHighlighted ? const Color(0xFFF43F5E) : const Color(0xFF1E293B)),
           ),
         ),
       ),
@@ -355,7 +360,7 @@ class _PaymentStatusScreenState extends State<PaymentStatusScreen> with SingleTi
                 );
               },
               style: ElevatedButton.styleFrom(
-                backgroundColor: BrandColors.primary,
+                backgroundColor: const Color(0xFFF43F5E),
                 foregroundColor: Colors.white,
                 padding: const EdgeInsets.symmetric(vertical: 16),
                 elevation: 0,
@@ -378,7 +383,7 @@ class _PaymentStatusScreenState extends State<PaymentStatusScreen> with SingleTi
               );
             },
             style: ElevatedButton.styleFrom(
-              backgroundColor: _currentStatus == PaymentStatus.success ? const Color(0xFFF1F5F9) : BrandColors.primary,
+              backgroundColor: _currentStatus == PaymentStatus.success ? const Color(0xFFF1F5F9) : const Color(0xFFF43F5E),
               foregroundColor: _currentStatus == PaymentStatus.success ? const Color(0xFF475569) : Colors.white,
               padding: const EdgeInsets.symmetric(vertical: 16),
               elevation: 0,

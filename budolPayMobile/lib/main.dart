@@ -31,7 +31,6 @@ import 'screens/favorites_screen.dart';
 import 'screens/debug_console_screen.dart';
 import 'screens/payment_status_screen.dart';
 import 'constants/routes.dart';
-import 'utils/brand_colors.dart';
 import 'package:flutter/foundation.dart';
 import 'dart:ui';
 
@@ -232,17 +231,17 @@ class _BudolPayAppState extends State<BudolPayApp> {
 
   @override
   Widget build(BuildContext context) {
-    // WHY: Use Consumer to rebuild when ApiService notifies theme changes.
-    return Consumer<ApiService>(
-      builder: (context, api, _) {
-        return MaterialApp(
-          navigatorKey: widget.navigatorKey,
-          title: 'budol₱ay',
-          debugShowCheckedModeBanner: false,
-          theme: BrandColors.getTheme(Brightness.light),
-          darkTheme: BrandColors.getTheme(Brightness.dark),
-          themeMode: api.isDarkMode ? ThemeMode.dark : ThemeMode.light,
-          builder: (context, child) {
+    return MaterialApp(
+      navigatorKey: widget.navigatorKey,
+      title: 'budol₱ay',
+      theme: ThemeData(
+        colorScheme: ColorScheme.fromSeed(
+          seedColor: const Color(0xFFF43F5E),
+          primary: const Color(0xFFF43F5E),
+        ),
+        useMaterial3: true,
+      ),
+      builder: (context, child) {
         // Wrap with SessionOverlay to handle locks and inactivity
         final secureChild = SessionOverlay(child: child ?? const SizedBox());
         
@@ -315,8 +314,6 @@ class _BudolPayAppState extends State<BudolPayApp> {
             errorMessage: args['errorMessage'],
           );
         },
-      },
-        );
       },
     );
   }

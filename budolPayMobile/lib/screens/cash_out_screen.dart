@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import '../utils/formatters.dart';
-import '../utils/brand_colors.dart';
 
 class CashOutScreen extends StatefulWidget {
   const CashOutScreen({super.key});
@@ -16,10 +15,9 @@ class _CashOutScreenState extends State<CashOutScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: BrandColors.background,
       appBar: AppBar(
         title: const Text('Cash Out'),
-        backgroundColor: BrandColors.primary,
+        backgroundColor: const Color(0xFFF43F5E),
         foregroundColor: Colors.white,
       ),
       body: SingleChildScrollView(

@@ -1,11 +1,9 @@
 import 'package:flutter/material.dart';
-import 'dart:ui';
 import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 import 'dart:async';
 import '../services/api_service.dart';
 import '../constants/routes.dart';
-import '../utils/brand_colors.dart';
 
 class RegistrationScreen extends StatefulWidget {
   const RegistrationScreen({super.key});
@@ -214,12 +212,12 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: BrandColors.background,
+      backgroundColor: const Color(0xFF0F172A),
       appBar: AppBar(
         backgroundColor: Colors.transparent,
         elevation: 0,
         leading: IconButton(
-          icon: Icon(Icons.arrow_back, color: Theme.of(context).colorScheme.onSurface),
+          icon: const Icon(Icons.arrow_back, color: Colors.white),
           onPressed: () {
             if (_currentStep > 0) {
               _pageController.previousPage(duration: const Duration(milliseconds: 300), curve: Curves.easeInOut);
@@ -230,29 +228,23 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
         ),
         title: GestureDetector(
           onLongPress: () => Navigator.pushNamed(context, Routes.debugConsole),
-          child: Text('Create Account', style: TextStyle(color: Theme.of(context).colorScheme.onSurface)),
+          child: const Text('Create Account', style: TextStyle(color: Colors.white)),
         ),
       ),
-      body: Stack(
+      body: Column(
         children: [
-          _buildMeshBackground(),
-          _buildGlassOverlay(),
-          Column(
-            children: [
-              _buildProgressIndicator(),
-              Expanded(
-                child: PageView(
-                  controller: _pageController,
-                  physics: const NeverScrollableScrollPhysics(),
-                  onPageChanged: (i) => setState(() => _currentStep = i),
-                  children: [
-                    _buildPhoneStep(),
-                    _buildProfileStep(),
-                    _buildPinStep(),
-                  ],
-                ),
-              ),
-            ],
+          _buildProgressIndicator(),
+          Expanded(
+            child: PageView(
+              controller: _pageController,
+              physics: const NeverScrollableScrollPhysics(),
+              onPageChanged: (i) => setState(() => _currentStep = i),
+              children: [
+                _buildPhoneStep(),
+                _buildProfileStep(),
+                _buildPinStep(),
+              ],
+            ),
           ),
         ],
       ),
@@ -269,7 +261,7 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
               height: 4,
               margin: const EdgeInsets.symmetric(horizontal: 4),
               decoration: BoxDecoration(
-                color: index <= _currentStep ? BrandColors.accent : Theme.of(context).colorScheme.outlineVariant.withValues(alpha: 0.2),
+                color: index <= _currentStep ? const Color(0xFFF43F5E) : const Color(0xFF334155),
                 borderRadius: BorderRadius.circular(2),
               ),
             ),
@@ -291,9 +283,8 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
           Container(
             padding: const EdgeInsets.all(4),
             decoration: BoxDecoration(
-              color: Theme.of(context).colorScheme.surface.withValues(alpha: 0.5),
-              borderRadius: BorderRadius.circular(16),
-              border: Border.all(color: Theme.of(context).colorScheme.outline.withValues(alpha: 0.1)),
+              color: const Color(0xFF1E293B),
+              borderRadius: BorderRadius.circular(12),
             ),
             child: Row(
               children: [
@@ -303,15 +294,15 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
                     child: Container(
                       padding: const EdgeInsets.symmetric(vertical: 8),
                       decoration: BoxDecoration(
-                        color: !_isQuickReg ? Theme.of(context).colorScheme.primary : Colors.transparent,
-                        borderRadius: BorderRadius.circular(12),
+                        color: !_isQuickReg ? Colors.white.withValues(alpha: 0.1) : Colors.transparent,
+                        borderRadius: BorderRadius.circular(8),
                       ),
                       alignment: Alignment.center,
                       child: Text(
                         'Standard',
                         maxLines: 1,
                         style: TextStyle(
-                          color: !_isQuickReg ? Theme.of(context).colorScheme.onPrimary : Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6),
+                          color: !_isQuickReg ? Colors.white : Colors.white60,
                           fontWeight: FontWeight.bold,
                           fontSize: 13,
                         ),
@@ -325,8 +316,8 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
                     child: Container(
                       padding: const EdgeInsets.symmetric(vertical: 8),
                       decoration: BoxDecoration(
-                        color: _isQuickReg ? BrandColors.accent : Colors.transparent,
-                        borderRadius: BorderRadius.circular(12),
+                        color: _isQuickReg ? const Color(0xFF10B981) : Colors.transparent,
+                        borderRadius: BorderRadius.circular(8),
                       ),
                       alignment: Alignment.center,
                       child: Text(
@@ -334,7 +325,7 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
                         style: TextStyle(
-                          color: _isQuickReg ? BrandColors.primaryDark : Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6),
+                          color: _isQuickReg ? Colors.white : Colors.white60,
                           fontWeight: FontWeight.bold,
                           fontSize: 13,
                         ),
@@ -353,6 +344,7 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
               FilteringTextInputFormatter.digitsOnly,
               LengthLimitingTextInputFormatter(11),
             ],
+            style: const TextStyle(color: Colors.white),
             decoration: _inputDecoration(
               'Phone Number', 
               Icons.phone_android,
@@ -427,18 +419,21 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
           TextField(
             controller: _firstNameController,
             textCapitalization: TextCapitalization.words,
+            style: const TextStyle(color: Colors.white),
             decoration: _inputDecoration('First Name', Icons.person),
           ),
           const SizedBox(height: 16),
           TextField(
             controller: _lastNameController,
             textCapitalization: TextCapitalization.words,
+            style: const TextStyle(color: Colors.white),
             decoration: _inputDecoration('Last Name', Icons.person_outline),
           ),
           const SizedBox(height: 16),
           TextField(
             controller: _emailController,
             keyboardType: TextInputType.emailAddress,
+            style: const TextStyle(color: Colors.white),
             decoration: _inputDecoration(
               'Email', 
               Icons.email,
@@ -456,11 +451,12 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
           TextField(
             controller: _passwordController,
             obscureText: _obscurePassword,
+            style: const TextStyle(color: Colors.white),
             decoration: _inputDecoration(
               'Password', 
               Icons.lock,
               suffixIcon: IconButton(
-                icon: Icon(_obscurePassword ? Icons.visibility : Icons.visibility_off, color: Theme.of(context).colorScheme.onSurfaceVariant),
+                icon: Icon(_obscurePassword ? Icons.visibility : Icons.visibility_off, color: Colors.white70),
                 onPressed: () => setState(() => _obscurePassword = !_obscurePassword),
               ),
               errorText: (_passwordController.text.isNotEmpty && !_isPasswordComplex) 
@@ -472,11 +468,12 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
           TextField(
             controller: _confirmPasswordController,
             obscureText: _obscureConfirmPassword,
+            style: const TextStyle(color: Colors.white),
             decoration: _inputDecoration(
               'Confirm Password', 
               Icons.lock_outline,
               suffixIcon: IconButton(
-                icon: Icon(_obscureConfirmPassword ? Icons.visibility : Icons.visibility_off, color: Theme.of(context).colorScheme.onSurfaceVariant),
+                icon: Icon(_obscureConfirmPassword ? Icons.visibility : Icons.visibility_off, color: Colors.white70),
                 onPressed: () => setState(() => _obscureConfirmPassword = !_obscureConfirmPassword),
               ),
               errorText: (_confirmPasswordController.text.isNotEmpty && !_passwordsMatch)
@@ -503,7 +500,7 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
             keyboardType: TextInputType.number,
             obscureText: true,
             maxLength: 6,
-            style: TextStyle(letterSpacing: 8, fontSize: 24, color: Theme.of(context).colorScheme.onSurface),
+            style: const TextStyle(color: Colors.white, letterSpacing: 8, fontSize: 24),
             textAlign: TextAlign.center,
             decoration: _inputDecoration('PIN', Icons.lock),
           ),
@@ -513,7 +510,7 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
             keyboardType: TextInputType.number,
             obscureText: true,
             maxLength: 6,
-            style: TextStyle(letterSpacing: 8, fontSize: 18, color: Theme.of(context).colorScheme.onSurface),
+            style: const TextStyle(color: Colors.white, letterSpacing: 8, fontSize: 18),
             textAlign: TextAlign.center,
             decoration: _inputDecoration('Confirm PIN', Icons.lock_outline),
           ),
@@ -524,55 +521,6 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
     );
   }
 
-  Widget _buildMeshBackground() {
-    return Container(
-      color: const Color(0xFF0F172A), // Midnight Base
-      child: Stack(
-        children: [
-          _buildBlob(
-            color: BrandColors.primary.withValues(alpha: 0.1),
-            top: -100,
-            right: -50,
-            size: 350,
-          ),
-          _buildBlob(
-            color: const Color(0xFF991B1B).withValues(alpha: 0.08),
-            bottom: -150,
-            left: -100,
-            size: 500,
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildBlob({required Color color, double? top, double? left, double? right, double? bottom, required double size}) {
-    return Positioned(
-      top: top,
-      left: left,
-      right: right,
-      bottom: bottom,
-      child: Container(
-        width: size,
-        height: size,
-        decoration: BoxDecoration(
-          shape: BoxShape.circle,
-          gradient: RadialGradient(
-            colors: [color, color.withValues(alpha: 0)],
-          ),
-        ),
-      ),
-    );
-  }
-
-  Widget _buildGlassOverlay() {
-    return Container(
-      decoration: BoxDecoration(
-        color: Colors.black.withValues(alpha: 0.1),
-      ),
-    );
-  }
-
   Widget _stepContainer({
     required String title,
     required String subtitle,
@@ -580,53 +528,35 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
     VoidCallback? onNext,
     String buttonText = 'Continue',
   }) {
-    return SingleChildScrollView(
-      physics: const BouncingScrollPhysics(),
+    return Padding(
       padding: const EdgeInsets.all(24),
-      child: ClipRRect(
-        borderRadius: BorderRadius.circular(32),
-        child: BackdropFilter(
-          filter: ImageFilter.blur(sigmaX: 10, sigmaY: 10),
-          child: Container(
-            padding: const EdgeInsets.all(32),
-            decoration: BoxDecoration(
-              color: Colors.white.withValues(alpha: 0.02),
-              borderRadius: BorderRadius.circular(32),
-              border: Border.all(color: Colors.white.withValues(alpha: 0.1), width: 1.5),
-            ),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Text(title, style: TextStyle(color: Theme.of(context).colorScheme.onSurface, fontSize: 24, fontWeight: FontWeight.bold)),
-                const SizedBox(height: 8),
-                Text(subtitle, style: TextStyle(color: Theme.of(context).colorScheme.onSurfaceVariant.withValues(alpha: 0.8), fontSize: 14)),
-                const SizedBox(height: 32),
-                content,
-                const SizedBox(height: 48),
-                SizedBox(
-                  width: double.infinity,
-                  height: 56,
-                  child: ElevatedButton(
-                    onPressed: (_isLoading || onNext == null) ? null : onNext,
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: Theme.of(context).colorScheme.primary,
-                      foregroundColor: Theme.of(context).colorScheme.onPrimary,
-                      disabledBackgroundColor: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.12),
-                      disabledForegroundColor: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.38),
-                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-                      elevation: _isLoading ? 0 : 4,
-                      shadowColor: Theme.of(context).colorScheme.primary.withValues(alpha: 0.3),
-                    ),
-                    child: _isLoading 
-                      ? const CircularProgressIndicator(color: Colors.white, strokeWidth: 3)
-                      : Text(buttonText, style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
-                  ),
-                ),
-              ],
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(title, style: const TextStyle(color: Colors.white, fontSize: 28, fontWeight: FontWeight.bold)),
+          const SizedBox(height: 8),
+          Text(subtitle, style: const TextStyle(color: Colors.white70, fontSize: 16)),
+          const SizedBox(height: 32),
+          content,
+          const Spacer(),
+          SizedBox(
+            width: double.infinity,
+            height: 56,
+            child: ElevatedButton(
+              onPressed: (_isLoading || onNext == null) ? null : onNext,
+              style: ElevatedButton.styleFrom(
+                backgroundColor: const Color(0xFFF43F5E),
+                foregroundColor: Colors.white,
+                disabledBackgroundColor: const Color(0xFF334155),
+                disabledForegroundColor: Colors.white38,
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+              ),
+              child: _isLoading 
+                ? const CircularProgressIndicator(color: Colors.white)
+                : Text(buttonText, style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
             ),
           ),
-        ),
+        ],
       ),
     );
   }
@@ -634,10 +564,23 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
   InputDecoration _inputDecoration(String label, IconData icon, {Widget? suffixIcon, String? errorText}) {
     return InputDecoration(
       labelText: label,
-      prefixIcon: Icon(icon, color: Theme.of(context).colorScheme.primary),
+      prefixIcon: Icon(icon, color: Colors.white70),
       suffixIcon: suffixIcon,
       errorText: errorText,
-      // WHY: Allow global theme to set decoration details.
+      errorStyle: const TextStyle(color: Colors.redAccent),
+      labelStyle: const TextStyle(color: Colors.white70),
+      filled: true,
+      fillColor: Colors.white.withValues(alpha: 0.1),
+      border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+      focusedBorder: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(12),
+        borderSide: const BorderSide(color: Color(0xFFF43F5E)),
+      ),
+      enabledBorder: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(12),
+        borderSide: BorderSide(color: errorText != null ? Colors.redAccent : Colors.white24),
+      ),
+      counterStyle: const TextStyle(color: Colors.white70),
     );
   }
 }

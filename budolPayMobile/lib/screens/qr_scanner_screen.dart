@@ -7,8 +7,6 @@ import 'package:mobile_scanner/mobile_scanner.dart';
 import 'package:provider/provider.dart';
 import '../services/api_service.dart';
 import '../utils/ui_utils.dart';
-import '../utils/formatters.dart';
-import '../utils/brand_colors.dart';
 import 'payment_status_screen.dart';
 
 class QRScannerScreen extends StatefulWidget {
@@ -243,7 +241,14 @@ class PaymentSummaryScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     // Safe parsing of amount
-    double amount = AmountUtils.toDouble(paymentData['amount']);
+    double amount = 0.0;
+    if (paymentData['amount'] != null) {
+      if (paymentData['amount'] is num) {
+        amount = (paymentData['amount'] as num).toDouble();
+      } else {
+        amount = double.tryParse(paymentData['amount'].toString()) ?? 0.0;
+      }
+    }
 
     final storeName = paymentData['storeName'] ?? paymentData['merchant'] ?? 'Unknown Merchant';
     final orderId = paymentData['orderId'] ?? 'N/A';
@@ -281,7 +286,7 @@ class PaymentSummaryScreen extends StatelessWidget {
                         child: Icon(
                           Icons.account_balance_wallet_rounded,
                           size: 48,
-                          color: BrandColors.primary,
+                          color: Color(0xFFF43F5E),
                         ),
                       ),
                       const SizedBox(height: 12),
@@ -322,7 +327,7 @@ class PaymentSummaryScreen extends StatelessWidget {
                               style: const TextStyle(
                                 fontSize: 20,
                                 fontWeight: FontWeight.bold,
-                                color: BrandColors.primary,
+                                color: Color(0xFFF43F5E),
                                 letterSpacing: -0.5,
                               ),
                             ),
@@ -363,7 +368,7 @@ class PaymentSummaryScreen extends StatelessWidget {
                   ElevatedButton(
                     onPressed: () => _handlePayment(context),
                     style: ElevatedButton.styleFrom(
-                      backgroundColor: BrandColors.primary,
+                      backgroundColor: const Color(0xFFF43F5E),
                       foregroundColor: Colors.white,
                       padding: const EdgeInsets.symmetric(vertical: 14),
                       elevation: 0,
@@ -482,7 +487,7 @@ class QRScannerOverlayPainter extends CustomPainter {
 
     // Draw frame corners (Techno style)
     final Paint cornerPaint = Paint()
-      ..color = BrandColors.primary // BudolPay Ruby
+      ..color = const Color(0xFFF43F5E) // BudolPay Pink
       ..style = PaintingStyle.stroke
       ..strokeWidth = 3.0
       ..strokeCap = StrokeCap.round;
@@ -535,9 +540,9 @@ class QRScannerOverlayPainter extends CustomPainter {
     final Paint laserPaint = Paint()
       ..shader = LinearGradient(
         colors: [
-          BrandColors.primary.withAlpha(0),
-          BrandColors.primary,
-          BrandColors.primary.withAlpha(0),
+          const Color(0xFFF43F5E).withAlpha(0),
+          const Color(0xFFF43F5E),
+          const Color(0xFFF43F5E).withAlpha(0),
         ],
       ).createShader(Rect.fromLTWH(left, laserTop - 2, scanWidth, 4));
 
@@ -545,7 +550,7 @@ class QRScannerOverlayPainter extends CustomPainter {
     
     // Add glowing effect to the laser
     final Paint glowPaint = Paint()
-      ..color = BrandColors.primary.withAlpha(76) // ~0.3 opacity
+      ..color = const Color(0xFFF43F5E).withAlpha(76) // ~0.3 opacity
       ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 8);
     canvas.drawRect(Rect.fromLTWH(left + 5, laserTop - 2, scanWidth - 10, 4), glowPaint);
   }

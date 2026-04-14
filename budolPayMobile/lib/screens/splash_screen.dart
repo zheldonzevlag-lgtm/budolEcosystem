@@ -83,7 +83,7 @@ class _SplashScreenState extends State<SplashScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: Theme.of(context).colorScheme.surface,
+      backgroundColor: const Color(0xFF0F172A),
       body: Stack(
         children: [
           Center(
@@ -92,15 +92,15 @@ class _SplashScreenState extends State<SplashScreen> {
               children: [
                 _buildLogo(),
                 const SizedBox(height: 24),
-                CircularProgressIndicator(
-                  valueColor: AlwaysStoppedAnimation<Color>(Theme.of(context).colorScheme.primary),
+                const CircularProgressIndicator(
+                  valueColor: AlwaysStoppedAnimation<Color>(Color(0xFFF43F5E)),
                   strokeWidth: 2,
                 ),
                 const SizedBox(height: 16),
                 Text(
                   _navStatus,
-                  style: TextStyle(
-                    color: Theme.of(context).colorScheme.onSurfaceVariant,
+                  style: const TextStyle(
+                    color: Colors.white38,
                     fontSize: 12,
                     letterSpacing: 0.5,
                   ),
@@ -118,8 +118,8 @@ class _SplashScreenState extends State<SplashScreen> {
               children: [
                 Text(
                   'budolPay v${context.read<ApiService>().appVersion}',
-                  style: TextStyle(
-                    color: Theme.of(context).colorScheme.onSurfaceVariant,
+                  style: const TextStyle(
+                    color: Colors.white24,
                     fontSize: 10,
                     letterSpacing: 1.0,
                   ),
@@ -134,14 +134,14 @@ class _SplashScreenState extends State<SplashScreen> {
                           context.read<ApiService>().resetAdsStatus();
                           Navigator.pushReplacementNamed(context, Routes.marketing);
                         },
-                        child: Text('FORCE ADS', style: TextStyle(color: Theme.of(context).colorScheme.onSurfaceVariant, fontSize: 10)),
+                        child: const Text('FORCE ADS', style: TextStyle(color: Colors.white24, fontSize: 10)),
                       ),
                       const SizedBox(width: 20),
                       TextButton(
                         onPressed: () {
                           Navigator.pushReplacementNamed(context, Routes.login);
                         },
-                        child: Text('FORCE LOGIN', style: TextStyle(color: Theme.of(context).colorScheme.onSurfaceVariant, fontSize: 10)),
+                        child: const Text('FORCE LOGIN', style: TextStyle(color: Colors.white24, fontSize: 10)),
                       ),
                     ],
                   ),
@@ -160,13 +160,13 @@ class _SplashScreenState extends State<SplashScreen> {
         Container(
           padding: const EdgeInsets.all(20),
           decoration: BoxDecoration(
-            color: Theme.of(context).colorScheme.primary.withValues(alpha: 0.15),
+            color: const Color(0xFFF43F5E).withValues(alpha: 0.15),
             shape: BoxShape.circle,
           ),
-          child: Text(
+          child: const Text(
             '₱',
             style: TextStyle(
-              color: Theme.of(context).colorScheme.primary,
+              color: Color(0xFFF43F5E),
               fontSize: 70,
               fontWeight: FontWeight.bold,
             ),

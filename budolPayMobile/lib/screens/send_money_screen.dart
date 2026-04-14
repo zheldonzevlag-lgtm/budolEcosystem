@@ -5,7 +5,6 @@ import '../services/api_service.dart';
 import '../utils/formatters.dart';
 import '../utils/phone_utils.dart';
 import '../utils/ui_utils.dart';
-import '../utils/brand_colors.dart';
 
 class SendMoneyScreen extends StatefulWidget {
   final String? initialRecipient;
@@ -114,7 +113,7 @@ class _SendMoneyScreenState extends State<SendMoneyScreen> {
     final apiService = Provider.of<ApiService>(context, listen: false);
     final user = apiService.currentUser;
     if (user != null && user['kycTier'] == 'BASIC') {
-      final double monthlySent = AmountUtils.toDouble(user['monthlySent']);
+      final double monthlySent = (user['monthlySent'] ?? 0).toDouble();
       final double remaining = 5000.0 - monthlySent;
       if (amount > remaining) {
         ScaffoldMessenger.of(context).showSnackBar(
@@ -169,7 +168,7 @@ class _SendMoneyScreenState extends State<SendMoneyScreen> {
                 ),
                 UIUtils.formatBudolPayText(
                   'Reference: $reference',
-                  baseStyle: TextStyle(fontSize: 12, color: BrandColors.textSecondary)
+                  baseStyle: const TextStyle(fontSize: 12, color: Colors.white70)
                 ),
               ],
             ),
@@ -200,10 +199,9 @@ class _SendMoneyScreenState extends State<SendMoneyScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: Theme.of(context).colorScheme.surface,
       appBar: AppBar(
         title: const Text('Send Money'),
-        backgroundColor: Theme.of(context).colorScheme.primary,
+        backgroundColor: const Color(0xFFF43F5E),
         foregroundColor: Colors.white,
       ),
       body: _isLoading 
@@ -246,7 +244,7 @@ class _SendMoneyScreenState extends State<SendMoneyScreen> {
                   builder: (context, apiService, _) {
                     final user = apiService.currentUser;
                     if (user != null && user['kycTier'] == 'BASIC') {
-                      final double monthlySent = AmountUtils.toDouble(user['monthlySent']);
+                      final double monthlySent = (user['monthlySent'] ?? 0).toDouble();
                       final double remaining = 5000.0 - monthlySent;
                        return Text(
                         'Remaining limit: ₱${remaining.toStringAsFixed(2)}',
@@ -281,7 +279,7 @@ class _SendMoneyScreenState extends State<SendMoneyScreen> {
                 ),
                 focusedBorder: OutlineInputBorder(
                   borderRadius: BorderRadius.circular(8),
-                  borderSide: const BorderSide(color: BrandColors.primary, width: 2),
+                  borderSide: const BorderSide(color: Color(0xFFF43F5E), width: 2),
                 ),
               ),
               style: const TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
@@ -309,7 +307,7 @@ class _SendMoneyScreenState extends State<SendMoneyScreen> {
               child: ElevatedButton(
                 onPressed: _isLoading ? null : _handleTransfer,
                 style: ElevatedButton.styleFrom(
-                  backgroundColor: BrandColors.primary,
+                  backgroundColor: const Color(0xFFF43F5E),
                   foregroundColor: Colors.white,
                   shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(8),

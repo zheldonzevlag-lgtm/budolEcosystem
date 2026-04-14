@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:flutter/foundation.dart';
 import 'package:intl/intl.dart';
-import '../utils/brand_colors.dart';
 import '../services/api_service.dart';
 import '../services/socket_service.dart';
 import '../services/realtime_service.dart';
@@ -236,9 +235,8 @@ class _HomeScreenState extends State<HomeScreen> {
     String userName = 'User';
     if (user != null) {
       final firstName = user['firstName']?.toString() ?? '';
-      final lastName = user['lastName']?.toString() ?? '';
-      final fullName = '$firstName $lastName'.trim();
-      userName = fullName.isNotEmpty ? fullName : (user['email']?.toString() ?? 'User');
+      userName = firstName.trim();
+      if (userName.isEmpty) userName = user['email']?.toString() ?? 'User';
     }
 
     return PopScope(
@@ -258,26 +256,14 @@ class _HomeScreenState extends State<HomeScreen> {
         automaticallyImplyLeading: false,
         title: UIUtils.formatBudolPayText(
           'budol₱ay',
-          useColors: true,
+          useColors: false,
           baseStyle: const TextStyle(
-            fontSize: 22,
+            fontSize: 20,
             fontWeight: FontWeight.bold,
+            color: Colors.white,
           ),
         ),
-        backgroundColor: Colors.transparent,
-        elevation: 0,
-        flexibleSpace: Container(
-          decoration: BoxDecoration(
-            gradient: LinearGradient(
-              begin: Alignment.topLeft,
-              end: Alignment.bottomRight,
-              colors: [
-                BrandColors.primary,
-                const Color(0xFF991B1B), // Deep Ruby
-              ],
-            ),
-          ),
-        ),
+        backgroundColor: const Color(0xFFF43F5E),
         foregroundColor: Colors.white,
         actions: [
           // Connection status indicator
@@ -312,33 +298,125 @@ class _HomeScreenState extends State<HomeScreen> {
           physics: const AlwaysScrollableScrollPhysics(),
           child: Column(
             children: [
-              Stack(
-                children: [
-                  Container(
-                    height: 180,
-                    width: double.infinity,
-                    decoration: BoxDecoration(
-                      gradient: LinearGradient(
-                        begin: Alignment.topLeft,
-                        end: Alignment.bottomRight,
-                        colors: [
-                          BrandColors.primary,
-                          const Color(0xFF991B1B).withValues(alpha: 0.9), // Deep Ruby
-                        ],
-                      ),
-                      borderRadius: const BorderRadius.only(
-                        bottomLeft: Radius.circular(40),
-                        bottomRight: Radius.circular(40),
-                      ),
-                    ),
+              // Balance Card
+              Container(
+                padding: const EdgeInsets.all(24),
+                width: double.infinity,
+                decoration: const BoxDecoration(
+                  color: Color(0xFFF43F5E),
+                  borderRadius: BorderRadius.only(
+                    bottomLeft: Radius.circular(32),
+                    bottomRight: Radius.circular(32),
                   ),
-                  _buildBalanceCard(context, apiService, userName),
-                ],
+                ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
+                      children: [
+                        Flexible(
+                          child: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Text(
+                                _greeting,
+                                style: const TextStyle(color: Colors.white, fontSize: 16, fontWeight: FontWeight.w500),
+                              ),
+                              Flexible(
+                                child: Text(
+                                  _isNameVisible ? userName : '•' * userName.length,
+                                  style: const TextStyle(
+                                    color: Colors.white,
+                                    fontSize: 18,
+                                    fontWeight: FontWeight.w500,
+                                  ),
+                                  overflow: TextOverflow.ellipsis,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                        const SizedBox(width: 8),
+                        GestureDetector(
+                          onTap: () {
+                            setState(() {
+                              _isNameVisible = !_isNameVisible;
+                            });
+                          },
+                          child: Icon(
+                            _isNameVisible ? Icons.visibility : Icons.visibility_off,
+                            color: Colors.white70,
+                            size: 16,
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 16),
+                    const Text(
+                      'Available Balance',
+                      style: TextStyle(color: Colors.white70, fontSize: 14),
+                    ),
+                    const SizedBox(height: 8),
+                    _isLoading
+                        ? const SizedBox(
+                            height: 30,
+                            child: Center(child: CircularProgressIndicator(color: Colors.white)),
+                          )
+                        : Row(
+                            crossAxisAlignment: CrossAxisAlignment.center,
+                            children: [
+                              Text(
+                                _isBalanceVisible ? _balance : '₱ ••••••',
+                                style: const TextStyle(
+                                  color: Colors.white,
+                                  fontSize: 22,
+                                  fontWeight: FontWeight.bold,
+                                ),
+                              ),
+                              const SizedBox(width: 8),
+                              IconButton(
+                                constraints: const BoxConstraints(),
+                                padding: EdgeInsets.zero,
+                                iconSize: 20,
+                                icon: Icon(
+                                  _isBalanceVisible ? Icons.visibility : Icons.visibility_off,
+                                  color: Colors.white70,
+                                ),
+                                onPressed: () {
+                                  setState(() {
+                                    _isBalanceVisible = !_isBalanceVisible;
+                                  });
+                                },
+                              ),
+                            ],
+                          ),
+                    const SizedBox(height: 24),
+                    Row(
+                      children: [
+                        _buildBalanceAction(context, Icons.add_circle, 'Cash In', () async {
+                          await Navigator.pushNamed(context, Routes.cashIn);
+                          _fetchData();
+                        }),
+                        const SizedBox(width: 16),
+                        _buildBalanceAction(context, Icons.send, 'Send', () async {
+                          await Navigator.pushNamed(context, Routes.sendMoney);
+                          _fetchData();
+                        }),
+                        const SizedBox(width: 16),
+                        _buildBalanceAction(context, Icons.favorite, 'Favorites', () async {
+                          await Navigator.pushNamed(context, Routes.favorites);
+                          _fetchData();
+                        }),
+                        const SizedBox(width: 16),
+                        _buildBalanceAction(context, Icons.qr_code_scanner, 'Scan QR', () async {
+                          await Navigator.pushNamed(context, Routes.qrScanner);
+                          _fetchData(); // Refresh balance after returning from scanner
+                        }),
+                      ],
+                    ),
+                  ],
+                ),
               ),
-              
-              // Profile Completeness Widget
-              if (apiService.profileCompletion < 1.0)
-                _buildProfileCompleteness(context, apiService),
               
               // Services Grid
               Padding(
@@ -348,7 +426,7 @@ class _HomeScreenState extends State<HomeScreen> {
                   children: [
                     const Text(
                       'Services',
-                      style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                      style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Color(0xFF334155)), // Slate 700
                     ),
                     const SizedBox(height: 16),
                     GridView.count(
@@ -368,16 +446,12 @@ class _HomeScreenState extends State<HomeScreen> {
                             width: 32,
                             height: 32,
                             alignment: Alignment.center,
-                            decoration: BoxDecoration(
-                              color: BrandColors.accent.withValues(alpha: 0.1),
-                              shape: BoxShape.circle,
-                            ),
                             child: const Text(
                               '₱',
                               style: TextStyle(
-                                fontSize: 18,
-                                fontWeight: FontWeight.w900,
-                                color: BrandColors.accent,
+                                fontSize: 24,
+                                fontWeight: FontWeight.bold,
+                                color: Color(0xFFF43F5E),
                                 height: 1.0,
                               ),
                             ),
@@ -402,7 +476,7 @@ class _HomeScreenState extends State<HomeScreen> {
                       children: [
                         const Text(
                           'Recent Transactions',
-                          style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                          style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Color(0xFF334155)), // Slate 700
                         ),
                         TextButton(
                           onPressed: () {
@@ -432,9 +506,14 @@ class _HomeScreenState extends State<HomeScreen> {
                           final String title = tx['description'] ?? (isIncome ? 'Money Received' : 'Money Sent');
                           
                           // Safe parsing of amount
-                          final double amount = tx['amount'] != null 
-                              ? budol_format.AmountUtils.toDouble(tx['amount'])
-                              : 0.0;
+                          double amount = 0.0;
+                          if (tx['amount'] != null) {
+                            if (tx['amount'] is num) {
+                              amount = (tx['amount'] as num).toDouble();
+                            } else {
+                              amount = double.tryParse(tx['amount'].toString()) ?? 0.0;
+                            }
+                          }
                           
                           final String amountStr = '${isIncome ? '+' : '-'} PHP ${NumberFormat('#,##0.00').format(amount)}';
                           final Color amountColor = isIncome ? Colors.green : Colors.red;
@@ -509,204 +588,22 @@ class _HomeScreenState extends State<HomeScreen> {
   );
 }
 
-  /// WHY: Provides conditional layout for the greeting (Vertical vs Horizontal).
-  /// WHAT: Supports v2.5.0 requirement for UI flexibility.
-  Widget _buildAdaptiveGreeting(BuildContext context, ApiService apiService, String userName) {
-    final isVertical = apiService.greetingLayout == 'vertical';
-    final nameLabel = _isNameVisible ? userName : '•' * (userName.length > 15 ? 15 : userName.length);
-
-    if (isVertical) {
-      return Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  _greeting,
-                  style: TextStyle(
-                    color: Theme.of(context).colorScheme.onPrimary.withValues(alpha: 0.8),
-                    fontSize: 14,
-                    fontWeight: FontWeight.w400,
-                  ),
-                ),
-                const SizedBox(height: 4),
-                Text(
-                  nameLabel,
-                  style: TextStyle(
-                    color: Theme.of(context).colorScheme.onPrimary,
-                    fontSize: 22,
-                    fontWeight: FontWeight.bold,
-                  ),
-                  overflow: TextOverflow.ellipsis,
-                ),
-              ],
-            ),
-          ),
-          _buildVisibilityToggle(),
-        ],
-      );
-    } else {
-      // Horizontal Classic Layout
-      return Row(
-        children: [
-          Expanded(
-            child: Text.rich(
-              TextSpan(
-                children: [
-                  TextSpan(
-                    text: _greeting,
-                    style: TextStyle(
-                      color: Theme.of(context).colorScheme.onPrimary.withValues(alpha: 0.8),
-                      fontSize: 18,
-                      fontWeight: FontWeight.w400,
-                    ),
-                  ),
-                  TextSpan(
-                    text: nameLabel,
-                    style: TextStyle(
-                      color: Theme.of(context).colorScheme.onPrimary,
-                      fontSize: 18,
-                      fontWeight: FontWeight.bold,
-                    ),
-                  ),
-                ],
-              ),
-              overflow: TextOverflow.ellipsis,
-            ),
-          ),
-          _buildVisibilityToggle(),
-        ],
-      );
-    }
-  }
-
-  Widget _buildVisibilityToggle() {
-    return GestureDetector(
-      onTap: () {
-        setState(() {
-          _isNameVisible = !_isNameVisible;
-        });
-      },
-      child: Container(
-        margin: const EdgeInsets.only(top: 8),
-        child: Icon(
-          _isNameVisible ? Icons.visibility : Icons.visibility_off,
-          color: Theme.of(context).colorScheme.onPrimary.withValues(alpha: 0.7),
-          size: 18,
-        ),
-      ),
-    );
-  }
-
-  /// WHY: Encourages users to complete profile data for better system compliance.
-  /// WHAT: Shows a premium progress bar card.
-  Widget _buildProfileCompleteness(BuildContext context, ApiService apiService) {
-    final progress = apiService.profileCompletion;
-    final color = Theme.of(context).colorScheme.primary;
-
-    return Container(
-      margin: const EdgeInsets.symmetric(horizontal: 24, vertical: 8),
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: Theme.of(context).colorScheme.surface,
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: Theme.of(context).colorScheme.outlineVariant.withAlpha(51)),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withAlpha(13),
-            blurRadius: 10,
-            offset: const Offset(0, 4),
-          ),
-        ],
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              Text(
-                'Profile Status',
-                style: TextStyle(
-                  fontSize: 14,
-                  fontWeight: FontWeight.w600,
-                  color: Theme.of(context).colorScheme.onSurface,
-                ),
-              ),
-              Text(
-                '${(progress * 100).toInt()}%',
-                style: TextStyle(
-                  fontSize: 14,
-                  fontWeight: FontWeight.bold,
-                  color: color,
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 12),
-          ClipRRect(
-            borderRadius: BorderRadius.circular(4),
-            child: LinearProgressIndicator(
-              value: progress,
-              backgroundColor: color.withAlpha(26),
-              valueColor: AlwaysStoppedAnimation<Color>(color),
-              minHeight: 8,
-            ),
-          ),
-          const SizedBox(height: 12),
-          InkWell(
-            onTap: () => Navigator.pushNamed(context, Routes.editProfile),
-            child: Row(
-              children: [
-                Text(
-                  'Complete your profile for a better experience',
-                  style: TextStyle(
-                    fontSize: 12,
-                    color: Theme.of(context).colorScheme.onSurfaceVariant,
-                  ),
-                ),
-                const Spacer(),
-                Icon(
-                  Icons.arrow_forward_ios,
-                  size: 12,
-                  color: color,
-                ),
-              ],
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
   Widget _buildBalanceAction(BuildContext context, IconData icon, String label, VoidCallback onTap) {
-    return Expanded(
-      child: InkWell(
-        onTap: onTap,
-        borderRadius: BorderRadius.circular(16),
-        child: Container(
-          padding: const EdgeInsets.symmetric(vertical: 12),
-          decoration: BoxDecoration(
-            color: Colors.white.withValues(alpha: 0.1),
-            borderRadius: BorderRadius.circular(16),
-            border: Border.all(color: Colors.white.withValues(alpha: 0.15)),
+    return GestureDetector(
+      onTap: onTap,
+      child: Column(
+        children: [
+          Container(
+            padding: const EdgeInsets.all(12),
+            decoration: BoxDecoration(
+              color: Colors.white.withAlpha(51),
+              shape: BoxShape.circle,
+            ),
+            child: Icon(icon, color: Colors.white, size: 24),
           ),
-          child: Column(
-            children: [
-              Icon(icon, color: Colors.white, size: 24),
-              const SizedBox(height: 8),
-              Text(
-                label,
-                style: const TextStyle(color: Colors.white, fontSize: 11, fontWeight: FontWeight.w600),
-                textAlign: TextAlign.center,
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-              ),
-            ],
-          ),
-        ),
+          const SizedBox(height: 8),
+          Text(label, style: const TextStyle(color: Colors.white, fontSize: 12)),
+        ],
       ),
     );
   }
@@ -716,149 +613,42 @@ class _HomeScreenState extends State<HomeScreen> {
       mainAxisSize: MainAxisSize.min,
       mainAxisAlignment: MainAxisAlignment.center,
       children: [
-        Container(
-          width: 56,
-          height: 56,
-          decoration: BoxDecoration(
-            color: Theme.of(context).colorScheme.surface,
-            borderRadius: BorderRadius.circular(16),
-            border: Border.all(color: Theme.of(context).colorScheme.outline.withValues(alpha: 0.1)),
-            boxShadow: [
-              BoxShadow(
-                color: Theme.of(context).colorScheme.shadow.withValues(alpha: 0.05),
-                blurRadius: 10,
-                offset: const Offset(0, 4),
-              ),
-            ],
-          ),
-          child: Center(
-            child: icon is IconData 
-                ? Icon(icon, color: Theme.of(context).colorScheme.primary, size: 28)
-                : (icon is Widget ? icon : Icon(Icons.error, color: Theme.of(context).colorScheme.primary, size: 28)),
-          ),
+        SizedBox(
+          height: 32,
+          width: 32,
+          child: icon is IconData 
+              ? Icon(icon, color: const Color(0xFFF43F5E), size: 32)
+              : (icon is Widget ? icon : const Icon(Icons.error, color: Color(0xFFF43F5E), size: 32)),
         ),
         const SizedBox(height: 8),
         UIUtils.formatBudolPayText(
           label,
-          baseStyle: TextStyle(
-            fontSize: 12, 
-            fontWeight: FontWeight.w600,
-            color: Theme.of(context).colorScheme.onSurface,
-          ),
+          baseStyle: const TextStyle(fontSize: 12),
           textAlign: TextAlign.center,
         ),
       ],
     );
   }
 
-  Widget _buildBalanceCard(BuildContext context, ApiService apiService, String userName) {
-    return Container(
-      margin: const EdgeInsets.fromLTRB(20, 10, 20, 0),
-      padding: const EdgeInsets.all(24),
-      decoration: BoxDecoration(
-        color: Colors.white.withValues(alpha: 0.05),
-        borderRadius: BorderRadius.circular(32),
-        border: Border.all(color: Colors.white.withValues(alpha: 0.1), width: 1.5),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withValues(alpha: 0.2),
-            blurRadius: 20,
-            offset: const Offset(0, 10),
-          ),
-        ],
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          _buildAdaptiveGreeting(context, apiService, userName),
-          const SizedBox(height: 16),
-          Text(
-            'Available Balance',
-            style: TextStyle(color: Colors.white.withValues(alpha: 0.7), fontSize: 13, fontWeight: FontWeight.w500),
-          ),
-          const SizedBox(height: 8),
-          _isLoading
-              ? const SizedBox(
-                  height: 34,
-                  child: Center(child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2)),
-                )
-              : Row(
-                  crossAxisAlignment: CrossAxisAlignment.center,
-                  children: [
-                    Text(
-                      _isBalanceVisible ? _balance : '₱ ••••••',
-                      style: const TextStyle(
-                        color: Colors.white,
-                        fontSize: 28,
-                        fontWeight: FontWeight.bold,
-                        letterSpacing: 0.5,
-                      ),
-                    ),
-                    const SizedBox(width: 8),
-                    IconButton(
-                      constraints: const BoxConstraints(),
-                      padding: EdgeInsets.zero,
-                      iconSize: 22,
-                      icon: Icon(
-                        _isBalanceVisible ? Icons.visibility_outlined : Icons.visibility_off_outlined,
-                        color: Colors.white.withValues(alpha: 0.6),
-                      ),
-                      onPressed: () {
-                        setState(() {
-                          _isBalanceVisible = !_isBalanceVisible;
-                        });
-                      },
-                    ),
-                  ],
-                ),
-          const SizedBox(height: 28),
-          Row(
-            children: [
-              _buildBalanceAction(context, Icons.add_circle_outline, 'Cash In', () async {
-                await Navigator.pushNamed(context, Routes.cashIn);
-                _fetchData();
-              }),
-              const SizedBox(width: 12),
-              _buildBalanceAction(context, Icons.send_outlined, 'Send', () async {
-                await Navigator.pushNamed(context, Routes.sendMoney);
-                _fetchData();
-              }),
-              const SizedBox(width: 12),
-              _buildBalanceAction(context, Icons.qr_code_scanner, 'Scan QR', () async {
-                await Navigator.pushNamed(context, Routes.qrScanner);
-                _fetchData();
-              }),
-              const SizedBox(width: 12),
-              _buildBalanceAction(context, Icons.more_horiz, 'History', () async {
-                await Navigator.pushNamed(context, Routes.transactionHistory);
-                _fetchData();
-              }),
-            ],
-          ),
-        ],
-      ),
-    );
-  }
-
   Widget _buildTransactionItem(String title, String amount, String date, Color amountColor) {
+    const slate600 = Color(0xFF475569);
+    const fontSize = 13.0;
+    
     return ListTile(
       contentPadding: EdgeInsets.zero,
-      leading: Container(
-        padding: const EdgeInsets.all(12),
-        decoration: BoxDecoration(
-          color: BrandColors.primary.withValues(alpha: 0.08),
-          shape: BoxShape.circle,
-        ),
-        child: Icon(Icons.receipt_long_outlined, color: BrandColors.primary, size: 22),
+      leading: const CircleAvatar(
+        backgroundColor: Color(0xFFF1F5F9), // Slate 100
+        child: Icon(Icons.payment, color: Color(0xFFF43F5E), size: 20),
       ),
       title: UIUtils.formatBudolPayText(
         title, 
-        baseStyle: TextStyle(
+        baseStyle: const TextStyle(
           fontWeight: FontWeight.w600, 
-          fontSize: 14,
-          color: Theme.of(context).colorScheme.onSurface,
+          fontSize: fontSize,
+          color: slate600,
         )
       ),
+      subtitle: null,
       trailing: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         crossAxisAlignment: CrossAxisAlignment.end,
@@ -868,15 +658,15 @@ class _HomeScreenState extends State<HomeScreen> {
             style: TextStyle(
               color: amountColor, 
               fontWeight: FontWeight.bold,
-              fontSize: 14,
+              fontSize: fontSize,
             ),
           ),
-          const SizedBox(height: 4),
+          const SizedBox(height: 2),
           Text(
             date,
-            style: TextStyle(
+            style: const TextStyle(
               fontSize: 11,
-              color: Theme.of(context).colorScheme.onSurfaceVariant.withValues(alpha: 0.5),
+              color: Color(0xFF94A3B8), // Slate 400
             ),
           ),
         ],

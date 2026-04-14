@@ -4,7 +4,6 @@ import 'package:intl/intl.dart';
 import '../services/api_service.dart';
 import '../services/realtime_service.dart';
 import '../constants/routes.dart';
-import '../utils/brand_colors.dart';
 import 'dart:async';
 
 class WalletScreen extends StatefulWidget {
@@ -79,7 +78,7 @@ class _WalletScreenState extends State<WalletScreen> {
     return Scaffold(
       appBar: AppBar(
         title: const Text('Wallet'),
-        backgroundColor: BrandColors.primary,
+        backgroundColor: const Color(0xFFF43F5E),
         foregroundColor: Colors.white,
       ),
       body: SingleChildScrollView(
@@ -89,7 +88,7 @@ class _WalletScreenState extends State<WalletScreen> {
             Container(
               padding: const EdgeInsets.all(24),
               width: double.infinity,
-              color: BrandColors.primary,
+              color: const Color(0xFFF43F5E),
               child: Column(
                 children: [
                   const Text(
@@ -166,8 +165,8 @@ class _WalletScreenState extends State<WalletScreen> {
                     icon: const Icon(Icons.add),
                     label: const Text('Link New Account'),
                     style: OutlinedButton.styleFrom(
-                      foregroundColor: BrandColors.primary,
-                      side: const BorderSide(color: BrandColors.primary),
+                      foregroundColor: const Color(0xFFF43F5E),
+                      side: const BorderSide(color: Color(0xFFF43F5E)),
                       minimumSize: const Size(double.infinity, 50),
                     ),
                   ),
@@ -201,8 +200,8 @@ class _WalletScreenState extends State<WalletScreen> {
   }
 
   Widget _buildLimitProgress(String label, double progress, String detail) {
-    final onSurface = Theme.of(context).colorScheme.onSurface;
-    final onSurfaceVariant = Theme.of(context).colorScheme.onSurfaceVariant;
+    const slate600 = Color(0xFF475569);
+    const slate400 = Color(0xFF94A3B8);
     const fontSize = 13.0;
 
     return Column(
@@ -213,17 +212,17 @@ class _WalletScreenState extends State<WalletScreen> {
           children: [
             Text(
               label,
-              style: TextStyle(
+              style: const TextStyle(
                 fontSize: fontSize,
-                color: onSurfaceVariant,
+                color: slate400,
                 fontWeight: FontWeight.w500,
               ),
             ),
             Text(
               detail,
-              style: TextStyle(
+              style: const TextStyle(
                 fontSize: fontSize,
-                color: onSurface,
+                color: slate600,
                 fontWeight: FontWeight.w600,
               ),
             ),
@@ -232,8 +231,8 @@ class _WalletScreenState extends State<WalletScreen> {
         const SizedBox(height: 8),
         LinearProgressIndicator(
           value: progress,
-          backgroundColor: Theme.of(context).colorScheme.surfaceContainerHighest,
-          valueColor: AlwaysStoppedAnimation<Color>(Theme.of(context).colorScheme.primary),
+          backgroundColor: const Color(0xFFF1F5F9), // Slate 100
+          valueColor: const AlwaysStoppedAnimation<Color>(Color(0xFFF43F5E)),
           minHeight: 8,
           borderRadius: BorderRadius.circular(4),
         ),
@@ -242,8 +241,8 @@ class _WalletScreenState extends State<WalletScreen> {
   }
 
   Widget _buildLinkedItem(IconData icon, String name, String detail) {
-    final onSurface = Theme.of(context).colorScheme.onSurface;
-    final onSurfaceVariant = Theme.of(context).colorScheme.onSurfaceVariant;
+    const slate600 = Color(0xFF475569);
+    const slate400 = Color(0xFF94A3B8);
     const fontSize = 13.0;
 
     return ListTile(
@@ -251,27 +250,27 @@ class _WalletScreenState extends State<WalletScreen> {
       leading: Container(
         padding: const EdgeInsets.all(10),
         decoration: BoxDecoration(
-          color: Theme.of(context).colorScheme.surfaceContainerHighest,
+          color: const Color(0xFFF1F5F9), // Slate 100
           borderRadius: BorderRadius.circular(10),
         ),
-        child: Icon(icon, color: onSurfaceVariant),
+        child: Icon(icon, color: slate600),
       ),
       title: Text(
         name,
-        style: TextStyle(
+        style: const TextStyle(
           fontSize: fontSize,
-          color: onSurface,
+          color: slate600,
           fontWeight: FontWeight.w600,
         ),
       ),
       subtitle: Text(
         detail,
-        style: TextStyle(
+        style: const TextStyle(
           fontSize: fontSize - 1,
-          color: onSurfaceVariant,
+          color: slate400,
         ),
       ),
-      trailing: Icon(Icons.chevron_right, color: onSurfaceVariant, size: 20),
+      trailing: const Icon(Icons.chevron_right, color: slate400, size: 20),
     );
   }
 }

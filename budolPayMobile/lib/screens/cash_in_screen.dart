@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../services/api_service.dart';
 import '../utils/formatters.dart';
-import '../utils/brand_colors.dart';
 
 class CashInScreen extends StatefulWidget {
   const CashInScreen({super.key});
@@ -52,8 +51,8 @@ class _CashInScreenState extends State<CashInScreen> {
     final apiService = Provider.of<ApiService>(context, listen: false);
     final user = apiService.currentUser;
     if (user != null && user['kycTier'] == 'BASIC') {
-      final double monthlyReceived = AmountUtils.toDouble(user['monthlyReceived']);
-      final double walletBalance = AmountUtils.toDouble(user['walletBalance']);
+      final double monthlyReceived = (user['monthlyReceived'] ?? 0).toDouble();
+      final double walletBalance = (user['walletBalance'] ?? 0).toDouble();
       final double incomingRemaining = 5000.0 - monthlyReceived;
       final double walletRemaining = 10000.0 - walletBalance;
       
@@ -121,10 +120,9 @@ class _CashInScreenState extends State<CashInScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: BrandColors.background,
       appBar: AppBar(
         title: const Text('Cash In'),
-        backgroundColor: BrandColors.primary,
+        backgroundColor: const Color(0xFFF43F5E),
         foregroundColor: Colors.white,
       ),
       body: SingleChildScrollView(
@@ -173,8 +171,8 @@ class _CashInScreenState extends State<CashInScreen> {
                   builder: (context, apiService, _) {
                     final user = apiService.currentUser;
                     if (user != null && user['kycTier'] == 'BASIC') {
-                      final double monthlyReceived = AmountUtils.toDouble(user['monthlyReceived']);
-                      final double walletBalance = AmountUtils.toDouble(user['walletBalance']);
+                      final double monthlyReceived = (user['monthlyReceived'] ?? 0).toDouble();
+                      final double walletBalance = (user['walletBalance'] ?? 0).toDouble();
                       final double incomingRemaining = 5000.0 - monthlyReceived;
                       final double walletRemaining = 10000.0 - walletBalance;
                       final double allowed = incomingRemaining < walletRemaining ? incomingRemaining : walletRemaining;
@@ -220,7 +218,7 @@ class _CashInScreenState extends State<CashInScreen> {
               child: ElevatedButton(
                 onPressed: _isLoading ? null : _handleCashIn,
                 style: ElevatedButton.styleFrom(
-                  backgroundColor: BrandColors.primary,
+                  backgroundColor: const Color(0xFFF43F5E),
                   foregroundColor: Colors.white,
                   shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(8),

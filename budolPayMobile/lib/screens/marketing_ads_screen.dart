@@ -7,7 +7,6 @@ import '../services/api_service.dart';
 import '../constants/routes.dart';
 import '../utils/ui_utils.dart';
 import '../utils/js_helper.dart';
-import '../utils/brand_colors.dart';
 
 class MarketingAdsScreen extends StatefulWidget {
   const MarketingAdsScreen({super.key});
@@ -44,7 +43,7 @@ class _MarketingAdsScreenState extends State<MarketingAdsScreen> {
       'title': 'budol₱ay',
       'description': 'Your secure digital wallet for seamless payments and transfers across the budolEcosystem.',
       'icon': '₱',
-      'color': BrandColors.primary, // Rose (budol₱ay Branding)
+      'color': const Color(0xFFF43F5E), // Rose (budol₱ay Branding)
     },
     {
       'title': 'budolAkawntng',
@@ -164,9 +163,9 @@ class _MarketingAdsScreenState extends State<MarketingAdsScreen> {
     debugPrint('MarketingAdsScreen: build() called - kIsWeb: $kIsWeb');
     
     return Scaffold(
-      backgroundColor: BrandColors.background,
+      backgroundColor: const Color(0xFF0F172A),
       body: Material(
-        color: BrandColors.background,
+        color: const Color(0xFF0F172A),
         child: LayoutBuilder(
           builder: (context, constraints) {
             // Robust size detection for Web and Mobile
@@ -274,7 +273,7 @@ class _MarketingAdsScreenState extends State<MarketingAdsScreen> {
                   dotWidth: 8,
                   expansionFactor: 3,
                   spacing: 8,
-                  dotColor: Color(0xFF64748B),
+                  dotColor: Colors.white24,
                   activeDotColor: Color(0xFFF43F5E),
                 ),
               ),
@@ -308,7 +307,7 @@ class _MarketingAdsScreenState extends State<MarketingAdsScreen> {
                 child: ElevatedButton(
                   onPressed: _proceedToApp,
                   style: ElevatedButton.styleFrom(
-                    backgroundColor: BrandColors.primary,
+                    backgroundColor: const Color(0xFFF43F5E),
                     foregroundColor: Colors.white,
                     padding: EdgeInsets.symmetric(vertical: showFullUI ? 16 : 8),
                     shape: RoundedRectangleBorder(
@@ -329,7 +328,7 @@ class _MarketingAdsScreenState extends State<MarketingAdsScreen> {
           right: 16,
           child: TextButton(
             onPressed: _proceedToApp,
-            child: const Text('Skip', style: TextStyle(color: Color(0xFF64748B))),
+            child: const Text('Skip', style: TextStyle(color: Colors.white54)),
           ),
         ),
 
@@ -385,9 +384,9 @@ class _MarketingAdsScreenState extends State<MarketingAdsScreen> {
           const SizedBox(height: 24),
           UIUtils.formatBudolPayText(
             slide['description'],
-            baseStyle: TextStyle(
+            baseStyle: const TextStyle(
               fontSize: 18,
-              color: BrandColors.textSecondary,
+              color: Colors.white70,
               height: 1.5,
             ),
             textAlign: TextAlign.center,
@@ -422,12 +421,12 @@ class _MarketingAdsScreenState extends State<MarketingAdsScreen> {
       // Add suffix part if it exists
       if (match.group(2) != null) {
         String suffix = match.group(2)!;
-        Color suffixColor = BrandColors.primary; // Default Rose
+        Color suffixColor = const Color(0xFFF43F5E); // Default Rose
 
         String lowerSuffix = suffix.toLowerCase();
         if (lowerSuffix == 'pay' || lowerSuffix == '₱ay') {
           suffix = '₱ay';
-          suffixColor = BrandColors.primary;
+          suffixColor = const Color(0xFFF43F5E);
         } else if (lowerSuffix == 'ecosystem') {
           suffixColor = const Color(0xFF64748B); // Slate 500
         } else if (lowerSuffix == 'loan') {
@@ -460,7 +459,7 @@ class _MarketingAdsScreenState extends State<MarketingAdsScreen> {
     return Text.rich(
       TextSpan(
         style: const TextStyle(
-          color: BrandColors.textSecondary,
+          color: Colors.white70,
           fontSize: 16,
           height: 1.5,
         ),

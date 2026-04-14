@@ -9,7 +9,6 @@ import '../constants/routes.dart';
 import '../services/biometric_service.dart';
 import '../services/face_embedding_service.dart';
 import '../utils/ui_utils.dart';
-import '../utils/brand_colors.dart';
 import 'kyc_verification_screen.dart';
 
 class SettingsScreen extends StatefulWidget {
@@ -243,10 +242,10 @@ class _SettingsScreenState extends State<SettingsScreen> {
                 Container(
                   padding: const EdgeInsets.all(16),
                   decoration: BoxDecoration(
-                    color: BrandColors.primary.withAlpha(26),
+                    color: const Color(0xFFF43F5E).withAlpha(26),
                     shape: BoxShape.circle,
                   ),
-                  child: const Icon(Icons.lock_outline, color: BrandColors.primary, size: 40),
+                  child: const Icon(Icons.lock_outline, color: Color(0xFFF43F5E), size: 40),
                 ),
                 const SizedBox(height: 24),
                 const Text(
@@ -300,7 +299,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                           }
                         },
                         style: ElevatedButton.styleFrom(
-                          backgroundColor: BrandColors.primary,
+                          backgroundColor: const Color(0xFFF43F5E),
                           padding: const EdgeInsets.symmetric(vertical: 16),
                           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
                         ),
@@ -331,10 +330,10 @@ class _SettingsScreenState extends State<SettingsScreen> {
               Container(
                 padding: const EdgeInsets.all(16),
                 decoration: BoxDecoration(
-                  color: BrandColors.primary.withAlpha(26),
+                  color: const Color(0xFFF43F5E).withAlpha(26),
                   shape: BoxShape.circle,
                 ),
-                child: const Icon(Icons.logout, color: BrandColors.primary, size: 40),
+                child: const Icon(Icons.logout, color: Color(0xFFF43F5E), size: 40),
               ),
               const SizedBox(height: 24),
               const Text(
@@ -388,7 +387,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                         }
                       },
                       style: ElevatedButton.styleFrom(
-                        backgroundColor: BrandColors.primary,
+                        backgroundColor: const Color(0xFFF43F5E),
                         padding: const EdgeInsets.symmetric(vertical: 16),
                         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
                       ),
@@ -428,7 +427,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
     return Scaffold(
       appBar: AppBar(
         title: const Text('Settings'),
-        backgroundColor: Theme.of(context).colorScheme.primary,
+        backgroundColor: const Color(0xFFF43F5E),
         foregroundColor: Colors.white,
       ),
       body: Stack(
@@ -439,7 +438,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                 // Profile Header
                 Container(
                   padding: const EdgeInsets.all(24),
-                  color: Theme.of(context).colorScheme.surface,
+                  color: Colors.white,
                   child: Row(
                     children: [
                       const CircleAvatar(
@@ -454,11 +453,11 @@ class _SettingsScreenState extends State<SettingsScreen> {
                           children: [
                             Text(
                               userName,
-                              style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: Theme.of(context).colorScheme.onSurface),
+                              style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
                             ),
                             Text(
                               email,
-                              style: TextStyle(color: Theme.of(context).colorScheme.onSurfaceVariant),
+                              style: TextStyle(color: Colors.grey[600]),
                             ),
                             const SizedBox(height: 8),
                             Container(
@@ -482,7 +481,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                         ),
                       ),
                       IconButton(
-                        icon: const Icon(Icons.edit, color: BrandColors.primary),
+                        icon: const Icon(Icons.edit, color: Color(0xFFF43F5E)),
                         onPressed: () {
                           Navigator.pushNamed(context, Routes.editProfile);
                         },
@@ -545,59 +544,6 @@ class _SettingsScreenState extends State<SettingsScreen> {
                   ),
                 ]),
 
-                _buildSettingsGroup('Appearance', [
-                  _buildSettingsTile(
-                    Icons.palette_outlined, 
-                    'Theme Mode', 
-                    apiService.themeMode.toUpperCase(), 
-                    null,
-                    trailing: SegmentedButton<String>(
-                      segments: const [
-                        ButtonSegment(value: 'light', label: Text('Light', style: TextStyle(fontSize: 10))),
-                        ButtonSegment(value: 'dark', label: Text('Dark', style: TextStyle(fontSize: 10))),
-                        ButtonSegment(value: 'auto', label: Text('Auto', style: TextStyle(fontSize: 10))),
-                      ],
-                      selected: {apiService.themeMode},
-                      onSelectionChanged: (Set<String> selection) {
-                        apiService.setThemeMode(selection.first);
-                      },
-                      showSelectedIcon: false,
-                      style: SegmentedButton.styleFrom(
-                        visualDensity: VisualDensity.compact,
-                        padding: EdgeInsets.zero,
-                      ),
-                    ),
-                  ),
-                  _buildSettingsTile(
-                    Icons.view_agenda_outlined, 
-                    'Greeting Layout', 
-                    apiService.greetingLayout.toUpperCase(), 
-                    null,
-                    trailing: SegmentedButton<String>(
-                      segments: const [
-                        ButtonSegment(value: 'vertical', label: Text('Vertical', style: TextStyle(fontSize: 10))),
-                        ButtonSegment(value: 'horizontal', label: Text('Classic', style: TextStyle(fontSize: 10))),
-                      ],
-                      selected: {apiService.greetingLayout},
-                      onSelectionChanged: (Set<String> selection) {
-                        apiService.setGreetingLayout(selection.first);
-                      },
-                      showSelectedIcon: false,
-                      style: SegmentedButton.styleFrom(
-                        visualDensity: VisualDensity.compact,
-                        padding: EdgeInsets.zero,
-                      ),
-                    ),
-                  ),
-                  Padding(
-                    padding: const EdgeInsets.fromLTRB(24, 0, 24, 8),
-                    child: Text(
-                      'Auto mode switches precisely at 6:00 AM/PM.',
-                      style: TextStyle(fontSize: 11, color: Theme.of(context).colorScheme.onSurfaceVariant),
-                    ),
-                  ),
-                ]),
-
                 _buildSettingsGroup('General', [
                   _buildSettingsTile(Icons.notifications, 'Notifications', 'Manage alerts', () {}),
                   _buildSettingsTile(Icons.language, 'Language', 'English', () {}),
@@ -619,7 +565,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                     icon: const Icon(Icons.logout, color: Colors.white),
                     label: const Text('Logout Account', style: TextStyle(color: Colors.white, fontSize: 16, fontWeight: FontWeight.bold)),
                     style: ElevatedButton.styleFrom(
-                      backgroundColor: BrandColors.primary,
+                      backgroundColor: const Color(0xFFF43F5E),
                       padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 32),
                       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
                       elevation: 0,
@@ -635,8 +581,8 @@ class _SettingsScreenState extends State<SettingsScreen> {
           if (_showDebugWindow)
             Positioned.fill(
               child: Container(
-                decoration: BoxDecoration(
-                  color: Theme.of(context).colorScheme.surface, 
+                decoration: const BoxDecoration(
+                  color: Color(0xFF1E293B), // Professional dark background
                 ),
                 child: SafeArea(
                   child: Column(
@@ -779,11 +725,11 @@ class _SettingsScreenState extends State<SettingsScreen> {
           padding: const EdgeInsets.fromLTRB(24, 16, 24, 8),
           child: Text(
             title,
-            style: TextStyle(fontSize: 14, fontWeight: FontWeight.bold, color: Theme.of(context).colorScheme.primary),
+            style: const TextStyle(fontSize: 14, fontWeight: FontWeight.bold, color: Colors.grey),
           ),
         ),
         Container(
-          color: Theme.of(context).colorScheme.surface,
+          color: Colors.white,
           child: Column(children: children),
         ),
       ],
@@ -793,7 +739,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
   Widget _buildSettingsTile(IconData icon, String title, String subtitle, VoidCallback? onTap, {Widget? trailing}) {
     return ListTile(
       onTap: onTap,
-      leading: Icon(icon, color: BrandColors.primary),
+      leading: Icon(icon, color: const Color(0xFFF43F5E)),
       title: Text(title, style: const TextStyle(fontWeight: FontWeight.w500)),
       subtitle: subtitle.isNotEmpty ? Text(subtitle) : null,
       trailing: trailing ?? (onTap != null ? const Icon(Icons.chevron_right) : null),

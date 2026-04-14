@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import '../utils/ui_utils.dart';
 import '../utils/formatters.dart' as budol_format;
 import 'package:intl/intl.dart';
-import '../utils/brand_colors.dart';
 import 'package:provider/provider.dart';
 import '../services/api_service.dart';
 
@@ -84,7 +83,14 @@ class _TransactionDetailsScreenState extends State<TransactionDetailsScreen> {
     final Color amountColor = isIncome ? Colors.green : Colors.red;
     
     // Safe parsing of amount
-    double amount = budol_format.AmountUtils.toDouble(widget.transaction['amount']);
+    double amount = 0.0;
+    if (widget.transaction['amount'] != null) {
+      if (widget.transaction['amount'] is num) {
+        amount = (widget.transaction['amount'] as num).toDouble();
+      } else {
+        amount = double.tryParse(widget.transaction['amount'].toString()) ?? 0.0;
+      }
+    }
 
     final String amountStr = '$amountPrefix ₱${NumberFormat('#,##0.00').format(amount)}';
     
@@ -106,10 +112,9 @@ class _TransactionDetailsScreenState extends State<TransactionDetailsScreen> {
                            widget.transaction['receiverId'] != null;
 
     return Scaffold(
-      backgroundColor: BrandColors.background,
       appBar: AppBar(
         title: const Text('Transaction Details'),
-        backgroundColor: BrandColors.primary,
+        backgroundColor: const Color(0xFFF43F5E),
         foregroundColor: Colors.white,
       ),
       body: SingleChildScrollView(

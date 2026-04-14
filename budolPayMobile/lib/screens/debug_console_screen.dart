@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../services/api_service.dart';
 import 'package:intl/intl.dart';
-import '../utils/brand_colors.dart';
 
 class DebugConsoleScreen extends StatefulWidget {
   const DebugConsoleScreen({super.key});
@@ -20,11 +19,10 @@ class _DebugConsoleScreenState extends State<DebugConsoleScreen> {
     final logs = apiService.debugLogs.reversed.toList();
 
     return Scaffold(
-      backgroundColor: BrandColors.background,
+      backgroundColor: const Color(0xFF0F172A),
       appBar: AppBar(
-        backgroundColor: BrandColors.primary,
+        backgroundColor: const Color(0xFF1E293B),
         title: const Text('Debug Console', style: TextStyle(color: Colors.white, fontSize: 18)),
-        iconTheme: const IconThemeData(color: Colors.white),
         actions: [
           IconButton(
             icon: const Icon(Icons.delete_sweep, color: Colors.white70),
@@ -43,11 +41,11 @@ class _DebugConsoleScreenState extends State<DebugConsoleScreen> {
           if (_showSystemInfo) _buildSystemInfo(apiService),
           Expanded(
             child: logs.isEmpty
-                ? Center(
+                ? const Center(
                     child: Text(
                       'No logs captured yet.\nTry performing some actions.',
                       textAlign: TextAlign.center,
-                      style: TextStyle(color: BrandColors.textSecondary),
+                      style: TextStyle(color: Colors.white38),
                     ),
                   )
                 : ListView.separated(
@@ -66,9 +64,9 @@ class _DebugConsoleScreenState extends State<DebugConsoleScreen> {
     return Container(
       width: double.infinity,
       padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: BrandColors.surface,
-        border: Border(bottom: BorderSide(color: Colors.grey[200]!)),
+      decoration: const BoxDecoration(
+        color: Color(0xFF1E293B),
+        border: Border(bottom: BorderSide(color: Colors.white10)),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -94,7 +92,7 @@ class _DebugConsoleScreenState extends State<DebugConsoleScreen> {
             child: Text(label, style: const TextStyle(color: Colors.white38, fontSize: 12, fontWeight: FontWeight.bold)),
           ),
           Expanded(
-            child: SelectableText(value, style: TextStyle(color: BrandColors.textSecondary, fontSize: 12, fontFamily: 'monospace')),
+            child: SelectableText(value, style: const TextStyle(color: Colors.white70, fontSize: 12, fontFamily: 'monospace')),
           ),
         ],
       ),

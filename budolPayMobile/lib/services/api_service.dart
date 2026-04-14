@@ -1,4 +1,3 @@
-import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
 import 'package:http/http.dart' as http;
@@ -10,7 +9,6 @@ import '../utils/js_helper.dart';
 import '../utils/timezone_utils.dart';
 import '../utils/phone_utils.dart';
 import 'discovery_service.dart';
-import '../utils/formatters.dart';
 
 import 'package:package_info_plus/package_info_plus.dart';
 
@@ -56,8 +54,6 @@ class ApiService extends ChangeNotifier {
   static const String _hostKey = 'budolpay_custom_host';
   static const String _deviceIdKey = 'budolpay_device_id';
   static const String _hasSeenAdsKey = 'budolpay_has_seen_ads';
-  static const String _themeModeKey = 'budolpay_theme_mode';
-  static const String _greetingLayoutKey = 'budolpay_greeting_layout';
 
   String? _customHost;
   String? token;
@@ -65,10 +61,7 @@ class ApiService extends ChangeNotifier {
   Map<String, dynamic>? _systemSettings;
   String? _deviceId;
   bool _hasSeenAds = false;
-  String _themeMode = 'auto'; // light, dark, auto
-  String _greetingLayout = 'vertical'; // vertical, horizontal
-  Timer? _themeTimer;
-  String _appVersion = '1.3.91+191'; // v1.3.91+191 - Modern Ruby Branding Restoration
+  String _appVersion = '1.3.81'; // v1.3.81 - Phone Normalization Hotfix
 
   String get appVersion => _appVersion;
   Future<void>? _initFuture;
@@ -187,37 +180,9 @@ class ApiService extends ChangeNotifier {
 
   String get deviceId => _deviceId ?? 'unknown_device';
   bool get hasSeenAds => _hasSeenAds;
-  String get themeMode => _themeMode;
-  String get greetingLayout => _greetingLayout;
   Map<String, dynamic>? get currentUser => user;
   Map<String, dynamic>? get systemSettings => _systemSettings;
   bool get isAuthenticated => token != null && user != null && user!['id'] != null;
-
-  /// WHY: Calculates the visual dark mode state based on preference or current time.
-  bool get isDarkMode {
-    if (_themeMode == 'dark') return true;
-    if (_themeMode == 'light') return false;
-    
-    // Auto Mode: 6:00 PM (18) to 5:59 AM (05) is Dark.
-    final hour = DateTime.now().hour;
-    return hour >= 18 || hour < 6;
-  }
-
-  /// WHY: Calculates profile completeness as a percentage.
-  /// WHAT: Checks for critical user data fields.
-  double get profileCompletion {
-    if (user == null) return 0.0;
-    
-    int totalFields = 4;
-    int completedFields = 0;
-    
-    if (user!['firstName'] != null && user!['firstName'].toString().isNotEmpty) completedFields++;
-    if (user!['lastName'] != null && user!['lastName'].toString().isNotEmpty) completedFields++;
-    if (user!['pin_setup'] == true || user!['hasPin'] == true) completedFields++;
-    if (user!['kycStatus'] == 'VERIFIED' || user!['isVerified'] == true) completedFields++;
-    
-    return completedFields / totalFields;
-  }
 
   ApiService({this.token, this.user}) {
     // Initialize Secure Storage with Web Compatibility
@@ -303,52 +268,6 @@ class ApiService extends ChangeNotifier {
     if (kDebugMode) print('ApiService: Host manually updated to: $normalizedHost');
   }
 
-  /// WHY: Updates theme preference and resets the precise timer.
-  Future<void> setThemeMode(String mode) async {
-    _themeMode = mode;
-    final prefs = await SharedPreferences.getInstance();
-    await prefs.setString(_themeModeKey, mode);
-    _calculateNextThemeTransition();
-    notifyListeners();
-  }
-
-  /// WHY: Updates the greeting layout preference (Vertical vs Horizontal).
-  Future<void> setGreetingLayout(String layout) async {
-    _greetingLayout = layout;
-    final prefs = await SharedPreferences.getInstance();
-    await prefs.setString(_greetingLayoutKey, layout);
-    notifyListeners();
-  }
-
-  /// WHY: Triggers a theme refresh exactly at 6 AM or 6 PM.
-  void _calculateNextThemeTransition() {
-    _themeTimer?.cancel();
-    if (_themeMode != 'auto') return;
-
-    final now = DateTime.now();
-    DateTime nextTransition;
-
-    if (now.hour >= 6 && now.hour < 18) {
-      // It's day. Next transition is 6 PM today.
-      nextTransition = DateTime(now.year, now.month, now.day, 18, 0, 0);
-    } else if (now.hour >= 18) {
-      // It's night. Next transition is 6 AM tomorrow.
-      nextTransition = DateTime(now.year, now.month, now.day + 1, 6, 0, 0);
-    } else {
-      // It's early morning. Next transition is 6 AM today.
-      nextTransition = DateTime(now.year, now.month, now.day, 6, 0, 0);
-    }
-
-    final duration = nextTransition.difference(now);
-    if (kDebugMode) print('ApiService: Next theme transition in ${duration.inMinutes} minutes at ${nextTransition.toIso8601String()}');
-
-    _themeTimer = Timer(duration, () {
-      if (kDebugMode) print('ApiService: Precise theme transition triggered!');
-      notifyListeners();
-      _calculateNextThemeTransition(); // Schedule next
-    });
-  }
-
   Future<bool> discoverAndSetHost() async {
     final discoveredHost = await _discoveryService.discoverGateway();
     if (discoveredHost != null) {
@@ -379,13 +298,6 @@ class ApiService extends ChangeNotifier {
 
       final prefs = await SharedPreferences.getInstance();
       
-      // Load Theme
-      _themeMode = prefs.getString(_themeModeKey) ?? 'auto';
-      _calculateNextThemeTransition();
-
-      // Load Greeting Layout
-      _greetingLayout = prefs.getString(_greetingLayoutKey) ?? 'vertical';
-
       // Load Host
       _customHost = prefs.getString(_hostKey);
       
@@ -1298,9 +1210,9 @@ class ApiService extends ChangeNotifier {
     if (response.statusCode == 200) {
       final data = _safeDecode(response, context: 'getBalance');
       if (data is Map && data.containsKey('balance')) {
-        return AmountUtils.toDouble(data['balance']);
+        return (data['balance'] ?? 0.0).toDouble();
       }
-      return AmountUtils.toDouble(data);
+      return (data ?? 0.0).toDouble();
     } else {
       throw Exception('Failed to fetch balance');
     }

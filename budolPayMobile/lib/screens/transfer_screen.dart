@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import '../utils/formatters.dart';
-import '../utils/brand_colors.dart';
 
 class TransferScreen extends StatefulWidget {
   const TransferScreen({super.key});
@@ -19,10 +18,9 @@ class _TransferScreenState extends State<TransferScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: Theme.of(context).colorScheme.surface,
       appBar: AppBar(
         title: const Text('Bank Transfer'),
-        backgroundColor: Theme.of(context).colorScheme.primary,
+        backgroundColor: const Color(0xFFF43F5E),
         foregroundColor: Colors.white,
       ),
       body: SingleChildScrollView(
@@ -39,7 +37,7 @@ class _TransferScreenState extends State<TransferScreen> {
               padding: const EdgeInsets.symmetric(horizontal: 12),
               decoration: BoxDecoration(
                 borderRadius: BorderRadius.circular(12),
-                border: Border.all(color: Theme.of(context).colorScheme.outlineVariant),
+                border: Border.all(color: Colors.grey[300]!),
               ),
               child: DropdownButtonHideUnderline(
                 child: DropdownButton<String>(
@@ -100,7 +98,7 @@ class _TransferScreenState extends State<TransferScreen> {
                 _showSuccessDialog(amount);
               },
               style: ElevatedButton.styleFrom(
-                backgroundColor: BrandColors.primary,
+                backgroundColor: const Color(0xFFF43F5E),
                 foregroundColor: Colors.white,
                 minimumSize: const Size(double.infinity, 56),
                 shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
@@ -136,7 +134,7 @@ class _TransferScreenState extends State<TransferScreen> {
                 Navigator.pop(context);
               },
               style: ElevatedButton.styleFrom(
-                backgroundColor: Theme.of(context).colorScheme.primary,
+                backgroundColor: const Color(0xFFF43F5E),
                 foregroundColor: Colors.white,
                 minimumSize: const Size(double.infinity, 48),
                 shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
