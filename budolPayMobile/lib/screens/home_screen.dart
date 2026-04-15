@@ -235,8 +235,14 @@ class _HomeScreenState extends State<HomeScreen> {
     String userName = 'User';
     if (user != null) {
       final firstName = user['firstName']?.toString() ?? '';
-      userName = firstName.trim();
-      if (userName.isEmpty) userName = user['email']?.toString() ?? 'User';
+      final lastName = user['lastName']?.toString() ?? '';
+      final fullName = '$firstName $lastName'.trim();
+      
+      if (fullName.isNotEmpty) {
+        userName = fullName;
+      } else {
+        userName = user['email']?.toString().split('@')[0] ?? 'User';
+      }
     }
 
     return PopScope(
@@ -313,40 +319,50 @@ class _HomeScreenState extends State<HomeScreen> {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         Flexible(
-                          child: Row(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
                             mainAxisSize: MainAxisSize.min,
                             children: [
                               Text(
                                 _greeting,
-                                style: const TextStyle(color: Colors.white, fontSize: 16, fontWeight: FontWeight.w500),
+                                style: const TextStyle(color: Colors.white70, fontSize: 14),
                               ),
-                              Flexible(
-                                child: Text(
-                                  _isNameVisible ? userName : '•' * userName.length,
-                                  style: const TextStyle(
-                                    color: Colors.white,
-                                    fontSize: 18,
-                                    fontWeight: FontWeight.w500,
+                              const SizedBox(height: 4),
+                              Row(
+                                children: [
+                                  Flexible(
+                                    child: Text(
+                                      _isNameVisible ? userName : '•' * userName.length,
+                                      style: const TextStyle(
+                                        color: Colors.white,
+                                        fontSize: 20,
+                                        fontWeight: FontWeight.bold,
+                                      ),
+                                      overflow: TextOverflow.ellipsis,
+                                    ),
                                   ),
-                                  overflow: TextOverflow.ellipsis,
-                                ),
+                                  const SizedBox(width: 8),
+                                  IconButton(
+                                    constraints: const BoxConstraints(),
+                                    padding: EdgeInsets.zero,
+                                    iconSize: 20,
+                                    icon: Icon(
+                                      _isNameVisible ? Icons.visibility : Icons.visibility_off,
+                                      color: Colors.white70,
+                                    ),
+                                    onPressed: () {
+                                      setState(() {
+                                        _isNameVisible = !_isNameVisible;
+                                      });
+                                    },
+                                  ),
+                                ],
                               ),
                             ],
-                          ),
-                        ),
-                        const SizedBox(width: 8),
-                        GestureDetector(
-                          onTap: () {
-                            setState(() {
-                              _isNameVisible = !_isNameVisible;
-                            });
-                          },
-                          child: Icon(
-                            _isNameVisible ? Icons.visibility : Icons.visibility_off,
-                            color: Colors.white70,
-                            size: 16,
                           ),
                         ),
                       ],

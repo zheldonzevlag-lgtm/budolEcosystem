@@ -415,7 +415,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
       final firstName = user['firstName']?.toString() ?? '';
       final lastName = user['lastName']?.toString() ?? '';
       userName = '$firstName $lastName'.trim();
-      if (userName.isEmpty) userName = 'User';
+      if (userName.isEmpty) userName = user['email']?.toString().split('@')[0] ?? 'User';
       
       email = user['email']?.toString() ?? '';
     }
