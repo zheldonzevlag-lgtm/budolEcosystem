@@ -1358,7 +1358,7 @@ app.post('/login', async (req, res) => {
             timestamp: getLegacyManilaISO()
         });
 
-        res.json({ token, user: { id: user.id, email: maskPII(user.email), role: user.role } });
+        res.json({ token, user: { id: user.id, email: user.email, role: user.role, firstName: user.firstName, lastName: user.lastName, phoneNumber: user.phoneNumber } });
     } catch (error) {
         console.error('[Login Error]', error);
         res.status(500).json({ error: error.message });
@@ -1485,7 +1485,7 @@ app.post('/biometric/login-verify', async (req, res) => {
 
         res.json({
             token,
-            user: { id: user.id, phoneNumber: maskPII(user.phoneNumber), firstName: maskPII(user.firstName) }
+            user: { id: user.id, phoneNumber: user.phoneNumber, firstName: user.firstName, lastName: user.lastName }
         });
     } catch (error) {
         res.status(500).json({ error: error.message });
@@ -1597,9 +1597,9 @@ app.get('/user/find', async (req, res) => {
         const responseData = {
             id: user.id,
             email: maskPII(user.email),
-            phoneNumber: maskPII(user.phoneNumber),
-            firstName: maskPII(user.firstName),
-            lastName: maskPII(user.lastName)
+            phoneNumber: user.phoneNumber,
+            firstName: user.firstName,
+            lastName: user.lastName
         };
 
         console.log(`[User Find] Returning masked data for ${maskPII(user.email)}`);
@@ -1633,9 +1633,9 @@ app.get('/favorites', authenticate, async (req, res) => {
             recipient: f.recipient ? {
                 ...f.recipient,
                 email: maskPII(f.recipient.email),
-                phoneNumber: maskPII(f.recipient.phoneNumber),
-                firstName: maskPII(f.recipient.firstName),
-                lastName: maskPII(f.recipient.lastName)
+                phoneNumber: f.recipient.phoneNumber,
+                firstName: f.recipient.firstName,
+                lastName: f.recipient.lastName
             } : null
         }));
         res.json(maskedFavorites);
