@@ -15,6 +15,7 @@ import '../widgets/map_picker.dart';
 import 'kyc_capture_screen.dart';
 import 'package:geocoding/geocoding.dart';
 import 'package:connectivity_plus/connectivity_plus.dart';
+import 'dart:convert';
 
 
 class KYCVerificationScreen extends StatefulWidget {
@@ -108,27 +109,44 @@ class _KYCVerificationScreenState extends State<KYCVerificationScreen> {
       setState(() => _isProcessingML = true);
       
       try {
-        // Phase 2: Reverse Geocoding via OS Services
-        List<Placemark> placemarks = await placemarkFromCoordinates(
-          result.latitude, 
-          result.longitude,
-        );
+        String formattedAddress = '';
+        try {
+          List<Placemark> placemarks = await placemarkFromCoordinates(
+            result.latitude, 
+            result.longitude,
+          );
+          
+          if (placemarks.isNotEmpty) {
+            final place = placemarks.first;
+            
+            // Phase 3: Full Detail Address Assembly (User requirement)
+            final addressParts = [
+              place.street,
+              place.subLocality,
+              place.locality,
+              place.administrativeArea,
+              place.postalCode,
+              place.country,
+            ].where((part) => part != null && part.isNotEmpty).toList();
+            
+            formattedAddress = addressParts.join(', ');
+          }
+        } catch (_) {
+          // Native geocoding failed, fallback to OSM Nominatim
+        }
+
+        if (formattedAddress.isEmpty) {
+          final url = Uri.parse('https://nominatim.openstreetmap.org/reverse?lat=${result.latitude}&lon=${result.longitude}&format=json');
+          final response = await http.get(url, headers: {'User-Agent': 'budolPayApp/1.0'});
+          if (response.statusCode == 200) {
+            final data = json.decode(response.body);
+            if (data != null && data['display_name'] != null) {
+              formattedAddress = data['display_name'];
+            }
+          }
+        }
         
-        if (placemarks.isNotEmpty) {
-          final place = placemarks.first;
-          
-          // Phase 3: Full Detail Address Assembly (User requirement)
-          final addressParts = [
-            place.street,
-            place.subLocality,
-            place.locality,
-            place.administrativeArea,
-            place.postalCode,
-            place.country,
-          ].where((part) => part != null && part.isNotEmpty).toList();
-          
-          final formattedAddress = addressParts.join(', ');
-          
+        if (formattedAddress.isNotEmpty) {
           setState(() {
             _addressController.text = formattedAddress;
             _isProcessingML = false;
