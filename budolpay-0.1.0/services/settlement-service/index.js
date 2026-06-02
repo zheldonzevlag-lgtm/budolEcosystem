@@ -84,6 +84,8 @@ const router = express.Router();
 app.use('/api/settlement', router);
 app.use('/', router); // Fallback for direct calls
 
+app.get('/', (req, res) => res.json({ status: 'ok', service: 'settlement-service' }));
+
 app.use(express.json());
 
 // Health Check

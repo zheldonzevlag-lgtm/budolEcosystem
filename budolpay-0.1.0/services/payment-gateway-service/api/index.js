@@ -59,6 +59,8 @@ router.use(bodyParser.json({ type: (req) => req.headers['content-type']?.startsW
 app.use('/api/payment-gw', router);
 app.use('/', router); // Fallback for direct calls
 
+app.get('/', (req, res) => res.json({ status: 'ok', service: 'payment-gateway-service' }));
+
 const LOCAL_IP = process.env.LOCAL_IP;
 
 if (!LOCAL_IP) {

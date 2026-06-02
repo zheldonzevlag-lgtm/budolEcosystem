@@ -159,6 +159,8 @@ const router = express.Router();
 app.use('/api/auth', router);
 app.use('/', router); // Fallback for direct calls
 
+app.get('/', (req, res) => res.json({ status: 'ok', service: 'auth-service' }));
+
 const JWT_SECRET = process.env.JWT_SECRET || 'GJ7Lxn0/kdV/KuZJ5xJ7Ip0RvMerrGW5n0gf44mfHgc=';
 const BUDOL_ID_URL = process.env.BUDOL_ID_URL || `http://${LOCAL_IP || 'localhost'}:8000`;
 console.log(`[budolPay-Auth] Ecosystem JWT_SECRET Loaded`);

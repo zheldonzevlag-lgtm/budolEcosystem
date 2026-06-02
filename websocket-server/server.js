@@ -32,6 +32,10 @@ io.on('connection', (socket) => {
     });
 });
 
+app.get('/', (req, res) => {
+    res.json({ status: 'ok', service: 'budolPay WebSocket Server', endpoints: ['/trigger'] });
+});
+
 // Endpoint for Backend to trigger events
 // The Next.js API will call this via HTTP POST
 app.post('/trigger', (req, res) => {

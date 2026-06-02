@@ -32,6 +32,8 @@ const router = express.Router();
 app.use('/api/tx', router);
 app.use('/', router);
 
+app.get('/', (req, res) => res.json({ status: 'ok', service: 'transaction-service' }));
+
 const LOCAL_IP = process.env.LOCAL_IP;
 
 if (!LOCAL_IP) {

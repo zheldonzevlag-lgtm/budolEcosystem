@@ -252,6 +252,10 @@ app.use((req, res, next) => {
 });
 
 // Health check endpoint
+app.get('/', (req, res) => {
+    res.status(200).json({ status: 'ok', service: 'budolID SSO', endpoints: ['/api/health', '/login', '/register'] });
+});
+
 app.get('/api/health', (req, res) => {
     res.status(200).json({ status: 'UP', service: 'budolID', timestamp: new Date().toISOString() });
 });

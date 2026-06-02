@@ -43,6 +43,8 @@ const router = express.Router();
 app.use('/api/wallet', router);
 app.use('/', router); // Fallback for direct calls
 
+app.get('/', (req, res) => res.json({ status: 'ok', service: 'wallet-service' }));
+
 const LOCAL_IP = process.env.LOCAL_IP;
 
 if (!LOCAL_IP) {

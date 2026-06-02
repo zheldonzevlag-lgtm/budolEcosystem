@@ -3,43 +3,245 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>v1.3.82 Heritage | Developer Manual</title>
+    <title>BudolPay v1.3.93 | Developer Manual</title>
     <style>
-        body { background-color: #0F172A; color: #F8FAFC; font-family: 'Inter', sans-serif; padding: 40px; line-height: 1.6; }
-        code { background: #1E293B; color: #F43F5E; padding: 2px 6px; border-radius: 4px; }
-        .section { margin-bottom: 40px; }
-        h2 { border-bottom: 1px solid #F43F5E; padding-bottom: 5px; }
+        :root { --slate-900:#0F172A; --slate-800:#1E293B; --slate-700:#334155; --rose-500:#F43F5E; --text-main:#F8FAFC; --text-muted:#94A3B8; }
+        body { background:var(--slate-900); color:var(--text-main); font-family:'Inter',-apple-system,sans-serif; margin:0; display:flex; min-height:100vh; }
+        .sidebar { width:280px; background:var(--slate-800); min-height:100vh; padding:24px 16px; border-right:1px solid rgba(255,255,255,0.08); flex-shrink:0; }
+        .sidebar h2 { font-size:1rem; color:var(--rose-500); margin-bottom:24px; }
+        .main-content { flex:1; padding:40px; max-width:960px; }
+        h1 { color:var(--rose-500); }
+        h2 { color:var(--rose-500); border-bottom:1px solid var(--slate-700); padding-bottom:8px; margin-top:32px; }
+        h3 { color:#cbd5e1; margin-top:20px; }
+        .nav-item { padding:10px 14px; margin:4px 0; border-radius:8px; color:var(--text-main); text-decoration:none; display:block; font-size:0.9rem; }
+        .nav-item:hover { background:rgba(244,63,94,0.12); }
+        .nav-item.active { background:rgba(244,63,94,0.2); border-left:3px solid var(--rose-500); }
+        .card { background:var(--slate-800); border-radius:12px; padding:24px; margin-bottom:20px; border:1px solid rgba(255,255,255,0.08); }
+        pre { background:#0d1117; padding:20px; border-radius:10px; font-size:0.82rem; overflow-x:auto; color:#e2e8f0; border:1px solid rgba(255,255,255,0.08); line-height:1.6; }
+        code { background:rgba(244,63,94,0.1); padding:2px 6px; border-radius:4px; font-size:0.85em; color:var(--rose-500); }
+        .file-link { display:inline-flex; align-items:center; gap:6px; background:rgba(244,63,94,0.1); padding:6px 14px; border-radius:8px; color:var(--rose-500); text-decoration:none; font-size:0.85rem; border:1px solid rgba(244,63,94,0.3); margin:4px 0; }
+        .file-link:hover { background:rgba(244,63,94,0.2); }
+        .nav-version-info { margin-top:40px; padding-top:16px; border-top:1px solid rgba(255,255,255,0.1); font-size:0.8rem; color:var(--text-muted); }
+        a { color:var(--rose-500); }
+        ul li { color:var(--text-muted); margin-bottom:8px; }
+        ul li strong { color:var(--text-main); }
+        .why { background:rgba(99,102,241,0.08); border-left:3px solid #6366f1; padding:12px 16px; border-radius:0 8px 8px 0; margin:12px 0; font-size:0.9rem; color:#a5b4fc; }
     </style>
 </head>
 <body>
-    <h1>v1.3.82 Heritage Baseline Manual</h1>
-    
-    <div class="section">
-        <h2>Architecture Summary</h2>
-        <p>This codebase is pinned to the <strong>v1.3.82 Institutional Baseline</strong>. Developers must not introduce adaptive theming logic or third-party gradient packages (e.g., <code>mesh_gradient</code>) without explicit authorization.</p>
+    <div class="sidebar">
+        <h2>📱 BudolPay Docs</h2>
+        <a href="index.html" class="nav-item">🏠 Index</a>
+        <a href="task.html" class="nav-item">✅ Task List</a>
+        <a href="developer_manual.html" class="nav-item active">🛠️ Developer Manual</a>
+        <a href="issues%20&%20fixes.html" class="nav-item">🐞 Issues &amp; Fixes</a>
+        <a href="risk_register.html" class="nav-item">⚠️ Risk Register</a>
+        <a href="test_results.html" class="nav-item">🧪 Test Results</a>
+        <a href="future_recommendations.html" class="nav-item">🔮 Future Recommendations</a>
+        <a href="Mitigation.html" class="nav-item">🛡️ Mitigation</a>
+        <div class="nav-version-info">
+            <p>Version: 1.3.93+194 | 2026-04-17</p>
+            <a href="../knowledgebase.html">← Knowledgebase</a>
+        </div>
     </div>
+    <div class="main-content">
+        <h1>🛠️ Developer Manual — v1.3.93</h1>
+        <p style="color:var(--text-muted);">Technical reference for the geocoding fallback implementation. Branch: <code>release/1.3.93</code></p>
 
-    <div class="section">
-        <h2>Branding Standard</h2>
+        <h2>Overview</h2>
+        <div class="card">
+            <p>This release introduces a <strong>platform-agnostic geocoding layer</strong> to support address resolution across Android, iOS, and Flutter Web. The implementation wraps the native <code>geocoding</code> package with an <strong>OSM Nominatim REST API fallback</strong>.</p>
+            <ul>
+                <li><strong>Primary resolver:</strong> Flutter <code>geocoding</code> package (native Android/iOS Google Play Services)</li>
+                <li><strong>Fallback resolver:</strong> OpenStreetMap Nominatim REST API (works on Web, emulators, CI)</li>
+                <li><strong>HTTP client:</strong> <code>package:http</code> (already a dependency)</li>
+            </ul>
+        </div>
+
+        <h2>Modified Files</h2>
+
+        <!-- map_picker.dart -->
+        <h3>📄 map_picker.dart</h3>
+        <a href="file:///d:/IT%20Projects/clone/budolEcosystem/budolPayMobile/lib/widgets/map_picker.dart" class="file-link" target="_blank">📂 Open: lib/widgets/map_picker.dart</a>
+        <div class="why">
+            <strong>Why it exists:</strong> Provides an interactive map UI for the user to visually pick their exact address location during KYC verification. Replaced the static instruction banner with a live search TextField.
+        </div>
+
+        <h3>Key Method: <code>_geocodeAddress(String query)</code></h3>
+        <div class="why"><strong>What it does:</strong> Converts a typed address string into map coordinates. <strong>Why:</strong> Native geocoding fails on Web. Nominatim provides a universal fallback.</div>
+        <pre>
+Future&lt;void&gt; _geocodeAddress(String query) async {
+  if (query.isEmpty) return;
+  setState(() =&gt; _isLoading = true);
+  try {
+    LatLng? resultLatLng;
+
+    try {
+      // PRIMARY: Try native OS geocoding (works on Android/iOS physical devices)
+      List&lt;Location&gt; locations = await locationFromAddress(query);
+      if (locations.isNotEmpty) {
+        resultLatLng = LatLng(locations.first.latitude, locations.first.longitude);
+      }
+    } catch (_) {
+      // FALLBACK: Native failed (Web/emulator) — use OSM Nominatim REST API
+      final url = Uri.parse(
+        'https://nominatim.openstreetmap.org/search'
+        '?q=${Uri.encodeComponent(query)}&amp;format=json&amp;limit=1'
+      );
+      final response = await http.get(url, headers: {'User-Agent': 'budolPayApp/1.0'});
+      if (response.statusCode == 200) {
+        final data = json.decode(response.body) as List;
+        if (data.isNotEmpty) {
+          resultLatLng = LatLng(
+            double.parse(data[0]['lat']),
+            double.parse(data[0]['lon']),
+          );
+        }
+      }
+    }
+
+    if (resultLatLng != null) {
+      final loc = resultLatLng;
+      setState(() { _selectedLocation = loc; });
+      _mapController.move(loc, 15.0);         // Reposition map camera
+      await _reverseGeocodeCoordinate(loc);   // Auto-fill the search bar
+    } else {
+      throw Exception('Location not found');
+    }
+  } catch (e) {
+    if (mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Address not found')),
+      );
+    }
+  } finally {
+    if (mounted) setState(() =&gt; _isLoading = false);
+  }
+}
+        </pre>
+
+        <h3>Key Method: <code>_reverseGeocodeCoordinate(LatLng latLng)</code></h3>
+        <div class="why"><strong>What it does:</strong> Converts map coordinates into a human-readable street address, filling the search input. <strong>Why:</strong> Called on every tap/pin drop/GPS snap so the user always sees what address they pinned.</div>
+        <pre>
+Future&lt;void&gt; _reverseGeocodeCoordinate(LatLng latLng) async {
+  try {
+    try {
+      // PRIMARY: Native reverse geocoding
+      List&lt;Placemark&gt; placemarks = await placemarkFromCoordinates(
+        latLng.latitude, latLng.longitude,
+      );
+      if (placemarks.isNotEmpty) {
+        final p = placemarks.first;
+        final address = [p.street, p.subLocality, p.locality,
+                         p.administrativeArea, p.country]
+            .where((part) =&gt; part != null &amp;&amp; part.isNotEmpty)
+            .join(', ');
+        if (address.isNotEmpty) {
+          _searchController.text = address;
+          return; // Done — no fallback needed
+        }
+      }
+    } catch (_) {
+      // Native failed — fall through to Nominatim
+    }
+
+    // FALLBACK: OSM Nominatim Reverse Geocoding
+    final url = Uri.parse(
+      'https://nominatim.openstreetmap.org/reverse'
+      '?lat=${latLng.latitude}&amp;lon=${latLng.longitude}&amp;format=json'
+    );
+    final response = await http.get(url, headers: {'User-Agent': 'budolPayApp/1.0'});
+    if (response.statusCode == 200) {
+      final data = json.decode(response.body);
+      if (data != null &amp;&amp; data['display_name'] != null) {
+        _searchController.text = data['display_name'];
+      }
+    }
+  } catch (e) {
+    debugPrint('Reverse geocode error: $e');
+  }
+}
+        </pre>
+
+        <!-- kyc_verification_screen.dart -->
+        <h3>📄 kyc_verification_screen.dart</h3>
+        <a href="file:///d:/IT%20Projects/clone/budolEcosystem/budolPayMobile/lib/screens/kyc_verification_screen.dart" class="file-link" target="_blank">📂 Open: lib/screens/kyc_verification_screen.dart</a>
+        <div class="why">
+            <strong>Why modified:</strong> This screen calls <code>placemarkFromCoordinates()</code> after the user confirms their pinned location. The same fallback was applied so the KYC Present Address field populates reliably on all platforms.
+        </div>
+        <pre>
+// In _pinAddress() — after receiving result LatLng from MapPicker
+
+String formattedAddress = '';
+try {
+  // PRIMARY: Native reverse geocoding
+  List&lt;Placemark&gt; placemarks = await placemarkFromCoordinates(
+    result.latitude, result.longitude,
+  );
+  if (placemarks.isNotEmpty) {
+    final place = placemarks.first;
+    formattedAddress = [place.street, place.subLocality, place.locality,
+                        place.administrativeArea, place.postalCode, place.country]
+        .where((part) =&gt; part != null &amp;&amp; part.isNotEmpty)
+        .join(', ');
+  }
+} catch (_) {
+  // FALLBACK: Nominatim reverse geocoding
+}
+
+if (formattedAddress.isEmpty) {
+  final url = Uri.parse(
+    'https://nominatim.openstreetmap.org/reverse'
+    '?lat=${result.latitude}&amp;lon=${result.longitude}&amp;format=json'
+  );
+  final response = await http.get(url, headers: {'User-Agent': 'budolPayApp/1.0'});
+  if (response.statusCode == 200) {
+    final data = json.decode(response.body);
+    if (data != null &amp;&amp; data['display_name'] != null) {
+      formattedAddress = data['display_name'];
+    }
+  }
+}
+        </pre>
+
+        <h2>Dependencies</h2>
+        <div class="card">
+            <table style="width:100%; border-collapse:collapse; font-size:0.9rem;">
+                <thead><tr style="background:var(--slate-700);">
+                    <th style="padding:10px; color:var(--rose-500);">Package</th>
+                    <th style="padding:10px; color:var(--rose-500);">Version</th>
+                    <th style="padding:10px; color:var(--rose-500);">Purpose</th>
+                    <th style="padding:10px; color:var(--rose-500);">Why Chosen</th>
+                </tr></thead>
+                <tbody>
+                    <tr>
+                        <td style="padding:10px; color:var(--text-main);">geocoding</td>
+                        <td style="padding:10px; color:var(--text-muted);">^3.0.0</td>
+                        <td style="padding:10px; color:var(--text-muted);">Native forward/reverse geocoding on Android/iOS</td>
+                        <td style="padding:10px; color:var(--text-muted);">Official Flutter geocoding plugin with device-level accuracy</td>
+                    </tr>
+                    <tr>
+                        <td style="padding:10px; color:var(--text-main);">http</td>
+                        <td style="padding:10px; color:var(--text-muted);">^1.0.0</td>
+                        <td style="padding:10px; color:var(--text-muted);">Makes REST calls to OSM Nominatim API</td>
+                        <td style="padding:10px; color:var(--text-muted);">Already a project dependency — no new package needed</td>
+                    </tr>
+                    <tr>
+                        <td style="padding:10px; color:var(--text-main);">OSM Nominatim (external)</td>
+                        <td style="padding:10px; color:var(--text-muted);">Free API</td>
+                        <td style="padding:10px; color:var(--text-muted);">Platform-agnostic geocoding fallback</td>
+                        <td style="padding:10px; color:var(--text-muted);">Free, no API key required, works on all platforms including Web</td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+
+        <h2>TODO / Future Recommendations</h2>
         <ul>
-            <li><strong>Primary Heritage Color:</strong> <code>#F43F5E</code> (Rose 500)</li>
-            <li><strong>Secondary/Background Color:</strong> <code>#0F172A</code> (Slate 900)</li>
-            <li><strong>UI Logic:</strong> Hardcoded within screens or derived from the static Material 3 seed in <code>main.dart</code>.</li>
+            <li><!-- TODO: Nominatim Rate Limiting --> <strong>Rate Limiting:</strong> OSM Nominatim is a free public service. For production at scale, migrate to <strong>Geoapify</strong> or <strong>Google Maps Geocoding API</strong> with an API key.</li>
+            <li><!-- TODO: Search Suggestions --> <strong>Search Autocomplete:</strong> Implement a live dropdown of suggestions as the user types using <code>nominatim.openstreetmap.org/search</code> with debounce.</li>
+            <li><!-- TODO: Connectivity Guard --> <strong>Offline Guard:</strong> Show a friendly "No Internet" message if both primary and fallback geocoding fail due to connectivity issues.</li>
         </ul>
-    </div>
-
-    <div class="section">
-        <h2>Key Files</h2>
-        <ul>
-            <li><a href="file:///d:/IT Projects/clone/budolEcosystem/budolPayMobile/lib/main.dart">main.dart</a> - Entry point with static ThemeData.</li>
-            <li><a href="file:///d:/IT Projects/clone/budolEcosystem/budolPayMobile/lib/services/api_service.dart">api_service.dart</a> - Stripped of theme-state logic.</li>
-            <li><a href="file:///d:/IT Projects/clone/budolEcosystem/budolPayMobile/lib/screens/login_screen.dart">login_screen.dart</a> - Solid original background implementation.</li>
-        </ul>
-    </div>
-
-    <div class="section">
-        <h2>Critical Restriction</h2>
-        <p>Do not re-introduce the <code>budolPayMobile/lib/utils/brand_colors.dart</code> file. This file was discarded to ensure consistency with the user-requested v1.3.82 standard.</p>
     </div>
 </body>
 </html>

@@ -59,6 +59,10 @@ app.use(cors());
 app.use(express.json());
 
 // Health Check
+router.get('/', (req, res) => {
+    res.status(200).json({ status: 'ok', service: 'budolAccounting' });
+});
+
 router.get('/health', (req, res) => {
     res.status(200).json({ 
         status: 'Accounting Service is healthy', 

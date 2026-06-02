@@ -212,8 +212,10 @@ const sanitizeUrl = (url) => {
 };
 
 // Health Check for Vercel
-app.get('/health', (req, res) => res.json({ 
-    status: 'ok', 
+app.get('/', (req, res) => res.json({ status: 'ok', service: 'budolPay API Gateway' }));
+
+app.get('/health', (req, res) => res.json({
+    status: 'ok',
     service: 'api-gateway',
     timestamp: getLegacyManilaISO()
 }));
