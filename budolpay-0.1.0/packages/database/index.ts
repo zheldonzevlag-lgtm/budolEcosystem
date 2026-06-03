@@ -5,8 +5,8 @@ export * from '@prisma/client'
 const globalForPrisma = global as unknown as { prisma: PrismaClient }
 
 const dbUrl = process.env.DATABASE_URL && process.env.DATABASE_URL.length > 0 
-  ? process.env.DATABASE_URL 
-  : "postgresql://postgres:postgres@localhost:5432/budolpay?schema=public";
+  ? (process.env.DATABASE_URL.includes('?') ? process.env.DATABASE_URL : `${process.env.DATABASE_URL}?schema=budolpay`)
+  : "postgresql://postgres:postgres@localhost:5432/budolpay?schema=budolpay";
 
 export const prisma =
   globalForPrisma.prisma ||
