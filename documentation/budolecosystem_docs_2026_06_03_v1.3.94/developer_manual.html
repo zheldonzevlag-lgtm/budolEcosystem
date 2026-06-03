@@ -1,0 +1,127 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Developer Manual – v1.3.94</title>
+<style>
+body{font-family:'Segoe UI',sans-serif;margin:0;padding:0;background:#f4f5f7;color:#172b4d}
+.header{background:linear-gradient(135deg,#0052cc,#00875a);color:#fff;padding:24px 48px}
+.nav-bar{background:#fff;border-bottom:1px solid #dfe1e6;padding:12px 48px;display:flex;gap:16px;flex-wrap:wrap}
+.nav-bar a{color:#0052cc;text-decoration:none;font-size:14px;padding:6px 12px;border-radius:4px}
+.nav-bar a:hover{background:#deebff}
+.content{max-width:960px;margin:32px auto;padding:0 24px}
+.card{background:#fff;border-radius:8px;box-shadow:0 1px 3px rgba(0,0,0,.12);padding:24px;margin-bottom:24px}
+.card h2{margin-top:0;color:#0052cc;border-bottom:2px solid #0052cc;padding-bottom:8px}
+.card h3{color:#253858}
+pre{background:#1e1e1e;color:#d4d4d4;padding:16px;border-radius:6px;overflow-x:auto;font-size:13px;line-height:1.5}
+.keyword{color:#569cd6}.string{color:#ce9178}.comment{color:#6a9955}.type{color:#4ec9b0}
+a.file-link{color:#0052cc;font-weight:600}
+table{width:100%;border-collapse:collapse;margin:12px 0}
+th,td{text-align:left;padding:10px 12px;border-bottom:1px solid #dfe1e6}
+th{background:#f4f5f7}
+</style>
+</head>
+<body>
+<div class="header"><h1>Developer Manual – v1.3.94</h1><p>Prisma Schema Sync & Vercel Production DB Fix</p></div>
+<div class="nav-bar">
+<a href="index.html">← Index</a>
+<a href="task.html">Tasks</a>
+<a href="test_results.html">Test Results</a>
+<a href="issues_and_fixes.html">Issues & Fixes</a>
+</div>
+<div class="content">
+
+<div class="card">
+<h2>Purpose</h2>
+<p>This release resolves Vercel runtime crashes on the admin dashboard caused by a Prisma Client schema mismatch between the admin app's local schema and the actual production Neon database structure.</p>
+</div>
+
+<div class="card">
+<h2>Rationale</h2>
+<p>The admin app (<code>apps/admin</code>) maintained its own <code>prisma/schema.prisma</code> file that was outdated and contained e-commerce models (Product, Store, Category) not present in the production database. The generated Prisma Client expected columns like <code>points</code> and <code>expireAt</code> instead of the actual <code>hits</code> and <code>expiresAt</code> columns, causing runtime query failures.</p>
+</div>
+
+<div class="card">
+<h2>Technical Explanation</h2>
+<h3>Root Cause</h3>
+<ol>
+<li><strong>Schema Mismatch</strong>: <code>apps/admin/prisma/schema.prisma</code> defined <code>model SystemSettings</code> (plural) and <code>RateLimit</code> with fields <code>points</code>/<code>expireAt</code>. The production database uses <code>SystemSetting</code> (singular) with <code>hits</code>/<code>expiresAt</code>.</li>
+<li><strong>Status Route Bug</strong>: <code>/api/system/status</code> queried <code>prisma.systemSettings.findUnique({where: {id: 'default'}})</code> — table doesn't exist.</li>
+<li><strong>Wrong DB Cluster</strong>: <code>push_env.cjs</code> pointed to <code>ep-bitter-wildflower-a1y0z1id-pooler</code> instead of active cluster <code>ep-wandering-breeze-aoin4z9c-pooler</code>.</li>
+</ol>
+</div>
+
+<div class="card">
+<h2>Code Changes</h2>
+
+<h3>1. Schema Sync – <a class="file-link" href="file:///d:/IT%20Projects/clone/budolEcosystem/budolpay-0.1.0/apps/admin/prisma/schema.prisma">apps/admin/prisma/schema.prisma</a></h3>
+<p>Overwritten with the source-of-truth from <a class="file-link" href="file:///d:/IT%20Projects/clone/budolEcosystem/budolpay-0.1.0/packages/database/prisma/schema.prisma">packages/database/prisma/schema.prisma</a>. Key models:</p>
+<pre><span class="comment">// Correct singular model name matching production DB table</span>
+<span class="keyword">model</span> <span class="type">SystemSetting</span> {
+  id          String   @id @default(uuid())
+  key         String   @unique
+  value       String
+  isSecret    Boolean  @default(false)
+  description String?
+  updatedAt   DateTime @updatedAt
+  appId       String?
+  createdAt   DateTime @default(now())
+  group       String?
+  isActive    Boolean  @default(true)
+}
+
+<span class="comment">// Uses 'hits' and 'expiresAt' (not 'points'/'expireAt')</span>
+<span class="keyword">model</span> <span class="type">RateLimit</span> {
+  id        String   @id @default(uuid())
+  key       String   @unique
+  hits      Int      @default(1)
+  expiresAt DateTime
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}</pre>
+
+<h3>2. Status API Route – <a class="file-link" href="file:///d:/IT%20Projects/clone/budolEcosystem/budolpay-0.1.0/apps/admin/app/api/system/status/route.ts">apps/admin/app/api/system/status/route.ts</a></h3>
+<p>Changed from <code>prisma.systemSettings.findUnique({where:{id:'default'}})</code> to:</p>
+<pre><span class="comment">// Query singular SystemSetting model for DRS heartbeat timestamp</span>
+heartbeatSetting = <span class="keyword">await</span> prisma.<span class="type">systemSetting</span>.findUnique({
+    where: { key: <span class="string">'DRS_ENGINE_HEARTBEAT'</span> }
+});</pre>
+
+<h3>3. Environment Variables – <a class="file-link" href="file:///d:/IT%20Projects/clone/budolEcosystem/budolpay-0.1.0/apps/admin/push_env.cjs">apps/admin/push_env.cjs</a></h3>
+<pre><span class="comment">// BEFORE (incorrect cluster)</span>
+<span class="string">"DATABASE_URL"</span>: <span class="string">"...ep-bitter-wildflower-a1y0z1id-pooler..."</span>
+
+<span class="comment">// AFTER (correct production cluster)</span>
+<span class="string">"DATABASE_URL"</span>: <span class="string">"...ep-wandering-breeze-aoin4z9c-pooler.c-2..."</span></pre>
+</div>
+
+<div class="card">
+<h2>Dependencies</h2>
+<table>
+<tr><th>Dependency</th><th>Version</th><th>Purpose</th></tr>
+<tr><td>Prisma</td><td>5.14.0</td><td>ORM for PostgreSQL – generates type-safe client from schema</td></tr>
+<tr><td>Next.js</td><td>14.2.3</td><td>React framework hosting the admin dashboard API routes</td></tr>
+<tr><td>Vercel CLI</td><td>50.1.3</td><td>Deployment and environment variable management</td></tr>
+<tr><td>Neon PostgreSQL</td><td>–</td><td>Serverless PostgreSQL database (ep-wandering-breeze cluster)</td></tr>
+</table>
+</div>
+
+<div class="card">
+<h2>Compliance</h2>
+<table>
+<tr><th>Standard</th><th>Requirement</th><th>Implementation</th></tr>
+<tr><td>PCI DSS 10.2.1</td><td>Audit trail for authentication</td><td>Login route logs all auth attempts via createAuditLog()</td></tr>
+<tr><td>PCI DSS 10.2.4</td><td>Log invalid access attempts</td><td>Rate limit hits logged with IP, email, compliance metadata</td></tr>
+<tr><td>BSP Circular 808</td><td>Security controls for e-money</td><td>Rate limiting enforced on auth endpoints</td></tr>
+<tr><td>NPC DPA 2012</td><td>Data protection</td><td>Credentials stored as hashes; DB connections use SSL</td></tr>
+</table>
+</div>
+
+<div class="card">
+<h2>Tests</h2>
+<p>Test file: <a class="file-link" href="file:///d:/IT%20Projects/clone/budolEcosystem/scripts/test_scripts/system_status.test.js">scripts/test_scripts/system_status.test.js</a></p>
+<p>Result: <strong>10/10 tests passed</strong>. See <a href="test_results.html">test_results.html</a> for details.</p>
+</div>
+</div>
+</body>
+</html>

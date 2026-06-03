@@ -1,8 +1,8 @@
 const { execSync } = require('child_process');
 
 const envs = {
-    "DATABASE_URL": "postgresql://neondb_owner:npg_1XunT0SskIwa@ep-bitter-wildflower-a1y0z1id-pooler.ap-southeast-1.aws.neon.tech/budolpay?sslmode=require&schema=budolpay",
-    "DIRECT_URL": "postgresql://neondb_owner:npg_1XunT0SskIwa@ep-bitter-wildflower-a1y0z1id-pooler.ap-southeast-1.aws.neon.tech/budolpay?sslmode=require&schema=budolpay",
+    "DATABASE_URL": "postgresql://neondb_owner:npg_XLkrx73JNlRP@ep-wandering-breeze-aoin4z9c-pooler.c-2.ap-southeast-1.aws.neon.tech/budolpay?sslmode=require&schema=budolpay",
+    "DIRECT_URL": "postgresql://neondb_owner:npg_XLkrx73JNlRP@ep-wandering-breeze-aoin4z9c-pooler.c-2.ap-southeast-1.aws.neon.tech/budolpay?sslmode=require&schema=budolpay",
     "NEXT_PUBLIC_SSO_URL": "https://budol-id-sso.onrender.com",
     "SSO_URL": "https://budol-id-sso.onrender.com",
     "BUDOLACCOUNTING_URL": "https://budolaccounting.onrender.com", 

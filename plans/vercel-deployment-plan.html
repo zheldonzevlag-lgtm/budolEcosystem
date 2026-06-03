@@ -1,0 +1,454 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>budolEcosystem — Vercel Deployment Plan</title>
+  <style>
+    :root { --bg: #0a0a0f; --surface: #13131a; --surface2: #1a1a26; --border: #2a2a3a; --text: #e4e4f0; --text2: #8888a0; --accent: #6366f1; --accent2: #818cf8; --green: #22c55e; --yellow: #eab308; --red: #ef4444; --font: 'Inter', system-ui, -apple-system, sans-serif; }
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body { font-family: var(--font); background: var(--bg); color: var(--text); line-height: 1.6; padding: 0; }
+    .container { max-width: 1000px; margin: 0 auto; padding: 2rem 1.5rem; }
+    h1 { font-size: 2rem; font-weight: 700; letter-spacing: -0.02em; margin-bottom: 0.25rem; }
+    h1 span { color: var(--accent2); }
+    .subtitle { color: var(--text2); font-size: 0.95rem; margin-bottom: 2rem; border-bottom: 1px solid var(--border); padding-bottom: 1rem; }
+    h2 { font-size: 1.35rem; font-weight: 600; margin: 2rem 0 1rem; color: var(--accent2); display: flex; align-items: center; gap: 0.5rem; }
+    h2::before { content: ''; display: inline-block; width: 4px; height: 1.2em; background: var(--accent); border-radius: 2px; }
+    h3 { font-size: 1.05rem; font-weight: 600; margin: 1.5rem 0 0.5rem; color: var(--text); }
+    .card { background: var(--surface); border: 1px solid var(--border); border-radius: 12px; padding: 1.25rem; margin-bottom: 1rem; }
+    .card-title { font-weight: 600; font-size: 1rem; margin-bottom: 0.5rem; display: flex; align-items: center; gap: 0.5rem; }
+    .badge { display: inline-block; padding: 0.15rem 0.55rem; border-radius: 4px; font-size: 0.75rem; font-weight: 500; text-transform: uppercase; letter-spacing: 0.03em; }
+    .badge.nextjs { background: #1a1a2e; color: #818cf8; border: 1px solid #2a2a4e; }
+    .badge.express { background: #1a2e1a; color: #22c55e; border: 1px solid #2a4e2a; }
+    .badge.prod { background: #2e1a1a; color: #ef4444; border: 1px solid #4e2a2a; }
+    .badge.preview { background: #2e2e1a; color: #eab308; border: 1px solid #4e4e2a; }
+    .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 1rem; }
+    .step { display: flex; gap: 1rem; align-items: flex-start; padding: 0.75rem 0; border-bottom: 1px solid var(--border); }
+    .step:last-child { border-bottom: none; }
+    .step-num { background: var(--accent); color: #fff; width: 26px; height: 26px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 0.8rem; font-weight: 600; flex-shrink: 0; }
+    .step-content { flex: 1; }
+    .step-title { font-weight: 500; }
+    .step-desc { color: var(--text2); font-size: 0.9rem; }
+    code { background: var(--surface2); padding: 0.15rem 0.4rem; border-radius: 4px; font-size: 0.85em; color: var(--accent2); }
+    pre { background: var(--surface2); border: 1px solid var(--border); border-radius: 8px; padding: 1rem; overflow-x: auto; font-size: 0.85rem; margin: 0.5rem 0; }
+    .env-table { width: 100%; border-collapse: collapse; font-size: 0.9rem; }
+    .env-table th, .env-table td { text-align: left; padding: 0.5rem 0.75rem; border-bottom: 1px solid var(--border); }
+    .env-table th { color: var(--text2); font-weight: 500; font-size: 0.8rem; text-transform: uppercase; letter-spacing: 0.04em; }
+    .env-table td { font-family: monospace; font-size: 0.85rem; }
+    .note { background: var(--surface2); border-left: 3px solid var(--accent); padding: 0.75rem 1rem; border-radius: 0 8px 8px 0; margin: 0.75rem 0; font-size: 0.9rem; color: var(--text2); }
+    .warning { border-left-color: var(--yellow); }
+    .danger { border-left-color: var(--red); }
+    .arch { display: flex; flex-direction: column; gap: 0.5rem; margin: 1rem 0; }
+    .arch-row { display: flex; align-items: center; gap: 0.75rem; }
+    .arch-dot { width: 10px; height: 10px; border-radius: 50%; flex-shrink: 0; }
+    .arch-dot.vercel { background: #818cf8; }
+    .arch-dot.external { background: var(--yellow); }
+    .arch-dot.db { background: var(--green); }
+    .arch-label { min-width: 100px; font-weight: 500; }
+    .arch-arrow { color: var(--text2); }
+    .toc { list-style: none; padding: 0; }
+    .toc li { padding: 0.35rem 0; }
+    .toc a { color: var(--accent2); text-decoration: none; }
+    .toc a:hover { text-decoration: underline; }
+    .footer { margin-top: 3rem; padding-top: 1.5rem; border-top: 1px solid var(--border); color: var(--text2); font-size: 0.85rem; text-align: center; }
+  </style>
+</head>
+<body>
+<div class="container">
+
+  <h1>budol<span>Ecosystem</span></h1>
+  <div class="subtitle">Vercel Deployment Plan &mdash; v2.0 &mdash; <span id="date"></span></div>
+
+  <ul class="toc">
+    <li><a href="#overview">1. Overview &amp; Architecture</a></li>
+    <li><a href="#projects">2. Vercel Projects</a></li>
+    <li><a href="#env">3. Environment Variables</a></li>
+    <li><a href="#domains">4. Custom Domains &amp; DNS</a></li>
+    <li><a href="#deploy">5. Deployment Procedure</a></li>
+    <li><a href="#ci">6. CI/CD Pipeline</a></li>
+    <li><a href="#cron">7. Cron Jobs</a></li>
+    <li><a href="#monitoring">8. Monitoring &amp; Logs</a></li>
+    <li><a href="#rollback">9. Rollback Strategy</a></li>
+    <li><a href="#checklist">10. Pre-Launch Checklist</a></li>
+  </ul>
+
+  <!-- ============ 1 ============ -->
+  <h2 id="overview">Overview &amp; Architecture</h2>
+
+  <div class="card">
+    <p><strong>budolEcosystem</strong> is a Philippine fintech e-commerce platform deployed across <strong>5 Vercel projects</strong> spanning <strong>10+ serverless endpoints</strong>. All projects are region-pinned to <code>sin1</code> (Singapore) for lowest latency to the Philippines.</p>
+  </div>
+
+  <div class="card">
+    <h3>Architecture Diagram</h3>
+    <div class="arch">
+      <div class="arch-row"><span class="arch-dot vercel"></span><span class="arch-label">budolshap</span><span class="arch-arrow">&rarr;</span><span class="arch-dot external"></span>Cloudinary / Pusher / PayMongo / Sentry</div>
+      <div class="arch-row"><span class="arch-dot vercel"></span><span class="arch-label">budolpay Admin</span><span class="arch-arrow">&rarr;</span><span class="arch-dot external"></span>Cloudinary / Pusher / Sentry</div>
+      <div class="arch-row"><span class="arch-dot vercel"></span><span class="arch-label">budolpay API GW</span><span class="arch-arrow">&rarr;</span><span class="arch-dot db"></span>RDS PostgreSQL (budolpay)</div>
+      <div class="arch-row"><span class="arch-dot vercel"></span><span class="arch-label">budolID</span><span class="arch-arrow">&rarr;</span><span class="arch-dot db"></span>RDS PostgreSQL (budolid)</div>
+      <div class="arch-row"><span class="arch-dot vercel"></span><span class="arch-label">budolAccounting</span><span class="arch-arrow">&rarr;</span><span class="arch-dot db"></span>RDS PostgreSQL (budolaccounting)</div>
+      <div class="arch-row"><span class="arch-dot db"></span><span class="arch-label">WebSocket Server</span><span class="arch-arrow">&larr;</span>Render (standalone, not Vercel)</div>
+    </div>
+    <div class="note"><strong>Note:</strong> The WebSocket server uses Socket.io and requires persistent connections &mdash; deployed on Render, not Vercel.</div>
+  </div>
+
+  <!-- ============ 2 ============ -->
+  <h2 id="projects">Vercel Projects</h2>
+
+  <div class="grid">
+
+    <div class="card">
+      <div class="card-title"><span class="badge nextjs">Next.js 16</span> budolshap</div>
+      <div><strong>Directory:</strong> <code>budolshap-0.1.0/</code></div>
+      <div><strong>Framework:</strong> Next.js 16 (App Router), React 19</div>
+      <div><strong>Build:</strong> <code>next build</code></div>
+      <div><strong>Region:</strong> sin1</div>
+      <div><strong>vercel.json:</strong></div>
+      <pre>{
+  "version": 2,
+  "framework": "nextjs",
+  "regions": ["sin1"]
+}</pre>
+    </div>
+
+    <div class="card">
+      <div class="card-title"><span class="badge nextjs">Next.js 14</span> budolpay Admin</div>
+      <div><strong>Directory:</strong> <code>budolpay-0.1.0/apps/admin/</code></div>
+      <div><strong>Framework:</strong> Next.js 14.2, React 18</div>
+      <div><strong>Build:</strong> <code>prisma generate &amp;&amp; next build</code></div>
+      <div><strong>Region:</strong> sin1</div>
+      <div><strong>vercel.json:</strong></div>
+      <pre>{
+  "version": 2,
+  "framework": "nextjs",
+  "buildCommand": "npx prisma generate --schema=./prisma/schema.prisma && next build",
+  "outputDirectory": ".next",
+  "regions": ["sin1"]
+}</pre>
+    </div>
+
+    <div class="card">
+      <div class="card-title"><span class="badge express">Express</span> budolpay API Gateway</div>
+      <div><strong>File:</strong> <code>services/api-gateway/index.js</code></div>
+      <div><strong>Route:</strong> <code>/api/gateway/*</code>, <code>/api/notify</code>, <code>/api/*</code> (catch-all)</div>
+      <div><strong>Region:</strong> sin1</div>
+    </div>
+
+    <div class="card">
+      <div class="card-title"><span class="badge express">Express</span> budolpay Auth Service</div>
+      <div><strong>File:</strong> <code>services/auth-service/index.js</code></div>
+      <div><strong>Route:</strong> <code>/api/auth/*</code></div>
+      <div><strong>Region:</strong> sin1</div>
+    </div>
+
+    <div class="card">
+      <div class="card-title"><span class="badge express">Express</span> budolpay Wallet Service</div>
+      <div><strong>File:</strong> <code>services/wallet-service/index.js</code></div>
+      <div><strong>Route:</strong> <code>/api/wallet/*</code></div>
+      <div><strong>Region:</strong> sin1</div>
+    </div>
+
+    <div class="card">
+      <div class="card-title"><span class="badge express">Express</span> budolpay Transaction Service</div>
+      <div><strong>File:</strong> <code>services/transaction-service/index.js</code></div>
+      <div><strong>Route:</strong> <code>/api/tx/*</code></div>
+      <div><strong>Region:</strong> sin1</div>
+    </div>
+
+    <div class="card">
+      <div class="card-title"><span class="badge express">Express</span> budolpay Payment Gateway</div>
+      <div><strong>File:</strong> <code>services/payment-gateway-service/api/index.js</code></div>
+      <div><strong>Route:</strong> <code>/api/payment-gw/*</code></div>
+      <div><strong>Region:</strong> sin1</div>
+    </div>
+
+    <div class="card">
+      <div class="card-title"><span class="badge express">Express</span> budolpay KYC Service</div>
+      <div><strong>File:</strong> <code>services/verification-service/index.js</code></div>
+      <div><strong>Route:</strong> <code>/api/kyc/*</code></div>
+      <div><strong>Region:</strong> sin1</div>
+    </div>
+
+    <div class="card">
+      <div class="card-title"><span class="badge express">Express</span> budolpay Settlement Service</div>
+      <div><strong>File:</strong> <code>services/settlement-service/index.js</code></div>
+      <div><strong>Route:</strong> <code>/api/settlement/*</code></div>
+      <div><strong>Region:</strong> sin1</div>
+    </div>
+
+    <div class="card">
+      <div class="card-title"><span class="badge express">Express</span> budolID</div>
+      <div><strong>Directory:</strong> <code>budolID-0.1.0/</code></div>
+      <div><strong>File:</strong> <code>index.js</code> (Express 5)</div>
+      <div><strong>Route:</strong> <code>/*</code> (catch-all)</div>
+      <div><strong>Region:</strong> sin1</div>
+    </div>
+
+    <div class="card">
+      <div class="card-title"><span class="badge express">Express</span> budolAccounting</div>
+      <div><strong>Directory:</strong> <code>budolAccounting-0.1.0/</code></div>
+      <div><strong>File:</strong> <code>index.js</code> (Express 4)</div>
+      <div><strong>Route:</strong> <code>/*</code> (catch-all)</div>
+      <div><strong>Region:</strong> sin1</div>
+    </div>
+
+  </div>
+
+  <div class="card warning">
+    <div class="card-title">&#9888; Important: Monorepo Structure</div>
+    <p>The 7 budolpay microservices share a monorepo at <code>budolpay-0.1.0/</code> with npm workspaces. Each service is deployed as an independent serverless function, but they share packages (<code>@budolpay/database</code>, <code>@budolpay/audit</code>, etc.).</p>
+    <p style="margin-top:0.5rem;">Vercel will install dependencies from the root <code>package.json</code> workspaces. Ensure <code>rootDirectory</code> is set to <code>budolpay-0.1.0</code> in the Vercel project settings.</p>
+  </div>
+
+  <!-- ============ 3 ============ -->
+  <h2 id="env">Environment Variables</h2>
+
+  <div class="card">
+    <h3>budolshap</h3>
+    <table class="env-table">
+      <tr><th>Variable</th><th>Description</th><th>Sensitive</th></tr>
+      <tr><td>DATABASE_URL</td><td>PostgreSQL connection string</td><td>&#10003;</td></tr>
+      <tr><td>JWT_SECRET</td><td>JWT signing secret</td><td>&#10003;</td></tr>
+      <tr><td>NEXTAUTH_SECRET</td><td>NextAuth secret</td><td>&#10003;</td></tr>
+      <tr><td>NEXT_PUBLIC_SENTRY_DSN</td><td>Sentry error tracking</td><td></td></tr>
+      <tr><td>NEXT_PUBLIC_PUSHER_KEY</td><td>Pusher public key</td><td></td></tr>
+      <tr><td>PUSHER_APP_ID</td><td>Pusher app ID</td><td>&#10003;</td></tr>
+      <tr><td>PUSHER_SECRET</td><td>Pusher secret</td><td>&#10003;</td></tr>
+      <tr><td>CLOUDINARY_URL</td><td>Cloudinary URL</td><td>&#10003;</td></tr>
+      <tr><td>OPENAI_API_KEY</td><td>OpenAI API key</td><td>&#10003;</td></tr>
+      <tr><td>SMTP_HOST/ PORT/ USER/ PASS</td><td>Email credentials</td><td>&#10003;</td></tr>
+      <tr><td>NEXT_PUBLIC_PAYMONGO_PK</td><td>PayMongo public key</td><td></td></tr>
+      <tr><td>PAYMONGO_SK</td><td>PayMongo secret key</td><td>&#10003;</td></tr>
+      <tr><td>NEXT_PUBLIC_WS_URL</td><td>WebSocket server URL</td><td></td></tr>
+    </table>
+  </div>
+
+  <div class="card">
+    <h3>budolpay Services (shared across serverless functions)</h3>
+    <table class="env-table">
+      <tr><th>Variable</th><th>Description</th><th>Sensitive</th></tr>
+      <tr><td>DATABASE_URL</td><td>budolpay PostgreSQL</td><td>&#10003;</td></tr>
+      <tr><td>JWT_SECRET</td><td>JWT signing secret</td><td>&#10003;</td></tr>
+      <tr><td>JWT_REFRESH_SECRET</td><td>Refresh token secret</td><td>&#10003;</td></tr>
+      <tr><td>API_KEY_HASH</td><td>Internal API key</td><td>&#10003;</td></tr>
+      <tr><td>BUDOLID_API_URL</td><td>budolID service URL</td><td></td></tr>
+      <tr><td>BUDOL_ACCOUNTING_API_URL</td><td>Accounting service URL</td><td></td></tr>
+      <tr><td>REDIS_URL</td><td>Redis connection</td><td>&#10003;</td></tr>
+      <tr><td>PAYMONGO_SK</td><td>PayMongo secret key</td><td>&#10003;</td></tr>
+      <tr><td>LALAMOVE_API_KEY</td><td>Lalamove API key</td><td>&#10003;</td></tr>
+      <tr><td>GMAIL_USER / GMAIL_PASS</td><td>Email credentials</td><td>&#10003;</td></tr>
+      <tr><td>OTP_SECRET</td><td>OTP encryption</td><td>&#10003;</td></tr>
+      <tr><td>SENTRY_DSN</td><td>Sentry backend DSN</td><td></td></tr>
+      <tr><td>PUSHER_APP_ID / KEY / SECRET / CLUSTER</td><td>Pusher config</td><td>&#10003;</td></tr>
+    </table>
+  </div>
+
+  <div class="card">
+    <h3>budolID</h3>
+    <table class="env-table">
+      <tr><th>Variable</th><th>Description</th><th>Sensitive</th></tr>
+      <tr><td>DATABASE_URL</td><td>budolID PostgreSQL</td><td>&#10003;</td></tr>
+      <tr><td>JWT_SECRET</td><td>JWT secret</td><td>&#10003;</td></tr>
+      <tr><td>BUDOLPAY_API_URL</td><td>budolpay API URL</td><td></td></tr>
+      <tr><td>SMTP_*</td><td>Email config</td><td>&#10003;</td></tr>
+    </table>
+  </div>
+
+  <div class="card">
+    <h3>budolAccounting</h3>
+    <table class="env-table">
+      <tr><th>Variable</th><th>Description</th><th>Sensitive</th></tr>
+      <tr><td>DATABASE_URL</td><td>Accounting PostgreSQL</td><td>&#10003;</td></tr>
+      <tr><td>JWT_SECRET</td><td>JWT secret</td><td>&#10003;</td></tr>
+      <tr><td>BUDOL_API_KEY</td><td>Internal API key</td><td>&#10003;</td></tr>
+    </table>
+  </div>
+
+  <div class="note warning">
+    <strong>&#9888; Manage env vars via Vercel Dashboard or CLI.</strong><br>
+    Use <code>vercel env pull</code> for local development. Never commit <code>.env</code> files.
+  </div>
+
+  <!-- ============ 4 ============ -->
+  <h2 id="domains">Custom Domains &amp; DNS</h2>
+
+  <div class="card">
+    <table class="env-table">
+      <tr><th>Project</th><th>Vercel Domain</th><th>Custom Domain</th><th>DNS</th></tr>
+      <tr><td>budolshap</td><td><code>budolshap.vercel.app</code></td><td><code>budolshap.budol.duckdns.org</code></td><td>CNAME to <code>cname.vercel-dns.com</code></td></tr>
+      <tr><td>budolpay Admin</td><td><code>budolpay-admin.vercel.app</code></td><td>&mdash;</td><td>&mdash;</td></tr>
+      <tr><td>budolpay API</td><td><code>budolpay-api.vercel.app</code></td><td><code>budolpay.budol.duckdns.org</code></td><td>CNAME to <code>cname.vercel-dns.com</code></td></tr>
+      <tr><td>budolID</td><td><code>budolid.vercel.app</code></td><td><code>budolid.budol.duckdns.org</code></td><td>CNAME to <code>cname.vercel-dns.com</code></td></tr>
+      <tr><td>budolAccounting</td><td><code>budol-accounting.vercel.app</code></td><td>&mdash;</td><td>&mdash;</td></tr>
+    </table>
+    <div class="note">DuckDNS updates are handled by <code>scripts/update-duckdns.ps1</code> and <code>scripts/update-budolshap-duckdns.ps1</code>.</div>
+  </div>
+
+  <!-- ============ 5 ============ -->
+  <h2 id="deploy">Deployment Procedure</h2>
+
+  <div class="card">
+    <h3>Prerequisites</h3>
+    <div class="step"><div class="step-num">1</div><div class="step-content"><div class="step-title">Install Vercel CLI</div><div class="step-desc"><code>npm i -g vercel</code> or use <code>npx vercel</code></div></div></div>
+    <div class="step"><div class="step-num">2</div><div class="step-content"><div class="step-title">Log in to Vercel</div><div class="step-desc"><code>vercel login</code> &mdash; authenticates via GitHub, GitLab, or email</div></div></div>
+    <div class="step"><div class="step-num">3</div><div class="step-content"><div class="step-title">Check existing projects</div><div class="step-desc"><code>vercel list</code> &mdash; confirm projects are already created on Vercel</div></div></div>
+  </div>
+
+  <div class="card">
+    <h3>Deploy budolshap (Marketplace)</h3>
+    <div class="step"><div class="step-num">1</div><div class="step-content"><div class="step-title">Navigate</div><div class="step-desc"><code>cd budolshap-0.1.0</code></div></div></div>
+    <div class="step"><div class="step-num">2</div><div class="step-content"><div class="step-title">Link project</div><div class="step-desc"><code>vercel link</code> (first time only) &mdash; select existing project or create new</div></div></div>
+    <div class="step"><div class="step-num">3</div><div class="step-content"><div class="step-title">Set environment</div><div class="step-desc"><code>npm run db:vercel</code> &mdash; switches DATABASE_URL to Vercel/Production</div></div></div>
+    <div class="step"><div class="step-num">4</div><div class="step-content"><div class="step-title">Preview deploy</div><div class="step-desc"><code>vercel</code> &mdash; deploys to preview URL (automatically on PR merge if CI/CD is set)</div></div></div>
+    <div class="step"><div class="step-num">5</div><div class="step-content"><div class="step-title">Production deploy</div><div class="step-desc"><code>npm run deploy:prod</code> or <code>vercel --prod</code></div></div></div>
+    <div class="note"><strong>Scripts:</strong> <code>npm run deploy</code> (preview), <code>npm run deploy:prod</code> (production), <code>npm run env:pull</code> (sync env vars)</div>
+  </div>
+
+  <div class="card">
+    <h3>Deploy budolpay Services (Monorepo)</h3>
+    <div class="step"><div class="step-num">1</div><div class="step-content"><div class="step-title">Navigate to root</div><div class="step-desc"><code>cd budolpay-0.1.0</code></div></div></div>
+    <div class="step"><div class="step-num">2</div><div class="step-content"><div class="step-title">Link project</div><div class="step-desc"><code>vercel link</code> &mdash; link to the budolpay monorepo project</div></div></div>
+    <div class="step"><div class="step-num">3</div><div class="step-content"><div class="step-title">Set rootDirectory</div><div class="step-desc">In Vercel Dashboard &rarr; Project Settings &rarr; Root Directory: <code>budolpay-0.1.0</code></div></div></div>
+    <div class="step"><div class="step-num">4</div><div class="step-content"><div class="step-title">Set Node.js version</div><div class="step-desc">Vercel Dashboard &rarr; Project Settings &rarr; Node.js Version: <code>20.x</code></div></div></div>
+    <div class="step"><div class="step-num">5</div><div class="step-content"><div class="step-title">Deploy</div><div class="step-desc"><code>vercel --prod</code> &mdash; deploys all 7 functions defined in vercel.json</div></div></div>
+    <div class="note warning"><strong>Monorepo caveat:</strong> Shared packages (<code>@budolpay/database</code>, <code>@budolpay/audit</code>, etc.) must be resolved correctly. Vercel hoists workspace packages. If you see "Cannot find module" errors, check that <code>@budolpay/*</code> packages have valid <code>"main"</code> entries and <code>vercel.json</code> <code>builds</code> config uses correct source paths.</div>
+  </div>
+
+  <div class="card">
+    <h3>Deploy budolpay Admin Dashboard</h3>
+    <div class="step"><div class="step-num">1</div><div class="step-content"><div class="step-title">Navigate</div><div class="step-desc"><code>cd budolpay-0.1.0/apps/admin</code></div></div></div>
+    <div class="step"><div class="step-num">2</div><div class="step-content"><div class="step-title">Link and deploy</div><div class="step-desc"><code>vercel link</code> then <code>vercel --prod</code></div></div></div>
+    <div class="step"><div class="step-num">3</div><div class="step-content"><div class="step-title">Verification</div><div class="step-desc">Visit the deployment URL &mdash; confirm admin login and KYC/audit pages load</div></div></div>
+  </div>
+
+  <div class="card">
+    <h3>Deploy budolID</h3>
+    <div class="step"><div class="step-num">1</div><div class="step-content"><div class="step-title">Navigate</div><div class="step-desc"><code>cd budolID-0.1.0</code></div></div></div>
+    <div class="step"><div class="step-num">2</div><div class="step-content"><div class="step-title">Deploy</div><div class="step-desc"><code>vercel --prod</code></div></div></div>
+    <div class="step"><div class="step-num">3</div><div class="step-content"><div class="step-title">Verify SSO flow</div><div class="step-desc"><code>curl https://budolid.vercel.app/.well-known/health</code> &mdash; confirm 200 OK</div></div></div>
+  </div>
+
+  <div class="card">
+    <h3>Deploy budolAccounting</h3>
+    <div class="step"><div class="step-num">1</div><div class="step-content"><div class="step-title">Navigate</div><div class="step-desc"><code>cd budolAccounting-0.1.0</code></div></div></div>
+    <div class="step"><div class="step-num">2</div><div class="step-content"><div class="step-title">Deploy</div><div class="step-desc"><code>vercel --prod</code></div></div></div>
+  </div>
+
+  <div class="card danger">
+    <div class="card-title">&#9888; Critical: Database Migrations</div>
+    <p>Vercel deployments do <strong>not</strong> run Prisma migrations automatically. After deploying new code that changes the schema:</p>
+    <div class="step"><div class="step-num">1</div><div class="step-content"><div class="step-desc">Run <code>npx prisma migrate deploy</code> against your production database</div></div></div>
+    <div class="step"><div class="step-num">2</div><div class="step-content"><div class="step-desc"><strong>Before</strong> deploying new code that expects the new schema, apply the migration</div></div></div>
+    <div class="step"><div class="step-num">3</div><div class="step-content"><div class="step-desc">Use <code>vercel env pull</code> to sync latest production env vars locally first</div></div></div>
+  </div>
+
+  <!-- ============ 6 ============ -->
+  <h2 id="ci">CI/CD Pipeline</h2>
+
+  <div class="card">
+    <h3>Existing: GitHub Actions (<code>budolpay-0.1.0/.github/workflows/ci-cd.yml</code>)</h3>
+    <p>The existing pipeline builds Docker images and deploys to ECS Fargate. For Vercel, the recommended approach is:</p>
+    
+    <h3 style="margin-top:1rem;">Option A: Vercel Git Integration (Simpler)</h3>
+    <div class="step"><div class="step-num">1</div><div class="step-content"><div class="step-title">Connect repo</div><div class="step-desc">Vercel Dashboard &rarr; Import Git Repository &rarr; Select GitHub repo</div></div></div>
+    <div class="step"><div class="step-num">2</div><div class="step-content"><div class="step-title">Configure per project</div><div class="step-desc">Set root directory, framework, build command per project</div></div></div>
+    <div class="step"><div class="step-num">3</div><div class="step-content"><div class="step-title">Auto-deploys</div><div class="step-desc">Every push to <code>main</code> deploys to production; PR branches get preview deployments</div></div></div>
+
+    <h3 style="margin-top:1rem;">Option B: Vercel CLI in GitHub Actions (More control)</h3>
+    <pre>name: Deploy to Vercel
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with: { node-version: 20 }
+      - run: npm ci
+      - run: npx prisma generate
+      - run: npx vercel --prod --token=${{ secrets.VERCEL_TOKEN }}
+        env:
+          VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
+          VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID }}</pre>
+    <div class="note"><strong>Required secrets:</strong> <code>VERCEL_TOKEN</code> (from Vercel &rarr; Settings &rarr; Tokens), <code>VERCEL_ORG_ID</code>, <code>VERCEL_PROJECT_ID</code> (from <code>.vercel/project.json</code> after <code>vercel link</code>)</div>
+  </div>
+
+  <!-- ============ 7 ============ -->
+  <h2 id="cron">Cron Jobs</h2>
+
+  <div class="card">
+    <p>Vercel does not have native cron. Use one of these approaches:</p>
+    <div class="step"><div class="step-num">1</div><div class="step-content"><div class="step-title">Vercel Cron Jobs (Pro)</div><div class="step-desc">Vercer Pro plan supports <code>crons</code> in vercel.json. Example:</div></div></div>
+    <pre>{
+  "crons": [
+    { "path": "/api/cron/settlement", "schedule": "0 2 * * *" }
+  ]
+}</pre>
+    <div class="step"><div class="step-num">2</div><div class="step-content"><div class="step-title">External cron (Free)</div><div class="step-desc">Use cron-job.org, EasyCron, or GitHub Actions schedules to hit your API endpoints</div></div></div>
+    <div class="step"><div class="step-num">3</div><div class="step-content"><div class="step-title">Required cron endpoints</div><div class="step-desc">
+      &bull; <code>POST /api/cron/settlement</code> &mdash; daily merchant settlement (2AM)<br>
+      &bull; <code>POST /api/cron/cleanup</code> &mdash; cleanup expired sessions/tokens (4AM)<br>
+      &bull; <code>GET /api/health</code> &mdash; uptime monitoring (every 5 min)
+    </div></div></div>
+  </div>
+
+  <!-- ============ 8 ============ -->
+  <h2 id="monitoring">Monitoring &amp; Logs</h2>
+
+  <div class="card">
+    <h3>Vercel Built-in</h3>
+    <div class="step"><div class="step-num">1</div><div class="step-content"><div class="step-title">Logs</div><div class="step-desc">Vercel Dashboard &rarr; Project &rarr; Logs &mdash; real-time and historical</div></div></div>
+    <div class="step"><div class="step-num">2</div><div class="step-content"><div class="step-title">CLI logs</div><div class="step-desc"><code>vercel logs &lt;deployment-url&gt;</code></div></div></div>
+    <div class="step"><div class="step-num">3</div><div class="step-content"><div class="step-title">Analytics</div><div class="step-desc">Vercel Analytics (Web Vitals, page views) &mdash; enable per project in Dashboard</div></div></div>
+
+    <h3 style="margin-top:1rem;">Sentry (Already Configured)</h3>
+    <div class="step"><div class="step-num">1</div><div class="step-content"><div class="step-title">budolshap</div><div class="step-desc"><code>@sentry/nextjs</code> &mdash; configured in <code>next.config.mjs</code>. Check DSN is set in env vars.</div></div></div>
+    <div class="step"><div class="step-num">2</div><div class="step-content"><div class="step-title">budolpay services</div><div class="step-desc">Sentry is integrated in shared packages. Set <code>SENTRY_DSN</code> env var.</div></div></div>
+    <div class="step"><div class="step-num">3</div><div class="step-content"><div class="step-title">Uptime Monitoring</div><div class="step-desc">Use <strong>BetterUptime</strong>, <strong>Pingdom</strong>, or <strong>cron-job.org</strong> to monitor each production URL every 5 minutes.</div></div></div>
+  </div>
+
+  <!-- ============ 9 ============ -->
+  <h2 id="rollback">Rollback Strategy</h2>
+
+  <div class="card">
+    <div class="step"><div class="step-num">1</div><div class="step-content"><div class="step-title">Instant rollback</div><div class="step-desc">Vercel Dashboard &rarr; Deployments &rarr; find previous working deployment &rarr; "Promote to Production"</div></div></div>
+    <div class="step"><div class="step-num">2</div><div class="step-content"><div class="step-title">CLI rollback</div><div class="step-desc"><code>vercel rollback</code> &mdash; rolls back to the previous production deployment</div></div></div>
+    <div class="step"><div class="step-num">3</div><div class="step-content"><div class="step-title">Git revert</div><div class="step-desc"><code>git revert HEAD</code> &rarr; push &rarr; Vercel auto-deploys the revert</div></div></div>
+    <div class="note"><strong>Best practice:</strong> Enable "Auto-expose System Labels" in Vercel project settings to track rollbacks in your CI/CD.</div>
+  </div>
+
+  <!-- ============ 10 ============ -->
+  <h2 id="checklist">Pre-Launch Checklist</h2>
+
+  <div class="card">
+    <div class="step"><div class="step-num">&#9744;</div><div class="step-content"><div class="step-title">Environment variables</div><div class="step-desc">All secrets set in all 5 Vercel projects (see Section 3)</div></div></div>
+    <div class="step"><div class="step-num">&#9744;</div><div class="step-content"><div class="step-title">Database migrations</div><div class="step-desc"><code>npx prisma migrate deploy</code> run on all 4 databases (budolshap, budolpay, budolid, budolaccounting)</div></div></div>
+    <div class="step"><div class="step-num">&#9744;</div><div class="step-content"><div class="step-title">Custom domains</div><div class="step-desc">DNS CNAME records propagated; DuckDNS scripts working</div></div></div>
+    <div class="step"><div class="step-num">&#9744;</div><div class="step-content"><div class="step-title">SSL/TLS</div><div class="step-desc">Vercel auto-provisions SSL certificates; verify in Dashboard</div></div></div>
+    <div class="step"><div class="step-num">&#9744;</div><div class="step-content"><div class="step-title">WebSocket connectivity</div><div class="step-desc">budolshap connects to Render WebSocket server; test real-time events</div></div></div>
+    <div class="step"><div class="step-num">&#9744;</div><div class="step-content"><div class="step-title">Sentry error tracking</div><div class="step-desc">Check Sentry dashboard for any deployment errors</div></div></div>
+    <div class="step"><div class="step-num">&#9744;</div><div class="step-content"><div class="step-title">API health checks</div><div class="step-desc">All endpoints respond 200:</div></div></div>
+    <pre>curl https://budolshap.vercel.app/api/health
+curl https://budolpay-api.vercel.app/api/health
+curl https://budolid.vercel.app/api/health
+curl https://budol-accounting.vercel.app/api/health</pre>
+    <div class="step"><div class="step-num">&#9744;</div><div class="step-content"><div class="step-title">Payment integration</div><div class="step-desc">Test PayMongo webhook endpoint (<code>/api/notify</code> in api-gateway)</div></div></div>
+    <div class="step"><div class="step-num">&#9744;</div><div class="step-content"><div class="step-title">Auth flow</div><div class="step-desc">Test login, OTP, JWT refresh across budolshap &rarr; budolID &rarr; budolpay</div></div></div>
+    <div class="step"><div class="step-num">&#9744;</div><div class="step-content"><div class="step-title">Budget limits</div><div class="step-desc">Vercel Pro plan: $20/month. Serverless Function duration: max 10s (paid), 60s (Pro). Check cold starts.</div></div></div>
+    <div class="step"><div class="step-num">&#9744;</div><div class="step-content"><div class="step-title">Rollback tested</div><div class="step-desc">Verify rollback works in non-prod environment</div></div></div>
+    <div class="step"><div class="step-num">&#9744;</div><div class="step-content"><div class="step-title">Uptime monitoring set</div><div class="step-desc">External monitoring configured for all production URLs</div></div></div>
+  </div>
+
+  <div class="footer">
+    budolEcosystem &mdash; Vercel Deployment Plan v2.0 &mdash; Generated <span id="date2"></span>
+  </div>
+
+</div>
+
+<script>document.getElementById('date').textContent = document.getElementById('date2').textContent = new Date().toISOString().split('T')[0];</script>
+</body>
+</html>

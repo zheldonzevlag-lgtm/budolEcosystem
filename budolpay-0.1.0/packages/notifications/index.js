@@ -127,6 +127,15 @@ const createTransporter = (settings) => {
 const sendEmail = async (to, subject, text, html) => {
     try {
         const settings = await getSystemSettings();
+        const configuredProvider = settings.NOTIFICATION_EMAIL_PROVIDER || settings.emailProvider;
+        const provider = configuredProvider || (process.env.EMAIL_USER ? 'GOOGLE' : 'CONSOLE');
+        
+        if (provider === 'CONSOLE') {
+            const highlightedText = text.replace(/(\d{6})/, '\x1b[33m$1\x1b[0m');
+            console.log(`[CONSOLE EMAIL] To: ${maskPII(to)}\nSubject: ${subject}\nBody: ${highlightedText}`);
+            return true;
+        }
+
         const transporter = createTransporter(settings);
         const from = settings.NOTIFICATION_EMAIL_SENDER || settings.smtpFrom || process.env.EMAIL_USER || 'no-reply@budolpay.com';
         
@@ -137,7 +146,7 @@ const sendEmail = async (to, subject, text, html) => {
             text,
             html
         });
-        console.log(`[Notification] Email sent to ${maskPII(to)} via ${settings.NOTIFICATION_EMAIL_PROVIDER || settings.emailProvider || 'GOOGLE'}: ${info.messageId}`);
+        console.log(`[Notification] Email sent to ${maskPII(to)} via ${provider}: ${info.messageId}`);
         return true;
     } catch (err) {
         console.error(`[Notification] Email failed: ${err.message}`);
