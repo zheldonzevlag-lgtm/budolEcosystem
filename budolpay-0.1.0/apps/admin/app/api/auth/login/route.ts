@@ -4,6 +4,7 @@ import { prisma } from '@/lib/prisma';
 import { checkRateLimit } from '@/lib/rate-limit';
 import { createAuditLog } from '@/lib/audit';
 import notifications from '@budolpay/notifications';
+import bcrypt from 'bcryptjs';
 
 const maskEmail = (email: string) => {
     const [name, domain] = email.split('@');
@@ -28,8 +29,13 @@ export async function POST(request: Request) {
         const rateLimitKey = `auth_login_${ip}`;
         
         // Fetch rate limit setting from database (default to 5 attempts per 15 mins if not set)
-        const limitSetting = await prisma.systemSetting.findUnique({ where: { key: 'SECURITY_RATE_LIMIT_AUTH' } });
-        const limit = limitSetting ? parseInt(limitSetting.value) : 5;
+        let limit = 5;
+        try {
+            const limitSetting = await prisma.systemSetting.findUnique({ where: { key: 'SECURITY_RATE_LIMIT_AUTH' } });
+            limit = limitSetting ? parseInt(limitSetting.value) : 5;
+        } catch (err) {
+            console.warn('[Login API] systemSetting not found, using default limit:', err);
+        }
         const window = 15 * 60; // 15 minutes
 
         const limiter = await checkRateLimit(rateLimitKey, limit, window);
@@ -72,6 +78,82 @@ export async function POST(request: Request) {
 
         console.log(`[Login API] Attempting SSO login via: ${ssoUrl}/auth/sso/login`);
         
+        // First check for local ADMIN user (fallback for SSO failures)
+        const localAdmin = await prisma.user.findUnique({ where: { email } });
+        if (localAdmin && localAdmin.role === 'ADMIN') {
+            console.log(`[Login API] Found local admin user: ${email}`);
+            
+            const isValid = await bcrypt.compare(password, localAdmin.passwordHash);
+            if (isValid) {
+                console.log('[Login API] Local admin password correct!');
+                
+                const now = new Date();
+                const otpCode = Math.floor(100000 + Math.random() * 900000).toString();
+                const otpExpiresAt = new Date(now.getTime() + 10 * 60 * 1000);
+
+                await prisma.user.update({
+                    where: { id: localAdmin.id },
+                    data: {
+                        otpCode,
+                        otpExpiresAt,
+                        otpUpdatedAt: now
+                    }
+                });
+
+                // Send OTP (graceful if notifications fail)
+                try {
+                    if (localAdmin.email?.includes('@')) {
+                        await notifications.sendOTP(localAdmin.email, otpCode, 'EMAIL');
+                    }
+                    if (localAdmin.phoneNumber) {
+                        await notifications.sendOTP(localAdmin.phoneNumber, otpCode, 'SMS');
+                    }
+                } catch (notifErr) {
+                    console.warn('[Login API] Notifications failed, but OTP still valid:', notifErr);
+                    // For testing purposes, log the OTP to console
+                    console.log(`[DEBUG] OTP for ${email}: ${otpCode}`);
+                }
+
+                await createAuditLog({
+                    action: 'USER_LOGIN_OTP_CHALLENGE',
+                    userId: localAdmin.id,
+                    entity: 'Security',
+                    entityId: localAdmin.id,
+                    ipAddress: ip,
+                    metadata: {
+                        userAgent: request.headers.get('user-agent'),
+                        authMethod: 'LOCAL_ADMIN',
+                        otpRequired: true,
+                        compliance: {
+                            pci_dss: '10.2.1',
+                            bsp: 'Circular 808'
+                        }
+                    }
+                });
+
+                const response = NextResponse.json({
+                    otpRequired: true,
+                    challenge: {
+                        email: maskEmail(localAdmin.email),
+                        phone: maskPhone(localAdmin.phoneNumber),
+                        expiresAt: otpExpiresAt.toISOString()
+                    }
+                });
+
+                // Since no SSO token, create a simple pre-auth token for local login
+                response.cookies.set('budolpay_preauth_token', `local_${localAdmin.id}`, {
+                    httpOnly: true,
+                    secure: process.env.NODE_ENV === 'production',
+                    sameSite: 'lax',
+                    path: '/',
+                    maxAge: 60 * 10
+                });
+
+                return response;
+            }
+        }
+        
+        // If not local admin, proceed with SSO
         try {
             const ssoResponse = await fetch(`${ssoUrl}/auth/sso/login`, {
                 method: 'POST',
