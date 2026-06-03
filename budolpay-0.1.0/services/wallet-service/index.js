@@ -518,8 +518,10 @@ app.use((err, req, res, next) => {
     });
 });
 
-app.listen(PORT, '0.0.0.0', () => {
-    console.log(`[Wallet] Service running on http://0.0.0.0:${PORT} (LAN-accessible)`);
-});
+if (require.main === module) {
+    app.listen(PORT, '0.0.0.0', () => {
+        console.log(`[Wallet] Service running on http://0.0.0.0:${PORT} (LAN-accessible)`);
+    });
+}
 
 module.exports = app;

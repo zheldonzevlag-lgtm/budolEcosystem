@@ -477,6 +477,7 @@ app.use((err, req, res, next) => {
 });
 
 // Start Server
+if (require.main === module) {
 server.listen(PORT, '0.0.0.0', () => {
     console.log(`[Gateway] Service running on http://${LOCAL_IP}:${PORT}`);
     console.log(`[Gateway] Local LAN access at http://${LOCAL_IP}:${PORT}`);
@@ -501,5 +502,6 @@ server.listen(PORT, '0.0.0.0', () => {
         }
     }
 });
+}
 
 module.exports = app;

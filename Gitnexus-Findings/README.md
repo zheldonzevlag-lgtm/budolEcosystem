@@ -25,7 +25,7 @@ budolEcosystem/
 ├── budolPayMobile/           # Flutter mobile app (Android/iOS/Web)
 ├── budolID-0.1.0/            # Identity & SSO service
 ├── budolAccounting-0.1.0/    # Double-entry accounting ledger
-├── budoloan-0.1.0/           # Loan service (scaffolded)
+├── budolloan-0.1.0/          # Loan service (scaffolded)
 ├── websocket-server/         # Socket.io real-time server
 ├── scripts/                  # Deployment, backup, and test scripts
 ├── documentation/            # Project documentation (HTML docs)
@@ -273,7 +273,7 @@ Key models (PostgreSQL via Prisma):
 | **budolid** | User, Session, EcosystemApp | 3 models, identity & SSO |
 | **budolpay** | User, Wallet, Transaction, Settlement, Dispute, AuditLog, ChartOfAccount, LedgerEntry, Session, EcosystemApp, FavoriteRecipient, VerificationDocument, ChangeRequest, SystemSetting, RateLimit | 16 models, fintech services |
 | **budolaccounting** | ChartOfAccount, LedgerEntry | 2 models, double-entry accounting (ASSET, LIABILITY, EQUITY, REVENUE, EXPENSE) |
-| **budoloan** | Loan, Repayment | 2 models, loan management (scaffolded, not yet integrated) |
+| **budolloan** | Loan, Repayment | 2 models, loan management (scaffolded, not yet integrated) |
 
 ## API Endpoints
 

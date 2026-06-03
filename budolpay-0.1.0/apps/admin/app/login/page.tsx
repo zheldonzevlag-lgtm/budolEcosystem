@@ -1,12 +1,12 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { Suspense, useState, useEffect } from 'react';
 import { Shield, Loader2, AlertTriangle, Eye, EyeOff } from 'lucide-react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { Toaster, toast } from 'react-hot-toast';
 import MathCaptcha from '@/components/MathCaptcha';
 
-export default function LoginPage() {
+function LoginForm() {
     const router = useRouter();
     const searchParams = useSearchParams();
     const [isLoading, setIsLoading] = useState(false);
@@ -25,7 +25,6 @@ export default function LoginPage() {
     });
     const [systemStatus, setSystemStatus] = useState({ status: 'LOADING', color: 'slate' });
 
-    // Prevent usage of 0.0.0.0 which is a bind address, not a visitable address
     useEffect(() => {
         if (typeof window !== 'undefined' && window.location.hostname === '0.0.0.0') {
             const newUrl = window.location.href.replace('0.0.0.0', window.location.hostname === '0.0.0.0' ? 'localhost' : window.location.hostname);
@@ -333,5 +332,17 @@ export default function LoginPage() {
                 </div>
             </div>
         </div>
+    );
+}
+
+export default function LoginPage() {
+    return (
+        <Suspense fallback={
+            <div className="min-h-screen bg-slate-900 flex items-center justify-center">
+                <Loader2 className="w-8 h-8 animate-spin text-white" />
+            </div>
+        }>
+            <LoginForm />
+        </Suspense>
     );
 }

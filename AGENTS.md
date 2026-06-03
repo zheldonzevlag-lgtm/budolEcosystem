@@ -1,7 +1,7 @@
 <!-- gitnexus:start -->
 # GitNexus — Code Intelligence
 
-This project is indexed by GitNexus as **budolEcosystem** (26266 symbols, 35895 relationships, 300 execution flows). Use the GitNexus MCP tools to understand code, assess impact, and navigate safely.
+This project is indexed by GitNexus as **budolEcosystem** (25080 symbols, 35534 relationships, 300 execution flows). Use the GitNexus MCP tools to understand code, assess impact, and navigate safely.
 
 > If any GitNexus tool warns the index is stale, run `npx gitnexus analyze` in terminal first.
 
@@ -39,25 +39,5 @@ This project is indexed by GitNexus as **budolEcosystem** (26266 symbols, 35895 
 | Rename / extract / split / refactor | `.claude/skills/gitnexus/gitnexus-refactoring/SKILL.md` |
 | Tools, resources, schema reference | `.claude/skills/gitnexus/gitnexus-guide/SKILL.md` |
 | Index, status, clean, wiki CLI commands | `.claude/skills/gitnexus/gitnexus-cli/SKILL.md` |
-| Work in the Test_scripts_2 area (460 symbols) | `.claude/skills/generated/test-scripts-2/SKILL.md` |
-| Work in the Services area (247 symbols) | `.claude/skills/generated/services/SKILL.md` |
-| Work in the Components area (214 symbols) | `.claude/skills/generated/components/SKILL.md` |
-| Work in the Screens area (172 symbols) | `.claude/skills/generated/screens/SKILL.md` |
-| Work in the V2 area (120 symbols) | `.claude/skills/generated/v2/SKILL.md` |
-| Work in the Test_scripts area (107 symbols) | `.claude/skills/generated/test-scripts/SKILL.md` |
-| Work in the Categories area (51 symbols) | `.claude/skills/generated/categories/SKILL.md` |
-| Work in the Admin area (36 symbols) | `.claude/skills/generated/admin/SKILL.md` |
-| Work in the Orders area (32 symbols) | `.claude/skills/generated/orders/SKILL.md` |
-| Work in the Coupons area (28 symbols) | `.claude/skills/generated/coupons/SKILL.md` |
-| Work in the Users area (28 symbols) | `.claude/skills/generated/users/SKILL.md` |
-| Work in the Scripts area (27 symbols) | `.claude/skills/generated/scripts/SKILL.md` |
-| Work in the Resend-otp area (26 symbols) | `.claude/skills/generated/resend-otp/SKILL.md` |
-| Work in the Auth area (26 symbols) | `.claude/skills/generated/auth/SKILL.md` |
-| Work in the Address area (24 symbols) | `.claude/skills/generated/address/SKILL.md` |
-| Work in the Add-product area (23 symbols) | `.claude/skills/generated/add-product/SKILL.md` |
-| Work in the Shipping area (20 symbols) | `.claude/skills/generated/shipping/SKILL.md` |
-| Work in the Settings area (20 symbols) | `.claude/skills/generated/settings/SKILL.md` |
-| Work in the Legacy area (20 symbols) | `.claude/skills/generated/legacy/SKILL.md` |
-| Work in the V3.4.6 area (17 symbols) | `.claude/skills/generated/v3-4-6/SKILL.md` |
 
 <!-- gitnexus:end -->

@@ -1227,9 +1227,11 @@ const startDrsHeartbeat = async () => {
     if (heartbeat.unref) heartbeat.unref();
 };
 
-app.listen(PORT, '0.0.0.0', () => {
-    console.log(`[Transaction] Service running on http://0.0.0.0:${PORT} (LAN-accessible)`);
-    startDrsHeartbeat();
-});
+if (require.main === module) {
+    app.listen(PORT, '0.0.0.0', () => {
+        console.log(`[Transaction] Service running on http://0.0.0.0:${PORT} (LAN-accessible)`);
+        startDrsHeartbeat();
+    });
+}
 
 module.exports = { app, calculateRiskScore, checkComplianceLimits };

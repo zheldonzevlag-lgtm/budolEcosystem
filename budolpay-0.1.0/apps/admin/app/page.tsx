@@ -56,9 +56,15 @@ export default async function DashboardPage() {
   const birDot = unsyncedTransactions > 0 ? "bg-amber-400" : "bg-green-400";
 
   // DRS Engine Real-time Status Check (v2.4.7)
-  const drsHeartbeat = await prisma.systemSetting.findUnique({
-    where: { key: 'DRS_ENGINE_HEARTBEAT' }
-  });
+  let drsHeartbeat;
+  try {
+    drsHeartbeat = await prisma.systemSetting.findUnique({
+      where: { key: 'DRS_ENGINE_HEARTBEAT' }
+    });
+  } catch (err) {
+    console.warn('[Dashboard] systemSetting not found for DRS, using OFFLINE:', err);
+    drsHeartbeat = null;
+  }
 
   let drsStatus = "OFFLINE";
   let drsColor = "text-[#f43f5e]";

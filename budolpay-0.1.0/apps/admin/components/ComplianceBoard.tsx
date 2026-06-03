@@ -23,31 +23,26 @@ interface ComplianceFlag {
 interface ComplianceAlert {
   id: string;
   action: string;
-  entity: string;
-  entityId: string;
-  flags: ComplianceFlag[];
-  transactionId: string;
-  referenceId: string;
-  riskScore?: number;
-  riskMetadata?: any;
-  metadata: {
-    severity: 'HIGH' | 'MEDIUM' | 'CRITICAL';
-    rulesTriggered: string[];
-    aiWeightedScore?: number;
-  };
   createdAt: string;
-  user?: {
-    firstName: string;
-    lastName: string;
-    email: string;
-    kycTier: string;
+  newValue: {
+    flags: ComplianceFlag[];
+    transactionId: string;
+    referenceId: string;
+    riskScore?: number;
+    riskMetadata?: any;
+    user?: {
+      firstName: string;
+      lastName: string;
+      email: string;
+      kycTier: string;
+    };
   };
 }
 
 export default function ComplianceBoard() {
   const [alerts, setAlerts] = useState<ComplianceAlert[]>([]);
   const [loading, setLoading] = useState(true);
-  const [activeRole, setActiveRole] = useState<'MANAGER' | 'GENERAL_MANAGER' | 'USER'>('MANAGER');
+  const [activeRole, setActiveRole] = useState<'MANAGER' | 'GENERAL_MANAGER' | 'USER' | 'ADMIN'>('MANAGER');
   const [searchQuery, setSearchQuery] = useState("");
 
   useEffect(() => {
@@ -117,9 +112,9 @@ export default function ComplianceBoard() {
 
   const filteredAlerts = alerts.filter(alert => {
     const searchLow = searchQuery.toLowerCase();
-    const refId = (alert?.newValue?.referenceId || alert?.referenceId || "").toLowerCase();
+    const refId = (alert?.newValue?.referenceId || "").toLowerCase();
     const action = (alert?.action || "").toLowerCase();
-    const email = (alert?.user?.email || "").toLowerCase();
+    const email = (alert?.newValue?.user?.email || "").toLowerCase();
     
     return refId.includes(searchLow) || action.includes(searchLow) || email.includes(searchLow);
   });
@@ -187,7 +182,7 @@ export default function ComplianceBoard() {
             const isHighRisk = (alert.newValue.riskScore || 0) >= 75;
             const isCritical = (alert.newValue.riskScore || 0) >= 90;
             const scoreColor = isCritical ? 'bg-[#f43f5e] text-white ring-4 ring-rose-100' : isHighRisk ? 'bg-amber-500 text-white ring-4 ring-amber-50' : 'bg-slate-100 text-slate-500 ring-4 ring-slate-50';
-            const severityLabel = isCritical ? 'CRITICAL' : alert.metadata.severity;
+            const severityLabel = isCritical ? 'CRITICAL' : alert.newValue.riskMetadata?.severity;
             
             return (
             <div key={alert.id} className={`p-4 border-b border-slate-50 hover:bg-slate-50/80 transition-all flex flex-col md:flex-row gap-4 items-start md:items-center relative group hover:z-50`}>
@@ -234,13 +229,13 @@ export default function ComplianceBoard() {
                    <div className="flex items-center gap-1.5">
                      <User size={11} className="text-slate-400" />
                      <span className="text-[10px] font-bold text-slate-600 truncate">
-                       {alert.user ? `${alert.user.firstName} ${alert.user.lastName}` : "System Entity"}
+                        {alert.newValue.user ? `${alert.newValue.user.firstName} ${alert.newValue.user.lastName}` : "System Entity"}
                      </span>
-                     {alert.user?.kycTier && (
-                       <span className="text-[7.5px] font-black px-1.5 py-0.5 rounded bg-slate-200/50 text-slate-500 tracking-wider uppercase">
-                         {alert.user.kycTier}
-                       </span>
-                     )}
+                      {alert.newValue.user?.kycTier && (
+                        <span className="text-[7.5px] font-black px-1.5 py-0.5 rounded bg-slate-200/50 text-slate-500 tracking-wider uppercase">
+                          {alert.newValue.user.kycTier}
+                        </span>
+                      )}
                    </div>
                    <span className="text-slate-300">•</span>
                    <div className="flex items-center gap-1 text-slate-400">
@@ -284,7 +279,7 @@ export default function ComplianceBoard() {
                             </button>
                           </div>
                         )}
-                        {(activeRole === 'GENERAL_MANAGER' || activeRole === 'ADMIN') && (
+                        {(activeRole === 'GENERAL_MANAGER') && (
                           <button
                             onClick={() => handleResolve(alert.newValue.transactionId, alert.newValue.riskMetadata?.proposedAction || 'APPROVE')}
                             className={`px-3 py-1.5 text-white text-[9px] font-black rounded-lg transition-all uppercase tracking-widest shadow-sm ${alert.newValue.riskMetadata?.proposedAction ? 'bg-orange-500 hover:bg-orange-600 ring-4 ring-orange-500/20 animate-pulse' : 'bg-[#f43f5e] hover:bg-rose-600'}`}

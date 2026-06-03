@@ -36,12 +36,12 @@ prisma.$connect()
             { 
                 name: 'budolPay', 
                 apiKey: 'bp_key_2025', 
-                redirectUri: isProd ? 'https://budolpay.vercel.app/api/auth/callback' : `http://${localIP}:3000/api/auth/callback` 
+                redirectUri: isProd ? 'https://budolpay-admin-sooty.vercel.app/api/auth/callback' : `http://${localIP}:3000/api/auth/callback` 
             },
             { 
                 name: 'budolShap', 
                 apiKey: 'bs_key_2025', 
-                redirectUri: isProd ? 'https://budolshap.vercel.app/auth/callback' : `http://${localIP}:3001/auth/callback` 
+                redirectUri: isProd ? 'https://budolshap-kappa.vercel.app/auth/callback' : `http://${localIP}:3001/auth/callback` 
             }
         ];
 

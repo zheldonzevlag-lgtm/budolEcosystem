@@ -7,7 +7,7 @@ const BUDOL_ID_URL = process.env.BUDOL_ID_URL ||
                      process.env.AUTH_SERVICE_URL || 
                      process.env.SSO_URL || 
                      process.env.NEXT_PUBLIC_SSO_URL ||
-                      'http://127.0.0.1:8000';
+                      (process.env.VERCEL === '1' || !!process.env.NEXT_PUBLIC_VERCEL_ENV ? 'https://budolid-ten.vercel.app' : 'http://127.0.0.1:8000');
  
  // Helper to construct URL based on service port
  const getServiceUrl = (endpoint) => {

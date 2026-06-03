@@ -29,7 +29,7 @@ budolEcosystem/
 ├── budolPayMobile/           # Flutter mobile app (Android/iOS/Web) v1.3.93
 ├── budolID-0.1.0/            # Central Identity & SSO service
 ├── budolAccounting-0.1.0/    # Double-entry accounting ledger
-├── budoloan-0.1.0/           # Loan management (scaffolded, not integrated)
+├── budolloan-0.1.0/          # Loan management (scaffolded, not integrated)
 ├── websocket-server/         # Standalone Socket.io real-time server
 ├── scripts/                  # Deployment, backup, and test scripts
 ├── documentation/            # Project documentation (HTML docs)
@@ -247,9 +247,9 @@ The ecosystem uses **5 separate Prisma schemas** with PostgreSQL:
 | `ChartOfAccount` | Chart of accounts (ASSET, LIABILITY, EQUITY, REVENUE, EXPENSE) |
 | `LedgerEntry` | Debit/credit entries with app and transaction tracking |
 
-### budoloan Schema (2 models, 2 enums) -- Scaffolded, Not Integrated
+### budolloan Schema (2 models, 2 enums) -- Scaffolded, Not Integrated
 
-**File:** `budoloan-0.1.0/prisma/schema.prisma`
+**File:** `budolloan-0.1.0/prisma/schema.prisma`
 
 | Model | Purpose |
 |-------|---------|
