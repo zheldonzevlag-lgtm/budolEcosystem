@@ -9,6 +9,7 @@ import { triggerRealtimeEvent } from '@/lib/realtime'
 import { registerWithBudolId, loginWithBudolId } from '@/lib/api/budolIdClient'
 import { normalizePhone } from '@/lib/utils/phone-utils'
 import { createAuditLog } from '@/lib/audit'
+import { checkSecurityThreat, sanitizeInput } from '@/lib/security'
 
 // Input validation functions
 function validateRegistrationInput(data) {
@@ -69,6 +70,19 @@ export async function POST(request) {
             });
             return NextResponse.json({ error: 'Invalid request' }, { status: 400 });
         }
+        
+        // Security: Check for injection and XSS attempts
+        const threatCheck = await checkSecurityThreat(request, { name, email, phoneNumber });
+        if (threatCheck.blocked) {
+            console.warn(`[Security] Threat detected in registration: ${threatCheck.threats.join(', ')}`);
+            return NextResponse.json(
+                { error: 'Invalid characters detected in input' },
+                { status: 400 }
+            );
+        }
+        
+        // Sanitize inputs
+        name = sanitizeInput(name);
 
         // Normalize phone number for consistent storage
         const normalizedPhone = normalizePhone(phoneNumber);
