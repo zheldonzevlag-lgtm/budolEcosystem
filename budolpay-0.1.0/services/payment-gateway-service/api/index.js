@@ -1,4 +1,9 @@
-require('dotenv').config({ path: require('path').resolve(__dirname, '../../../.env'), override: true });
+// Try to load dotenv, but don't fail if .env doesn't exist
+try {
+  require('dotenv').config({ path: require('path').resolve(__dirname, '../../../.env'), override: true });
+} catch (e) {
+  // Ignore - .env may not exist on Vercel
+}
 const IS_VERCEL = process.env.VERCEL === '1' || !!process.env.NEXT_PUBLIC_VERCEL_ENV;
 
 if (IS_VERCEL) {
@@ -15,16 +20,10 @@ const path = require('path');
 const { PrismaClient } = require('@prisma/client');
 
 const getDatabaseUrl = () => {
-  let url = process.env.DATABASE_URL;
-  if (!url || url.trim().length === 0) {
-    // Fallback for build-time static optimization on Vercel
-    return "postgresql://postgres:postgres@localhost:5432/budolpay?schema=public";
-  }
-  url = url.trim();
-  const baseUrl = url.split('?')[0];
-  const params = new URLSearchParams(url.split('?')[1] || '');
-  const paramStr = params.toString();
-  return paramStr ? `${baseUrl}?${paramStr}` : baseUrl;
+  // Hardcoded correct Neon database URL - DO NOT CHANGE
+  const correctUrl = "postgresql://neondb_owner:npg_XLkrx73JNlRP@ep-wandering-breeze-aoin4z9c-pooler.c-2.ap-southeast-1.aws.neon.tech/budolpay?sslmode=require&schema=budolpay";
+  console.log('[Payment-Gateway] Using hardcoded DATABASE_URL');
+  return correctUrl;
 };
 
 const prisma = new PrismaClient({
@@ -1128,4 +1127,5 @@ if (!IS_VERCEL && process.env.NODE_ENV !== 'test') {
   });
 }
 
-module.exports = { app, generateSecureReferenceId };
+// For Vercel: export the Express app directly
+module.exports = app;

@@ -8,8 +8,8 @@ export class BudolPayAdapter extends BasePaymentAdapter {
     constructor() {
         super();
         
-        const isVercel = process.env.VERCEL === '1' || !!process.env.NEXT_PUBLIC_VERCEL_ENV;
-        const defaultProdUrl = 'https://budolpay-api-monolith.vercel.app';
+const isVercel = process.env.VERCEL === '1' || !!process.env.NEXT_PUBLIC_VERCEL_ENV;
+        const defaultProdUrl = 'https://budolpay-api-monolith.vercel.app/api/payment-gw';
         const defaultLocalUrl = 'http://192.168.1.2:8080/pg'; // API Gateway route for local
 
         let rawUrl = process.env.PAYMENT_GATEWAY_URL || process.env.NEXT_PUBLIC_PAYMENT_GATEWAY_URL || (isVercel ? defaultProdUrl : defaultLocalUrl);
