@@ -167,7 +167,7 @@ export async function getSystemSettings(forceRefresh = false) {
             settings.maxProductVideos = process.env.MAX_PRODUCT_VIDEOS ? parseInt(process.env.MAX_PRODUCT_VIDEOS) : 0;
         }
 
-        // Fallback fetch for columns that may exist in DB but not yet in generated Prisma client.
+// Fallback fetch for columns that may exist in DB but not yet in generated Prisma client.
         // WHY: Prisma's $queryRaw can read any column regardless of client schema.
         try {
             const rows = await prisma.$queryRawUnsafe(
@@ -175,44 +175,36 @@ export async function getSystemSettings(forceRefresh = false) {
                         "smtpUser", "smtpPass", "smtpFrom", "brevoApiKey", "gmassApiKey",
                         "smsProvider", "zerixApiKey", "itextmoApiKey", "itextmoClientCode",
                         "viberApiKey", "brevoSmsApiKey"
-                 FROM "SystemSettings" WHERE "id" = 'default'`
+                  FROM "SystemSettings" WHERE "id" = 'default'`
             );
             if (Array.isArray(rows) && rows.length > 0) {
                 const row = rows[0];
-                // Priority: USE_DB_SMTP=true → Admin panel → Environment variables
+                // USE_DB_SMTP=true: use DB settings first, fallback to env vars
+                // Default: env vars take precedence, fallback to DB
                 const useDbSmtp = process.env.USE_DB_SMTP === 'true';
                 
-                // If USE_DB_SMTP=true, try admin panel first, then fallback to env vars
                 if (useDbSmtp) {
-                    // Use admin panel settings if available
+                    // DB settings first, then env vars
                     if (row.smtpHost) settings.smtpHost = row.smtpHost;
-                    else if (process.env.SMTP_HOST) settings.smtpHost = process.env.SMTP_HOST;
-                    
+                    else settings.smtpHost = process.env.SMTP_HOST;
                     if (row.smtpPort) settings.smtpPort = row.smtpPort;
-                    else if (process.env.SMTP_PORT) settings.smtpPort = process.env.SMTP_PORT;
-                    
+                    else settings.smtpPort = process.env.SMTP_PORT;
                     if (row.smtpUser) settings.smtpUser = row.smtpUser;
-                    else if (process.env.SMTP_USER) settings.smtpUser = process.env.SMTP_USER;
-                    
+                    else settings.smtpUser = process.env.SMTP_USER;
                     if (row.smtpPass) settings.smtpPass = row.smtpPass;
-                    else if (process.env.SMTP_PASS) settings.smtpPass = process.env.SMTP_PASS;
-                    
+                    else settings.smtpPass = process.env.SMTP_PASS;
                     if (row.smtpFrom) settings.smtpFrom = row.smtpFrom;
-                    else if (process.env.SMTP_FROM) settings.smtpFrom = process.env.SMTP_FROM;
+                    else settings.smtpFrom = process.env.SMTP_FROM;
                 } else {
-                    // Default: env vars take precedence, fallback to DB if not set
+                    // Original logic: env vars first, then DB
                     if (process.env.SMTP_HOST) settings.smtpHost = process.env.SMTP_HOST;
                     else if (row.smtpHost) settings.smtpHost = row.smtpHost;
-                    
                     if (process.env.SMTP_PORT) settings.smtpPort = process.env.SMTP_PORT;
                     else if (row.smtpPort) settings.smtpPort = row.smtpPort;
-                    
                     if (process.env.SMTP_USER) settings.smtpUser = process.env.SMTP_USER;
                     else if (row.smtpUser) settings.smtpUser = row.smtpUser;
-                    
                     if (process.env.SMTP_PASS) settings.smtpPass = process.env.SMTP_PASS;
                     else if (row.smtpPass) settings.smtpPass = row.smtpPass;
-                    
                     if (process.env.SMTP_FROM) settings.smtpFrom = process.env.SMTP_FROM;
                     else if (row.smtpFrom) settings.smtpFrom = row.smtpFrom;
                 }
