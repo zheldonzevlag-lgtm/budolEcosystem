@@ -10,6 +10,50 @@ import { registerWithBudolId, loginWithBudolId } from '@/lib/api/budolIdClient'
 import { normalizePhone } from '@/lib/utils/phone-utils'
 import { createAuditLog } from '@/lib/audit'
 
+// Input validation functions
+function validateRegistrationInput(data) {
+    const errors = []
+    
+    // Email validation
+    if (!data.email) {
+        errors.push('Email is required')
+    } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(data.email)) {
+        errors.push('Invalid email format')
+    } else if (data.email.length > 254) {
+        errors.push('Email is too long')
+    }
+    
+    // Password strength validation
+    if (!data.password) {
+        errors.push('Password is required')
+    } else {
+        if (data.password.length < 8) {
+            errors.push('Password must be at least 8 characters')
+        }
+        if (!/[A-Z]/.test(data.password)) {
+            errors.push('Password must contain at least one uppercase letter')
+        }
+        if (!/[0-9]/.test(data.password)) {
+            errors.push('Password must contain at least one number')
+        }
+    }
+    
+    // Name validation
+    if (!data.name || data.name.trim().length < 2) {
+        errors.push('Name must be at least 2 characters')
+    }
+    
+    // Phone validation (Philippines format)
+    if (data.phoneNumber) {
+        const normalizedPhone = normalizePhone(data.phoneNumber)
+        if (!normalizedPhone) {
+            errors.push('Invalid Philippine phone number format')
+        }
+    }
+    
+    return { valid: errors.length === 0, errors }
+}
+
 export async function POST(request) {
     try {
         const body = await request.json()
@@ -46,6 +90,15 @@ export async function POST(request) {
             if (!name || !email || !password || !phoneNumber) {
                 return NextResponse.json(
                     { error: 'Missing required fields (Name, Email, Password, Phone Number)' },
+                    { status: 400 }
+                )
+            }
+            
+            // Enhanced input validation (non-quick registration)
+            const validation = validateRegistrationInput({ name, email, password, phoneNumber })
+            if (!validation.valid) {
+                return NextResponse.json(
+                    { error: 'Validation failed', details: validation.errors },
                     { status: 400 }
                 )
             }
