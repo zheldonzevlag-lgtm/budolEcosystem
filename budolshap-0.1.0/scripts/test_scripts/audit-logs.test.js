@@ -46,10 +46,10 @@ describe('Audit Log Logic', () => {
         const { prisma } = require('../../lib/prisma');
         expect(prisma.auditLog.create).toHaveBeenCalledWith(expect.objectContaining({
             data: expect.objectContaining({
-                userId: 'user-123',
                 action: 'TEST_ACTION',
                 status: 'SUCCESS',
-                ipAddress: '127.0.0.1'
+                ipAddress: '127.0.0.1',
+                user: { connect: { id: 'user-123' } }
             })
         }));
     });
