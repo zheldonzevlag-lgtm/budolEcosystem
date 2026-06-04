@@ -18,7 +18,7 @@ model User {
   image                String
   cart                 Json             @default("{}")
   accountType          AccountType      @default(BUYER)
-  emailVerified        Boolean          @default(false)
+  emailVerified        Boolean         @default(false)
   isAdmin              Boolean          @default(false)
   isMember             Boolean          @default(false)
   isCoopMember         Boolean          @default(false)
@@ -35,6 +35,9 @@ model User {
   role                 String           @default("USER")
   metadata             Json?            @default("{}")
   deletedAt            DateTime?
+  // Security fields for account lockout
+  failedAttempts      Int?             @default(0)
+  lockedUntil         DateTime?
   Address              Address[]
   auditLogs            AuditLog[]
   Cart                 Cart?
@@ -44,6 +47,7 @@ model User {
   buyerOrders          Order[]          @relation("BuyerRelation")
   ratings              Rating[]
   store                Store?
+  sessions             Session[]
 }
 
 model Category {
@@ -456,6 +460,20 @@ model RateLimit {
   key      String @id
   points   Int    @default(0)
   expireAt BigInt
+}
+
+model Session {
+  id        String   @id @default(cuid())
+  userId    String
+  expiresAt DateTime
+  ip       String?
+  userAgent String?
+  isActive Boolean  @default(true)
+  createdAt DateTime @default(now())
+  user     User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([expiresAt])
 }
 
 model VerificationCode {
