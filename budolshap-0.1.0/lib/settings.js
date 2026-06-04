@@ -179,35 +179,12 @@ export async function getSystemSettings(forceRefresh = false) {
             );
             if (Array.isArray(rows) && rows.length > 0) {
                 const row = rows[0];
-                // USE_DB_SMTP=true: use DB settings first, fallback to env vars
-                // Default: env vars take precedence, fallback to DB
-                const useDbSmtp = process.env.USE_DB_SMTP === 'true';
-                
-                if (useDbSmtp) {
-                    // DB settings first, then env vars
-                    if (row.smtpHost) settings.smtpHost = row.smtpHost;
-                    else settings.smtpHost = process.env.SMTP_HOST;
-                    if (row.smtpPort) settings.smtpPort = row.smtpPort;
-                    else settings.smtpPort = process.env.SMTP_PORT;
-                    if (row.smtpUser) settings.smtpUser = row.smtpUser;
-                    else settings.smtpUser = process.env.SMTP_USER;
-                    if (row.smtpPass) settings.smtpPass = row.smtpPass;
-                    else settings.smtpPass = process.env.SMTP_PASS;
-                    if (row.smtpFrom) settings.smtpFrom = row.smtpFrom;
-                    else settings.smtpFrom = process.env.SMTP_FROM;
-                } else {
-                    // Original logic: env vars first, then DB
-                    if (process.env.SMTP_HOST) settings.smtpHost = process.env.SMTP_HOST;
-                    else if (row.smtpHost) settings.smtpHost = row.smtpHost;
-                    if (process.env.SMTP_PORT) settings.smtpPort = process.env.SMTP_PORT;
-                    else if (row.smtpPort) settings.smtpPort = row.smtpPort;
-                    if (process.env.SMTP_USER) settings.smtpUser = process.env.SMTP_USER;
-                    else if (row.smtpUser) settings.smtpUser = row.smtpUser;
-                    if (process.env.SMTP_PASS) settings.smtpPass = process.env.SMTP_PASS;
-                    else if (row.smtpPass) settings.smtpPass = row.smtpPass;
-                    if (process.env.SMTP_FROM) settings.smtpFrom = process.env.SMTP_FROM;
-                    else if (row.smtpFrom) settings.smtpFrom = row.smtpFrom;
-                }
+                // Original logic: env vars take precedence, fallback to DB
+                if (!process.env.SMTP_HOST && row.smtpHost) settings.smtpHost = row.smtpHost;
+                if (!process.env.SMTP_PORT && row.smtpPort) settings.smtpPort = row.smtpPort;
+                if (!process.env.SMTP_USER && row.smtpUser) settings.smtpUser = row.smtpUser;
+                if (!process.env.SMTP_PASS && row.smtpPass) settings.smtpPass = row.smtpPass;
+                if (!process.env.SMTP_FROM && row.smtpFrom) settings.smtpFrom = row.smtpFrom;
                 if (row.brevoApiKey !== undefined) settings.brevoApiKey = row.brevoApiKey;
                 if (row.gmassApiKey !== undefined) settings.gmassApiKey = row.gmassApiKey;
                 if (row.smsProvider && !process.env.OVERRIDE_SMS_PROVIDER) settings.smsProvider = row.smsProvider;
