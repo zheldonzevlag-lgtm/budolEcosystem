@@ -115,7 +115,11 @@ export async function POST(request) {
             }
 
             if (!productionUrl) {
-                productionUrl = process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : 'https://budolshap-v3.vercel.app';
+                productionUrl = process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : process.env.NEXT_PUBLIC_BASE_URL;
+            }
+
+            if (!productionUrl) {
+                console.error('[PayMongo] No base URL available. Set NEXT_PUBLIC_BASE_URL or ensure host header is present.');
             }
 
             returnUrl = `${productionUrl}/payment/return`;

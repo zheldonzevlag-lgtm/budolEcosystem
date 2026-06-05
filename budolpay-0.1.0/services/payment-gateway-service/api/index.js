@@ -20,10 +20,13 @@ const path = require('path');
 const { PrismaClient } = require('@prisma/client');
 
 const getDatabaseUrl = () => {
-  // Hardcoded correct Neon database URL - DO NOT CHANGE
-  const correctUrl = "postgresql://neondb_owner:npg_XLkrx73JNlRP@ep-wandering-breeze-aoin4z9c-pooler.c-2.ap-southeast-1.aws.neon.tech/budolpay?sslmode=require&schema=budolpay";
-  console.log('[Payment-Gateway] Using hardcoded DATABASE_URL');
-  return correctUrl;
+  const url = process.env.BUDOLPAY_DATABASE_URL || process.env.DATABASE_URL;
+  if (!url) {
+    console.error('[Payment-Gateway] FATAL: No database URL configured. Set BUDOLPAY_DATABASE_URL or DATABASE_URL.');
+  } else {
+    console.log('[Payment-Gateway] Using database URL from environment');
+  }
+  return url;
 };
 
 const prisma = new PrismaClient({
@@ -116,7 +119,8 @@ router.get('/health', (req, res) => {
 });
 
 // Helper to get transaction table name (Now unified via schema isolation)
-const getTxTableName = () => '"Transaction"';
+// Uses explicit schema prefix to ensure queries hit budolpay."Transaction" regardless of search_path
+const getTxTableName = () => 'budolpay."Transaction"';
 
 // Check Transaction Status
 router.get('/status/:referenceId', async (req, res) => {
@@ -124,19 +128,34 @@ router.get('/status/:referenceId', async (req, res) => {
   try {
     const tableName = getTxTableName();
     let transaction;
-    
+
     if (process.env.VERCEL === '1') {
-      // Use raw SQL on Vercel to avoid schema collision
-      const results = await prisma.$queryRawUnsafe(
-        `SELECT status FROM ${tableName} WHERE "referenceId" = $1 LIMIT 1`,
+      // Strategy 1: Look up by referenceId (JON-xxx format)
+      let results = await prisma.$queryRawUnsafe(
+        `SELECT status, id, "referenceId" FROM ${tableName} WHERE "referenceId" = $1 LIMIT 1`,
         referenceId
       );
       transaction = results && results.length > 0 ? results[0] : null;
+
+      // Strategy 2: Fallback to lookup by id (UUID / paymentIntentId)
+      if (!transaction) {
+        results = await prisma.$queryRawUnsafe(
+          `SELECT status, id, "referenceId" FROM ${tableName} WHERE id = $1 LIMIT 1`,
+          referenceId
+        );
+        transaction = results && results.length > 0 ? results[0] : null;
+        if (transaction) console.log(`[Gateway] Status: Found by UUID id=${referenceId} ref=${transaction.referenceId}`);
+      }
     } else {
-      // Use standard Prisma for local dev
+      // Local dev path
       transaction = await prisma.transaction.findUnique({
         where: { referenceId: referenceId }
       });
+      if (!transaction) {
+        transaction = await prisma.transaction.findUnique({
+          where: { id: referenceId }
+        });
+      }
     }
 
     if (!transaction) return res.status(404).json({ error: 'Transaction not found' });
@@ -389,7 +408,10 @@ router.post('/create-intent', async (req, res) => {
       if (existing && existing.length > 0) {
         const existingTx = existing[0];
         console.log(`[PaymentGW] Found existing pending tx for order ${orderId}: ${existingTx.referenceId}`);
-        const baseUrl = process.env.BASE_URL || `https://payment-gateway-service-two.vercel.app`;
+        if (!process.env.BASE_URL) {
+          console.error('[PaymentGW] BASE_URL env var not set — checkout URLs may be incorrect');
+        }
+        const baseUrl = process.env.BASE_URL;
         return res.status(200).json({
           success: true,
           id: existingTx.id,
@@ -453,7 +475,10 @@ router.post('/create-intent', async (req, res) => {
     }).catch(e => console.warn('[PaymentGW] Audit log warning:', e.message));
 
     // 2. Build provider response
-    const baseUrl = process.env.BASE_URL || `https://payment-gateway-service-two.vercel.app`;
+    if (!process.env.BASE_URL) {
+      console.error('[PaymentGW] BASE_URL env var not set — checkout URLs may be incorrect');
+    }
+    const baseUrl = process.env.BASE_URL;
     let providerResponse = null;
     let qrCode = null;
 

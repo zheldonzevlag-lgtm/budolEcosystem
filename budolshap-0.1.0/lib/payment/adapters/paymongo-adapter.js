@@ -99,7 +99,7 @@ export class PayMongoAdapter extends BasePaymentAdapter {
             const paymentMethodId = methodData.data.id;
 
             // 3. Attach Payment Method to Intent
-            const fallbackUrl = (process.env.NEXT_PUBLIC_SITE_URL || process.env.NEXT_PUBLIC_BASE_URL || 'https://budolshap-v3.vercel.app').replace(/\/$/, '');
+            const fallbackUrl = (process.env.NEXT_PUBLIC_SITE_URL || process.env.NEXT_PUBLIC_BASE_URL).replace(/\/$/, '');
             const returnUrl = options.successUrl || (fallbackUrl.startsWith('http') ? `${fallbackUrl}/payment/success` : `https://${fallbackUrl}/payment/success`);
 
             const attachBody = {

@@ -61,20 +61,17 @@ export async function POST(request) {
         }
 
         // Resolve gateway base URL:
-        // Production fallback: If Vercel env is detected, use the vercel URL.
-        const isVercel = process.env.VERCEL === '1' || process.env.NODE_ENV === 'production';
-        const defaultProdUrl = 'https://payment-gateway-service-two.vercel.app';
-        const defaultLocalUrl = 'http://localhost:8004';
-        
-        let GATEWAY_BASE_URL =
+        const GATEWAY_BASE_URL =
             process.env.PAYMENT_GATEWAY_URL ||
             process.env.NEXT_PUBLIC_PAYMENT_GATEWAY_URL ||
-            (isVercel ? defaultProdUrl : defaultLocalUrl);
-            
-        // FAILSAFE: Override stale DuckDNS configuration
-        // If testing locally or building on Vercel with old env keys, force correct routing
-        if (GATEWAY_BASE_URL.includes('duckdns.org')) {
-            GATEWAY_BASE_URL = isVercel ? defaultProdUrl : 'http://192.168.1.2:8004';
+            process.env.MONOLITH_URL;
+
+        if (!GATEWAY_BASE_URL) {
+            console.error('[Payment Cancel Proxy] No gateway URL configured. Set PAYMENT_GATEWAY_URL, NEXT_PUBLIC_PAYMENT_GATEWAY_URL, or MONOLITH_URL.');
+            return NextResponse.json(
+                { error: 'Payment gateway URL not configured' },
+                { status: 500 }
+            );
         }
 
         console.log(`[Payment Cancel Proxy] Cancelling | ref=${targetRef} | orderId=${orderId} | gateway=${GATEWAY_BASE_URL}`);

@@ -8,21 +8,23 @@ export class BudolPayAdapter extends BasePaymentAdapter {
     constructor() {
         super();
         
-const isVercel = process.env.VERCEL === '1' || !!process.env.NEXT_PUBLIC_VERCEL_ENV;
-        const defaultProdUrl = 'https://budolpay-api-monolith.vercel.app/api/payment-gw';
-        const defaultLocalUrl = 'http://192.168.1.2:8080/pg'; // API Gateway route for local
+        const isVercel = process.env.VERCEL === '1' || !!process.env.NEXT_PUBLIC_VERCEL_ENV;
 
-        let rawUrl = process.env.PAYMENT_GATEWAY_URL || process.env.NEXT_PUBLIC_PAYMENT_GATEWAY_URL || (isVercel ? defaultProdUrl : defaultLocalUrl);
-        
-        if (rawUrl.includes('duckdns.org')) {
-            rawUrl = isVercel ? defaultProdUrl : defaultLocalUrl;
+        let rawUrl = process.env.PAYMENT_GATEWAY_URL || process.env.NEXT_PUBLIC_PAYMENT_GATEWAY_URL || process.env.MONOLITH_URL;
+
+        if (!rawUrl) {
+            console.error('[BudolPayAdapter] FATAL: No gateway URL configured. Set PAYMENT_GATEWAY_URL, NEXT_PUBLIC_PAYMENT_GATEWAY_URL, or MONOLITH_URL.');
         }
 
         this.gatewayUrl = rawUrl;
 
         console.log(`[BudolPayAdapter] Initialized. Gateway: ${this.gatewayUrl} | isVercel: ${isVercel}`);
         
-        this.apiKey = process.env.BUDOLPAY_API_KEY || 'bs_key_2025';
+        this.apiKey = process.env.BUDOLPAY_API_KEY;
+        
+        if (!this.apiKey) {
+            console.error('[BudolPayAdapter] FATAL: No API key configured. Set BUDOLPAY_API_KEY.');
+        }
         
         // Legacy logic: only append /payments if it's a specific older gateway format
         // We SKIP this for the Vercel healthy mirror to avoid double /payments or incorrect paths

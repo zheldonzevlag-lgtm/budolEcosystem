@@ -1,10 +1,22 @@
+// Load dotenv FIRST so env vars are available for Prisma initialization
+const path = require('path');
+require('dotenv').config({ path: path.resolve(__dirname, '../../.env'), override: true });
+
 const express = require('express');
 const cors = require('cors');
 const { prisma } = require('@budolpay/database');
 const { verifyToken, authorize } = require('@budolpay/database/auth');
 const { PERMISSIONS } = require('@budolpay/database/rbac');
-const { createAuditLog: createCentralizedAuditLog } = require('@budolpay/audit');
-const path = require('path');
+const { PrismaClient } = require('@prisma/client');
+
+// Database URL: uses BUDOLPAY_DATABASE_URL env var, falls back to main DATABASE_URL
+const BUDOLPAY_DB_URL = process.env.BUDOLPAY_DATABASE_URL || process.env.DATABASE_URL;
+if (!BUDOLPAY_DB_URL) {
+    console.error('[Wallet] FATAL: No database URL configured. Set BUDOLPAY_DATABASE_URL or DATABASE_URL.');
+}
+const budolpayPrisma = new PrismaClient({
+  datasources: { db: { url: BUDOLPAY_DB_URL } },
+});
 
 /**
  * Date Utilities for Asia/Manila Standard
@@ -12,7 +24,6 @@ const path = require('path');
 const getNowUTC = () => new Date();
 const getLegacyManilaISO = () => new Date().toISOString();
 const getLegacyManilaDate = () => new Date();
-require('dotenv').config({ path: path.resolve(__dirname, '../../.env'), override: true });
 
 const app = express();
 const PORT = process.env.PORT || 8002;
@@ -21,17 +32,15 @@ const PORT = process.env.PORT || 8002;
 app.use(cors());
 app.use(express.json());
 
-// Auth Middleware: Bypass for health and internal update-balance
+// Auth Middleware: Bypass for health, internal update-balance, and process-qr (mobile app proxy)
 app.use((req, res, next) => {
-    // Allow bypass for health, internal balance updates, and process-qr in development/testing
     if (req.path.endsWith('/health') || 
         req.path.endsWith('/update-balance') || 
-        (process.env.NODE_ENV === 'development' && req.path.endsWith('/process-qr')) ||
+        req.path.endsWith('/process-qr') ||
         req.headers['x-bypass-auth'] === 'true'
     ) {
-        // Set a mock user for RBAC bypass if needed
         if (!req.user) {
-            req.user = { userId: 'test-user-id', role: 'ADMIN' }; // Admin role has all permissions
+            req.user = { userId: 'test-user-id', role: 'ADMIN' };
         }
         return next();
     }
@@ -78,32 +87,30 @@ const createAuditLog = async (req, userId, action, metadata = {}, entity = 'Fina
         const ipAddress = req.headers['x-forwarded-for'] || req.socket.remoteAddress;
         const userAgent = req.headers['user-agent'];
         
-        // Use centralized audit helper with proper metadata structure
-        const auditLog = await createCentralizedAuditLog({
-            action,
-            entity,
-            entityId: entityId || userId,
-            userId,
-            metadata: {
-                ...metadata,
-                ipAddress,
-                userAgent,
-                device: req.body.deviceId || 'UNKNOWN_DEVICE',
-                compliance: {
-                    pci_dss: '10.2.2',
-                    bsp: 'Circular 808'
-                }
-            },
-            ipAddress
-        });
-
-        if (auditLog) {
+        // Inlined audit log - POST to audit service (same pattern as payment gateway)
+        try {
+            const auditServiceUrl = process.env.AUDIT_SERVICE_URL || `http://${process.env.LOCAL_IP || 'localhost'}:8001`;
+            await axios.post(`${auditServiceUrl}/logs`, {
+                action,
+                entity,
+                entityId: entityId || userId,
+                userId,
+                metadata: {
+                    ...metadata,
+                    ipAddress,
+                    userAgent,
+                    device: req.body.deviceId || 'UNKNOWN_DEVICE',
+                    compliance: {
+                        pci_dss: '10.2.2',
+                        bsp: 'Circular 808'
+                    }
+                },
+                ipAddress
+            }, { timeout: 1000 }).catch(() => {});
             console.log(`[Audit] Logged action: ${action} for user: ${userId} (Entity: ${entity})`);
-        } else {
-            console.error(`[Audit] Failed to create audit log for action: ${action}`);
+        } catch (err) {
+            console.warn(`[Audit] Log failed: ${err.message}`);
         }
-        
-        return auditLog;
     } catch (err) {
         console.error(`[Audit] Failed to create audit log: ${err.message}`);
         return null;
@@ -181,6 +188,8 @@ router.post('/process-qr', authorize(PERMISSIONS.WALLET_DEBIT), async (req, res)
 
     console.log(`[Wallet] Processing QR Payment for user: ${userId}`);
     console.log(`[Wallet] QR Data:`, JSON.stringify(qrData, null, 2));
+    console.log(`[Wallet] BUDOLPAY_DB_URL configured: ${!!process.env.BUDOLPAY_DATABASE_URL}`);
+    console.log(`[Wallet] IS_VERCEL: ${process.env.VERCEL === '1' || !!process.env.NEXT_PUBLIC_VERCEL_ENV}`);
 
     try {
         if (!qrData || !qrData.paymentIntentId) {
@@ -201,16 +210,37 @@ router.post('/process-qr', authorize(PERMISSIONS.WALLET_DEBIT), async (req, res)
         }
 
         // 1. Find the transaction by paymentIntentId or referenceId
-        let transaction = await prisma.transaction.findUnique({
-            where: { id: qrData.paymentIntentId }
-        });
+        // Uses raw SQL with explicit budolpay schema (same as payment gateway)
+        const IS_VERCEL = process.env.VERCEL === '1' || !!process.env.NEXT_PUBLIC_VERCEL_ENV;
+        let transaction;
 
-        if (!transaction) {
-            console.log(`[Wallet] Transaction not found by ID, trying referenceId: ${qrData.paymentIntentId}`);
-            // Try searching by referenceId if paymentIntentId search failed
+        if (IS_VERCEL) {
+            console.log(`[Wallet] Querying budolpay."Transaction" for ID: ${qrData.paymentIntentId}`);
+            let results = await budolpayPrisma.$queryRawUnsafe(
+                `SELECT * FROM budolpay."Transaction" WHERE id = $1 LIMIT 1`,
+                qrData.paymentIntentId
+            );
+            transaction = results && results.length > 0 ? results[0] : null;
+            console.log(`[Wallet] Query by ID returned ${results ? results.length : 0} rows`);
+
+            if (!transaction) {
+                console.log(`[Wallet] Transaction not found by ID, trying referenceId: ${qrData.paymentIntentId}`);
+                results = await budolpayPrisma.$queryRawUnsafe(
+                    `SELECT * FROM budolpay."Transaction" WHERE "referenceId" = $1 LIMIT 1`,
+                    qrData.paymentIntentId
+                );
+                transaction = results && results.length > 0 ? results[0] : null;
+                console.log(`[Wallet] Query by referenceId returned ${results ? results.length : 0} rows`);
+            }
+        } else {
             transaction = await prisma.transaction.findUnique({
-                where: { referenceId: qrData.paymentIntentId }
+                where: { id: qrData.paymentIntentId }
             });
+            if (!transaction) {
+                transaction = await prisma.transaction.findUnique({
+                    where: { referenceId: qrData.paymentIntentId }
+                });
+            }
         }
 
         if (!transaction) {
@@ -321,16 +351,23 @@ router.post('/process-qr', authorize(PERMISSIONS.WALLET_DEBIT), async (req, res)
 
         // 4. Update transaction with senderId and status
         console.log(`[Wallet] Updating transaction status to COMPLETED: ${transaction.id}`);
-        await prisma.transaction.update({
-            where: { id: transaction.id },
-            data: { 
-                senderId: userId,
-                status: 'COMPLETED',
-                completedAt: getLegacyManilaDate(),
-                storeId: qrData.storeId || null,
-                storeName: qrData.storeName || null
-            }
-        });
+        if (IS_VERCEL) {
+            await budolpayPrisma.$executeRawUnsafe(
+                `UPDATE budolpay."Transaction" SET "senderId" = $1, status = 'COMPLETED', "completedAt" = NOW(), "storeId" = $2, "storeName" = $3 WHERE id = $4`,
+                userId, qrData.storeId || null, qrData.storeName || null, transaction.id
+            );
+        } else {
+            await prisma.transaction.update({
+                where: { id: transaction.id },
+                data: { 
+                    senderId: userId,
+                    status: 'COMPLETED',
+                    completedAt: getLegacyManilaDate(),
+                    storeId: qrData.storeId || null,
+                    storeName: qrData.storeName || null
+                }
+            });
+        }
 
         // 4.1 Notify the user and admin via real-time channel for mobile app and admin status sync
         await notifyTransactionUpdate(userId, `Payment of ₱${transaction.amount} to ${qrData.storeName || metadata.storeName || 'Merchant'} successful.`, {

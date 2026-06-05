@@ -47,7 +47,8 @@ export async function POST(request) {
         } else if (process.env.VERCEL_URL) {
             baseUrl = `https://${process.env.VERCEL_URL}`;
         } else {
-            baseUrl = 'https://budolshap-v3.vercel.app'; // Final fallback
+            console.error('[Unified Checkout] No base URL available. Set NEXT_PUBLIC_BASE_URL or ensure host header is present.');
+            baseUrl = '';
         }
 
         // Ensure no trailing slash
