@@ -538,6 +538,10 @@ class ApiService extends ChangeNotifier {
           await _saveSession();
         }
         notifyListeners();
+
+        if (data['otpRequired'] == true) {
+          return {...data, 'status': 'OTP_REQUIRED'};
+        }
         return {...data, 'status': 'SUCCESS'};
       } else if (response.statusCode == 401 || response.statusCode == 404) {
         return {'error': data['error'] ?? 'Invalid credentials', 'status': 'FAILED'};
@@ -1078,12 +1082,12 @@ class ApiService extends ChangeNotifier {
       final response = await http.get(
         Uri.parse(url),
         headers: {'Content-Type': 'application/json'},
-      ).timeout(const Duration(seconds: 5));
+      ).timeout(const Duration(seconds: 10));
       final decoded = _safeDecode(response, context: 'checkEmail');
       return decoded is Map ? Map<String, dynamic>.from(decoded) : {};
     } catch (e) {
       if (kDebugMode) print('ApiService: Error checking email: $e');
-      return {'exists': false};
+      return {'exists': true, 'error': e.toString()};
     }
   }
 

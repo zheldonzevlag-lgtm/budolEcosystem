@@ -359,7 +359,14 @@ class _LoginScreenState extends State<LoginScreen> with WidgetsBindingObserver {
     final otp = _otpController.text.trim();
     if (otp.isEmpty) return;
     
-    if (_userId == null) {
+    // Recover userId from ApiService if _userId is null (email login timing issue)
+    String? effectiveUserId = _userId;
+    if (effectiveUserId == null) {
+      final apiService = context.read<ApiService>();
+      effectiveUserId = apiService.currentUser?['id']?.toString();
+    }
+
+    if (effectiveUserId == null) {
       _showError('Session expired. Please enter your mobile or email again.');
       setState(() => _currentStep = LoginStep.phone);
       return;
@@ -372,7 +379,7 @@ class _LoginScreenState extends State<LoginScreen> with WidgetsBindingObserver {
       final String otpType = args?['type'] ?? 'TRUST_DEVICE';
 
       final result = await context.read<ApiService>().verifyOtp(
-        userId: _userId!,
+        userId: effectiveUserId!,
         otp: otp,
         type: otpType,
       );

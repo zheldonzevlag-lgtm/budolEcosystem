@@ -1,7 +1,7 @@
 const path = require('path');
 // Load environment variables immediately
 const envPath = path.resolve(__dirname, '../../.env');
-require('dotenv').config({ path: envPath, override: true });
+require('dotenv').config({ path: envPath, override: false });
 
 // DEBUG LOGGING
 console.log('[DEBUG-AUTH] Starting Auth Service...');
@@ -154,12 +154,23 @@ app.use((req, res, next) => {
     next();
 });
 
-// Vercel Support: Handle API prefix
-const router = express.Router();
-app.use('/api/auth', router);
-app.use('/', router); // Fallback for direct calls
-
-app.get('/', (req, res) => res.json({ status: 'ok', service: 'auth-service' }));
+// Vercel Support: Health check
+app.get('/api/auth/health', async (req, res) => {
+    try {
+        const count = await prisma.user.count();
+        res.json({ status: 'ok', service: 'auth-service', userCount: count });
+    } catch (e) {
+        res.status(500).json({ status: 'error', error: e.message.substring(0, 200) });
+    }
+});
+app.get('/health', async (req, res) => {
+    try {
+        const count = await prisma.user.count();
+        res.json({ status: 'ok', service: 'auth-service', userCount: count });
+    } catch (e) {
+        res.status(500).json({ status: 'error', error: e.message.substring(0, 200) });
+    }
+});
 
 const JWT_SECRET = process.env.JWT_SECRET || 'GJ7Lxn0/kdV/KuZJ5xJ7Ip0RvMerrGW5n0gf44mfHgc=';
 const BUDOL_ID_URL = process.env.BUDOL_ID_URL || `http://${LOCAL_IP || 'localhost'}:8000`;
@@ -167,7 +178,7 @@ console.log(`[budolPay-Auth] Ecosystem JWT_SECRET Loaded`);
 console.log(`[budolPay-Auth] budolID SSO Service Link: ${BUDOL_ID_URL}`);
 
 // SSO: Get App Info
-router.get('/sso/app-info', async (req, res) => {
+app.get('/api/auth/sso/app-info', async (req, res) => {
     const { apiKey } = req.query;
     const ecosystemApp = await prisma.ecosystemApp.findUnique({ where: { apiKey } });
     if (!ecosystemApp) return res.status(404).json({ error: 'Invalid Ecosystem App' });
@@ -193,7 +204,7 @@ const authenticate = async (req, res, next) => {
 };
 
 // Verify Token & Get Profile (Mobile App Sync) - Universal Entry Point
-app.get('/verify', async (req, res) => {
+app.get('/api/auth/verify', async (req, res) => {
     const authHeader = req.headers.authorization;
     if (!authHeader || !authHeader.startsWith('Bearer ')) {
         return res.status(401).json({ error: 'Unauthorized' });
@@ -300,7 +311,7 @@ app.get('/verify', async (req, res) => {
 });
 
 // Update Profile (Compliance Aligned)
-app.patch('/profile', authenticate, async (req, res) => {
+app.patch('/api/auth/profile', authenticate, async (req, res) => {
     console.error('--- PROFILE PATCH RECEIVED ---', JSON.stringify(req.body));
     const { firstName, lastName, email } = req.body;
     const userId = req.user.id;
@@ -398,12 +409,12 @@ app.patch('/profile', authenticate, async (req, res) => {
 });
 
 // Health Check
-router.get('/health', (req, res) => {
+app.get('/api/auth/health-check', (req, res) => {
     res.status(200).json({ status: 'Auth Service is healthy', timestamp: getLegacyManilaDate() });
 });
 
 // DEBUG: Check DB Columns
-app.get('/debug/db-columns', async (req, res) => {
+app.get('/api/auth/debug/db-columns', async (req, res) => {
     try {
         const result = await prisma.$queryRaw`
             SELECT column_name, data_type 
@@ -476,7 +487,7 @@ const aiAntiSpamEngine = {
 };
 
 // Register (Global User - GoTyme Aligned)
-app.post('/register', async (req, res) => {
+app.post('/api/auth/register', async (req, res) => {
     const { email, password, phoneNumber, firstName, lastName, pin, deviceId } = req.body;
 
     // AI Anti-Spam Check
@@ -628,7 +639,7 @@ app.post('/register', async (req, res) => {
  * Phase 1: Phone + OTP Only
  * Creates a temporary profile with UNVERIFIED status
  */
-app.post('/register/quick', async (req, res) => {
+app.post('/api/auth/register/quick', async (req, res) => {
     const { phoneNumber, deviceId, firstName } = req.body;
 
     if (!phoneNumber) return res.status(400).json({ error: 'Phone number is required' });
@@ -710,7 +721,7 @@ app.post('/register/quick', async (req, res) => {
 });
 
 // Check if email is already taken (Ecosystem-wide)
-app.get('/check-email', async (req, res) => {
+app.get('/api/auth/check-email', async (req, res) => {
     const { email } = req.query;
     if (!email) return res.status(400).json({ error: 'Email is required' });
 
@@ -740,7 +751,7 @@ app.get('/check-email', async (req, res) => {
 });
 
 // Check if phone number is already taken (Ecosystem-wide)
-app.get('/check-phone', async (req, res) => {
+app.get('/api/auth/check-phone', async (req, res) => {
     const { phone } = req.query;
     if (!phone) return res.status(400).json({ error: 'Phone is required' });
 
@@ -790,7 +801,7 @@ app.get('/check-phone', async (req, res) => {
 });
 
 // Mobile Login - Phase 1: Identify & Challenge (GoTyme Style)
-app.post('/login/mobile/identify', async (req, res) => {
+app.post('/api/auth/login/mobile/identify', async (req, res) => {
     let { phoneNumber, deviceId } = req.body;
 
     if (!phoneNumber) return res.status(400).json({ error: 'Mobile number or email is required' });
@@ -947,7 +958,7 @@ app.post('/login/mobile/identify', async (req, res) => {
 });
 
 // Mobile Login - Phase 2: Verify PIN
-app.post('/login/mobile/verify-pin', async (req, res) => {
+app.post('/api/auth/login/mobile/verify-pin', async (req, res) => {
     const { userId, pin, deviceId } = req.body;
 
     try {
@@ -1009,7 +1020,7 @@ app.post('/login/mobile/verify-pin', async (req, res) => {
 });
 
 // Mobile Login - Phase 3: Setup PIN (for users without one)
-app.post('/login/mobile/setup-pin', async (req, res) => {
+app.post('/api/auth/login/mobile/setup-pin', async (req, res) => {
     const { userId, pin } = req.body;
 
     if (!pin || pin.length !== 6 || isNaN(pin)) {
@@ -1052,7 +1063,7 @@ app.post('/login/mobile/setup-pin', async (req, res) => {
 });
 
 // Resend OTP
-app.post('/resend-otp', async (req, res) => {
+app.post('/api/auth/resend-otp', async (req, res) => {
     const { userId, type } = req.body; // type can be 'EMAIL', 'SMS', or 'BOTH'
     console.log(`[Resend-OTP] Request received for userId: ${userId}, type: ${type}`);
 
@@ -1120,7 +1131,7 @@ app.post('/resend-otp', async (req, res) => {
 });
 
 // Verify OTP (Universal Endpoint for Mobile & Web)
-app.post(['/verify-otp', '/login/mobile/verify-otp'], async (req, res) => {
+app.post(['/api/auth/verify-otp', '/api/auth/login/mobile/verify-otp'], async (req, res) => {
     const { userId, otp, type, deviceId } = req.body; // type can be 'EMAIL', 'SMS', 'BOTH', 'KYC', or 'DEVICE'
     try {
         const user = await prisma.user.findUnique({ where: { id: userId } });
@@ -1229,7 +1240,7 @@ app.post(['/verify-otp', '/login/mobile/verify-otp'], async (req, res) => {
 });
 
 // SSO Login
-app.post('/sso/login', async (req, res) => {
+app.post('/api/auth/sso/login', async (req, res) => {
     const { email, password, apiKey } = req.body;
     try {
         // 1. Verify App
@@ -1281,7 +1292,7 @@ app.post('/sso/login', async (req, res) => {
 });
 
 // Logout (Internal)
-app.post('/logout', async (req, res) => {
+app.post('/api/auth/logout', async (req, res) => {
     const { userId } = req.body;
     try {
         if (userId) {
@@ -1299,7 +1310,7 @@ app.post('/logout', async (req, res) => {
 });
 
 // Legacy Login (Internal) & Proxied Mobile Login
-app.post('/login', async (req, res) => {
+app.post('/api/auth/login', async (req, res) => {
     const { email, password } = req.body;
     try {
         const user = await prisma.user.findUnique({ where: { email } });
@@ -1312,18 +1323,11 @@ app.post('/login', async (req, res) => {
         // If user is managed by BudolID, verify their credentials via SSO Proxy
         if (user.passwordHash === 'SSO_MANAGED' || user.passwordHash === 'QUICK_REG_PENDING') {
             try {
-                // Use NEXT_PUBLIC_SSO_URL from env or 127.0.0.1 (not localhost) to avoid Node 18 IPv6 fetch issues
                 const budolIdUrl = process.env.BUDOL_ID_URL || process.env.NEXT_PUBLIC_SSO_URL || 'http://127.0.0.1:8000';
-                
-                // Use native fetch to proxy the login request
                 const response = await fetch(`${budolIdUrl}/auth/sso/login`, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({
-                        email,
-                        password,
-                        apiKey: 'bp_key_2025' // Core ecosystem key
-                    })
+                    body: JSON.stringify({ email, password, apiKey: 'bp_key_2025' })
                 });
 
                 if (response.ok) {
@@ -1331,16 +1335,42 @@ app.post('/login', async (req, res) => {
                     if (data.token) {
                         isPasswordValid = true;
                     } else {
-                        return res.status(401).json({ error: 'SSO Proxy: No token in response', data });
+                        return res.status(401).json({ error: 'SSO Proxy: No token in response' });
                     }
                 } else {
-                    const errText = await response.text();
-                    console.error(`[SSO Proxy] BudolID rejected login for ${email} with status ${response.status}`, errText);
-                    return res.status(401).json({ error: `SSO Proxy Rejected: ${response.status} - ${errText}`, budolIdUrl });
+                    console.warn(`[SSO Proxy] BudolID rejected login for ${email}, falling back to OTP`);
                 }
             } catch (err) {
-                console.error(`[SSO Proxy] Failed to connect to BudolID for ${email}:`, err.message);
-                return res.status(500).json({ error: `SSO Proxy Fetch Failed: ${err.message}`, budolIdUrl: process.env.BUDOL_ID_URL || process.env.NEXT_PUBLIC_SSO_URL || 'http://127.0.0.1:8000' });
+                console.warn(`[SSO Proxy] BudolID unavailable for ${email}, falling back to OTP:`, err.message);
+            }
+
+            // If SSO failed or unavailable, send OTP instead
+            if (!isPasswordValid) {
+                const otpCode = generateOTP();
+                const otpExpiresAt = new Date(getNowUTC().getTime() + 10 * 60 * 1000);
+
+                await prisma.user.update({
+                    where: { id: user.id },
+                    data: { otpCode, otpExpiresAt, otpUpdatedAt: getNowUTC() }
+                });
+
+                const deliveryType = (user.email && !user.email.endsWith('@budolpay.local')) ? 'BOTH' : 'SMS';
+                const recipient = user.email || user.phoneNumber;
+
+                console.log(`[Login] Sending OTP to ${maskPII(recipient)} via ${deliveryType}`);
+                try {
+                    await sendOTP(recipient, otpCode, deliveryType);
+                } catch (err) {
+                    console.error(`[Login] sendOTP failed: ${err.message}`);
+                }
+                console.log(`[LOCAL] Login OTP for ${maskPII(recipient)}: \x1b[33m${otpCode}\x1b[0m`);
+
+                return res.json({
+                    otpRequired: true,
+                    userId: user.id,
+                    user: { id: user.id, email: user.email, firstName: user.firstName, lastName: user.lastName },
+                    message: 'OTP sent to your registered email'
+                });
             }
         } else {
             // Standard bcrypt check for local BudolPay users
@@ -1351,16 +1381,41 @@ app.post('/login', async (req, res) => {
             return res.status(401).json({ error: 'Invalid credentials' });
         }
 
-        const token = jwt.sign({ userId: user.id, role: user.role }, JWT_SECRET, { expiresIn: '24h' });
+        // BSP 808 Compliant: Always require OTP after password verification
+        const otpCode = generateOTP();
+        const otpExpiresAt = new Date(getNowUTC().getTime() + 10 * 60 * 1000);
 
-        // Audit: Standard Web/Mobile Login
-        await createAuditLog(req, user.id, 'WEB_LOGIN', {
-            method: user.passwordHash === 'SSO_MANAGED' ? 'SSO_MANAGED_PROXY' : 'PASSWORD',
-            status: 'SUCCESS',
-            timestamp: getLegacyManilaISO()
+        await prisma.user.update({
+            where: { id: user.id },
+            data: { otpCode, otpExpiresAt, otpUpdatedAt: getNowUTC() }
         });
 
-        res.json({ token, user: { id: user.id, email: user.email, role: user.role, firstName: user.firstName, lastName: user.lastName, phoneNumber: user.phoneNumber } });
+        const deliveryType = (user.email && !user.email.endsWith('@budolpay.local')) ? 'BOTH' : 'SMS';
+        const recipient = user.email || user.phoneNumber;
+
+        console.log(`[Login] Password verified for ${maskPII(user.email)}. Sending OTP to ${maskPII(recipient)} via ${deliveryType}`);
+        try {
+            await sendOTP(recipient, otpCode, deliveryType);
+        } catch (err) {
+            console.error(`[Login] sendOTP failed: ${err.message}`);
+        }
+        console.log(`[LOCAL] Login OTP for ${maskPII(recipient)}: \x1b[33m${otpCode}\x1b[0m`);
+
+        // Audit: Password verified, OTP sent
+        await createAuditLog(req, user.id, 'OTP_SENT', {
+            method: 'EMAIL',
+            recipient: maskPII(recipient),
+            status: 'SUCCESS',
+            timestamp: getLegacyManilaISO()
+        }, 'Security', user.id);
+
+        res.json({
+            status: 'OTP_REQUIRED',
+            otpRequired: true,
+            userId: user.id,
+            user: { id: user.id, email: user.email, firstName: user.firstName, lastName: user.lastName },
+            message: 'OTP sent to your registered email'
+        });
     } catch (error) {
         console.error('[Login Error]', error);
         res.status(500).json({ error: error.message });
@@ -1370,7 +1425,7 @@ app.post('/login', async (req, res) => {
 // --- PIN & BIOMETRIC MANAGEMENT ---
 
 // Update PIN
-app.post('/pin/update', async (req, res) => {
+app.post('/api/auth/pin/update', async (req, res) => {
     const { userId, oldPin, newPin } = req.body;
 
     if (newPin.length !== 6 || isNaN(newPin)) {
@@ -1407,7 +1462,7 @@ app.post('/pin/update', async (req, res) => {
 });
 
 // Biometric Registration Challenge (GoTyme Standard)
-app.post('/biometric/register-challenge', async (req, res) => {
+app.post('/api/auth/biometric/register-challenge', async (req, res) => {
     const { userId } = req.body;
     try {
         const user = await prisma.user.findUnique({ where: { id: userId } });
@@ -1432,7 +1487,7 @@ app.post('/biometric/register-challenge', async (req, res) => {
 });
 
 // Biometric Registration Verify
-app.post('/biometric/register-verify', async (req, res) => {
+app.post('/api/auth/biometric/register-verify', async (req, res) => {
     const { userId, credentialId, publicKey } = req.body;
     try {
         await prisma.user.update({
@@ -1449,7 +1504,7 @@ app.post('/biometric/register-verify', async (req, res) => {
 });
 
 // Biometric Login Verify
-app.post('/biometric/login-verify', async (req, res) => {
+app.post('/api/auth/biometric/login-verify', async (req, res) => {
     const { userId, deviceId, signature } = req.body;
     try {
         const user = await prisma.user.findUnique({ where: { id: userId } });
@@ -1496,13 +1551,13 @@ app.post('/biometric/login-verify', async (req, res) => {
 
 // Global Verify Token (For all apps) - Consolidate with the main authenticated /verify endpoint above
 // The authenticated endpoint at line ~182 handles this securely with middleware.
-// app.get('/verify', ... removed duplicate ...);
+// app.get('/api/auth/verify', ... removed duplicate ...);
 
 
-app.get('/health', (req, res) => res.json({ status: 'OK', service: 'auth-service', version: 'v3.2.0' }));
+app.get('/api/auth/health', (req, res) => res.json({ status: 'OK', service: 'auth-service', version: 'v3.2.0' }));
 
 // User Search (Used for Send Money recipient lookup)
-app.get('/user/find', async (req, res) => {
+app.get('/api/auth/user/find', async (req, res) => {
     const { email, phone } = req.query;
 
     if (!email && !phone) {
@@ -1613,7 +1668,7 @@ app.get('/user/find', async (req, res) => {
 });
 
 // Favorites Management
-app.get('/favorites', authenticate, async (req, res) => {
+app.get('/api/auth/favorites', authenticate, async (req, res) => {
     try {
         const favorites = await prisma.favoriteRecipient.findMany({
             where: { userId: req.user.id },
@@ -1647,7 +1702,7 @@ app.get('/favorites', authenticate, async (req, res) => {
     }
 });
 
-app.post('/favorites', authenticate, async (req, res) => {
+app.post('/api/auth/favorites', authenticate, async (req, res) => {
     const { recipientId, alias } = req.body;
 
     if (!recipientId) return res.status(400).json({ error: 'Recipient ID is required' });
@@ -1698,7 +1753,7 @@ app.post('/favorites', authenticate, async (req, res) => {
     }
 });
 
-app.delete('/favorites/:recipientId', authenticate, async (req, res) => {
+app.delete('/api/auth/favorites/:recipientId', authenticate, async (req, res) => {
     const { recipientId } = req.params;
 
     try {
@@ -1725,4 +1780,4 @@ if (require.main === module) {
     });
 }
 
-module.exports = { app, maskPII };
+module.exports = app;
