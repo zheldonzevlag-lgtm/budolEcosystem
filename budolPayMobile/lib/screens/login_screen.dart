@@ -864,6 +864,9 @@ class _LoginScreenState extends State<LoginScreen> with WidgetsBindingObserver {
             controller: _phoneController,
             keyboardType: TextInputType.phone,
             style: const TextStyle(color: Colors.white),
+            inputFormatters: [FilteringTextInputFormatter.digitsOnly],
+            maxLength: 12,
+            maxLengthEnforcement: MaxLengthEnforcement.none,
             decoration: _inputDecoration(
               'Mobile Number', 
               Icons.phone_android, 
@@ -874,6 +877,7 @@ class _LoginScreenState extends State<LoginScreen> with WidgetsBindingObserver {
                   ? const Icon(Icons.error_outline, color: Colors.redAccent)
                   : _isPhoneValid ? const Icon(Icons.check_circle_outline, color: Colors.greenAccent) : null,
               errorText: _phoneError,
+              counterText: '',
             ),
           ),
         if (isEmail) ...[
@@ -1184,12 +1188,13 @@ class _LoginScreenState extends State<LoginScreen> with WidgetsBindingObserver {
     );
   }
 
-  InputDecoration _inputDecoration(String label, IconData icon, {Color? iconColor, String? errorText, Widget? suffixIcon}) {
+  InputDecoration _inputDecoration(String label, IconData icon, {Color? iconColor, String? errorText, Widget? suffixIcon, String? counterText}) {
     return InputDecoration(
       labelText: label,
       prefixIcon: Icon(icon, color: iconColor ?? Colors.white70),
       suffixIcon: suffixIcon,
       errorText: errorText,
+      counterText: counterText,
       labelStyle: const TextStyle(color: Colors.white70),
       filled: true,
       fillColor: Colors.white.withValues(alpha: 0.1),
