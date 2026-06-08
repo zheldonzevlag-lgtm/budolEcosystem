@@ -54,12 +54,30 @@ export const uploadImage = async (input) => {
     // If it's a File object, compress it
     if (typeof fileOrString !== 'string' && fileOrString instanceof File) {
         try {
+            // Check original file size before compression
+            const MAX_ORIGINAL_IMAGE_SIZE = 10 * 1024 * 1024; // 10MB
+            if (fileOrString.size > MAX_ORIGINAL_IMAGE_SIZE) {
+                throw new Error(`Image is too large. Please select an image under 10MB.`);
+            }
+
             base64Data = await compressImage(fileOrString, {
                 maxWidth: 1200,
                 maxHeight: 1200,
                 quality: 0.8
             });
+            
+            // Check base64 size after compression (Vercel payload limit is 4.5MB)
+            // Base64 is ~33% larger than binary, so 3.3MB binary = ~4.4MB base64
+            const MAX_BASE64_PAYLOAD = 4.4 * 1024 * 1024;
+            // Rough estimation of base64 bytes: length * (3/4)
+            if (base64Data.length * 0.75 > MAX_BASE64_PAYLOAD) {
+                 throw new Error(`Image is still too large after compression. Please select a smaller image (under 3MB).`);
+            }
         } catch (error) {
+            // Only fall back to raw base64 if it wasn't a size error
+            if (error.message.includes('too large')) {
+                throw error;
+            }
             console.error("Compression failed", error);
             base64Data = await new Promise((resolve) => {
                 const reader = new FileReader();
@@ -88,20 +106,20 @@ export const uploadImage = async (input) => {
 
         let errorMessage = `Upload failed: Server returned ${response.status} ${response.statusText}`;
         
-        // Try to parse as JSON if the response looks like JSON
-        if (responseText.trim().startsWith('{') || responseText.trim().startsWith('[')) {
+        // Handle specific 413 error (Vercel/Next.js payload too large)
+        if (response.status === 413 || errorMessage.includes('FUNCTION_PAYLOAD_TOO_LARGE') || responseText.includes('413')) {
+            errorMessage = 'The image is too large to process. Maximum upload size is 3MB.';
+        } else if (responseText.trim().startsWith('{') || responseText.trim().startsWith('[')) {
             try {
                 const errorData = JSON.parse(responseText);
                 errorMessage = errorData.error || errorMessage;
             } catch (parseError) {
-                // JSON parsing failed, use the raw text (truncated to prevent huge errors)
                 console.error('Upload failed with malformed JSON:', responseText.substring(0, 500));
                 errorMessage = `Upload failed: ${responseText.substring(0, 200)}`;
             }
         } else if (responseText) {
-            // Non-JSON response (likely HTML error page)
             console.error('Upload failed with non-JSON response:', responseText.substring(0, 500));
-            errorMessage = `Upload failed: ${responseText.substring(0, 200)}`;
+            errorMessage = `Upload failed: Server error or file too large.`;
         }
         
         throw new Error(errorMessage);
@@ -120,6 +138,15 @@ export const uploadVideo = async (input) => {
 
     let base64Data = fileOrString;
     if (typeof fileOrString !== 'string' && fileOrString instanceof File) {
+        // Vercel Serverless has a strict 4.5MB request body payload limit.
+        // Base64 encoding adds ~33% overhead.
+        // 3.3MB * 1.33 = ~4.4MB payload, safely under the 4.5MB limit.
+        const MAX_VIDEO_SIZE = 3.3 * 1024 * 1024; // 3.3MB
+        
+        if (fileOrString.size > MAX_VIDEO_SIZE) {
+            throw new Error(`Video is too large (${(fileOrString.size / (1024*1024)).toFixed(1)}MB). Maximum allowed video size is 3.3MB.`);
+        }
+
         base64Data = await new Promise((resolve) => {
             const reader = new FileReader();
             reader.onload = (e) => resolve(e.target.result);
@@ -145,20 +172,19 @@ export const uploadVideo = async (input) => {
 
         let errorMessage = `Video upload failed: Server returned ${response.status} ${response.statusText}`;
         
-        // Try to parse as JSON if the response looks like JSON
-        if (responseText.trim().startsWith('{') || responseText.trim().startsWith('[')) {
+        if (response.status === 413 || errorMessage.includes('FUNCTION_PAYLOAD_TOO_LARGE') || responseText.includes('413')) {
+            errorMessage = 'The video is too large to process. Maximum upload size is 3.3MB.';
+        } else if (responseText.trim().startsWith('{') || responseText.trim().startsWith('[')) {
             try {
                 const errorData = JSON.parse(responseText);
                 errorMessage = errorData.error || errorMessage;
             } catch (parseError) {
-                // JSON parsing failed, use the raw text (truncated to prevent huge errors)
                 console.error('Video upload failed with malformed JSON:', responseText.substring(0, 500));
                 errorMessage = `Video upload failed: ${responseText.substring(0, 200)}`;
             }
         } else if (responseText) {
-            // Non-JSON response (likely HTML error page or timeout)
             console.error('Video upload failed with non-JSON response:', responseText.substring(0, 500));
-            errorMessage = `Video upload failed: ${responseText.substring(0, 200)}`;
+            errorMessage = `Video upload failed: Server error or file too large.`;
         }
         
         throw new Error(errorMessage);
