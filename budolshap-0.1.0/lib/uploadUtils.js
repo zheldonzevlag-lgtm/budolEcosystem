@@ -144,7 +144,7 @@ export const uploadVideo = async (input) => {
         const MAX_VIDEO_SIZE = 3.3 * 1024 * 1024; // 3.3MB
         
         if (fileOrString.size > MAX_VIDEO_SIZE) {
-            throw new Error(`Video is too large (${(fileOrString.size / (1024*1024)).toFixed(1)}MB). Maximum allowed video size is 3.3MB.`);
+            throw new Error(`The video is too large to process. Maximum upload size is 3.3MB`);
         }
 
         base64Data = await new Promise((resolve) => {

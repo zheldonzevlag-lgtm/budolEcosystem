@@ -508,7 +508,7 @@ export default function AddProductWizard({ initialData, storeId }) {
                             return cloudinaryUrl;
                         } catch (error) {
                             console.error('Failed to upload image:', error);
-                            throw new Error(`Failed to upload image: ${img.fileName || 'unknown'}`);
+                            throw new Error(error.message || `Failed to upload image: ${img.fileName || 'unknown'}`);
                         }
                     }
                     // If it's a string but not a URL, try to use it
@@ -531,7 +531,7 @@ export default function AddProductWizard({ initialData, storeId }) {
                             return cloudinaryUrl;
                         } catch (error) {
                             console.error('Failed to upload video:', error);
-                            throw new Error(`Failed to upload video: ${video.fileName || 'unknown'}`);
+                            throw new Error(error.message || `Failed to upload video: ${video.fileName || 'unknown'}`);
                         }
                     }
                     if (typeof video === 'string') {
@@ -564,7 +564,7 @@ export default function AddProductWizard({ initialData, storeId }) {
                                 return { ...variant, image: imageUrl };
                             } catch (error) {
                                 console.error('Failed to upload variant image:', error);
-                                throw new Error(`Failed to upload variant image`);
+                                throw new Error(error.message || `Failed to upload variant image`);
                             }
                         }
                         
