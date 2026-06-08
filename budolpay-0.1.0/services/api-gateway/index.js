@@ -6,6 +6,7 @@ const helmet = require('helmet');
 const morgan = require('morgan');
 const cors = require('cors');
 const jwt = require('jsonwebtoken');
+const rateLimit = require('express-rate-limit');
 const path = require('path');
 require('dotenv').config({ path: path.resolve(__dirname, '../../.env'), override: true });
 const LOCAL_IP = process.env.LOCAL_IP;
@@ -32,10 +33,24 @@ const app = express();
 const server = http.createServer(app);
 
 // 1. GLOBAL MIDDLEWARE (Security, CORS, Logging) - MUST BE FIRST
+const ALLOWED_ORIGINS = [
+    process.env.NEXT_PUBLIC_APP_URL,
+    process.env.NEXT_PUBLIC_BASE_URL,
+    process.env.PAYMENT_GATEWAY_URL,
+    'http://localhost:3000',
+    'http://localhost:3001',
+].filter(Boolean);
+
 app.use(cors({
-    origin: '*', // Allow all for development
+    origin: (origin, callback) => {
+        if (!origin || ALLOWED_ORIGINS.includes(origin)) {
+            callback(null, true);
+        } else {
+            callback(new Error('Not allowed by CORS'));
+        }
+    },
     methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS', 'PATCH'],
-    allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With'],
+    allowedHeaders: ['Content-Type', 'Authorization'],
     credentials: true
 }));
 app.use(helmet({
@@ -43,6 +58,51 @@ app.use(helmet({
     crossOriginResourcePolicy: { policy: "cross-origin" }
 }));
 app.use(morgan('dev'));
+
+// Rate Limiting
+const loginLimiter = rateLimit({
+    windowMs: 15 * 60 * 1000, // 15 minutes
+    max: 5,
+    message: { error: 'Too many login attempts. Please try again later.' },
+    standardHeaders: true,
+    legacyHeaders: false,
+});
+
+const otpLimiter = rateLimit({
+    windowMs: 5 * 60 * 1000, // 5 minutes
+    max: 3,
+    message: { error: 'Too many OTP attempts. Please request a new code.' },
+    standardHeaders: true,
+    legacyHeaders: false,
+});
+
+const financialLimiter = rateLimit({
+    windowMs: 60 * 1000, // 1 minute
+    max: 10,
+    keyGenerator: (req) => req.user?.userId || req.ip,
+    message: { error: 'Too many requests. Please slow down.' },
+    standardHeaders: true,
+    legacyHeaders: false,
+});
+
+const generalLimiter = rateLimit({
+    windowMs: 60 * 1000, // 1 minute
+    max: 100,
+    message: { error: 'Too many requests. Please try again later.' },
+    standardHeaders: true,
+    legacyHeaders: false,
+});
+
+app.use('/api/auth/sso/login', loginLimiter);
+app.use('/api/auth/sso/login-form', loginLimiter);
+app.use('/api/auth/verify-otp', otpLimiter);
+app.use('/api/auth/login/mobile/verify-otp', otpLimiter);
+app.use('/api/wallet/update-balance', financialLimiter);
+app.use('/api/wallet/process-qr', financialLimiter);
+app.use('/api/transactions/transfer', financialLimiter);
+app.use('/api/transactions/cash-in', financialLimiter);
+app.use('/api/transactions/cash-out', financialLimiter);
+app.use(generalLimiter);
 
 // Custom logging middleware for deep visibility
 app.use((req, res, next) => {
@@ -97,9 +157,9 @@ const initPusher = async (force = false) => {
         const method = settingsMap['REALTIME_METHOD'] || 'SWR';
         
         if (method === 'PUSHER' || process.env.PUSHER_APP_ID) {
-            const appId = settingsMap['REALTIME_PUSHER_APP_ID'] || settingsMap['PUSHER_APP_ID'] || process.env.PUSHER_APP_ID || "2090861";
-            const key = settingsMap['REALTIME_PUSHER_KEY'] || settingsMap['PUSHER_KEY'] || process.env.PUSHER_KEY || "7c449017a85bda0ae88a";
-            const secret = settingsMap['REALTIME_PUSHER_SECRET'] || settingsMap['PUSHER_SECRET'] || process.env.PUSHER_SECRET || "2ceb82a5951aa226ce93";
+            const appId = settingsMap['REALTIME_PUSHER_APP_ID'] || settingsMap['PUSHER_APP_ID'] || process.env.PUSHER_APP_ID;
+            const key = settingsMap['REALTIME_PUSHER_KEY'] || settingsMap['PUSHER_KEY'] || process.env.PUSHER_KEY;
+            const secret = settingsMap['REALTIME_PUSHER_SECRET'] || settingsMap['PUSHER_SECRET'] || process.env.PUSHER_SECRET;
             const cluster = settingsMap['REALTIME_PUSHER_CLUSTER'] || settingsMap['PUSHER_CLUSTER'] || process.env.PUSHER_CLUSTER || "ap1";
 
             if (appId && key && secret && cluster) {
@@ -127,34 +187,20 @@ const initPusher = async (force = false) => {
 // Initial call
 initPusher();
 
-const JWT_SECRET = process.env.JWT_SECRET || 'GJ7Lxn0/kdV/KuZJ5xJ7Ip0RvMerrGW5n0gf44mfHgc=';
+if (!process.env.JWT_SECRET) {
+    console.error('FATAL: JWT_SECRET environment variable is required');
+    process.exit(1);
+}
+const JWT_SECRET = process.env.JWT_SECRET;
 
 const { hasPermission, PERMISSIONS } = require('../../packages/database/rbac-config');
 
 // Middleware to verify JWT and check for PIN requirement
 const verifyToken = (req, res, next) => {
-    // Development bypass: allow local requests or certain routes without full token validation if needed
-    if (process.env.NODE_ENV === 'development') {
-        // Still try to extract user info if token exists
-        const authHeader = req.headers['authorization'];
-        const token = authHeader && authHeader.split(' ')[1];
-        if (token) {
-            try {
-                const decoded = jwt.verify(token, JWT_SECRET);
-                req.user = decoded;
-            } catch (err) {
-                console.log('[Gateway] Dev Mode: Invalid token but continuing');
-            }
-        }
-        return next();
-    }
-
     const authHeader = req.headers['authorization'];
     const token = authHeader && authHeader.split(' ')[1];
 
     if (!token) {
-        // If no token, we still want to proceed for public routes
-        // But we ensure req.user is null
         req.user = null;
         return next();
     }
@@ -162,44 +208,16 @@ const verifyToken = (req, res, next) => {
     try {
         const decoded = jwt.verify(token, JWT_SECRET);
         req.user = decoded;
-        
-        // ... rest of the logic
-
-        // RBAC Check for Admin Routes
-        if (req.originalUrl.includes('/admin') && !hasPermission(decoded.role, PERMISSIONS.TRANSACTION_READ_ALL)) {
-            console.warn(`[RBAC] Access Denied: User ${decoded.userId} with role ${decoded.role} attempted to access Admin route: ${req.originalUrl}`);
-            return res.status(403).json({
-                error: 'Forbidden',
-                message: 'Admin privileges required for this route',
-                compliance_alert: 'Unauthorized access attempts are logged under BSP Circular 808 standards.'
-            });
-        }
-
-        // If the route is NOT /auth (where login happens) and it's a mobile user
-        // We check if they have a PIN set if the token indicates it's missing
-        const isAuthRoute = req.originalUrl.includes('/auth');
-        const isMobile = decoded.type === 'MOBILE';
-
-        if (isMobile && !isAuthRoute && decoded.hasPin === false) {
-            return res.status(403).json({
-                status: 'PIN_SETUP_REQUIRED',
-                error: 'PIN setup required',
-                message: 'You must set up a PIN before accessing this feature.'
-            });
-        }
-
         next();
     } catch (err) {
-        // If token is invalid, let the microservice handle it or reject here
-        // For now, we just pass to next() and let microservices do their own auth
-        next();
+        return res.status(401).json({ error: 'Invalid or expired token' });
     }
 };
 
 const PORT = process.env.PORT || 8080;
 const io = new Server(server, {
     cors: {
-        origin: "*",
+        origin: ALLOWED_ORIGINS,
         methods: ["GET", "POST"]
     }
 });
@@ -342,7 +360,7 @@ const services = [
 // Internal Connectivity Test Route
 router.get('/test-internal', async (req, res) => {
     const results = {};
-    const bypassToken = (process.env.VERCEL_BYPASS_TOKEN || 'PRXvYV0n0D6uF8FIn02y').toString().trim();
+    const bypassToken = (process.env.VERCEL_BYPASS_TOKEN || '').toString().trim();
     
     for (const service of services) {
         try {
@@ -468,11 +486,13 @@ app.use((req, res) => {
 
 // Global Error Handler
 app.use((err, req, res, next) => {
-    console.error('[Gateway] Global Error:', err.stack);
+    console.error('[Gateway] Global Error:', err.message);
+    const safeMessage = process.env.NODE_ENV === 'production'
+        ? 'An unexpected error occurred in the Gateway'
+        : err.message;
     res.status(err.status || 500).json({
         error: err.name || 'InternalServerError',
-        message: err.message || 'An unexpected error occurred in the Gateway',
-        path: req.path
+        message: safeMessage
     });
 });
 

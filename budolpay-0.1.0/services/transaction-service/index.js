@@ -25,7 +25,7 @@ const PORT = process.env.PORT || 8003;
 // 1. Middleware (MUST come before routes)
 app.use(cors());
 app.use(express.json());
-// app.use(verifyToken);
+app.use(verifyToken);
 
 // 2. Vercel Support: Handle API prefix
 const router = express.Router();
@@ -1178,22 +1178,14 @@ router.get('/history/:userId', async (req, res) => {
 
 // Global Error Handler (Ensures JSON instead of HTML)
 app.use((err, req, res, next) => {
-    console.error('[Transaction Service] Global Error:', err.stack);
+    console.error('[Transaction Service] Global Error:', err.message);
+    const safeMessage = process.env.NODE_ENV === 'production'
+        ? 'An unexpected error occurred in the Transaction Service'
+        : err.message;
     res.status(err.status || 500).json({
         error: err.name || 'InternalServerError',
-        message: err.message || 'An unexpected error occurred',
-        path: req.path
-    });
-});
-
-// Global Error Handler
-app.use((err, req, res, next) => {
-    console.error(`[Transaction Service Error] ${err.stack}`);
-    res.status(err.status || 500).json({
-        error: err.name || 'InternalServerError',
-        message: err.message || 'An unexpected error occurred in the Transaction Service',
-        timestamp: getLegacyManilaISO(),
-        path: req.path
+        message: safeMessage,
+        timestamp: getLegacyManilaISO()
     });
 });
 

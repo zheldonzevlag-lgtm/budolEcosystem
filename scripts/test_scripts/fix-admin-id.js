@@ -66,15 +66,15 @@ async function fixAdminId() {
 
             // 3. Update references in a transaction
             await shapPrisma.$transaction([
-                shapPrisma.$executeRawUnsafe(`UPDATE "Order" SET "userId" = '${newId}' WHERE "userId" = '${oldId}'`),
-                shapPrisma.$executeRawUnsafe(`UPDATE "Address" SET "userId" = '${newId}' WHERE "userId" = '${oldId}'`),
-                shapPrisma.$executeRawUnsafe(`UPDATE "AuditLog" SET "userId" = '${newId}' WHERE "userId" = '${oldId}'`),
-                shapPrisma.$executeRawUnsafe(`UPDATE "Cart" SET "userId" = '${newId}' WHERE "userId" = '${oldId}'`),
-                shapPrisma.$executeRawUnsafe(`UPDATE "Rating" SET "userId" = '${newId}' WHERE "userId" = '${oldId}'`),
-                shapPrisma.$executeRawUnsafe(`UPDATE "Chat" SET "buyerId" = '${newId}' WHERE "buyerId" = '${oldId}'`),
-                shapPrisma.$executeRawUnsafe(`UPDATE "Chat" SET "sellerId" = '${newId}' WHERE "sellerId" = '${oldId}'`),
-                shapPrisma.$executeRawUnsafe(`UPDATE "Message" SET "senderId" = '${newId}' WHERE "senderId" = '${oldId}'`),
-                shapPrisma.$executeRawUnsafe(`UPDATE "Store" SET "userId" = '${newId}' WHERE "userId" = '${oldId}'`)
+                shapPrisma.$executeRawUnsafe('UPDATE "Order" SET "userId" = $1 WHERE "userId" = $2', newId, oldId),
+                shapPrisma.$executeRawUnsafe('UPDATE "Address" SET "userId" = $1 WHERE "userId" = $2', newId, oldId),
+                shapPrisma.$executeRawUnsafe('UPDATE "AuditLog" SET "userId" = $1 WHERE "userId" = $2', newId, oldId),
+                shapPrisma.$executeRawUnsafe('UPDATE "Cart" SET "userId" = $1 WHERE "userId" = $2', newId, oldId),
+                shapPrisma.$executeRawUnsafe('UPDATE "Rating" SET "userId" = $1 WHERE "userId" = $2', newId, oldId),
+                shapPrisma.$executeRawUnsafe('UPDATE "Chat" SET "buyerId" = $1 WHERE "buyerId" = $2', newId, oldId),
+                shapPrisma.$executeRawUnsafe('UPDATE "Chat" SET "sellerId" = $1 WHERE "sellerId" = $2', newId, oldId),
+                shapPrisma.$executeRawUnsafe('UPDATE "Message" SET "senderId" = $1 WHERE "senderId" = $2', newId, oldId),
+                shapPrisma.$executeRawUnsafe('UPDATE "Store" SET "userId" = $1 WHERE "userId" = $2', newId, oldId)
             ]);
             console.log('Updated references');
 

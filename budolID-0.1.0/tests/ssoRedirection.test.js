@@ -44,7 +44,7 @@ const JWT_SECRET = 'test-secret';
 
 app.post('/auth/sso/login-form', async (req, res) => {
     const { email, password, apiKey, redirect_uri } = req.body;
-    const activeApiKey = apiKey || 'bp_key_2025';
+    const activeApiKey = apiKey || 'bp_b31ea1888dcb2ba76fdbb776ea8f5b7a';
 
     try {
         const ecosystemApp = await prisma.ecosystemApp.findUnique({ where: { apiKey: activeApiKey } });
@@ -85,7 +85,7 @@ describe('SSO Redirection Logic', () => {
     });
 
     test('should use registered redirectUri if no redirect_uri parameter is provided', async () => {
-        const mockApp = { id: 'app1', name: 'budolPay', apiKey: 'bp_key_2025', redirectUri: 'https://budolpay.vercel.app/api/auth/callback' };
+        const mockApp = { id: 'app1', name: 'budolPay', apiKey: 'bp_b31ea1888dcb2ba76fdbb776ea8f5b7a', redirectUri: 'https://budolpay.vercel.app/api/auth/callback' };
         const mockUser = { id: 'user1', email: 'test@example.com', password: await bcrypt.hash('password123', 10) };
 
         prisma.ecosystemApp.findUnique.mockResolvedValue(mockApp);
@@ -93,14 +93,14 @@ describe('SSO Redirection Logic', () => {
 
         const response = await request(app)
             .post('/auth/sso/login-form')
-            .send({ email: 'test@example.com', password: 'password123', apiKey: 'bp_key_2025' });
+            .send({ email: 'test@example.com', password: 'password123', apiKey: 'bp_b31ea1888dcb2ba76fdbb776ea8f5b7a' });
 
         expect(response.status).toBe(302);
         expect(response.header.location).toContain('https://budolpay.vercel.app/api/auth/callback');
     });
 
     test('should use dynamic redirect_uri if it matches the allowed domain', async () => {
-        const mockApp = { id: 'app1', name: 'budolPay', apiKey: 'bp_key_2025', redirectUri: 'https://budolpay.vercel.app/api/auth/callback' };
+        const mockApp = { id: 'app1', name: 'budolPay', apiKey: 'bp_b31ea1888dcb2ba76fdbb776ea8f5b7a', redirectUri: 'https://budolpay.vercel.app/api/auth/callback' };
         const mockUser = { id: 'user1', email: 'test@example.com', password: await bcrypt.hash('password123', 10) };
 
         prisma.ecosystemApp.findUnique.mockResolvedValue(mockApp);
@@ -109,14 +109,14 @@ describe('SSO Redirection Logic', () => {
         const dynamicUri = 'https://subdomain.budolpay.vercel.app/api/auth/callback';
         const response = await request(app)
             .post('/auth/sso/login-form')
-            .send({ email: 'test@example.com', password: 'password123', apiKey: 'bp_key_2025', redirect_uri: dynamicUri });
+            .send({ email: 'test@example.com', password: 'password123', apiKey: 'bp_b31ea1888dcb2ba76fdbb776ea8f5b7a', redirect_uri: dynamicUri });
 
         expect(response.status).toBe(302);
         expect(response.header.location).toContain(dynamicUri);
     });
 
     test('should fallback to registered redirectUri if dynamic redirect_uri is on a different domain', async () => {
-        const mockApp = { id: 'app1', name: 'budolPay', apiKey: 'bp_key_2025', redirectUri: 'https://budolpay.vercel.app/api/auth/callback' };
+        const mockApp = { id: 'app1', name: 'budolPay', apiKey: 'bp_b31ea1888dcb2ba76fdbb776ea8f5b7a', redirectUri: 'https://budolpay.vercel.app/api/auth/callback' };
         const mockUser = { id: 'user1', email: 'test@example.com', password: await bcrypt.hash('password123', 10) };
 
         prisma.ecosystemApp.findUnique.mockResolvedValue(mockApp);
@@ -125,7 +125,7 @@ describe('SSO Redirection Logic', () => {
         const maliciousUri = 'https://malicious-site.com/callback';
         const response = await request(app)
             .post('/auth/sso/login-form')
-            .send({ email: 'test@example.com', password: 'password123', apiKey: 'bp_key_2025', redirect_uri: maliciousUri });
+            .send({ email: 'test@example.com', password: 'password123', apiKey: 'bp_b31ea1888dcb2ba76fdbb776ea8f5b7a', redirect_uri: maliciousUri });
 
         expect(response.status).toBe(302);
         expect(response.header.location).toContain('https://budolpay.vercel.app/api/auth/callback');
@@ -133,7 +133,7 @@ describe('SSO Redirection Logic', () => {
     });
 
     test('should allow localhost for development', async () => {
-        const mockApp = { id: 'app1', name: 'budolPay', apiKey: 'bp_key_2025', redirectUri: 'https://budolpay.vercel.app/api/auth/callback' };
+        const mockApp = { id: 'app1', name: 'budolPay', apiKey: 'bp_b31ea1888dcb2ba76fdbb776ea8f5b7a', redirectUri: 'https://budolpay.vercel.app/api/auth/callback' };
         const mockUser = { id: 'user1', email: 'test@example.com', password: await bcrypt.hash('password123', 10) };
 
         prisma.ecosystemApp.findUnique.mockResolvedValue(mockApp);
@@ -142,7 +142,7 @@ describe('SSO Redirection Logic', () => {
         const localUri = 'http://localhost:3000/api/auth/callback';
         const response = await request(app)
             .post('/auth/sso/login-form')
-            .send({ email: 'test@example.com', password: 'password123', apiKey: 'bp_key_2025', redirect_uri: localUri });
+            .send({ email: 'test@example.com', password: 'password123', apiKey: 'bp_b31ea1888dcb2ba76fdbb776ea8f5b7a', redirect_uri: localUri });
 
         expect(response.status).toBe(302);
         expect(response.header.location).toContain(localUri);

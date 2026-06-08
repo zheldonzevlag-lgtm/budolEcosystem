@@ -1,0 +1,1240 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>budolEcosystem — Security Audit Report</title>
+    <style>
+        :root {
+            --critical: #dc2626;
+            --critical-bg: #fef2f2;
+            --high: #ea580c;
+            --high-bg: #fff7ed;
+            --medium: #ca8a04;
+            --medium-bg: #fefce8;
+            --low: #2563eb;
+            --low-bg: #eff6ff;
+            --dark: #1e293b;
+            --gray: #64748b;
+            --light: #f1f5f9;
+            --border: #e2e8f0;
+            --success: #16a34a;
+        }
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: 'Segoe UI', system-ui, -apple-system, sans-serif; background: #f8fafc; color: var(--dark); line-height: 1.6; }
+        .container { max-width: 1200px; margin: 0 auto; padding: 0 24px; }
+
+        /* Header */
+        .header { background: linear-gradient(135deg, #1e293b 0%, #334155 100%); color: white; padding: 48px 0; }
+        .header h1 { font-size: 2.5rem; font-weight: 800; margin-bottom: 8px; }
+        .header .subtitle { color: #94a3b8; font-size: 1.1rem; }
+        .header .meta { display: flex; gap: 24px; margin-top: 20px; color: #94a3b8; font-size: 0.9rem; }
+        .header .meta span { display: flex; align-items: center; gap: 6px; }
+
+        /* Stats Bar */
+        .stats-bar { display: grid; grid-template-columns: repeat(4, 1fr); gap: 16px; margin: -40px auto 40px; position: relative; z-index: 1; }
+        .stat-card { background: white; border-radius: 12px; padding: 24px; text-align: center; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.1); border-top: 4px solid; }
+        .stat-card.critical { border-color: var(--critical); }
+        .stat-card.high { border-color: var(--high); }
+        .stat-card.medium { border-color: var(--medium); }
+        .stat-card.low { border-color: var(--low); }
+        .stat-card .number { font-size: 2.5rem; font-weight: 800; }
+        .stat-card.critical .number { color: var(--critical); }
+        .stat-card.high .number { color: var(--high); }
+        .stat-card.medium .number { color: var(--medium); }
+        .stat-card.low .number { color: var(--low); }
+        .stat-card .label { font-size: 0.85rem; color: var(--gray); text-transform: uppercase; letter-spacing: 1px; font-weight: 600; }
+
+        /* Sections */
+        .section { margin-bottom: 40px; }
+        .section-title { font-size: 1.5rem; font-weight: 700; margin-bottom: 20px; padding-bottom: 12px; border-bottom: 2px solid var(--border); }
+
+        /* Vulnerability Cards */
+        .vuln-card { background: white; border-radius: 12px; margin-bottom: 16px; box-shadow: 0 1px 3px rgba(0,0,0,0.1); overflow: hidden; border-left: 4px solid; }
+        .vuln-card.critical { border-left-color: var(--critical); }
+        .vuln-card.high { border-left-color: var(--high); }
+        .vuln-card.medium { border-left-color: var(--medium); }
+        .vuln-card.low { border-left-color: var(--low); }
+        .vuln-header { padding: 16px 20px; display: flex; align-items: center; gap: 12px; cursor: pointer; }
+        .vuln-header:hover { background: var(--light); }
+        .severity-badge { display: inline-block; padding: 2px 10px; border-radius: 20px; font-size: 0.75rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px; color: white; flex-shrink: 0; }
+        .severity-badge.critical { background: var(--critical); }
+        .severity-badge.high { background: var(--high); }
+        .severity-badge.medium { background: var(--medium); }
+        .severity-badge.low { background: var(--low); }
+        .vuln-title { font-weight: 600; font-size: 1rem; }
+        .vuln-id { color: var(--gray); font-size: 0.85rem; font-family: monospace; }
+        .vuln-body { padding: 0 20px 20px; display: none; }
+        .vuln-card.open .vuln-body { display: block; }
+        .vuln-body h4 { font-size: 0.85rem; text-transform: uppercase; letter-spacing: 1px; color: var(--gray); margin: 16px 0 6px; font-weight: 600; }
+        .vuln-body pre { background: #1e293b; color: #e2e8f0; padding: 16px; border-radius: 8px; overflow-x: auto; font-size: 0.85rem; line-height: 1.5; margin: 8px 0; }
+        .vuln-body code { background: #f1f5f9; padding: 2px 6px; border-radius: 4px; font-size: 0.85rem; font-family: 'Cascadia Code', 'Fira Code', monospace; }
+        .vuln-body pre code { background: none; padding: 0; }
+        .vuln-body .risk { background: #fef2f2; border: 1px solid #fecaca; padding: 12px 16px; border-radius: 8px; color: #991b1b; }
+        .vuln-body .files { background: var(--light); padding: 12px 16px; border-radius: 8px; }
+        .vuln-body .files code { background: white; padding: 4px 8px; border-radius: 4px; display: inline-block; margin: 2px 0; font-size: 0.8rem; }
+        .toggle-icon { margin-left: auto; transition: transform 0.2s; color: var(--gray); }
+        .vuln-card.open .toggle-icon { transform: rotate(180deg); }
+
+        /* Action Plan */
+        .phase { background: white; border-radius: 12px; margin-bottom: 24px; box-shadow: 0 1px 3px rgba(0,0,0,0.1); overflow: hidden; }
+        .phase-header { padding: 20px 24px; display: flex; align-items: center; gap: 16px; }
+        .phase-number { width: 48px; height: 48px; border-radius: 12px; display: flex; align-items: center; justify-content: center; font-weight: 800; font-size: 1.2rem; color: white; flex-shrink: 0; }
+        .phase-1 .phase-number { background: var(--critical); }
+        .phase-2 .phase-number { background: var(--high); }
+        .phase-3 .phase-number { background: var(--medium); }
+        .phase-4 .phase-number { background: var(--low); }
+        .phase-title { font-size: 1.15rem; font-weight: 700; }
+        .phase-timeline { font-size: 0.85rem; color: var(--gray); }
+        .phase-body { padding: 0 24px 24px; }
+        .phase-body .impact { background: #fffbeb; border: 1px solid #fde68a; padding: 12px 16px; border-radius: 8px; margin-bottom: 16px; font-size: 0.9rem; color: #92400e; }
+        .phase-body .impact strong { color: #78350f; }
+        .action-item { background: var(--light); border-radius: 8px; padding: 16px; margin-bottom: 12px; }
+        .action-item h4 { font-size: 0.95rem; margin-bottom: 8px; }
+        .action-item pre { background: #1e293b; color: #e2e8f0; padding: 12px; border-radius: 6px; overflow-x: auto; font-size: 0.8rem; margin: 8px 0; }
+        .action-item .files-list { margin-top: 8px; }
+        .action-item .files-list code { display: inline-block; background: white; padding: 2px 8px; border-radius: 4px; font-size: 0.8rem; margin: 2px; border: 1px solid var(--border); }
+        .verification { background: #f0fdf4; border: 1px solid #bbf7d0; padding: 10px 14px; border-radius: 6px; margin-top: 10px; font-size: 0.85rem; color: #166534; }
+        .verification strong { color: #14532d; }
+
+        /* Env Table */
+        .env-table { width: 100%; border-collapse: collapse; background: white; border-radius: 12px; overflow: hidden; box-shadow: 0 1px 3px rgba(0,0,0,0.1); }
+        .env-table th { background: var(--dark); color: white; padding: 12px 16px; text-align: left; font-size: 0.85rem; text-transform: uppercase; letter-spacing: 0.5px; }
+        .env-table td { padding: 10px 16px; border-bottom: 1px solid var(--border); font-size: 0.9rem; }
+        .env-table tr:last-child td { border-bottom: none; }
+        .env-table tr:hover td { background: var(--light); }
+        .env-table code { background: #f1f5f9; padding: 2px 6px; border-radius: 3px; font-size: 0.8rem; }
+
+        /* Summary Table */
+        .summary-table { width: 100%; border-collapse: collapse; background: white; border-radius: 12px; overflow: hidden; box-shadow: 0 1px 3px rgba(0,0,0,0.1); margin-bottom: 32px; }
+        .summary-table th { background: var(--dark); color: white; padding: 12px 16px; text-align: left; }
+        .summary-table td { padding: 12px 16px; border-bottom: 1px solid var(--border); }
+        .summary-table tr:last-child td { border-bottom: none; font-weight: 700; background: var(--light); }
+
+        /* Risk Matrix */
+        .risk-matrix { display: grid; grid-template-columns: repeat(2, 1fr); gap: 16px; margin-top: 20px; }
+        .risk-item { padding: 16px; border-radius: 8px; border: 1px solid var(--border); }
+        .risk-item .fix-name { font-weight: 600; margin-bottom: 4px; }
+        .risk-item .risk-level { font-size: 0.85rem; }
+        .risk-item .mitigation { font-size: 0.85rem; color: var(--gray); margin-top: 6px; }
+
+        /* Footer */
+        .footer { background: var(--dark); color: #94a3b8; padding: 32px 0; text-align: center; margin-top: 60px; font-size: 0.9rem; }
+
+        @media (max-width: 768px) {
+            .stats-bar { grid-template-columns: repeat(2, 1fr); }
+            .header h1 { font-size: 1.8rem; }
+            .risk-matrix { grid-template-columns: 1fr; }
+            .header .meta { flex-direction: column; gap: 8px; }
+        }
+    </style>
+</head>
+<body>
+
+<!-- HEADER -->
+<div class="header">
+    <div class="container">
+        <h1>Security Audit Report</h1>
+        <div class="subtitle">budolEcosystem — Comprehensive Security Assessment</div>
+        <div class="meta">
+            <span>Date: June 6, 2026</span>
+            <span>Scope: Full Ecosystem (5 services + WebSocket + Docker)</span>
+            <span>Classification: CONFIDENTIAL</span>
+        </div>
+    </div>
+</div>
+
+<!-- STATS -->
+<div class="container">
+    <div class="stats-bar">
+        <div class="stat-card critical">
+            <div class="number">5</div>
+            <div class="label">Critical</div>
+        </div>
+        <div class="stat-card high">
+            <div class="number">12</div>
+            <div class="label">High</div>
+        </div>
+        <div class="stat-card medium">
+            <div class="number">15</div>
+            <div class="label">Medium</div>
+        </div>
+        <div class="stat-card low">
+            <div class="number">2</div>
+            <div class="label">Low</div>
+        </div>
+    </div>
+
+    <!-- EXECUTIVE SUMMARY -->
+    <div class="section">
+        <h2 class="section-title">Executive Summary</h2>
+        <p style="margin-bottom:16px;">This audit identified <strong>34 security vulnerabilities</strong> across the budolEcosystem codebase. The most dangerous findings involve <strong>completely unauthenticated financial endpoints</strong> (wallet balance modification, payment processing), <strong>hardcoded secrets committed to source control</strong>, and <strong>authentication bypass mechanisms</strong> that allow any attacker to gain admin privileges.</p>
+        <table class="summary-table">
+            <thead><tr><th>Severity</th><th>Count</th><th>Key Issues</th></tr></thead>
+            <tbody>
+                <tr><td><span class="severity-badge critical">CRITICAL</span></td><td>5</td><td>Hardcoded JWT secret, API gateway dev bypass, wallet auth bypass via header, unauthenticated balance update, CORS + credentials</td></tr>
+                <tr><td><span class="severity-badge high">HIGH</span></td><td>12</td><td>Hardcoded DB credentials, Cloudinary secrets, wildcard CORS, WebSocket no auth, debug endpoint leaks DB URL, XSS, no rate limiting, gateway token fall-through</td></tr>
+                <tr><td><span class="severity-badge medium">MEDIUM</span></td><td>15</td><td>Hardcoded Pusher/Vercel bypass keys, predictable API keys, admin passwords in seeds, client-side CAPTCHA, stack trace leakage, Docker root, CSRF, no security headers, long JWT expiry, open redirect</td></tr>
+                <tr><td><span class="severity-badge low">LOW</span></td><td>2</td><td>Old Node.js image, PII in seed scripts</td></tr>
+                <tr><td colspan="2" style="font-weight:700;">Total Vulnerabilities</td><td style="font-weight:700;">34</td></tr>
+            </tbody>
+        </table>
+    </div>
+
+    <!-- CRITICAL VULNS -->
+    <div class="section">
+        <h2 class="section-title" style="color:var(--critical);">CRITICAL Vulnerabilities</h2>
+
+        <div class="vuln-card critical" onclick="this.classList.toggle('open')">
+            <div class="vuln-header">
+                <span class="severity-badge critical">CRITICAL</span>
+                <span class="vuln-id">VULN-01</span>
+                <span class="vuln-title">Hardcoded JWT Secret with Predictable Fallback</span>
+                <span class="toggle-icon">&#9660;</span>
+            </div>
+            <div class="vuln-body">
+                <h4>Files</h4>
+                <div class="files">
+                    <code>budolID-0.1.0/index.js:94</code>
+                    <code>budolpay-0.1.0/services/auth-service/index.js:164</code>
+                    <code>budolpay-0.1.0/services/api-gateway/index.js:130</code>
+                </div>
+                <h4>Vulnerable Code</h4>
+<pre><code>const JWT_SECRET = process.env.JWT_SECRET || 'GJ7Lxn0/kdV/KuZJ5xJ7Ip0RvMerrGW5n0gf44mfHgc=';</code></pre>
+                <h4>Risk</h4>
+                <div class="risk">If JWT_SECRET env var is unset in production, the hardcoded fallback is used. An attacker with source code access can forge any JWT token and impersonate any user including admins, gaining full access to financial operations.</div>
+                <h4>Attack Vector</h4>
+                <p>Attacker reads source code, uses the known secret to sign a JWT with <code>role: 'ADMIN'</code>, and submits it to any authenticated endpoint.</p>
+            </div>
+        </div>
+
+        <div class="vuln-card critical" onclick="this.classList.toggle('open')">
+            <div class="vuln-header">
+                <span class="severity-badge critical">CRITICAL</span>
+                <span class="vuln-id">VULN-02</span>
+                <span class="vuln-title">API Gateway Dev Mode Bypasses All Authentication</span>
+                <span class="toggle-icon">&#9660;</span>
+            </div>
+            <div class="vuln-body">
+                <h4>File</h4>
+                <div class="files"><code>budolpay-0.1.0/services/api-gateway/index.js:136-150</code></div>
+                <h4>Vulnerable Code</h4>
+<pre><code>const verifyToken = (req, res, next) => {
+    if (process.env.NODE_ENV === 'development') {
+        // ... decode token if present ...
+        return next(); // ALL REQUESTS PASS WITHOUT AUTH
+    }
+};</code></pre>
+                <h4>Risk</h4>
+                <div class="risk">When NODE_ENV is not set to 'production' (Express defaults to undefined), ALL routes bypass authentication. Since the API gateway is the entry point for the entire budolPay microservice architecture, this effectively disables all security.</div>
+            </div>
+        </div>
+
+        <div class="vuln-card critical" onclick="this.classList.toggle('open')">
+            <div class="vuln-header">
+                <span class="severity-badge critical">CRITICAL</span>
+                <span class="vuln-id">VULN-03</span>
+                <span class="vuln-title">Wallet Service Auth Bypass via HTTP Header</span>
+                <span class="toggle-icon">&#9660;</span>
+            </div>
+            <div class="vuln-body">
+                <h4>File</h4>
+                <div class="files"><code>budolpay-0.1.0/services/wallet-service/index.js:36-48</code></div>
+                <h4>Vulnerable Code</h4>
+<pre><code>app.use((req, res, next) => {
+    if (req.path.endsWith('/health') || 
+        req.path.endsWith('/update-balance') || 
+        req.path.endsWith('/process-qr') ||
+        req.headers['x-bypass-auth'] === 'true'
+    ) {
+        if (!req.user) {
+            req.user = { userId: 'test-user-id', role: 'ADMIN' };
+        }
+        return next();
+    }
+    verifyToken(req, res, next);
+});</code></pre>
+                <h4>Risk</h4>
+                <div class="risk">
+                    Three critical attack vectors:<br>
+                    1. Setting header <code>x-bypass-auth: true</code> grants ADMIN privileges to any request<br>
+                    2. <code>/update-balance</code> (modifies wallet balances) is permanently unauthenticated<br>
+                    3. <code>/process-qr</code> (processes payments) is permanently unauthenticated
+                </div>
+                <h4>Attack Example</h4>
+<pre><code>curl -X POST http://target:8002/update-balance \
+  -H "Content-Type: application/json" \
+  -d '{"userId":"victim-id","amount":999999,"type":"add"}'</code></pre>
+            </div>
+        </div>
+
+        <div class="vuln-card critical" onclick="this.classList.toggle('open')">
+            <div class="vuln-header">
+                <span class="severity-badge critical">CRITICAL</span>
+                <span class="vuln-id">VULN-04</span>
+                <span class="vuln-title">Unauthenticated Balance Update Allows Unlimited Fund Creation</span>
+                <span class="toggle-icon">&#9660;</span>
+            </div>
+            <div class="vuln-body">
+                <h4>File</h4>
+                <div class="files"><code>budolpay-0.1.0/services/wallet-service/index.js:485-545</code></div>
+                <h4>Vulnerable Code</h4>
+<pre><code>router.post('/update-balance', async (req, res) => {
+    const { userId, amount, type } = req.body;
+    const newBalance = type === 'add' 
+        ? parseFloat(wallet.balance) + parseFloat(amount)
+        : parseFloat(wallet.balance) - parseFloat(amount);
+});</code></pre>
+                <h4>Risk</h4>
+                <div class="risk">Combined with VULN-03, anyone can create unlimited funds in any wallet. No authentication, no authorization checks, no audit trail, no limits on amount.</div>
+            </div>
+        </div>
+
+        <div class="vuln-card critical" onclick="this.classList.toggle('open')">
+            <div class="vuln-header">
+                <span class="severity-badge critical">CRITICAL</span>
+                <span class="vuln-id">VULN-05</span>
+                <span class="vuln-title">CORS Wildcard with Credentials Enabled</span>
+                <span class="toggle-icon">&#9660;</span>
+            </div>
+            <div class="vuln-body">
+                <h4>File</h4>
+                <div class="files"><code>budolpay-0.1.0/services/api-gateway/index.js:35-39</code></div>
+                <h4>Vulnerable Code</h4>
+<pre><code>app.use(cors({
+    origin: '*',
+    methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS', 'PATCH'],
+    allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With'],
+    credentials: true
+}));</code></pre>
+                <h4>Risk</h4>
+                <div class="risk">Any website can make cross-origin requests to the API. Combined with auth bypasses, a malicious website can perform arbitrary API calls (including financial operations) on behalf of any user.</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- HIGH VULNS -->
+    <div class="section">
+        <h2 class="section-title" style="color:var(--high);">HIGH Vulnerabilities</h2>
+
+        <div class="vuln-card high" onclick="this.classList.toggle('open')">
+            <div class="vuln-header">
+                <span class="severity-badge high">HIGH</span>
+                <span class="vuln-id">VULN-06</span>
+                <span class="vuln-title">Hardcoded Database Credentials (postgres:r00t)</span>
+                <span class="toggle-icon">&#9660;</span>
+            </div>
+            <div class="vuln-body">
+                <h4>Files</h4>
+                <div class="files">
+                    <code>budolID-0.1.0/index.js:17</code>
+                    <code>budolpay-0.1.0/docker-compose.yml (9 occurrences)</code>
+                    <code>.env (root)</code>
+                </div>
+                <h4>Risk</h4>
+                <div class="risk">Database password <code>r00t</code> is hardcoded in source and docker-compose. Default PostgreSQL credentials with trivially guessable weak password.</div>
+            </div>
+        </div>
+
+        <div class="vuln-card high" onclick="this.classList.toggle('open')">
+            <div class="vuln-header">
+                <span class="severity-badge high">HIGH</span>
+                <span class="vuln-id">VULN-07</span>
+                <span class="vuln-title">Hardcoded Cloudinary API Secret</span>
+                <span class="toggle-icon">&#9660;</span>
+            </div>
+            <div class="vuln-body">
+                <h4>File</h4>
+                <div class="files"><code>budolshap-0.1.0/scripts/test_scripts/upload_logo_to_cloudinary.js:15-16</code></div>
+                <h4>Risk</h4>
+                <div class="risk">Full Cloudinary credentials committed to source. Allows uploading/deleting/modifying all media assets and abusing the account for storage/bandwidth.</div>
+            </div>
+        </div>
+
+        <div class="vuln-card high" onclick="this.classList.toggle('open')">
+            <div class="vuln-header">
+                <span class="severity-badge high">HIGH</span>
+                <span class="vuln-id">VULN-08</span>
+                <span class="vuln-title">Gateway Token Verification Falls Through on Invalid Tokens</span>
+                <span class="toggle-icon">&#9660;</span>
+            </div>
+            <div class="vuln-body">
+                <h4>File</h4>
+                <div class="files"><code>budolpay-0.1.0/services/api-gateway/index.js:192-196</code></div>
+<pre><code>} catch (err) {
+    // Invalid token forwarded to backend instead of rejected
+    next();
+}</code></pre>
+                <h4>Risk</h4>
+                <div class="risk">Invalid/expired/tampered tokens are forwarded to backend services. Combined with VULN-11 (transaction service has no auth), any token reaches unprotected services.</div>
+            </div>
+        </div>
+
+        <div class="vuln-card high" onclick="this.classList.toggle('open')">
+            <div class="vuln-header">
+                <span class="severity-badge high">HIGH</span>
+                <span class="vuln-id">VULN-09</span>
+                <span class="vuln-title">Transaction Service Auth Completely Commented Out</span>
+                <span class="toggle-icon">&#9660;</span>
+            </div>
+            <div class="vuln-body">
+                <h4>File</h4>
+                <div class="files"><code>budolpay-0.1.0/services/transaction-service/index.js:28</code></div>
+<pre><code>// app.use(verifyToken);  // COMMENTED OUT</code></pre>
+                <h4>Risk</h4>
+                <div class="risk">All transaction endpoints (<code>/transfer</code>, <code>/cash-in</code>, <code>/cash-out</code>, <code>/resolve</code>) accessible without any authentication.</div>
+            </div>
+        </div>
+
+        <div class="vuln-card high" onclick="this.classList.toggle('open')">
+            <div class="vuln-header">
+                <span class="severity-badge high">HIGH</span>
+                <span class="vuln-id">VULN-10</span>
+                <span class="vuln-title">WebSocket Server Has No Authentication</span>
+                <span class="toggle-icon">&#9660;</span>
+            </div>
+            <div class="vuln-body">
+                <h4>File</h4>
+                <div class="files"><code>websocket-server/server.js:21-53</code></div>
+                <h4>Risk</h4>
+                <div class="risk">Any client can subscribe to any channel (admin, user-specific, store channels) and send fake events via unauthenticated <code>/trigger</code> endpoint.</div>
+            </div>
+        </div>
+
+        <div class="vuln-card high" onclick="this.classList.toggle('open')">
+            <div class="vuln-header">
+                <span class="severity-badge high">HIGH</span>
+                <span class="vuln-id">VULN-11</span>
+                <span class="vuln-title">API Gateway Socket.io Has No Authentication</span>
+                <span class="toggle-icon">&#9660;</span>
+            </div>
+            <div class="vuln-body">
+                <h4>File</h4>
+                <div class="files"><code>budolpay-0.1.0/services/api-gateway/index.js:232-263</code></div>
+<pre><code>socket.on('join', (userId) => {
+    if (userId === 'admin') {
+        socket.join('admin'); // Anyone can claim to be admin
+    } else if (userId) {
+        socket.join(`user:${userId}`); // Anyone can join any user's room
+    }
+});</code></pre>
+                <h4>Risk</h4>
+                <div class="risk">Any WebSocket client can join the admin room or any user's personal room by emitting <code>join('admin')</code>.</div>
+            </div>
+        </div>
+
+        <div class="vuln-card high" onclick="this.classList.toggle('open')">
+            <div class="vuln-header">
+                <span class="severity-badge high">HIGH</span>
+                <span class="vuln-id">VULN-12</span>
+                <span class="vuln-title">Debug Endpoint Exposes Full Database URL with Credentials</span>
+                <span class="toggle-icon">&#9660;</span>
+            </div>
+            <div class="vuln-body">
+                <h4>File</h4>
+                <div class="files"><code>budolpay-0.1.0/services/auth-service/index.js:406-421</code></div>
+<pre><code>app.get('/debug/db-columns', async (req, res) => {
+    res.json({
+        url: process.env.DATABASE_URL, // EXPOSES CREDENTIALS
+        columns: result
+    });
+});</code></pre>
+                <h4>Risk</h4>
+                <div class="risk">Unauthenticated endpoint exposes full database connection URL including username and password.</div>
+            </div>
+        </div>
+
+        <div class="vuln-card high" onclick="this.classList.toggle('open')">
+            <div class="vuln-header">
+                <span class="severity-badge high">HIGH</span>
+                <span class="vuln-id">VULN-13</span>
+                <span class="vuln-title">Reflected XSS in Login Page</span>
+                <span class="toggle-icon">&#9660;</span>
+            </div>
+            <div class="vuln-body">
+                <h4>File</h4>
+                <div class="files"><code>budolID-0.1.0/index.js:265-345</code></div>
+<pre><code>const { apiKey, redirect_uri, error, email, password } = req.query;
+// ... interpolated directly into HTML without sanitization:
+value="${activeApiKey}"
+value="${preservedPassword}"</code></pre>
+                <h4>Risk</h4>
+                <div class="risk">User-controlled query parameters reflected into HTML without sanitization. Attacker can craft URL: <code>/login?apiKey="&gt;&lt;script&gt;alert(1)&lt;/script&gt;</code></div>
+            </div>
+        </div>
+
+        <div class="vuln-card high" onclick="this.classList.toggle('open')">
+            <div class="vuln-header">
+                <span class="severity-badge high">HIGH</span>
+                <span class="vuln-id">VULN-14</span>
+                <span class="vuln-title">No Rate Limiting on Login/OTP Endpoints</span>
+                <span class="toggle-icon">&#9660;</span>
+            </div>
+            <div class="vuln-body">
+                <h4>Files</h4>
+                <div class="files">
+                    <code>budolID-0.1.0/index.js (all login endpoints)</code>
+                    <code>budolpay-0.1.0/services/auth-service/index.js:1123</code>
+                </div>
+                <h4>Risk</h4>
+                <div class="risk">Unlimited brute-force attempts on passwords and 6-digit OTP codes. No account lockout mechanism.</div>
+            </div>
+        </div>
+
+        <div class="vuln-card high" onclick="this.classList.toggle('open')">
+            <div class="vuln-header">
+                <span class="severity-badge high">HIGH</span>
+                <span class="vuln-id">VULN-15</span>
+                <span class="vuln-title">No Rate Limiting on Financial Operations</span>
+                <span class="toggle-icon">&#9660;</span>
+            </div>
+            <div class="vuln-body">
+                <h4>Files</h4>
+                <div class="files">
+                    <code>budolpay-0.1.0/services/wallet-service/index.js</code>
+                    <code>budolpay-0.1.0/services/transaction-service/index.js</code>
+                    <code>budolpay-0.1.0/services/payment-gateway-service/api/index.js</code>
+                </div>
+                <h4>Risk</h4>
+                <div class="risk">No rate limiting on wallet operations, P2P transfers, cash-in/cash-out, or payment intents. Enables rapid fund drainage and DoS.</div>
+            </div>
+        </div>
+
+        <div class="vuln-card high" onclick="this.classList.toggle('open')">
+            <div class="vuln-header">
+                <span class="severity-badge high">HIGH</span>
+                <span class="vuln-id">VULN-16</span>
+                <span class="vuln-title">Password Reflected in Login Error URL</span>
+                <span class="toggle-icon">&#9660;</span>
+            </div>
+            <div class="vuln-body">
+                <h4>File</h4>
+                <div class="files"><code>budolID-0.1.0/index.js:1297</code></div>
+<pre><code>return res.redirect(`/login?...&email=${encodeURIComponent(email)}&password=${encodeURIComponent(password)}`);</code></pre>
+                <h4>Risk</h4>
+                <div class="risk">Plaintext password appears in browser history, server logs, referrer headers, and proxy logs on failed login.</div>
+            </div>
+        </div>
+
+        <div class="vuln-card high" onclick="this.classList.toggle('open')">
+            <div class="vuln-header">
+                <span class="severity-badge high">HIGH</span>
+                <span class="vuln-id">VULN-17</span>
+                <span class="vuln-title">SSO App Info Endpoint Leaks apiSecret</span>
+                <span class="toggle-icon">&#9660;</span>
+            </div>
+            <div class="vuln-body">
+                <h4>File</h4>
+                <div class="files"><code>budolpay-0.1.0/services/auth-service/index.js:170-175</code></div>
+                <h4>Risk</h4>
+                <div class="risk">Full ecosystem app record including <code>apiSecret</code> is returned with just the public <code>apiKey</code>.</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- MEDIUM VULNS -->
+    <div class="section">
+        <h2 class="section-title" style="color:var(--medium);">MEDIUM Vulnerabilities</h2>
+
+        <div class="vuln-card medium" onclick="this.classList.toggle('open')">
+            <div class="vuln-header">
+                <span class="severity-badge medium">MEDIUM</span>
+                <span class="vuln-id">VULN-18</span>
+                <span class="vuln-title">Hardcoded Pusher Credentials</span>
+                <span class="toggle-icon">&#9660;</span>
+            </div>
+            <div class="vuln-body">
+                <h4>File</h4>
+                <div class="files"><code>budolpay-0.1.0/services/api-gateway/index.js:100-103</code></div>
+                <h4>Risk</h4>
+                <div class="risk">Pusher API keys as hardcoded fallback. Allows sending fraudulent real-time events to admin dashboards or user channels.</div>
+            </div>
+        </div>
+
+        <div class="vuln-card medium" onclick="this.classList.toggle('open')">
+            <div class="vuln-header">
+                <span class="severity-badge medium">MEDIUM</span>
+                <span class="vuln-id">VULN-19</span>
+                <span class="vuln-title">Hardcoded Vercel Bypass Token</span>
+                <span class="toggle-icon">&#9660;</span>
+            </div>
+            <div class="vuln-body">
+                <h4>File</h4>
+                <div class="files"><code>budolpay-0.1.0/services/api-gateway/index.js:345</code></div>
+                <h4>Risk</h4>
+                <div class="risk">Vercel deployment protection bypass token hardcoded in source. Allows bypassing deployment protection on all Vercel-hosted services.</div>
+            </div>
+        </div>
+
+        <div class="vuln-card medium" onclick="this.classList.toggle('open')">
+            <div class="vuln-header">
+                <span class="severity-badge medium">MEDIUM</span>
+                <span class="vuln-id">VULN-20</span>
+                <span class="vuln-title">Predictable Ecosystem API Keys</span>
+                <span class="toggle-icon">&#9660;</span>
+            </div>
+            <div class="vuln-body">
+                <h4>File</h4>
+                <div class="files"><code>budolID-0.1.0/index.js:37-45</code></div>
+                <h4>Risk</h4>
+                <div class="risk">API keys <code>bp_key_2025</code>, <code>bs_key_2025</code> are not cryptographically random and can be guessed.</div>
+            </div>
+        </div>
+
+        <div class="vuln-card medium" onclick="this.classList.toggle('open')">
+            <div class="vuln-header">
+                <span class="severity-badge medium">MEDIUM</span>
+                <span class="vuln-id">VULN-21</span>
+                <span class="vuln-title">Hardcoded Admin Passwords in Seed Scripts</span>
+                <span class="toggle-icon">&#9660;</span>
+            </div>
+            <div class="vuln-body">
+                <h4>Files</h4>
+                <div class="files">
+                    <code>budolID-0.1.0/seed_user.js:12</code>
+                    <code>budolpay-0.1.0/apps/admin/create_admin.js:8</code>
+                </div>
+                <h4>Risk</h4>
+                <div class="risk">Known admin passwords committed to source. If these scripts run in production, attackers can use these credentials.</div>
+            </div>
+        </div>
+
+        <div class="vuln-card medium" onclick="this.classList.toggle('open')">
+            <div class="vuln-header">
+                <span class="severity-badge medium">MEDIUM</span>
+                <span class="vuln-id">VULN-22</span>
+                <span class="vuln-title">Client-Side-Only CAPTCHA on Registration</span>
+                <span class="toggle-icon">&#9660;</span>
+            </div>
+            <div class="vuln-body">
+                <h4>File</h4>
+                <div class="files"><code>budolID-0.1.0/index.js:621-673</code></div>
+                <h4>Risk</h4>
+                <div class="risk">CAPTCHA is computed in browser JavaScript. Trivially bypassed by direct HTTP form submission.</div>
+            </div>
+        </div>
+
+        <div class="vuln-card medium" onclick="this.classList.toggle('open')">
+            <div class="vuln-header">
+                <span class="severity-badge medium">MEDIUM</span>
+                <span class="vuln-id">VULN-23</span>
+                <span class="vuln-title">Stack Traces Leaked in Error Responses</span>
+                <span class="toggle-icon">&#9660;</span>
+            </div>
+            <div class="vuln-body">
+                <h4>Files</h4>
+                <div class="files">
+                    <code>api-gateway/index.js:470-477</code>
+                    <code>wallet-service/index.js:548-556</code>
+                    <code>auth-service/index.js:298</code>
+                </div>
+                <h4>Risk</h4>
+                <div class="risk">Raw error messages reveal database schema, file paths, internal service URLs, and implementation details.</div>
+            </div>
+        </div>
+
+        <div class="vuln-card medium" onclick="this.classList.toggle('open')">
+            <div class="vuln-header">
+                <span class="severity-badge medium">MEDIUM</span>
+                <span class="vuln-id">VULN-24</span>
+                <span class="vuln-title">LIKE Pattern Injection via orderId</span>
+                <span class="toggle-icon">&#9660;</span>
+            </div>
+            <div class="vuln-body">
+                <h4>File</h4>
+                <div class="files"><code>budolpay-0.1.0/services/payment-gateway-service/api/index.js:216,315,401</code></div>
+                <h4>Risk</h4>
+                <div class="risk">User-controlled orderId in LIKE pattern could match unintended transactions using <code>%</code> and <code>_</code> wildcards.</div>
+            </div>
+        </div>
+
+        <div class="vuln-card medium" onclick="this.classList.toggle('open')">
+            <div class="vuln-header">
+                <span class="severity-badge medium">MEDIUM</span>
+                <span class="vuln-id">VULN-25</span>
+                <span class="vuln-title">All Docker Containers Run as Root</span>
+                <span class="toggle-icon">&#9660;</span>
+            </div>
+            <div class="vuln-body">
+                <h4>Files</h4>
+                <div class="files">
+                    <code>Dockerfile.backend</code>
+                    <code>websocket-server/Dockerfile</code>
+                    <code>budolshap-0.1.0/Dockerfile</code>
+                    <code>budolpay-0.1.0/Dockerfile</code>
+                </div>
+                <h4>Risk</h4>
+                <div class="risk">None of the Dockerfiles create a non-root user. Code execution inside a container grants root privileges, facilitating container escape.</div>
+            </div>
+        </div>
+
+        <div class="vuln-card medium" onclick="this.classList.toggle('open')">
+            <div class="vuln-header">
+                <span class="severity-badge medium">MEDIUM</span>
+                <span class="vuln-id">VULN-26</span>
+                <span class="vuln-title">No CSRF Protection on SSO Login Form</span>
+                <span class="toggle-icon">&#9660;</span>
+            </div>
+            <div class="vuln-body">
+                <h4>Risk</h4>
+                <div class="risk">Cookie-based SSO login form is vulnerable to CSRF auto-submit attacks. A malicious website could trigger password changes or transactions.</div>
+            </div>
+        </div>
+
+        <div class="vuln-card medium" onclick="this.classList.toggle('open')">
+            <div class="vuln-header">
+                <span class="severity-badge medium">MEDIUM</span>
+                <span class="vuln-id">VULN-27</span>
+                <span class="vuln-title">Missing Security Headers (Helmet) on Most Services</span>
+                <span class="toggle-icon">&#9660;</span>
+            </div>
+            <div class="vuln-body">
+                <h4>Files</h4>
+                <div class="files">
+                    <code>budolID-0.1.0/index.js</code>
+                    <code>auth-service/index.js</code>
+                    <code>wallet-service/index.js</code>
+                    <code>websocket-server/server.js</code>
+                </div>
+                <h4>Risk</h4>
+                <div class="risk">Missing X-Frame-Options, X-Content-Type-Options, HSTS, CSP headers. Only API gateway uses helmet (with CSP disabled).</div>
+            </div>
+        </div>
+
+        <div class="vuln-card medium" onclick="this.classList.toggle('open')">
+            <div class="vuln-header">
+                <span class="severity-badge medium">MEDIUM</span>
+                <span class="vuln-id">VULN-28</span>
+                <span class="vuln-title">JWT Token Expiry Too Long (30 days mobile, 7 days SSO)</span>
+                <span class="toggle-icon">&#9660;</span>
+            </div>
+            <div class="vuln-body">
+                <h4>Files</h4>
+                <div class="files">
+                    <code>auth-service/index.js:987 (30d)</code>
+                    <code>budolID-0.1.0/index.js:1310 (7d)</code>
+                </div>
+                <h4>Risk</h4>
+                <div class="risk">Stolen tokens valid for up to 30 days with no token revocation mechanism.</div>
+            </div>
+        </div>
+
+        <div class="vuln-card medium" onclick="this.classList.toggle('open')">
+            <div class="vuln-header">
+                <span class="severity-badge medium">MEDIUM</span>
+                <span class="vuln-id">VULN-29</span>
+                <span class="vuln-title">Open Redirect via Broad SSO Whitelist</span>
+                <span class="toggle-icon">&#9660;</span>
+            </div>
+            <div class="vuln-body">
+                <h4>File</h4>
+                <div class="files"><code>budolID-0.1.0/index.js:1342-1346</code></div>
+                <h4>Risk</h4>
+                <div class="risk">Any <code>*.vercel.app</code> or <code>192.168.*</code> URL accepted as redirect target. Attacker can host malicious page on Vercel and receive JWT tokens.</div>
+            </div>
+        </div>
+
+        <div class="vuln-card medium" onclick="this.classList.toggle('open')">
+            <div class="vuln-header">
+                <span class="severity-badge medium">MEDIUM</span>
+                <span class="vuln-id">VULN-30</span>
+                <span class="vuln-title">Raw SQL with String Interpolation in Admin Scripts</span>
+                <span class="toggle-icon">&#9660;</span>
+            </div>
+            <div class="vuln-body">
+                <h4>File</h4>
+                <div class="files"><code>scripts/test_scripts/fix-admin-id.js:69-77</code></div>
+                <h4>Risk</h4>
+                <div class="risk">Dangerous SQL pattern. If inputs are ever user-derived, direct SQL injection is possible.</div>
+            </div>
+        </div>
+
+        <div class="vuln-card medium" onclick="this.classList.toggle('open')">
+            <div class="vuln-header">
+                <span class="severity-badge medium">MEDIUM</span>
+                <span class="vuln-id">VULN-31</span>
+                <span class="vuln-title">No Input Validation on Financial Endpoints</span>
+                <span class="toggle-icon">&#9660;</span>
+            </div>
+            <div class="vuln-body">
+                <h4>Risk</h4>
+                <div class="risk">No schema validation, no amount limits, no type checking on financial inputs across all wallet/transaction/payment services.</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- LOW VULNS -->
+    <div class="section">
+        <h2 class="section-title" style="color:var(--low);">LOW Vulnerabilities</h2>
+
+        <div class="vuln-card low" onclick="this.classList.toggle('open')">
+            <div class="vuln-header">
+                <span class="severity-badge low">LOW</span>
+                <span class="vuln-id">VULN-33</span>
+                <span class="vuln-title">WebSocket Server Uses Node.js 18 (Approaching EOL)</span>
+                <span class="toggle-icon">&#9660;</span>
+            </div>
+            <div class="vuln-body">
+                <h4>File</h4>
+                <div class="files"><code>websocket-server/Dockerfile:1</code></div>
+                <h4>Risk</h4>
+                <div class="risk">Node.js 18 approaching end-of-life. Other services use Node.js 20.</div>
+            </div>
+        </div>
+
+        <div class="vuln-card low" onclick="this.classList.toggle('open')">
+            <div class="vuln-header">
+                <span class="severity-badge low">LOW</span>
+                <span class="vuln-id">VULN-34</span>
+                <span class="vuln-title">Real PII in Seed Scripts</span>
+                <span class="toggle-icon">&#9660;</span>
+            </div>
+            <div class="vuln-body">
+                <h4>Files</h4>
+                <div class="files">
+                    <code>budolID-0.1.0/seed_user.js</code>
+                    <code>budolpay-0.1.0/apps/admin/create_admin.js</code>
+                </div>
+                <h4>Risk</h4>
+                <div class="risk">Real email addresses and phone numbers committed to source code.</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- ENV FILES EXPOSURE -->
+    <div class="section">
+        <h2 class="section-title">Environment Variables Exposed in Source Control</h2>
+        <p style="margin-bottom:16px;color:var(--gray);">42+ .env files contain production/development secrets. While .gitignore lists .env, variant files (.env.local, .env.vercel-prod, .env.check, etc.) are NOT covered.</p>
+        <table class="env-table">
+            <thead>
+                <tr><th>File</th><th>Key Secrets Exposed</th></tr>
+            </thead>
+            <tbody>
+                <tr><td><code>.env</code> (root)</td><td>All DB passwords, JWT secret, Cloudinary/PayMongo/Lalamove keys, Prisma API keys, Vercel OIDC token</td></tr>
+                <tr><td><code>budolpay-0.1.0/services/*/.env</code></td><td>JWT secret, DB URLs, all API keys (duplicated across 4+ services)</td></tr>
+                <tr><td><code>budolshap-0.1.0/.env</code></td><td>Full production config with all secrets</td></tr>
+                <tr><td><code>budolID-0.1.0/.env</code></td><td>JWT secret, DB URLs, all API keys</td></tr>
+                <tr><td><code>budolAccounting-0.1.0/.env</code></td><td>JWT secret, DB URLs, all API keys</td></tr>
+                <tr><td><code>budolpay-0.1.0/.env.vercel-prod</code></td><td>Production JWT secret and configs</td></tr>
+                <tr><td><code>budolpay-0.1.0/.env.vercel-prod2</code></td><td>Production JWT secret</td></tr>
+            </tbody>
+        </table>
+    </div>
+
+    <!-- ACTION PLAN -->
+    <div class="section">
+        <h2 class="section-title">Security Hardening Action Plan</h2>
+
+        <!-- PHASE 1 -->
+        <div class="phase phase-1">
+            <div class="phase-header">
+                <div class="phase-number">P1</div>
+                <div>
+                    <div class="phase-title">CRITICAL — Immediate</div>
+                    <div class="phase-timeline">Days 1-3 | Must complete first</div>
+                </div>
+            </div>
+            <div class="phase-body">
+                <div class="impact"><strong>Impact:</strong> Requires updating all .env files across the ecosystem and rotating all exposed secrets. Expect 2-4 hours of downtime for secret rotation.</div>
+
+                <div class="action-item">
+                    <h4>1.1 Remove All Hardcoded Secrets (VULN-01, 06, 07, 18, 19, 20, 21)</h4>
+                    <p>Remove ALL hardcoded fallback values. Require env vars — crash on startup if missing. Rotate ALL exposed secrets.</p>
+<pre><code>// BEFORE (insecure)
+const JWT_SECRET = process.env.JWT_SECRET || 'GJ7Lxn0/kdV/KuZJ5xJ7Ip0RvMerrGW5n0gf44mfHgc=';
+
+// AFTER (secure)
+if (!process.env.JWT_SECRET) {
+    console.error('FATAL: JWT_SECRET environment variable is required');
+    process.exit(1);
+}
+const JWT_SECRET = process.env.JWT_SECRET;</code></pre>
+                    <div class="files-list">
+                        <strong>Files:</strong>
+                        <code>budolID-0.1.0/index.js</code>
+                        <code>auth-service/index.js</code>
+                        <code>api-gateway/index.js</code>
+                        <code>upload_logo_to_cloudinary.js</code>
+                        <code>seed_user.js</code>
+                        <code>create_admin.js</code>
+                    </div>
+                    <div class="verification"><strong>Verify:</strong> grep -r "|| '" --include="*.js" should return no hardcoded secrets. App crashes if JWT_SECRET not set.</div>
+                </div>
+
+                <div class="action-item">
+                    <h4>1.2 Fix Wallet Service Auth Bypass (VULN-03, 04, 31)</h4>
+                    <p>Remove <code>x-bypass-auth</code> header bypass. Remove <code>/update-balance</code> and <code>/process-qr</code> from unauthenticated list.</p>
+<pre><code>// BEFORE (insecure)
+app.use((req, res, next) => {
+    if (req.path.endsWith('/health') || 
+        req.path.endsWith('/update-balance') || 
+        req.path.endsWith('/process-qr') ||
+        req.headers['x-bypass-auth'] === 'true'
+    ) {
+        if (!req.user) req.user = { userId: 'test-user-id', role: 'ADMIN' };
+        return next();
+    }
+    verifyToken(req, res, next);
+});
+
+// AFTER (secure)
+app.use((req, res, next) => {
+    if (req.path.endsWith('/health')) return next();
+    verifyToken(req, res, next);
+});</code></pre>
+                    <div class="verification"><strong>Verify:</strong> curl with x-bypass-auth header returns 401. Unauthenticated requests to /update-balance return 401.</div>
+                </div>
+
+                <div class="action-item">
+                    <h4>1.3 Fix API Gateway Auth Bypass (VULN-02, 08)</h4>
+                    <p>Remove development mode bypass entirely. Reject invalid tokens instead of forwarding.</p>
+<pre><code>// BEFORE (insecure)
+const verifyToken = (req, res, next) => {
+    if (process.env.NODE_ENV === 'development') {
+        return next(); // ALL REQUESTS PASS
+    }
+};
+// ...
+} catch (err) { next(); } // forwards invalid tokens
+
+// AFTER (secure)
+const verifyToken = (req, res, next) => {
+    const token = req.headers['authorization']?.split(' ')[1];
+    if (!token) return res.status(401).json({ error: 'Access token required' });
+    try {
+        req.user = jwt.verify(token, JWT_SECRET);
+        next();
+    } catch (err) {
+        return res.status(401).json({ error: 'Invalid or expired token' });
+    }
+};</code></pre>
+                </div>
+
+                <div class="action-item">
+                    <h4>1.4 Fix Transaction Service Auth (VULN-09)</h4>
+                    <p>Uncomment the verifyToken middleware.</p>
+<pre><code>// BEFORE
+// app.use(verifyToken);
+
+// AFTER
+app.use(verifyToken);</code></pre>
+                </div>
+
+                <div class="action-item">
+                    <h4>1.5 Fix CORS Configuration (VULN-05)</h4>
+                    <p>Replace wildcard CORS with explicit allowed origins.</p>
+<pre><code>// BEFORE (insecure)
+app.use(cors({ origin: '*', credentials: true }));
+
+// AFTER (secure)
+const ALLOWED_ORIGINS = [
+    process.env.NEXT_PUBLIC_APP_URL,
+    process.env.NEXT_PUBLIC_BASE_URL,
+    'http://localhost:3000',
+].filter(Boolean);
+
+app.use(cors({
+    origin: (origin, callback) => {
+        if (!origin || ALLOWED_ORIGINS.includes(origin)) callback(null, true);
+        else callback(new Error('Not allowed by CORS'));
+    },
+    credentials: true,
+}));</code></pre>
+                    <p>Apply same fix to <code>websocket-server/server.js</code>.</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- PHASE 2 -->
+        <div class="phase phase-2">
+            <div class="phase-header">
+                <div class="phase-number">P2</div>
+                <div>
+                    <div class="phase-title">HIGH — Urgent</div>
+                    <div class="phase-timeline">Days 4-7 | Depends on Phase 1</div>
+                </div>
+            </div>
+            <div class="phase-body">
+                <div class="impact"><strong>Impact:</strong> Adds security layers that may affect development workflows. Rate limiting should be tested thoroughly. WebSocket auth changes require client-side updates.</div>
+
+                <div class="action-item">
+                    <h4>2.1 Add Rate Limiting (VULN-14, 15)</h4>
+                    <p>Install express-rate-limit and apply to all sensitive endpoints.</p>
+<pre><code>npm install express-rate-limit
+
+const rateLimit = require('express-rate-limit');
+
+const loginLimiter = rateLimit({
+    windowMs: 15 * 60 * 1000, max: 5,
+    message: { error: 'Too many login attempts' }
+});
+
+const otpLimiter = rateLimit({
+    windowMs: 5 * 60 * 1000, max: 3,
+    message: { error: 'Too many OTP attempts' }
+});
+
+const financialLimiter = rateLimit({
+    windowMs: 60 * 1000, max: 10,
+    keyGenerator: (req) => req.user?.userId || req.ip
+});
+
+app.post('/auth/sso/login', loginLimiter, loginHandler);
+app.post('/verify-otp', otpLimiter, otpHandler);
+app.post('/update-balance', financialLimiter, updateBalanceHandler);</code></pre>
+                </div>
+
+                <div class="action-item">
+                    <h4>2.2 Add WebSocket Authentication (VULN-10, 11)</h4>
+                    <p>Require JWT for WebSocket connections and protect /trigger endpoint.</p>
+<pre><code>io.use((socket, next) => {
+    const token = socket.handshake.auth.token;
+    if (!token) return next(new Error('Authentication required'));
+    try {
+        socket.user = jwt.verify(token, JWT_SECRET);
+        next();
+    } catch (err) { next(new Error('Invalid token')); }
+});
+
+io.on('connection', (socket) => {
+    socket.on('subscribe', (channelName) => {
+        if (channelName === `user:${socket.user.userId}` || 
+            socket.user.role === 'ADMIN') {
+            socket.join(channelName);
+        }
+    });
+});</code></pre>
+                </div>
+
+                <div class="action-item">
+                    <h4>2.3 Remove Debug Endpoint (VULN-12)</h4>
+                    <p>Delete or protect <code>/debug/db-columns</code>. Remove DATABASE_URL from response.</p>
+                </div>
+
+                <div class="action-item">
+                    <h4>2.4 Fix XSS Vulnerabilities (VULN-13, 16)</h4>
+                    <p>HTML-escape all user input. Remove password from error redirect.</p>
+<pre><code>function escapeHtml(str) {
+    if (!str) return '';
+    return String(str).replace(/&/g,'&amp;').replace(/</g,'&lt;')
+        .replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+
+// Use for all interpolated values:
+value="${escapeHtml(activeApiKey)}"
+
+// Remove password from redirect:
+return res.redirect(`/login?...&email=${encodeURIComponent(email)}`);
+// Never pass password in URL</code></pre>
+                </div>
+
+                <div class="action-item">
+                    <h4>2.5 Add Security Headers (VULN-27)</h4>
+                    <p>Add helmet to all Express services.</p>
+<pre><code>npm install helmet
+
+const helmet = require('helmet');
+app.use(helmet({
+    contentSecurityPolicy: {
+        directives: {
+            defaultSrc: ["'self'"],
+            scriptSrc: ["'self'"],
+            styleSrc: ["'self'", "'unsafe-inline'"],
+            imgSrc: ["'self'", "data:", "https://res.cloudinary.com"]
+        }
+    },
+    hsts: { maxAge: 31536000, includeSubDomains: true }
+}));</code></pre>
+                </div>
+
+                <div class="action-item">
+                    <h4>2.6 JWT Token Revocation (VULN-28)</h4>
+                    <p>Implement token blacklist. Reduce expiry to 7d mobile / 1d SSO.</p>
+                </div>
+
+                <div class="action-item">
+                    <h4>2.7 Protect SSO App Info Endpoint (VULN-17)</h4>
+                    <p>Use Prisma select to exclude apiSecret from response.</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- PHASE 3 -->
+        <div class="phase phase-3">
+            <div class="phase-header">
+                <div class="phase-number">P3</div>
+                <div>
+                    <div class="phase-title">MEDIUM — Important</div>
+                    <div class="phase-timeline">Days 8-14 | Depends on Phase 2</div>
+                </div>
+            </div>
+            <div class="phase-body">
+                <div class="impact"><strong>Impact:</strong> Defense-in-depth improvements. Lower risk but still should be tested.</div>
+
+                <div class="action-item">
+                    <h4>3.1 Replace Client-Side CAPTCHA with Server-Side (VULN-22)</h4>
+                    <p>Integrate reCAPTCHA or hCaptcha on server for registration.</p>
+                </div>
+                <div class="action-item">
+                    <h4>3.2 Sanitize Error Responses (VULN-23)</h4>
+                    <p>Centralized error handler that strips internal details from responses.</p>
+                </div>
+                <div class="action-item">
+                    <h4>3.3 Add CSRF Protection for SSO Login Form (VULN-26)</h4>
+                    <p>Install csurf, apply to form-based routes only.</p>
+                </div>
+                <div class="action-item">
+                    <h4>3.4 Fix Open Redirect (VULN-29)</h4>
+                    <p>Replace broad wildcard whitelist with strict hostname matching.</p>
+                </div>
+                <div class="action-item">
+                    <h4>3.5 Docker Security (VULN-25, 33)</h4>
+                    <p>Add non-root user to all Dockerfiles. Upgrade WebSocket to Node.js 20.</p>
+<pre><code>RUN addgroup --system appgroup && adduser --system --ingroup appgroup appuser
+USER appuser</code></pre>
+                </div>
+                <div class="action-item">
+                    <h4>3.6 Fix SQL Interpolation (VULN-30)</h4>
+                    <p>Use parameterized queries instead of string interpolation.</p>
+                </div>
+                <div class="action-item">
+                    <h4>3.7 Add Input Validation (VULN-31)</h4>
+                    <p>Use Joi schemas for all financial endpoint inputs.</p>
+                </div>
+                <div class="action-item">
+                    <h4>3.8 Consolidate .env Files</h4>
+                    <p>Delete all variant .env files. Create .env.example. Use secrets manager for production.</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- PHASE 4 -->
+        <div class="phase phase-4">
+            <div class="phase-header">
+                <div class="phase-number">P4</div>
+                <div>
+                    <div class="phase-title">LOW — Best Practice</div>
+                    <div class="phase-timeline">Days 15-21</div>
+                </div>
+            </div>
+            <div class="phase-body">
+                <div class="action-item">
+                    <h4>4.1 Fix PII in Seed Scripts (VULN-34)</h4>
+                    <p>Replace real emails/phones with test data.</p>
+                </div>
+                <div class="action-item">
+                    <h4>4.2 Upgrade WebSocket to Node.js 20 (VULN-33)</h4>
+                    <p>Update Dockerfile to FROM node:20-alpine.</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- RISK ASSESSMENT OF FIXES -->
+    <div class="section">
+        <h2 class="section-title">Risk Assessment of Fixes</h2>
+        <div class="risk-matrix">
+            <div class="risk-item" style="border-left:4px solid var(--success);">
+                <div class="fix-name">Remove Hardcoded Secrets</div>
+                <div class="risk-level" style="color:var(--success);">Risk: LOW</div>
+                <div class="mitigation">Mitigation: Just set env vars. Test with all services.</div>
+            </div>
+            <div class="risk-item" style="border-left:4px solid var(--medium);">
+                <div class="fix-name">Fix Wallet Auth Bypass</div>
+                <div class="risk-level" style="color:var(--medium);">Risk: MEDIUM</div>
+                <div class="mitigation">Mitigation: Removes debug access. Ensure admin endpoints still work with real auth.</div>
+            </div>
+            <div class="risk-item" style="border-left:4px solid var(--high);">
+                <div class="fix-name">Fix API Gateway Auth</div>
+                <div class="risk-level" style="color:var(--high);">Risk: HIGH</div>
+                <div class="mitigation">Mitigation: All services depend on it. Test thoroughly with all microservices.</div>
+            </div>
+            <div class="risk-item" style="border-left:4px solid var(--medium);">
+                <div class="fix-name">Fix CORS</div>
+                <div class="risk-level" style="color:var(--medium);">Risk: MEDIUM</div>
+                <div class="mitigation">Mitigation: May break frontend. Update allowed origins before deploying.</div>
+            </div>
+            <div class="risk-item" style="border-left:4px solid var(--success);">
+                <div class="fix-name">Add Rate Limiting</div>
+                <div class="risk-level" style="color:var(--success);">Risk: LOW</div>
+                <div class="mitigation">Mitigation: Start with generous limits, reduce over time.</div>
+            </div>
+            <div class="risk-item" style="border-left:4px solid var(--medium);">
+                <div class="fix-name">WebSocket Auth</div>
+                <div class="risk-level" style="color:var(--medium);">Risk: MEDIUM</div>
+                <div class="mitigation">Mitigation: Requires client-side changes. Deploy simultaneously.</div>
+            </div>
+            <div class="risk-item" style="border-left:4px solid var(--success);">
+                <div class="fix-name">Security Headers</div>
+                <div class="risk-level" style="color:var(--success);">Risk: LOW</div>
+                <div class="mitigation">Mitigation: Standard practice. Test for CSP breakage.</div>
+            </div>
+            <div class="risk-item" style="border-left:4px solid var(--success);">
+                <div class="fix-name">Input Validation</div>
+                <div class="risk-level" style="color:var(--success);">Risk: LOW</div>
+                <div class="mitigation">Mitigation: May reject malformed requests that currently pass. Test edge cases.</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- TESTING CHECKLIST -->
+    <div class="section">
+        <h2 class="section-title">Testing Checklist</h2>
+        <div style="background:white;border-radius:12px;padding:24px;box-shadow:0 1px 3px rgba(0,0,0,0.1);">
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;">
+                <label style="display:flex;align-items:center;gap:8px;padding:8px;border-radius:6px;background:var(--light);">
+                    <input type="checkbox"> All services crash if env vars missing
+                </label>
+                <label style="display:flex;align-items:center;gap:8px;padding:8px;border-radius:6px;background:var(--light);">
+                    <input type="checkbox"> Unauthenticated requests return 401
+                </label>
+                <label style="display:flex;align-items:center;gap:8px;padding:8px;border-radius:6px;background:var(--light);">
+                    <input type="checkbox"> x-bypass-auth header has no effect
+                </label>
+                <label style="display:flex;align-items:center;gap:8px;padding:8px;border-radius:6px;background:var(--light);">
+                    <input type="checkbox"> CORS blocks unauthorized origins
+                </label>
+                <label style="display:flex;align-items:center;gap:8px;padding:8px;border-radius:6px;background:var(--light);">
+                    <input type="checkbox"> Rate limiting triggers at thresholds
+                </label>
+                <label style="display:flex;align-items:center;gap:8px;padding:8px;border-radius:6px;background:var(--light);">
+                    <input type="checkbox"> WebSocket requires valid JWT
+                </label>
+                <label style="display:flex;align-items:center;gap:8px;padding:8px;border-radius:6px;background:var(--light);">
+                    <input type="checkbox"> Error responses don't leak stack traces
+                </label>
+                <label style="display:flex;align-items:center;gap:8px;padding:8px;border-radius:6px;background:var(--light);">
+                    <input type="checkbox"> Security headers present in responses
+                </label>
+                <label style="display:flex;align-items:center;gap:8px;padding:8px;border-radius:6px;background:var(--light);">
+                    <input type="checkbox"> No .env files with real secrets in git
+                </label>
+                <label style="display:flex;align-items:center;gap:8px;padding:8px;border-radius:6px;background:var(--light);">
+                    <input type="checkbox"> Financial endpoints validate input
+                </label>
+                <label style="display:flex;align-items:center;gap:8px;padding:8px;border-radius:6px;background:var(--light);">
+                    <input type="checkbox"> XSS payloads are escaped in HTML
+                </label>
+                <label style="display:flex;align-items:center;gap:8px;padding:8px;border-radius:6px;background:var(--light);">
+                    <input type="checkbox"> Login redirect no longer includes password
+                </label>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- FOOTER -->
+<div class="footer">
+    <div class="container">
+        <p>budolEcosystem Security Audit Report — Generated June 6, 2026</p>
+        <p style="margin-top:4px;">Classification: CONFIDENTIAL — Do not distribute outside the development team</p>
+    </div>
+</div>
+
+<script>
+    // Auto-open critical cards
+    document.querySelectorAll('.vuln-card.critical').forEach(c => c.classList.add('open'));
+</script>
+
+</body>
+</html>

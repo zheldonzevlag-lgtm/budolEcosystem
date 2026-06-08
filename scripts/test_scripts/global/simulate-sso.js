@@ -1,8 +1,9 @@
+require('dotenv').config();
 const axios = require('axios');
 const jwt = require('jsonwebtoken');
 
 // Use the same secret as the apps
-const JWT_SECRET = "GJ7Lxn0/kdV/KuZJ5xJ7Ip0RvMerrGW5n0gf44mfHgc=";
+const JWT_SECRET = process.env.JWT_SECRET;
 const LOCAL_IP = process.env.LOCAL_IP || 'localhost';
 const SHAP_URL = `http://${LOCAL_IP}:3001`;
 const SSO_URL = `http://${LOCAL_IP}:8000`;
@@ -20,7 +21,7 @@ async function simulateSSOCallback() {
         const loginResponse = await axios.post(`${SSO_URL}/auth/sso/login`, {
             email: 'galvezjon59@gmail.com',
             password: 'password123',
-            apiKey: 'bs_key_2025' // budolShap's API key
+            apiKey: 'bs_ac2bca9790f9b70f4e21c8a3c2812917' // budolShap's API key
         }, {
             maxRedirects: 0,
             validateStatus: (status) => status >= 200 && status < 400
@@ -80,7 +81,7 @@ async function simulateSSOCallback() {
         const payLoginResponse = await axios.post(`${SSO_URL}/auth/sso/login`, {
             email: 'galvezjon59@gmail.com',
             password: 'password123',
-            apiKey: 'bp_key_2025' // budolPay's API key
+            apiKey: 'bp_b31ea1888dcb2ba76fdbb776ea8f5b7a' // budolPay's API key
         }, {
             maxRedirects: 0,
             validateStatus: (status) => status >= 200 && status < 400

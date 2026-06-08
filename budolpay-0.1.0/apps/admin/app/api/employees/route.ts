@@ -326,7 +326,18 @@ export async function POST(request: Request) {
       otpStore.set(userId, { otp, expiry });
 
       // Dual-Channel Compliance Broadcast
-      await sendDualChannelNotification(user, 'OTP', otp);
+      const notifyResults = await sendDualChannelNotification(user, 'OTP', otp);
+
+      const deliveredChannels = [
+        notifyResults.email ? "EMAIL" : null,
+        notifyResults.sms ? "SMS" : null
+      ].filter(Boolean);
+
+      if (deliveredChannels.length === 0) {
+        return NextResponse.json({
+          error: "OTP generated, but delivery failed on both email and SMS channels."
+        }, { status: 503 });
+      }
 
       // Compliance v2.4.1: Log the MFA request
       await createAuditLog({
@@ -337,12 +348,20 @@ export async function POST(request: Request) {
         actorName: actor ? `${actor.firstName || ''} ${actor.lastName || ''}`.trim() || actor.email : undefined,
         actorEmail: actor?.email || undefined,
         ipAddress: "Internal System",
-        newValue: { channel: "SMS_AND_EMAIL" } as any
+        newValue: {
+          channel: deliveredChannels.join("_AND_"),
+          delivery: notifyResults
+        } as any
       });
 
       return NextResponse.json({
         success: true,
-        message: "OTP sent via SMS and Email.",
+        message: notifyResults.email && notifyResults.sms
+          ? "OTP sent via SMS and Email."
+          : notifyResults.sms
+            ? "OTP sent via SMS only. Email delivery is currently unavailable."
+            : "OTP sent via Email only. SMS delivery is currently unavailable.",
+        delivery: notifyResults,
         // We return OTP in sandbox for testing, though in prod we wait for user output
         _sandbox_debug_otp: otp
       });

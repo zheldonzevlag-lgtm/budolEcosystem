@@ -1,5 +1,6 @@
+require('dotenv').config();
 const jwt = require('jsonwebtoken');
-const JWT_SECRET = 'budolid-super-secret-key'; // Match auth-service/api-gateway
+const JWT_SECRET = process.env.JWT_SECRET;
 
 const userToken = jwt.sign({ 
   userId: 'user-123', 

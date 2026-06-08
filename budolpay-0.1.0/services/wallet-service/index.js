@@ -4,6 +4,7 @@ require('dotenv').config({ path: path.resolve(__dirname, '../../.env'), override
 
 const express = require('express');
 const cors = require('cors');
+const helmet = require('helmet');
 const { prisma } = require('@budolpay/database');
 const { verifyToken, authorize } = require('@budolpay/database/auth');
 const { PERMISSIONS } = require('@budolpay/database/rbac');
@@ -29,19 +30,12 @@ const app = express();
 const PORT = process.env.PORT || 8002;
 
 // 1. Middleware (MUST come before routes)
+app.use(helmet());
 app.use(cors());
 app.use(express.json());
 
-// Auth Middleware: Bypass for health, internal update-balance, and process-qr (mobile app proxy)
 app.use((req, res, next) => {
-    if (req.path.endsWith('/health') || 
-        req.path.endsWith('/update-balance') || 
-        req.path.endsWith('/process-qr') ||
-        req.headers['x-bypass-auth'] === 'true'
-    ) {
-        if (!req.user) {
-            req.user = { userId: 'test-user-id', role: 'ADMIN' };
-        }
+    if (req.path.endsWith('/health')) {
         return next();
     }
     verifyToken(req, res, next);
@@ -546,12 +540,14 @@ router.post('/update-balance', async (req, res) => {
 
 // Global Error Handler (Ensures JSON instead of HTML)
 app.use((err, req, res, next) => {
-    console.error('[Wallet Service] Global Error:', err.stack);
+    console.error('[Wallet Service] Global Error:', err.message);
+    const safeMessage = process.env.NODE_ENV === 'production'
+        ? 'An unexpected error occurred in the Wallet Service'
+        : err.message;
     res.status(err.status || 500).json({
         error: err.name || 'InternalServerError',
-        message: err.message || 'An unexpected error occurred in the Wallet Service',
-        timestamp: new Date().toISOString(),
-        path: req.path
+        message: safeMessage,
+        timestamp: new Date().toISOString()
     });
 });
 

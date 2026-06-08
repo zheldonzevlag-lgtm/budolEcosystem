@@ -12,6 +12,8 @@ const express = require('express');
 const jwt = require('jsonwebtoken');
 const bcrypt = require('bcryptjs');
 const cors = require('cors');
+const helmet = require('helmet');
+const rateLimit = require('express-rate-limit');
 const axios = require('axios');
 const { prisma } = require('@budolpay/database');
 const { sendAccountCreationSuccess, sendOTP, sendVerificationSuccess } = require('@budolpay/notifications');
@@ -68,6 +70,34 @@ const generateOTP = () => {
 const app = express();
 const PORT = process.env.PORT || 8001;
 const LOCAL_IP = process.env.LOCAL_IP;
+
+// Security headers
+app.use(helmet());
+
+// Rate Limiting
+const loginLimiter = rateLimit({
+    windowMs: 15 * 60 * 1000,
+    max: 5,
+    message: { error: 'Too many login attempts. Please try again later.' },
+    standardHeaders: true,
+    legacyHeaders: false,
+});
+
+const otpLimiter = rateLimit({
+    windowMs: 5 * 60 * 1000,
+    max: 3,
+    message: { error: 'Too many OTP attempts. Please request a new code.' },
+    standardHeaders: true,
+    legacyHeaders: false,
+});
+
+const registrationLimiter = rateLimit({
+    windowMs: 60 * 60 * 1000,
+    max: 10,
+    message: { error: 'Too many registration attempts. Please try again later.' },
+    standardHeaders: true,
+    legacyHeaders: false,
+});
 
 if (!LOCAL_IP) {
     console.error('[Auth] CRITICAL: LOCAL_IP environment variable is not set. Service may not be network-aware.');
@@ -161,7 +191,11 @@ app.use('/', router); // Fallback for direct calls
 
 app.get('/', (req, res) => res.json({ status: 'ok', service: 'auth-service' }));
 
-const JWT_SECRET = process.env.JWT_SECRET || 'GJ7Lxn0/kdV/KuZJ5xJ7Ip0RvMerrGW5n0gf44mfHgc=';
+if (!process.env.JWT_SECRET) {
+    console.error('FATAL: JWT_SECRET environment variable is required');
+    process.exit(1);
+}
+const JWT_SECRET = process.env.JWT_SECRET;
 const BUDOL_ID_URL = process.env.BUDOL_ID_URL || `http://${LOCAL_IP || 'localhost'}:8000`;
 console.log(`[budolPay-Auth] Ecosystem JWT_SECRET Loaded`);
 console.log(`[budolPay-Auth] budolID SSO Service Link: ${BUDOL_ID_URL}`);
@@ -169,7 +203,10 @@ console.log(`[budolPay-Auth] budolID SSO Service Link: ${BUDOL_ID_URL}`);
 // SSO: Get App Info
 router.get('/sso/app-info', async (req, res) => {
     const { apiKey } = req.query;
-    const ecosystemApp = await prisma.ecosystemApp.findUnique({ where: { apiKey } });
+    const ecosystemApp = await prisma.ecosystemApp.findUnique({ 
+        where: { apiKey },
+        select: { id: true, name: true, apiKey: true, redirectUrl: true }
+    });
     if (!ecosystemApp) return res.status(404).json({ error: 'Invalid Ecosystem App' });
     res.json(ecosystemApp);
 });
@@ -410,13 +447,10 @@ app.get('/debug/db-columns', async (req, res) => {
             FROM information_schema.columns 
             WHERE table_name = 'User' AND column_name IN ('pinHash', 'trustedDevices', 'biometricKeyId');
         `;
-        res.json({
-            url: process.env.DATABASE_URL,
-            columns: result
-        });
+        res.json({ columns: result });
     } catch (error) {
-        console.error('[Identify Error]', error);
-        res.status(500).json({ error: error.message });
+        console.error('[Identify Error]', error.message);
+        res.status(500).json({ error: 'Failed to fetch column info' });
     }
 });
 
@@ -475,9 +509,58 @@ const aiAntiSpamEngine = {
     }
 };
 
+// Server-side CAPTCHA Store
+const captchaStore = new Map();
+
+function generateCaptchaChallenge() {
+    const n1 = Math.floor(Math.random() * 9) + 1;
+    const n2 = Math.floor(Math.random() * 9) + 1;
+    const op = Math.random() > 0.5 ? '+' : '-';
+    let finalN1 = n1, finalN2 = n2;
+    if (op === '-' && n1 < n2) { finalN1 = n2; finalN2 = n1; }
+    const answer = op === '+' ? finalN1 + finalN2 : finalN1 - finalN2;
+    const token = require('crypto').randomBytes(32).toString('hex');
+    captchaStore.set(token, { answer, createdAt: Date.now() });
+    for (const [key, val] of captchaStore) {
+        if (Date.now() - val.createdAt > 5 * 60 * 1000) captchaStore.delete(key);
+    }
+    return { token, n1: finalN1, n2: finalN2, op };
+}
+
+app.get('/captcha/generate', (req, res) => {
+    const challenge = generateCaptchaChallenge();
+    res.json({ token: challenge.token, n1: challenge.n1, n2: challenge.n2, op: challenge.op });
+});
+
+app.post('/captcha/verify', (req, res) => {
+    const { token, answer } = req.body;
+    const stored = captchaStore.get(token);
+    if (!stored) return res.status(400).json({ valid: false, error: 'CAPTCHA expired or invalid' });
+    captchaStore.delete(token);
+    if (parseInt(answer) === stored.answer) {
+        const verifiedToken = require('crypto').randomBytes(32).toString('hex');
+        captchaStore.set(verifiedToken, { verified: true, createdAt: Date.now() });
+        res.json({ valid: true, verifiedToken });
+    } else {
+        res.json({ valid: false, error: 'Incorrect answer' });
+    }
+});
+
 // Register (Global User - GoTyme Aligned)
-app.post('/register', async (req, res) => {
-    const { email, password, phoneNumber, firstName, lastName, pin, deviceId } = req.body;
+app.post('/register', registrationLimiter, async (req, res) => {
+    const { email, password, phoneNumber, firstName, lastName, pin, deviceId, captchaToken } = req.body;
+
+    // CAPTCHA Verification (skip for API calls)
+    if (!req.headers['x-api-key'] && !req.headers['x-internal-service']) {
+        if (!captchaToken) {
+            return res.status(400).json({ error: 'CAPTCHA verification required' });
+        }
+        const captchaData = captchaStore.get(captchaToken);
+        if (!captchaData || !captchaData.verified) {
+            return res.status(400).json({ error: 'CAPTCHA expired or invalid. Please refresh and try again.' });
+        }
+        captchaStore.delete(captchaToken);
+    }
 
     // AI Anti-Spam Check
     const spamAnalysis = await aiAntiSpamEngine.score({ email, firstName, lastName, phoneNumber });
@@ -790,7 +873,7 @@ app.get('/check-phone', async (req, res) => {
 });
 
 // Mobile Login - Phase 1: Identify & Challenge (GoTyme Style)
-app.post('/login/mobile/identify', async (req, res) => {
+app.post('/login/mobile/identify', loginLimiter, async (req, res) => {
     let { phoneNumber, deviceId } = req.body;
 
     if (!phoneNumber) return res.status(400).json({ error: 'Mobile number or email is required' });
@@ -984,7 +1067,7 @@ app.post('/login/mobile/verify-pin', async (req, res) => {
             });
         }
 
-        const token = jwt.sign({ userId: user.id, role: user.role, type: 'MOBILE' }, JWT_SECRET, { expiresIn: '30d' }); // Longer session for mobile
+        const token = jwt.sign({ userId: user.id, role: user.role, type: 'MOBILE' }, JWT_SECRET, { expiresIn: '7d' }); // Shorter session for security
 
         // Audit: Mobile PIN Login
         await createAuditLog(req, user.id, 'SECURITY_MOBILE_LOGIN_PIN', {
@@ -1033,7 +1116,7 @@ app.post('/login/mobile/setup-pin', async (req, res) => {
         const token = jwt.sign(
             { userId: user.id, role: user.role, type: 'MOBILE', isVerified: true, hasPin: true },
             JWT_SECRET,
-            { expiresIn: '30d' }
+            { expiresIn: '7d' }
         );
 
         res.json({
@@ -1120,7 +1203,7 @@ app.post('/resend-otp', async (req, res) => {
 });
 
 // Verify OTP (Universal Endpoint for Mobile & Web)
-app.post(['/verify-otp', '/login/mobile/verify-otp'], async (req, res) => {
+app.post(['/verify-otp', '/login/mobile/verify-otp'], otpLimiter, async (req, res) => {
     const { userId, otp, type, deviceId } = req.body; // type can be 'EMAIL', 'SMS', 'BOTH', 'KYC', or 'DEVICE'
     try {
         const user = await prisma.user.findUnique({ where: { id: userId } });
@@ -1205,7 +1288,7 @@ app.post(['/verify-otp', '/login/mobile/verify-otp'], async (req, res) => {
             const token = jwt.sign(
                 { userId: updatedUser.id, role: updatedUser.role, type: 'MOBILE', isVerified: true, hasPin },
                 JWT_SECRET,
-                { expiresIn: hasPin ? '30d' : '10m' } // Limited session if no PIN
+                { expiresIn: hasPin ? '7d' : '10m' } // Limited session if no PIN
             );
 
             return res.json({
@@ -1229,7 +1312,7 @@ app.post(['/verify-otp', '/login/mobile/verify-otp'], async (req, res) => {
 });
 
 // SSO Login
-app.post('/sso/login', async (req, res) => {
+app.post('/sso/login', loginLimiter, async (req, res) => {
     const { email, password, apiKey } = req.body;
     try {
         // 1. Verify App
@@ -1251,7 +1334,7 @@ app.post('/sso/login', async (req, res) => {
                 apps: ['budolPay', 'budolShap', 'budolExpress']
             },
             JWT_SECRET,
-            { expiresIn: '7d' }
+            { expiresIn: '1d' }
         );
 
         // 4. Register Session
@@ -1322,7 +1405,7 @@ app.post('/login', async (req, res) => {
                     body: JSON.stringify({
                         email,
                         password,
-                        apiKey: 'bp_key_2025' // Core ecosystem key
+                        apiKey: 'bp_b31ea1888dcb2ba76fdbb776ea8f5b7a' // Core ecosystem key
                     })
                 });
 
@@ -1475,7 +1558,7 @@ app.post('/biometric/login-verify', async (req, res) => {
             return res.status(400).json({ error: 'Biometric signature required' });
         }
 
-        const token = jwt.sign({ userId: user.id, role: user.role, type: 'BIOMETRIC' }, JWT_SECRET, { expiresIn: '30d' });
+        const token = jwt.sign({ userId: user.id, role: user.role, type: 'BIOMETRIC' }, JWT_SECRET, { expiresIn: '7d' });
 
         // Audit: Mobile Biometric Login
         await createAuditLog(req, user.id, 'SECURITY_MOBILE_LOGIN_BIOMETRIC', {
@@ -1724,5 +1807,17 @@ if (require.main === module) {
         setInterval(() => { }, 1000000);
     });
 }
+
+// Global Error Handler
+app.use((err, req, res, next) => {
+    console.error('[Auth Service] Global Error:', err.message);
+    const safeMessage = process.env.NODE_ENV === 'production'
+        ? 'An unexpected error occurred in the Auth Service'
+        : err.message;
+    res.status(err.status || 500).json({
+        error: err.name || 'InternalServerError',
+        message: safeMessage
+    });
+});
 
 module.exports = { app, maskPII };

@@ -24,6 +24,10 @@ WORKDIR /app
 COPY --from=builder /app/budolpay-0.1.0/packages/database /app/budolpay-0.1.0/packages/database
 COPY --from=builder /app/budolAccounting-0.1.0 /app/budolAccounting-0.1.0
 
+# Run as non-root user
+RUN groupadd -r appgroup && useradd -r -g appgroup appuser
+USER appuser
+
 WORKDIR /app/budolAccounting-0.1.0
 EXPOSE 8005
 CMD ["node", "index.js"]

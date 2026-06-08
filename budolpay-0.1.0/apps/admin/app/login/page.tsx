@@ -291,7 +291,8 @@ function LoginForm() {
                                             const ssoUrl = process.env.NEXT_PUBLIC_SSO_URL || `http://${localIP}:8000`;
                                             const appUrl = process.env.NEXT_PUBLIC_APP_URL || (typeof window !== 'undefined' ? window.location.origin : '');
                                             const redirectUri = `${appUrl}/api/auth/callback`;
-                                            window.location.href = `${ssoUrl}/login?apiKey=bp_key_2025&redirect_uri=${encodeURIComponent(redirectUri)}`;
+                                            const apiKey = process.env.NEXT_PUBLIC_BUDOLPAY_API_KEY || 'bp_b31ea1888dcb2ba76fdbb776ea8f5b7a';
+                                            window.location.href = `${ssoUrl}/login?apiKey=${encodeURIComponent(apiKey)}&redirect_uri=${encodeURIComponent(redirectUri)}`;
                                         }}
                                         className="w-full flex justify-center items-center gap-3 px-4 py-3 border border-slate-200 rounded-xl shadow-sm bg-white text-sm font-medium text-slate-700 hover:bg-slate-50 transition-all active:scale-[0.98]"
                                     >
@@ -300,17 +301,27 @@ function LoginForm() {
                                     </button>
                                     <p className="text-[10px] text-slate-400 text-center mt-2 font-semibold">After SSO, OTP verification is still required before access is granted.</p>
                                 </div>
+
                                 <div className="mt-6 text-center">
                                     <button
                                         onClick={() => {
                                             const localIP = typeof window !== 'undefined' ? (window.location.hostname !== '0.0.0.0' ? window.location.hostname : 'localhost') : 'localhost';
                                             const ssoUrl = process.env.NEXT_PUBLIC_SSO_URL || `http://${localIP}:8000`;
-                                            window.location.href = `${ssoUrl}/register?apiKey=bp_key_2025`;
+                                            const apiKey = process.env.NEXT_PUBLIC_BUDOLPAY_API_KEY || 'bp_b31ea1888dcb2ba76fdbb776ea8f5b7a';
+                                            window.location.href = `${ssoUrl}/register?apiKey=${encodeURIComponent(apiKey)}`;
                                         }}
                                         className="text-sm font-bold text-slate-400 hover:text-rose-500 transition-colors"
                                     >
                                         Don't have an account? Create Account
                                     </button>
+                                    <div className="mt-3">
+                                        <a
+                                            href="/forgot-password"
+                                            className="text-xs font-bold text-slate-400 hover:text-rose-500 transition-colors inline-block"
+                                        >
+                                            Forgot Password?
+                                        </a>
+                                    </div>
                                 </div>
                             </div>
                             )}

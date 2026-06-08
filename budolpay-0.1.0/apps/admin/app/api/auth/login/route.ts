@@ -65,7 +65,9 @@ export async function POST(request: Request) {
                 { 
                     status: 429,
                     headers: {
-                        'Retry-After': Math.ceil((limiter.reset.getTime() - Date.now()) / 1000).toString()
+                        'Retry-After': Math.ceil((limiter.reset.getTime() - Date.now()) / 1000).toString(),
+                        'Cache-Control': 'no-store, no-cache, must-revalidate',
+                        'Pragma': 'no-cache'
                     }
                 }
             );
@@ -74,7 +76,7 @@ export async function POST(request: Request) {
         // 1. Authenticate against budolID API (Server-to-Server)
         const LOCAL_IP = process.env.LOCAL_IP || 'localhost';
         const ssoUrl = process.env.SSO_URL || `http://${LOCAL_IP}:8000`;
-        const apiKey = 'bp_key_2025'; // This should be in env
+        const apiKey = process.env.BUDOLID_SSO_API_KEY || 'bp_b31ea1888dcb2ba76fdbb776ea8f5b7a';
 
         console.log(`[Login API] Attempting SSO login via: ${ssoUrl}/auth/sso/login`);
         

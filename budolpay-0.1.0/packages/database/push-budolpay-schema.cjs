@@ -1,13 +1,14 @@
 
 // Script to push BudolPay schema to BudolPay DB specifically
+require('dotenv').config();
 const { execSync } = require('child_process');
 const path = require('path');
 
 const budolpaySchemaPath = path.join(__dirname, 'prisma/schema.prisma');
 
 const envVars = {
-  DATABASE_URL: 'postgresql://neondb_owner:npg_XLkrx73JNlRP@ep-wandering-breeze-aoin4z9c-pooler.c-2.ap-southeast-1.aws.neon.tech/budolpay?sslmode=require&channel_binding=require',
-  DIRECT_URL: 'postgresql://neondb_owner:npg_XLkrx73JNlRP@ep-wandering-breeze-aoin4z9c-pooler.c-2.ap-southeast-1.aws.neon.tech/budolpay?sslmode=require&channel_binding=require'
+  DATABASE_URL: process.env.DATABASE_URL + '&channel_binding=require',
+  DIRECT_URL: process.env.DATABASE_URL + '&channel_binding=require'
 };
 
 console.log('🚀 Pushing BudolPay schema to budolpay DB...');

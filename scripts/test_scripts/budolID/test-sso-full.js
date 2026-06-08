@@ -2,7 +2,7 @@ require('dotenv').config();
 const { prisma } = require('@budolpay/database');
 const jwt = require('jsonwebtoken');
 
-const JWT_SECRET = 'GJ7Lxn0/kdV/KuZJ5xJ7Ip0RvMerrGW5n0gf44mfHgc=';
+const JWT_SECRET = process.env.JWT_SECRET;
 const BUDOLPAY_CALLBACK = 'http://127.0.0.1:3000/api/auth/callback';
 const BUDOLSHAP_CALLBACK = 'http://127.0.0.1:3001/auth/callback';
 

@@ -8,7 +8,7 @@ async function testVerify() {
         const loginRes = await axios.post(`${BUDOLID_URL}/auth/sso/login`, {
             email: 'reynaldomgalvez@gmail.com',
             password: 'tr@1t0r',
-            apiKey: 'bs_key_2025'
+            apiKey: 'bs_ac2bca9790f9b70f4e21c8a3c2812917'
         }, {
             maxRedirects: 0,
             validateStatus: (status) => status === 302

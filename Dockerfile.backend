@@ -11,6 +11,8 @@ COPY budolID-0.1.0/package*.json ./
 RUN npm install
 COPY budolID-0.1.0/ .
 RUN npx prisma generate
+RUN groupadd -r appgroup && useradd -r -g appgroup appuser
+USER appuser
 EXPOSE 8000
 CMD ["npm", "start"]
 
@@ -26,7 +28,9 @@ RUN cd budolpay-0.1.0/packages/database && npx prisma generate
 WORKDIR /app/budolAccounting-0.1.0
 COPY budolAccounting-0.1.0/package*.json ./
 RUN npm install
-COPY budolAccounting-0.1.0/ ./
+COPY budolAccounting-0.1.0/ .
+RUN groupadd -r appgroup && useradd -r -g appgroup appuser
+USER appuser
 EXPOSE 8005
 CMD ["node", "index.js"]
 
@@ -62,34 +66,50 @@ RUN npx prisma generate --schema=packages/database/prisma/schema.prisma
 
 # Final Service Stages (Builder Pattern for ECS)
 FROM budol-pay-base AS budol-gateway
+RUN groupadd -r appgroup && useradd -r -g appgroup appuser
+USER appuser
 EXPOSE 8080
 CMD ["node", "services/api-gateway/index.js"]
 
 FROM budol-pay-base AS budol-auth
+RUN groupadd -r appgroup && useradd -r -g appgroup appuser
+USER appuser
 EXPOSE 8001
 CMD ["node", "services/auth-service/index.js"]
 
 FROM budol-pay-base AS budol-wallet
+RUN groupadd -r appgroup && useradd -r -g appgroup appuser
+USER appuser
 EXPOSE 8002
 CMD ["node", "services/wallet-service/index.js"]
 
 FROM budol-pay-base AS budol-tx
+RUN groupadd -r appgroup && useradd -r -g appgroup appuser
+USER appuser
 EXPOSE 8003
 CMD ["node", "services/transaction-service/index.js"]
 
 FROM budol-pay-base AS budol-payment
+RUN groupadd -r appgroup && useradd -r -g appgroup appuser
+USER appuser
 EXPOSE 8004
 CMD ["node", "services/payment-gateway-service/index.js"]
 
 FROM budol-pay-base AS budol-kyc
+RUN groupadd -r appgroup && useradd -r -g appgroup appuser
+USER appuser
 EXPOSE 8006
 CMD ["node", "services/verification-service/index.js"]
 
 FROM budol-pay-base AS budol-settlement
+RUN groupadd -r appgroup && useradd -r -g appgroup appuser
+USER appuser
 EXPOSE 8002
 CMD ["node", "services/settlement-service/index.js"]
 
 FROM budol-pay-base AS budol-admin
+RUN groupadd -r appgroup && useradd -r -g appgroup appuser
+USER appuser
 EXPOSE 3000
 CMD ["node", "apps/admin/server.js"]
 

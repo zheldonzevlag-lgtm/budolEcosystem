@@ -85,6 +85,8 @@ const getSystemSettings = async (forceRefresh = false) => {
     }
 };
 
+const isLikelyEmail = (value) => typeof value === 'string' && value.includes('@');
+
 const createTransporter = (settings) => {
     const provider = settings.NOTIFICATION_EMAIL_PROVIDER || settings.emailProvider || 'GOOGLE';
     const smtpHost = settings.NOTIFICATION_EMAIL_SMTP_HOST || settings.smtpHost;
@@ -93,6 +95,7 @@ const createTransporter = (settings) => {
     const smtpPass = settings.NOTIFICATION_EMAIL_SMTP_PASS || settings.smtpPass;
     const brevoApiKey = settings.NOTIFICATION_BREVO_API_KEY || settings.brevoApiKey;
     const gmassApiKey = settings.NOTIFICATION_GMASS_API_KEY || settings.gmassApiKey;
+    const normalizedPass = (smtpPass || '').replace(/\s+/g, '');
     
     if (provider === 'BREVO') {
         return nodemailer.createTransport({
@@ -100,7 +103,7 @@ const createTransporter = (settings) => {
             port: parseInt(smtpPort) || 587,
             auth: {
                 user: smtpUser || process.env.BREVO_USER,
-                pass: brevoApiKey || smtpPass || process.env.BREVO_PASS
+                pass: brevoApiKey || normalizedPass || process.env.BREVO_PASS
             }
         });
     } else if (provider === 'GMASS') {
@@ -109,16 +112,37 @@ const createTransporter = (settings) => {
             port: parseInt(smtpPort) || 587,
             auth: {
                 user: smtpUser || process.env.GMASS_USER,
-                pass: gmassApiKey || smtpPass || process.env.GMASS_PASS
+                pass: gmassApiKey || normalizedPass || process.env.GMASS_PASS
             }
         });
     } else {
-        // Default to Google
+        const configuredUser = smtpUser || process.env.EMAIL_USER;
+        const configuredHost = smtpHost || process.env.EMAIL_HOST;
+        const configuredPort = parseInt(smtpPort || process.env.EMAIL_PORT || '587');
+        const shouldUseGmailService =
+            provider === 'GOOGLE' ||
+            !configuredHost ||
+            isLikelyEmail(configuredHost) ||
+            configuredHost === 'gmail' ||
+            configuredHost === 'smtp.gmail.com';
+
+        if (shouldUseGmailService) {
+            return nodemailer.createTransport({
+                service: 'gmail',
+                auth: {
+                    user: configuredUser,
+                    pass: normalizedPass || process.env.EMAIL_PASS
+                }
+            });
+        }
+
         return nodemailer.createTransport({
-            service: 'gmail',
+            host: configuredHost,
+            port: configuredPort,
+            secure: configuredPort === 465,
             auth: {
-                user: smtpUser || process.env.EMAIL_USER,
-                pass: smtpPass || process.env.EMAIL_PASS
+                user: configuredUser,
+                pass: normalizedPass || process.env.EMAIL_PASS
             }
         });
     }
@@ -133,7 +157,11 @@ const sendEmail = async (to, subject, text, html) => {
         if (provider === 'CONSOLE') {
             const highlightedText = text.replace(/(\d{6})/, '\x1b[33m$1\x1b[0m');
             console.log(`[CONSOLE EMAIL] To: ${maskPII(to)}\nSubject: ${subject}\nBody: ${highlightedText}`);
-            return true;
+            const allowConsoleAsSuccess = process.env.NODE_ENV !== 'production' && process.env.VERCEL !== '1';
+            if (!allowConsoleAsSuccess) {
+                console.warn('[Notification] Email provider is CONSOLE in a deployed environment; treating as undelivered.');
+            }
+            return allowConsoleAsSuccess;
         }
 
         const transporter = createTransporter(settings);
@@ -200,6 +228,11 @@ const sendSMS = async (to, message) => {
             // Highlight 6-digit OTP in console log if present
             const highlightedMessage = message.replace(/(\d{6})/, '\x1b[33m$1\x1b[0m');
             console.log(`[CONSOLE SMS] To: ${maskPII(to)}, Message: ${highlightedMessage}`);
+            const allowConsoleAsSuccess = process.env.NODE_ENV !== 'production' && process.env.VERCEL !== '1';
+            if (!allowConsoleAsSuccess) {
+                console.warn('[Notification] SMS provider is CONSOLE in a deployed environment; treating as undelivered.');
+            }
+            return allowConsoleAsSuccess;
         }
         
         return true;

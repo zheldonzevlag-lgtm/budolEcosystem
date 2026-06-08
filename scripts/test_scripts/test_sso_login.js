@@ -5,7 +5,7 @@ async function testSSOLogin() {
     const loginData = {
         email: 'reynaldomgalvez@gmail.com',
         password: 'tr@1t0r2026!',
-        apiKey: 'bs_key_2025' // From check-db.js output
+        apiKey: 'bs_ac2bca9790f9b70f4e21c8a3c2812917' // From check-db.js output
     };
 
     try {
