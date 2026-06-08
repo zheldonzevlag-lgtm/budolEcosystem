@@ -268,10 +268,8 @@ export default function MarketingAdsSettings() {
                                             onChange={async (e) => {
                                                 const file = e.target.files?.[0]
                                                 if (!file) return
-                                                const fd = new FormData()
-                                                fd.append('file', file)
-                                                fd.append('type', 'marketing')
-                                                const res = await fetch('/api/upload', { method: 'POST', body: fd })
+                                                const base64 = await new Promise((resolve) => { const reader = new FileReader(); reader.onload = (e) => resolve(e.target.result); reader.readAsDataURL(file); });
+                                                const res = await fetch('/api/upload', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ image: base64, type: 'marketing' }) })
                                                 const data = await res.json()
                                                 if (data.url) setNewGroup({ ...newGroup, items: [...newGroup.items, { imageUrl: data.url }] })
                                             }}

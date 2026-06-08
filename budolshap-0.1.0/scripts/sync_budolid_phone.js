@@ -1,12 +1,16 @@
 
 import { PrismaClient } from '@prisma/client';
 
-// Use a specific connection string for the budolid schema
+// Use environment variable for database connection
+const dbUrl = process.env.BUDOLID_DATABASE_URL || process.env.DATABASE_URL;
+if (!dbUrl) {
+    console.error('FATAL: BUDOLID_DATABASE_URL or DATABASE_URL environment variable is required');
+    process.exit(1);
+}
+
 const prisma = new PrismaClient({
     datasources: {
-        db: {
-            url: "postgresql://postgres:r00t@localhost:5432/budolshap_1db?schema=budolid"
-        }
+        db: { url: dbUrl }
     }
 });
 

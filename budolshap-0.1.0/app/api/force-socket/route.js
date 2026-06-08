@@ -9,7 +9,7 @@ export async function GET() {
             where: { id: "default" },
             data: {
                 realtimeProvider: "SOCKET_IO",
-                socketUrl: "https://budolws.duckdns.org"
+                socketUrl: "https://websocket-budol.vercel.app"
             }
         });
         clearSettingsCache();

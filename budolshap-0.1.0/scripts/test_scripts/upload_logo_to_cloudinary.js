@@ -3,25 +3,20 @@ import path from 'path';
 import dotenv from 'dotenv';
 import { fileURLToPath } from 'url';
 
-// Load env vars
+// Always use env vars — never hardcode secrets
 dotenv.config({ path: '.env.local' });
 dotenv.config({ path: '.env' });
 
-// Manually set if missing (using the ones found in fix-cloudinary-env.js as fallback/verification)
-// This ensures it works even if .env is missing or not loaded correctly by dotenv in this script context
-if (!process.env.NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME) {
-    cloudinary.config({
-        cloud_name: 'dasfwpg7x',
-        api_key: '537684148625265',
-        api_secret: 'USb6SDEDehMLyw9_HlFC1wDqlDE'
-    });
-} else {
-    cloudinary.config({
-        cloud_name: process.env.NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME,
-        api_key: process.env.CLOUDINARY_API_KEY,
-        api_secret: process.env.CLOUDINARY_API_SECRET,
-    });
+if (!process.env.NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME || !process.env.CLOUDINARY_API_KEY || !process.env.CLOUDINARY_API_SECRET) {
+    console.error('Missing Cloudinary env vars. Set NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME, CLOUDINARY_API_KEY, CLOUDINARY_API_SECRET in .env');
+    process.exit(1);
 }
+
+cloudinary.config({
+    cloud_name: process.env.NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME,
+    api_key: process.env.CLOUDINARY_API_KEY,
+    api_secret: process.env.CLOUDINARY_API_SECRET,
+});
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);

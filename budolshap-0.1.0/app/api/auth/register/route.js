@@ -58,7 +58,7 @@ function validateRegistrationInput(data) {
 export async function POST(request) {
     try {
         const body = await request.json()
-        let { name, email, password, phoneNumber, deviceFingerprint, image, registrationType, _honey } = body
+        let { name, email, password, phoneNumber, deviceFingerprint, image, registrationType, _honey, captchaSessionId, captchaAnswer } = body
 
         // Anti-spam: Honeypot check
         if (_honey) {
@@ -69,6 +69,25 @@ export async function POST(request) {
                 metadata: { spamField: '_honey' }
             });
             return NextResponse.json({ error: 'Invalid request' }, { status: 400 });
+        }
+
+        // Server-side CAPTCHA validation
+        if (!captchaSessionId || captchaAnswer === undefined) {
+            return NextResponse.json({ error: 'CAPTCHA required' }, { status: 400 });
+        }
+        const captchaStore = globalThis.__captchaStore || {};
+        const captcha = captchaStore[captchaSessionId];
+        if (!captcha || Date.now() - captcha.created > 300000) {
+            delete captchaStore[captchaSessionId];
+            return NextResponse.json({ error: 'CAPTCHA expired' }, { status: 400 });
+        }
+        delete captchaStore[captchaSessionId];
+        const expectedCaptchaAnswer =
+            captcha.operator === '-'
+                ? captcha.a - captcha.b
+                : captcha.a + captcha.b;
+        if (expectedCaptchaAnswer !== Number(captchaAnswer)) {
+            return NextResponse.json({ error: 'Invalid CAPTCHA answer' }, { status: 400 });
         }
         
         // Security: Check for injection and XSS attempts

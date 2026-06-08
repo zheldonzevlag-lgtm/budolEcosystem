@@ -1,11 +1,11 @@
 import jwt from 'jsonwebtoken'
 
-// JWT_SECRET - require environment variable in production, allow dev fallback
-const JWT_SECRET = process.env.JWT_SECRET || (
-    process.env.NODE_ENV === 'production'
-        ? (() => { throw new Error('CRITICAL: JWT_SECRET environment variable is required in production!'); })()
-        : 'dev-local-only-secret-do-not-use-in-prod'
-);
+// JWT_SECRET - require environment variable
+const JWT_SECRET = process.env.JWT_SECRET
+if (!JWT_SECRET) {
+    console.error('FATAL: JWT_SECRET environment variable is required');
+    process.exit(1);
+}
 const JWT_EXPIRES_IN = process.env.JWT_EXPIRES_IN || '7d'
 
 // Generate JWT token

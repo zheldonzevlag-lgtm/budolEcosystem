@@ -6,6 +6,7 @@ const ALLOWED_METHODS = ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS', 'HEAD']
 
 export function middleware(request) {
     const response = NextResponse.next()
+    const pathname = request.nextUrl.pathname
     
     // 1. Security headers
     response.headers.set('X-Content-Type-Options', 'nosniff')
@@ -30,7 +31,8 @@ export function middleware(request) {
     
     // 4. Request size limiting (for POST/PUT requests)
     const contentLength = request.headers.get('content-length')
-    if (contentLength && parseInt(contentLength) > MAX_REQUEST_SIZE_MB * 1024 * 1024) {
+    const isUploadRoute = pathname === '/api/upload'
+    if (!isUploadRoute && contentLength && parseInt(contentLength) > MAX_REQUEST_SIZE_MB * 1024 * 1024) {
         return NextResponse.json(
             { error: 'Request too large. Maximum size is ' + MAX_REQUEST_SIZE_MB + 'MB' },
             { status: 413 }

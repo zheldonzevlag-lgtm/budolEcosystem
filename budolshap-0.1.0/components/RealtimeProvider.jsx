@@ -105,7 +105,11 @@ export default function RealtimeProvider({ children }) {
                 if (socket) socket.disconnect();
 
                 try {
-                    const socketInstance = io(configData.socketUrl)
+                    const socketInstance = io(configData.socketUrl, {
+                        auth: {
+                            token: typeof window !== 'undefined' ? localStorage.getItem('token') : null
+                        }
+                    })
                     setSocket(socketInstance)
                     currentSocket = socketInstance
                     setupSocketListeners(socketInstance)

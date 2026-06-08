@@ -10,14 +10,14 @@ async function main() {
         await prisma.$executeRawUnsafe(`
             UPDATE "EcosystemApp" 
             SET "redirectUri" = 'https://budolshap.duckdns.org/auth/callback' 
-            WHERE "apiKey" = 'bs_key_2025'
+            WHERE "apiKey" = 'bs_ac2bca9790f9b70f4e21c8a3c2812917'
         `);
         
         // Update budolpay
         await prisma.$executeRawUnsafe(`
             UPDATE "EcosystemApp" 
             SET "redirectUri" = 'https://budolpay.duckdns.org/auth/callback' 
-            WHERE "apiKey" = 'bp_key_2025'
+            WHERE "apiKey" = 'bp_b31ea1888dcb2ba76fdbb776ea8f5b7a'
         `);
         
         console.log("SUCCESS: redirectUri updated to duckdns.org for bp and bs keys.");

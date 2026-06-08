@@ -1,3 +1,4 @@
+require('dotenv').config();
 const { PrismaClient } = require('@prisma/client');
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
@@ -5,12 +6,12 @@ const jwt = require('jsonwebtoken');
 const prisma = new PrismaClient({
   datasources: {
     db: {
-      url: "postgresql://postgres:r00t@localhost:5432/budolshap_1db?schema=public"
+      url: process.env.DATABASE_URL
     },
   },
 });
 
-const JWT_SECRET = 'budolid-super-secret-key';
+const JWT_SECRET = process.env.JWT_SECRET;
 
 async function setupShapUser() {
   const email = 'clark.kent@budolshap.com';

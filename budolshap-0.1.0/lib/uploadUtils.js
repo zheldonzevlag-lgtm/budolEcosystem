@@ -73,7 +73,7 @@ export const uploadImage = async (input) => {
     const response = await fetch('/api/upload', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ image: base64Data })
+        body: JSON.stringify({ image: base64Data, type: 'product' })
     });
 
     if (!response.ok) {

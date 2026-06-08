@@ -2,11 +2,15 @@ import { PrismaClient } from '@prisma/client';
 import bcrypt from 'bcryptjs';
 
 async function main() {
+    const dbUrl = process.env.DATABASE_URL || process.env.BUDOLSHAP_DATABASE_URL;
+    if (!dbUrl) {
+        console.error('FATAL: DATABASE_URL or BUDOLSHAP_DATABASE_URL environment variable is required');
+        process.exit(1);
+    }
+
     const prisma = new PrismaClient({
         datasources: {
-            db: {
-                url: "postgresql://budolpostgres:r00tPassword2026!@budol-db-production.cnu6imkq689x.ap-southeast-1.rds.amazonaws.com:5432/budolshap_1db?sslmode=no-verify"
-            }
+            db: { url: dbUrl }
         }
     });
 

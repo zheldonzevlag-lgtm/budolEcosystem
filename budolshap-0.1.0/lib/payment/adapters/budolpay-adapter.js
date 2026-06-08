@@ -16,23 +16,15 @@ export class BudolPayAdapter extends BasePaymentAdapter {
             console.error('[BudolPayAdapter] FATAL: No gateway URL configured. Set PAYMENT_GATEWAY_URL, NEXT_PUBLIC_PAYMENT_GATEWAY_URL, or MONOLITH_URL.');
         }
 
-        this.gatewayUrl = rawUrl;
+        this.gatewayUrl = rawUrl.replace(/\/$/, '');
 
-        console.log(`[BudolPayAdapter] Initialized. Gateway: ${this.gatewayUrl} | isVercel: ${isVercel}`);
-        
-        this.apiKey = process.env.BUDOLPAY_API_KEY;
-        
-        if (!this.apiKey) {
-            console.error('[BudolPayAdapter] FATAL: No API key configured. Set BUDOLPAY_API_KEY.');
-        }
-        
-        // Legacy logic: only append /payments if it's a specific older gateway format
-        // We SKIP this for the Vercel healthy mirror to avoid double /payments or incorrect paths
         const isLegacyGateway = (this.gatewayUrl.includes(':8080') || this.gatewayUrl.includes('duckdns.org')) && 
                                 !this.gatewayUrl.includes('vercel.app');
         
-        if (isLegacyGateway && !this.gatewayUrl.includes('/payments')) {
-            console.log(`[BudolPay Adapter] 🌐 Legacy Gateway detected (${this.gatewayUrl}). Adding /payments prefix.`);
+        if (!isLegacyGateway && !this.gatewayUrl.includes('/api/payment-gw')) {
+            this.gatewayUrl = `${this.gatewayUrl}/api/payment-gw`;
+        } else if (isLegacyGateway && !this.gatewayUrl.includes('/payments')) {
+            console.log(`[BudolPay Adapter] Legacy Gateway detected (${this.gatewayUrl}). Adding /payments prefix.`);
             this.gatewayUrl = this.gatewayUrl.endsWith('/') 
                 ? `${this.gatewayUrl}payments` 
                 : `${this.gatewayUrl}/payments`;

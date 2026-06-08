@@ -1,9 +1,10 @@
+require('dotenv').config();
 const { PrismaClient } = require('@prisma/client');
 
 const prisma = new PrismaClient({
   datasources: {
     db: {
-      url: "postgresql://neondb_owner:npg_XLkrx73JNlRP@ep-wandering-breeze-aoin4z9c-pooler.c-2.ap-southeast-1.aws.neon.tech/budolid?sslmode=require&channel_binding=require"
+      url: process.env.DATABASE_URL + '&channel_binding=require'
     }
   }
 });

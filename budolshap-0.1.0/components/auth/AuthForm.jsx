@@ -55,6 +55,7 @@ const AuthForm = ({ mode = 'login', onSuccess, onToggleMode, isModal = false, su
         _honey: ''
     })
     const [isCaptchaSolved, setIsCaptchaSolved] = useState(false)
+    const [captchaData, setCaptchaData] = useState(null)
 
     useEffect(() => {
         setIsMounted(true)
@@ -615,7 +616,9 @@ const AuthForm = ({ mode = 'login', onSuccess, onToggleMode, isModal = false, su
                         phoneNumber: finalPhone,
                         image: formData.image,
                         registrationType: registrationType,
-                        _honey: formData._honey
+                        _honey: formData._honey,
+                        captchaSessionId: captchaData?.sessionId,
+                        captchaAnswer: captchaData?.answer
                     })
                 })
 
@@ -666,7 +669,10 @@ const AuthForm = ({ mode = 'login', onSuccess, onToggleMode, isModal = false, su
         <form onSubmit={handleSubmit} className="flex flex-col gap-4" autoComplete="off">
             {!isCaptchaSolved ? (
                 <MathCaptcha 
-                    onSolve={() => setIsCaptchaSolved(true)} 
+                    onSolve={(data) => {
+                        setCaptchaData(data);
+                        setIsCaptchaSolved(true);
+                    }} 
                     primaryColor={isLogin ? 'blue' : 'rose'} 
                 />
             ) : (
@@ -1141,41 +1147,9 @@ const AuthForm = ({ mode = 'login', onSuccess, onToggleMode, isModal = false, su
 
             {isLogin && (
                 <div className="mb-2">
-                    <div className="relative mb-4">
-                        <div className="absolute inset-0 flex items-center">
-                            <span className="w-full border-t border-slate-200"></span>
-                        </div>
-                        <div className="relative flex justify-center text-[10px] uppercase">
-                            <span className="bg-white px-2 text-slate-400 font-medium text-center">
-                                Quick Access to <span className="font-bold text-slate-500 lowercase">budol</span><span className="font-bold normal-case text-purple-600">Ecosystem</span>
-                            </span>
-                        </div>
+                    <div className="text-center">
+                        <span className="text-[11px] text-slate-400 font-medium">SSO authentication is handled automatically through budolID.</span>
                     </div>
-
-                    {isMounted ? (
-                        <button
-                            type="button"
-                            onClick={() => {
-                                const ssoUrl = process.env.NEXT_PUBLIC_SSO_URL || (typeof window !== 'undefined' ? `http://${window.location.hostname}:8000` : 'http://localhost:8000');
-                                const appUrl = process.env.NEXT_PUBLIC_APP_URL || (typeof window !== 'undefined' ? window.location.origin : '');
-                                const redirectUri = `${appUrl}/auth/callback`;
-                                const apiKey = process.env.NEXT_PUBLIC_BUDOLID_API_KEY || 'bs_key_2025';
-                                window.location.href = `${ssoUrl}/login?apiKey=${apiKey}&redirect_uri=${encodeURIComponent(redirectUri)}`;
-                            }}
-                            className={`w-full flex justify-center items-center gap-3 py-3 border rounded-lg shadow-sm text-sm font-semibold transition-all active:scale-[0.98] ${
-                                highlightSSO 
-                                ? "bg-rose-600 border-rose-700 text-white ring-2 ring-rose-500/20 scale-[1.02]" 
-                                : "bg-rose-500 border-rose-600 text-white hover:bg-rose-600 hover:border-rose-700"
-                            }`}
-                        >
-                            <div className="w-5 h-5 bg-blue-500 rounded flex items-center justify-center text-[10px] text-white font-bold">B</div>
-                            <span>Login with budolID</span>
-                        </button>
-                    ) : (
-                        <div className="w-full py-3 border border-slate-200 rounded-lg bg-slate-50 animate-pulse h-[46px] flex items-center justify-center">
-                            <div className="w-4 h-4 border-2 border-slate-200 border-t-slate-400 rounded-full animate-spin"></div>
-                        </div>
-                    )}
                 </div>
             )}
             </>
