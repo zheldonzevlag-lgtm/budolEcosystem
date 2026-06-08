@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server'
 import cloudinary from '@/lib/cloudinary'
 import { getAuthFromCookies } from '@/lib/auth'
 
+export const runtime = 'nodejs'
 export const maxDuration = 300; // Increase timeout to 300 seconds (5 minutes)
 
 const normalizeFolderName = (name) => {
@@ -54,10 +55,11 @@ export async function POST(request) {
             type = formData.get('type') || 'product';
             
             // Convert File to base64 for Cloudinary
-            if (image instanceof File) {
+            if (image && typeof image === 'object' && typeof image.arrayBuffer === 'function') {
                 const arrayBuffer = await image.arrayBuffer();
                 const buffer = Buffer.from(arrayBuffer);
-                image = `data:${image.type};base64,${buffer.toString('base64')}`;
+                const mimeType = image.type || 'application/octet-stream';
+                image = `data:${mimeType};base64,${buffer.toString('base64')}`;
             }
         } else {
             // Handle JSON (for URL-based uploads)
@@ -79,7 +81,7 @@ export async function POST(request) {
         }
 
         // Detect if the image is an SVG
-        const isSVG = image && (image.startsWith('data:image/svg') || image.includes('data:image/svg+xml'));
+        const isSVG = typeof image === 'string' && (image.startsWith('data:image/svg') || image.includes('data:image/svg+xml'));
         console.log('[Upload] Image payload received. length:', image?.length, 'isSVG:', isSVG);
 
         // Validate size (max 10MB for images, 50MB for videos)

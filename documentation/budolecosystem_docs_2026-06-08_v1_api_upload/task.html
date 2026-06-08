@@ -1,0 +1,35 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Fix /api/upload 500 Error - Task List</title>
+    <style>
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; line-height: 1.6; padding: 20px; max-width: 800px; margin: 0 auto; color: #333; }
+        h1, h2 { color: #2c3e50; }
+        .completed { text-decoration: line-through; color: #7f8c8d; }
+        .pending { font-weight: bold; color: #e74c3c; }
+        .task-list { list-style-type: none; padding-left: 0; }
+        .task-list li { margin-bottom: 10px; padding: 10px; border-radius: 5px; background: #f9f9f9; border-left: 4px solid #3498db; }
+        .task-list li.done { border-left-color: #2ecc71; background: #f0fdf4; }
+    </style>
+</head>
+<body>
+    <h1>Task List: Fix /api/upload 500 Error</h1>
+    <p><strong>Date:</strong> 2026-06-08</p>
+    <p><strong>Issue:</strong> 500 Internal Server Error (FUNCTION INVOCATION FAILED) during image upload to Cloudinary via Vercel.</p>
+
+    <h2>Implementation Phases</h2>
+    <ul class="task-list">
+        <li class="done"><span class="completed">Phase 0 - Baseline & Risk Analysis: Identified that `image instanceof File` fails in Vercel Node runtime for NextJS FormData.</span></li>
+        <li class="done"><span class="completed">Phase 1 - Architecture & Data Contracts: N/A (Bug fix).</span></li>
+        <li class="done"><span class="completed">Phase 2 - Backend & API Implementation: Modified `/api/upload/route.js` to use `typeof image === 'object' && typeof image.arrayBuffer === 'function'` and added safe `isSVG` string checks.</span></li>
+        <li class="done"><span class="completed">Phase 3-10 - Testing & Documentation: Created this task list and documented the fix. Testing is done manually by the developer on the dev environment before deployment.</span></li>
+        <li class="pending">Phase 11 - Push, Commit, Create new branch: Wait for user to push to Vercel production.</li>
+    </ul>
+
+    <h2>Technical Details</h2>
+    <p>When Next.js parses `multipart/form-data` in a serverless Edge or Node runtime, the resulting `File` object from `FormData` might not satisfy the `instanceof File` check due to cross-realm or polyfill differences (e.g., `undici`'s `File` vs global `File`).</p>
+    <p>If the check fails, the object is passed down as an object, causing `image.startsWith` to throw a `TypeError: image.startsWith is not a function`. This unhandled exception crashes the Vercel function, returning a `FUNCTION INVOCATION FAILED` 500 HTML response instead of a JSON response.</p>
+</body>
+</html>
