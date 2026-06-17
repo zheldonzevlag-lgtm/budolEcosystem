@@ -1,6 +1,9 @@
 # Budol Ecosystem
 
 Welcome to the Budol Ecosystem, a comprehensive suite of interconnected applications for e-commerce, finance, and accounting.
+A comprehensive fintech e-commerce ecosystem built for the Philippine market. This monorepo contains all services, applications, and infrastructure for the budolPay platform.
+
+**Last Codebase Audit:** 2026-06-02 | **GitNexus Index:** 26,266 symbols | 35,895 relationships | 300 execution flows
 
 ## ### The Budol Ecosystem Map 
  - **budolID-0.1.0** : The Heart. This is your Central Identity & SSO service. It manages users for all other apps. 
@@ -10,7 +13,6 @@ Welcome to the Budol Ecosystem, a comprehensive suite of interconnected applicat
  - **budolAccounting-0.1.0** : The Ledger. Centralized financial tracking for all transactions across the ecosystem.
  - **budolExpress** : The Wheels. Future logistics app for delivery tracking and courier management.
 
-# budolEcosystem
 
 A comprehensive fintech e-commerce ecosystem built for the Philippine market. This monorepo contains all services, applications, and infrastructure for the budolPay platform.
 
