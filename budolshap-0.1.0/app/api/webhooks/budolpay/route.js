@@ -6,6 +6,17 @@ import { triggerRealtimeEvent } from '@/lib/realtime';
 import { updateOrderStatus } from '@/lib/services/ordersService';
 import { createAuditLog } from '@/lib/audit';
 
+// Webhook IP whitelist (reuse same pattern)
+const ALLOWED_WEBHOOK_IPS = process.env.ALLOWED_WEBHOOK_IPS 
+    ? process.env.ALLOWED_WEBHOOK_IPS.split(',')
+    : []
+
+function verifyWebhookSource(request) {
+    if (ALLOWED_WEBHOOK_IPS.length === 0) return true
+    const ip = request.headers.get('x-forwarded-for')?.split(',')[0] || request.headers.get('x-real-ip') || 'unknown'
+    return ALLOWED_WEBHOOK_IPS.some(allowedIp => ip === allowedIp)
+}
+
 /**
  * POST /api/webhooks/budolpay
  * Handle BudolPay Gateway webhook events
@@ -32,6 +43,18 @@ export async function POST(request) {
         data = body.data;
 
         console.log('[BudolPay Webhook] Received event:', event);
+
+        // Security: Check webhook source IP if configured
+        if (!verifyWebhookSource(request)) {
+            const ip = request.headers.get('x-forwarded-for')?.split(',')[0] || 'unknown'
+            console.warn(`[BudolPay Webhook] Blocked - Unknown source IP: ${ip}`)
+            await createAuditLog(null, 'WEBHOOK_BLOCKED', request, {
+                details: 'Webhook request from unauthorized IP',
+                status: 'FAILURE',
+                metadata: { provider: 'budolpay', ip }
+            })
+            return NextResponse.json({ error: 'Unauthorized webhook source' }, { status: 401 })
+        }
 
         // 1. Log to Database (Pending)
         try {

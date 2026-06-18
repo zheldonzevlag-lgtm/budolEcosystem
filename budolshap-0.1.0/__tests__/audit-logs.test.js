@@ -41,9 +41,9 @@ describe('createAuditLog', () => {
 
     expect(prisma.auditLog.create).toHaveBeenCalledWith(expect.objectContaining({
       data: expect.objectContaining({
-        userId,
         action,
         ipAddress: '127.0.0.1',
+        user: { connect: { id: userId } }
       }),
     }));
   });
@@ -66,14 +66,14 @@ describe('createAuditLog', () => {
 
     expect(prisma.auditLog.create).toHaveBeenCalledWith(expect.objectContaining({
       data: expect.objectContaining({
-        userId,
         action,
         entity: 'Order',
         entityId: 'ord-123',
         details: 'Suspicious activity detected',
         status: 'WARNING',
         metadata: expect.objectContaining({ riskScore: 0.9 }),
-        ipAddress: '1.2.3.4'
+        ipAddress: '1.2.3.4',
+        user: { connect: { id: userId } }
       }),
     }));
   });
@@ -88,9 +88,9 @@ describe('createAuditLog', () => {
 
     expect(prisma.auditLog.create).toHaveBeenCalledWith(expect.objectContaining({
       data: expect.objectContaining({
-        userId: null,
         action,
-        status: 'FAILURE'
+        status: 'FAILURE',
+        user: undefined
       }),
     }));
   });

@@ -20,6 +20,11 @@ const getLocalExternalIPs = () => {
     }
 };
 
+// Why: NEXT_PUBLIC_APP_URL can have a trailing CRLF (\r\n) if set via Vercel
+// dashboard copy-paste. This causes HTTP header injection which makes Next.js
+// serve the static /500 page instead of executing the API route handler.
+const sanitizedAppUrl = (process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000').trim().replace(/[\r\n]+/g, '')
+
 const nextConfig = {
     reactStrictMode: false,
     // Only apply in development to avoid crashing AWS Fargate network interface lookups
@@ -84,11 +89,12 @@ const nextConfig = {
                 headers: [
                     {
                         key: 'Access-Control-Allow-Origin',
-                        value: '*',
+                        // Use pre-sanitized value — env var may contain CRLF from Vercel dashboard
+                        value: sanitizedAppUrl,
                     },
                     {
                         key: 'Access-Control-Allow-Methods',
-                        value: 'GET, POST, PUT, DELETE, OPTIONS',
+                        value: 'POST, OPTIONS',
                     },
                     {
                         key: 'Access-Control-Allow-Headers',

@@ -1,7 +1,8 @@
+require('dotenv').config();
 const { prisma } = require('./budolpay-0.1.0/packages/database');
 const jwt = require('jsonwebtoken');
 
-const JWT_SECRET = 'GJ7Lxn0/kdV/KuZJ5xJ7Ip0RvMerrGW5n0gf44mfHgc=';
+const JWT_SECRET = process.env.JWT_SECRET;
 
 async function main() {
   const email = 'galvezjon59@gmail.com';

@@ -6,7 +6,7 @@ async function testLogin() {
     const res = await axios.post('http://192.168.1.2:8000/auth/sso/login-form', qs.stringify({
       email: 'admin@budol.com',
       password: 'password123',
-      apiKey: 'bp_key_2025'
+      apiKey: 'bp_b31ea1888dcb2ba76fdbb776ea8f5b7a'
     }), {
       headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
       maxRedirects: 0,

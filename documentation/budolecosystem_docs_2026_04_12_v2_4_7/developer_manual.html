@@ -1,0 +1,182 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Developer Manual v2.4.7 - BudolPay</title>
+    <link rel="stylesheet" href="../docs_v1.css">
+    <style>
+        .code-block { background: #0d1117; color: #e6edf3; padding: 16px; border-radius: 8px; font-family: 'Courier New', monospace; font-size: 13px; overflow-x: auto; margin: 12px 0; line-height: 1.6; }
+        .code-block .comment { color: #8b949e; }
+        .code-block .keyword { color: #ff7b72; }
+        .code-block .string { color: #a5d6ff; }
+        .code-block .fn-name { color: #d2a8ff; }
+    </style>
+</head>
+<body>
+    <nav class="sidebar">
+        <h2>BudolPay Docs</h2>
+        <h3>Navigation</h3>
+        <ul>
+            <li><a href="index.html">Release Index</a></li>
+            <li><a href="developer_manual.html" class="active">Developer Manual</a></li>
+            <li><a href="system_admin_manual.html">System Admin Manual</a></li>
+            <li><a href="user_manual.html">User Manual</a></li>
+            <li><a href="risk_register.html">Risk Register</a></li>
+            <li><a href="Mitigation.html">Mitigation Plan</a></li>
+            <li><a href="issues & fixes.html">Issues &amp; Fixes</a></li>
+            <li><a href="test_results.html">Test Results</a></li>
+            <li><a href="future_recommendations.html">Future Recommendations</a></li>
+        </ul>
+        <h3>TOC</h3>
+        <ul>
+            <li><a href="#architecture">Architecture</a></li>
+            <li><a href="#new-files">New Files (v2.4.7)</a></li>
+            <li><a href="#key-changes">Key Code Changes</a></li>
+            <li><a href="#test-patterns">Test Patterns</a></li>
+            <li><a href="#compliance">Compliance Notes</a></li>
+        </ul>
+    </nav>
+    <main class="content">
+        <header class="header">
+            <h1>Developer Manual: v2.4.7</h1>
+            <div class="metadata">
+                <span><strong>Version:</strong> v2.4.7</span>
+                <span><strong>Date:</strong> 2026-04-13</span>
+                <span><strong>Author:</strong> Antigravity AI Auditor</span>
+            </div>
+        </header>
+
+        <section class="section" id="architecture">
+            <h2>Architecture Overview</h2>
+            <div class="card">
+                <p>BudolPay is a multi-service Philippine fintech ecosystem compliant with BSP, PCI DSS v4.0, NPC, and BIR regulations. v2.4.7 focused on <strong>test suite stabilization</strong> and the <strong>DRS Engine Heartbeat</strong> telemetry subsystem.</p>
+                <table>
+                    <thead><tr><th>Service</th><th>Port</th><th>Technology</th><th>Role</th></tr></thead>
+                    <tbody>
+                        <tr><td>auth-service</td><td>8001</td><td>Express.js</td><td>Registration, Login, OTP, JWT, AI Anti-Spam</td></tr>
+                        <tr><td>wallet-service</td><td>8002</td><td>Express.js</td><td>Balances, QR Payments, P2P Transfers</td></tr>
+                        <tr><td>transaction-service</td><td>8003</td><td>Express.js</td><td>Transaction log, DRS Engine Heartbeat</td></tr>
+                        <tr><td>payment-gateway-service</td><td>8004</td><td>Express.js</td><td>Payment intents, Checkout, Provider routing</td></tr>
+                        <tr><td>budolID (SSO)</td><td>8000</td><td>Express.js</td><td>Single Sign-On for Admin Dashboard</td></tr>
+                        <tr><td>apps/admin</td><td>3000</td><td>Next.js 14</td><td>Admin Dashboard, Compliance Board, RBAC</td></tr>
+                    </tbody>
+                </table>
+            </div>
+        </section>
+
+        <section class="section" id="new-files">
+            <h2>New Files Introduced in v2.4.7</h2>
+            <div class="card">
+                <h3>📄 payment-gateway-service/api/utils.js <a href="file:///D:/IT%20Projects/clone/budolEcosystem/budolpay-0.1.0/services/payment-gateway-service/api/utils.js">[Open File]</a></h3>
+                <p><strong>Purpose:</strong> Extracted pure utility functions from <code>api/index.js</code> to make them testable without importing the Express server's side-effects (DB startup, app.listen).</p>
+                <p><strong>Why this exists:</strong> When Jest imported <code>api/index.js</code> directly to test <code>generateSecureReferenceId</code>, it triggered the startup IIFE that connected to the database and started a server, leaving open handles that prevented Jest from exiting cleanly.</p>
+                <div class="code-block"><pre><span class="comment">// api/utils.js — Side-effect-free utility module</span>
+<span class="keyword">const</span> crypto = require(<span class="string">'crypto'</span>);
+
+<span class="comment">// WHY: Extracted from api/index.js for testability.
+// Tests can safely import this without triggering DB or server startup.</span>
+<span class="keyword">function</span> <span class="fn-name">generateSecureReferenceId</span>() {
+  <span class="keyword">const</span> timestamp = getLegacyManilaISO()
+    .replace(<span class="string">/[-T:.Z]/g</span>, <span class="string">''</span>)
+    .slice(<span class="string">0</span>, <span class="string">14</span>);
+  <span class="keyword">const</span> randomBytes = crypto.randomBytes(<span class="string">4</span>).toString(<span class="string">'hex'</span>).toUpperCase();
+  <span class="keyword">return</span> `JON-${timestamp}-${randomBytes}`;
+}
+
+module.exports = { getLegacyManilaISO, getLegacyManilaDate, generateSecureReferenceId };</pre></div>
+            </div>
+        </section>
+
+        <section class="section" id="key-changes">
+            <h2>Key Code Changes</h2>
+
+            <div class="card">
+                <h3>1. body-parser Charset Fix — <a href="file:///D:/IT%20Projects/clone/budolEcosystem/budolpay-0.1.0/services/payment-gateway-service/api/index.js">[payment-gateway-service/api/index.js]</a></h3>
+                <p><strong>Change:</strong> Updated <code>bodyParser.json()</code> to use a custom <code>type()</code> function.</p>
+                <p><strong>Rationale:</strong> Clients (including PowerShell's Invoke-RestMethod) append <code>charset=UTF-8</code> to their Content-Type headers. The default body-parser rejected this with HTTP 415.</p>
+                <div class="code-block"><pre><span class="comment">// BEFORE (strict — rejects 'application/json; charset=UTF-8')</span>
+router.use(bodyParser.json());
+
+<span class="comment">// AFTER (permissive — accepts any application/json variant)</span>
+router.use(bodyParser.json({
+  type: (req) =&gt; req.headers[<span class="string">'content-type'</span>]?.startsWith(<span class="string">'application/json'</span>)
+}));</pre></div>
+            </div>
+
+            <div class="card">
+                <h3>2. Startup Diagnostic Guard — <a href="file:///D:/IT%20Projects/clone/budolEcosystem/budolpay-0.1.0/services/payment-gateway-service/api/index.js">[payment-gateway-service/api/index.js]</a></h3>
+                <p><strong>Change:</strong> Wrapped the DB startup IIFE in <code>if (process.env.NODE_ENV !== 'test')</code>.</p>
+                <p><strong>Why:</strong> Even after extracting utils.js, if index.js is imported by any test, the diagnostic block would attempt a DB connection. The guard prevents this entirely in test environments.</p>
+                <div class="code-block"><pre><span class="comment">// WHY: Skip DB diagnostics in Jest (NODE_ENV=test) to prevent open handles</span>
+<span class="keyword">if</span> (process.env.NODE_ENV !== <span class="string">'test'</span>) {
+  (<span class="keyword">async</span> () =&gt; {
+    <span class="keyword">const</span> count = <span class="keyword">await</span> prisma.user.count();
+    console.log(`✅ DB connected. ${count} users.`);
+  })();
+}</pre></div>
+            </div>
+
+            <div class="card">
+                <h3>3. Service Availability Guard in Tests</h3>
+                <p><strong>Pattern:</strong> Integration tests that require live services now use a <code>beforeAll</code> health-check to skip gracefully when the service is offline.</p>
+                <div class="code-block"><pre><span class="keyword">let</span> gatewayAvailable = <span class="keyword">false</span>;
+
+beforeAll(<span class="keyword">async</span> () =&gt; {
+  <span class="keyword">try</span> {
+    <span class="keyword">const</span> res = <span class="keyword">await</span> axios.get(`${GATEWAY_URL}/health`, { timeout: <span class="string">2000</span>, validateStatus: () =&gt; <span class="keyword">true</span> });
+    gatewayAvailable = res.status === <span class="string">200</span>;
+  } <span class="keyword">catch</span> { gatewayAvailable = <span class="keyword">false</span>; }
+});
+
+<span class="comment">// Conditionally skip when service is offline</span>
+<span class="keyword">const</span> itIfGateway = (...args) =&gt; gatewayAvailable ? it(...args) : it.skip(...args);</pre></div>
+                <p><strong>Files using this pattern:</strong> <code>payment-security.test.js</code></p>
+            </div>
+
+            <div class="card">
+                <h3>4. Admin Package.json Cleanup — <a href="file:///D:/IT%20Projects/clone/budolEcosystem/budolpay-0.1.0/apps/admin/package.json">[apps/admin/package.json]</a></h3>
+                <p><strong>Change:</strong> Removed the legacy <code>prebuild</code> script that ran <code>mkdir /tmp/prisma_cache</code>.</p>
+                <p><strong>Why:</strong> This Unix-only command caused Vercel and Windows CI builds to fail. Standard Prisma generate logic is sufficient.</p>
+            </div>
+        </section>
+
+        <section class="section" id="test-patterns">
+            <h2>Established Test Patterns</h2>
+            <div class="card">
+                <table>
+                    <thead><tr><th>Pattern</th><th>When to Use</th><th>Example</th></tr></thead>
+                    <tbody>
+                        <tr><td><code>itIfService()</code></td><td>Integration tests requiring a live service</td><td>payment-security.test.js</td></tr>
+                        <tr><td>Inline utility</td><td>ESM module can't be required in CJS Jest</td><td>realtime.test.js</td></tr>
+                        <tr><td>path.resolve(__dirname)</td><td>Any test referencing the project root</td><td>infrastructure-audit.test.js</td></tr>
+                        <tr><td>127.0.0.1 not localhost</td><td>Any test calling local services in Node 18+</td><td>spam_prevention.test.js</td></tr>
+                        <tr><td>validateStatus: () =&gt; true</td><td>Any test asserting on non-2xx status codes</td><td>payment-security.test.js</td></tr>
+                    </tbody>
+                </table>
+            </div>
+        </section>
+
+        <section class="section" id="compliance">
+            <h2>Compliance Notes</h2>
+            <div class="card">
+                <table>
+                    <thead><tr><th>Regulation</th><th>Requirement</th><th>Implementation</th></tr></thead>
+                    <tbody>
+                        <tr><td>PCI DSS Req 6.3</td><td>Security testing in SDLC</td><td>17 Jest suites enforcing security invariants</td></tr>
+                        <tr><td>PCI DSS Req 6.4</td><td>Software development lifecycle security</td><td>NODE_ENV=test guards, utility extraction</td></tr>
+                        <tr><td>BSP MORB Sec. 112</td><td>Environment portability</td><td>Dynamic path resolution in all test files</td></tr>
+                        <tr><td>NPC Data Privacy Act</td><td>PII protection</td><td>pii.test.js validates data masking</td></tr>
+                        <tr><td>BSP Circ. No. 1033</td><td>E-Payment security</td><td>QR mismatch rejection tested in payment-security.test.js</td></tr>
+                    </tbody>
+                </table>
+            </div>
+        </section>
+
+        <footer>
+            <hr>
+            <p style="font-size: 12px; color: #6b778c;">&copy; 2026 BudolPay Ecosystem. | <a href="index.html">← Back to Index</a> | <a href="system_admin_manual.html">System Admin Manual →</a></p>
+        </footer>
+    </main>
+</body>
+</html>

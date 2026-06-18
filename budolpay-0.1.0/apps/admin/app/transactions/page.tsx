@@ -26,6 +26,43 @@ export default function TransactionsPage() {
   const [typeFilter, setTypeFilter] = useState("ALL");
   const [searchTerm, setSearchTerm] = useState("");
 
+  const getSenderDisplay = (tx: any) => {
+    if (tx.sender?.email) return tx.sender.email;
+    
+    if (tx.metadata) {
+      try {
+        const meta = typeof tx.metadata === 'string' ? JSON.parse(tx.metadata) : tx.metadata;
+        if (meta.provider) return meta.provider;
+      } catch(e){}
+    }
+    
+    if (tx.type === 'CASH_IN' && tx.description && tx.description.includes('via')) {
+       return tx.description.split('via ')[1]?.trim() || 'SYSTEM';
+    }
+    return "SYSTEM";
+  };
+
+  const getReceiverDisplay = (tx: any) => {
+    if (tx.receiver?.email) return tx.receiver.email;
+    
+    if (tx.type === 'CASH_OUT' && tx.description && tx.description.includes('via')) {
+       return tx.description.split('via ')[1]?.trim() || 'EXTERNAL';
+    }
+
+    if (tx.type === 'MERCHANT_PAYMENT') {
+       if (tx.metadata) {
+         try {
+           const meta = typeof tx.metadata === 'string' ? JSON.parse(tx.metadata) : tx.metadata;
+           if (meta.storeName) return meta.storeName;
+           if (meta.app) return meta.app;
+         } catch(e){}
+       }
+       return "MERCHANT";
+    }
+
+    return "EXTERNAL";
+  };
+
   const handleExportCSV = () => {
     if (filteredTransactions.length === 0) {
       toast.error("No transactions to export");
@@ -35,8 +72,8 @@ export default function TransactionsPage() {
     const exportData = filteredTransactions.map(tx => ({
       'Reference ID': tx.referenceId,
       'Type': tx.type,
-      'Sender': tx.sender?.email || 'SYSTEM',
-      'Receiver': tx.receiver?.email || 'EXTERNAL',
+      'Sender': getSenderDisplay(tx),
+      'Receiver': getReceiverDisplay(tx),
       'Amount': tx.amount,
       'Fee': tx.fee,
       'Status': tx.status,
@@ -214,11 +251,11 @@ export default function TransactionsPage() {
                       <div className="space-y-1">
                         <div className="flex items-center gap-1 text-xs">
                           <span className="text-slate-400 w-8 font-bold uppercase text-[9px]">From:</span>
-                          <span className="text-slate-700 font-medium">{tx.sender?.email || "SYSTEM"}</span>
+                          <span className="text-slate-700 font-medium">{getSenderDisplay(tx)}</span>
                         </div>
                         <div className="flex items-center gap-1 text-xs">
                           <span className="text-slate-400 w-8 font-bold uppercase text-[9px]">To:</span>
-                          <span className="text-slate-700 font-medium">{tx.receiver?.email || "EXTERNAL"}</span>
+                          <span className="text-slate-700 font-medium">{getReceiverDisplay(tx)}</span>
                         </div>
                       </div>
                     </td>

@@ -22,25 +22,34 @@ export async function POST(request: Request) {
             return NextResponse.json({ error: 'Login session expired. Please sign in again.' }, { status: 401 });
         }
 
-        const LOCAL_IP = process.env.LOCAL_IP || 'localhost';
-        const ssoUrl = process.env.SSO_URL || `http://${LOCAL_IP}:8000`;
-        const verifyResponse = await fetch(`${ssoUrl}/auth/verify`, {
-            headers: { Authorization: `Bearer ${decodeURIComponent(preauthToken)}` },
-            cache: 'no-store'
-        });
+        let localUser;
+        
+        // Handle local admin tokens
+        if (preauthToken.startsWith('local_')) {
+            const userId = preauthToken.slice('local_'.length);
+            localUser = await prisma.user.findUnique({ where: { id: userId } });
+        } else {
+            // Handle SSO tokens
+            const LOCAL_IP = process.env.LOCAL_IP || 'localhost';
+            const ssoUrl = process.env.SSO_URL || `http://${LOCAL_IP}:8000`;
+            const verifyResponse = await fetch(`${ssoUrl}/auth/verify`, {
+                headers: { Authorization: `Bearer ${decodeURIComponent(preauthToken)}` },
+                cache: 'no-store'
+            });
 
-        if (!verifyResponse.ok) {
-            return NextResponse.json({ error: 'Pre-auth verification failed. Please sign in again.' }, { status: 401 });
+            if (!verifyResponse.ok) {
+                return NextResponse.json({ error: 'Pre-auth verification failed. Please sign in again.' }, { status: 401 });
+            }
+
+            const verifyData = await verifyResponse.json();
+            if (!verifyData.valid || !verifyData.user?.email) {
+                return NextResponse.json({ error: 'Pre-auth verification failed. Please sign in again.' }, { status: 401 });
+            }
+
+            localUser = await prisma.user.findUnique({
+                where: { email: verifyData.user.email }
+            });
         }
-
-        const verifyData = await verifyResponse.json();
-        if (!verifyData.valid || !verifyData.user?.email) {
-            return NextResponse.json({ error: 'Pre-auth verification failed. Please sign in again.' }, { status: 401 });
-        }
-
-        const localUser = await prisma.user.findUnique({
-            where: { email: verifyData.user.email }
-        });
 
         if (!localUser) {
             return NextResponse.json({ error: 'User not found.' }, { status: 404 });
@@ -72,7 +81,13 @@ export async function POST(request: Request) {
         });
 
         const response = NextResponse.json({ success: true });
-        response.cookies.set('budolpay_token', decodeURIComponent(preauthToken), {
+        
+        // Set appropriate token
+        const tokenToSet = preauthToken.startsWith('local_') 
+            ? `local_${localUser.id}` 
+            : decodeURIComponent(preauthToken);
+            
+        response.cookies.set('budolpay_token', tokenToSet, {
             httpOnly: true,
             secure: process.env.NODE_ENV === 'production',
             sameSite: 'lax',

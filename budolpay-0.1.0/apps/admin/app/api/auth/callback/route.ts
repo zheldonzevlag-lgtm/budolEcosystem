@@ -79,8 +79,10 @@ export async function GET(request: Request) {
 
         if (!localUser) {
             // Create local user if they don't exist
+            // FIX: (v45.2) Use the SSO ID as the local ID to ensure ecosystem-wide UUID consistency
             localUser = await prisma.user.create({
                 data: {
+                    id: ssoUser.id, 
                     email: ssoUser.email,
                     firstName: ssoUser.firstName || 'SSO',
                     lastName: ssoUser.lastName || 'User',

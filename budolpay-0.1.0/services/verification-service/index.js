@@ -104,6 +104,10 @@ app.use(cors());
 app.use(express.json());
 
 // ── Health Check ───────────────────────────────────────────────────────────────
+app.get('/', (req, res) => {
+  res.json({ status: 'ok', service: 'verification-service' });
+});
+
 app.get(['/health', '/api/health'], (req, res) => {
   res.json({ status: 'ok', service: 'verification-service', timestamp: new Date().toISOString() });
 });

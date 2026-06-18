@@ -5,7 +5,7 @@ async function verifyRealtimeGateway() {
     console.log("--- Verifying Realtime Gateway v0.1.1 ---");
     
     const gatewayUrl = process.env.GATEWAY_URL || 'http://localhost:8080';
-    const apiKey = process.env.BUDOLPAY_API_KEY || 'bs_key_2025';
+    const apiKey = process.env.BUDOLPAY_API_KEY || 'bs_ac2bca9790f9b70f4e21c8a3c2812917';
 
     console.log(`Checking Gateway connectivity at ${gatewayUrl}...`);
 

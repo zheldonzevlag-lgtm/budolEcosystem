@@ -1,0 +1,61 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Developer Manual - v2.2.7</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <style>
+        body { font-family: 'Inter', sans-serif; background: #F8FAFC; color: #0F172A; line-height: 1.6; margin: 0; padding: 40px; }
+        .container { max-width: 900px; margin: 0 auto; background: white; padding: 40px; border-radius: 16px; box-shadow: 0 4px 20px rgba(0,0,0,0.05); }
+        .code-block { background: #1E293B; color: #E2E8F0; padding: 20px; border-radius: 8px; overflow-x: auto; font-family: 'Fira Code', monospace; font-size: 0.9rem; position: relative; }
+        .link-btn { display: inline-block; background: #0F172A; color: white; padding: 8px 16px; border-radius: 6px; text-decoration: none; margin-bottom: 15px; font-size: 0.8rem; }
+        .link-btn:hover { background: #334155; }
+        h1, h2, h3 { color: #0F172A; }
+        .tag { background: #E2E8F0; padding: 2px 8px; border-radius: 4px; font-size: 0.75rem; font-weight: bold; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <a href="index.html" style="text-decoration: none; color: #64748B;"><i class="fas fa-chevron-left"></i> Back to Index</a>
+        <h1>Developer Manual <span class="tag">v2.2.7</span></h1>
+        
+        <section>
+            <h2>Technical Strategy: Actor Attribution</h2>
+            <p>To ensure individual accountability (PCI-DSS 10.2.1), we migrated from "system-only" logging to "actor-explicit" logging for all administrative routes. This relies on the <code>actorName</code> and <code>actorEmail</code> fields in the <code>createAuditLog</code> utility.</p>
+            
+            <h3>1. Admin Attribute Capture (API Proxy)</h3>
+            <p>Every administrative POST/PUT now decodes the <code>adminId</code> from the body and executes a lookup in the <code>User</code> table to retrieve forensic markers.</p>
+            <a href="file:///d:/IT Projects/clone/budolEcosystem/budolpay-0.1.0/apps/admin/app/api/employees/route.ts" class="link-btn">Open Employee API</a>
+            <div class="code-block">
+// Extracting actor identity for provisioning
+const actor = await prisma.user.findUnique({
+  where: { id: adminId },
+  select: { id: true, firstName: true, lastName: true, email: true }
+});
+
+await createAuditLog({
+  action: "ACCOUNT_PROVISIONED",
+  userId: actor.id,
+  actorName: `${actor.firstName} ${actor.lastName}`,
+  actorEmail: actor.email,
+  // ...
+});
+            </div>
+        </section>
+
+        <section style="margin-top: 40px;">
+            <h2>Impacted Systems</h2>
+            <ul>
+                <li><strong>Admin Dashboard</strong>: Modified to send <code>adminId</code> in all provisioning modals.</li>
+                <li><strong>Security Gateway</strong>: Now links automated scans to the initiating compliance officer.</li>
+                <li><strong>User Management</strong>: KYC overrides and document rotations now possess a clear audit trail.</li>
+            </ul>
+        </section>
+
+        <section style="margin-top: 40px;">
+            <h2>Maker-Checker Compliance</h2>
+            <p>The <code>v2.2.7</code> implementation enforces Segregation of Duties (SoD) by ensuring the <code>adminId</code> of the Maker is strictly captured during <code>CHANGE_REQUEST_CREATED</code>, independent of the local session storage.</p>
+        </section>
+    </div>
+</body>
+</html>

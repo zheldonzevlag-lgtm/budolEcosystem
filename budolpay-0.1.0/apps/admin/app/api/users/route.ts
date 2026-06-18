@@ -34,7 +34,14 @@ export async function GET(request: Request) {
 
 export async function POST(request: Request) {
   try {
-    const { action, userId, status, documentId, rotation } = await request.json();
+    const { action, userId, status, documentId, rotation, adminId } = await request.json();
+
+    const actor = adminId
+      ? await prisma.user.findUnique({
+        where: { id: adminId },
+        select: { id: true, firstName: true, lastName: true, email: true }
+      })
+      : null;
 
     if (action === "UPDATE_KYC_STATUS") {
       let kycTier: any = "BASIC";
@@ -70,6 +77,9 @@ export async function POST(request: Request) {
         action: "KYC_STATUS_UPDATED",
         entity: "User",
         entityId: userId,
+        userId: actor?.id,
+        actorName: actor ? `${actor.firstName || ''} ${actor.lastName || ''}`.trim() || actor.email : undefined,
+        actorEmail: actor?.email,
         oldValue: { kycStatus: oldUser?.kycStatus, kycTier: oldUser?.kycTier } as any,
         newValue: { kycStatus: updatedUser.kycStatus, kycTier: updatedUser.kycTier } as any,
         ipAddress: request.headers.get("x-forwarded-for") || "127.0.0.1",
@@ -110,6 +120,9 @@ export async function POST(request: Request) {
         action: "USER_DOCUMENT_ROTATION_UPDATED",
         entity: "VerificationDocument",
         entityId: documentId,
+        userId: actor?.id,
+        actorName: actor ? `${actor.firstName || ''} ${actor.lastName || ''}`.trim() || actor.email : undefined,
+        actorEmail: actor?.email,
         oldValue: { rotation: oldDoc?.rotation } as any,
         newValue: { rotation: updatedDoc.rotation } as any,
         ipAddress: request.headers.get("x-forwarded-for") || "127.0.0.1",

@@ -84,6 +84,8 @@ const router = express.Router();
 app.use('/api/settlement', router);
 app.use('/', router); // Fallback for direct calls
 
+app.get('/', (req, res) => res.json({ status: 'ok', service: 'settlement-service' }));
+
 app.use(express.json());
 
 // Health Check
@@ -356,8 +358,10 @@ app.use((err, req, res, next) => {
     });
 });
 
-app.listen(PORT, '0.0.0.0', () => {
-    console.log(`[Settlement] Service running on http://0.0.0.0:${PORT} (LAN-accessible)`);
-});
+if (require.main === module) {
+    app.listen(PORT, '0.0.0.0', () => {
+        console.log(`[Settlement] Service running on http://0.0.0.0:${PORT} (LAN-accessible)`);
+    });
+}
 
 module.exports = app;

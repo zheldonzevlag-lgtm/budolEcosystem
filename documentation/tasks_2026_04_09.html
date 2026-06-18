@@ -1,23 +1,128 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <title>Task List - Budol Ecosystem Push</title>
-    <style>
-        body { font-family: sans-serif; padding: 20px; }
-        .completed { text-decoration: line-through; color: gray; }
-        .pending { font-weight: bold; color: blue; }
-    </style>
+  <meta charset="UTF-8">
+  <title>Task List – BudolEcosystem v2.2.8 Payment Cancellation Lifecycle Fix</title>
+  <style>
+    :root { --primary: #4f46e5; --success: #10b981; --warn: #f59e0b; --danger: #ef4444; }
+    body { font-family: 'Segoe UI', system-ui, sans-serif; background: #f8fafc; color: #334155; padding: 2rem; max-width: 900px; margin: 0 auto; }
+    h1 { font-size: 1.5rem; font-weight: 800; color: var(--primary); margin-bottom: .25rem; }
+    .subtitle { font-size: .9rem; color: #64748b; margin-bottom: 1.5rem; }
+    .section { background: #fff; border: 1px solid #e2e8f0; border-radius: 12px; padding: 1.25rem 1.5rem; margin-bottom: 1.25rem; }
+    .section h2 { font-size: .95rem; font-weight: 700; color: var(--primary); margin-bottom: .75rem; border-bottom: 1px solid #e2e8f0; padding-bottom: .5rem; }
+    ul { list-style: none; padding: 0; margin: 0; }
+    li { display: flex; align-items: flex-start; gap: .6rem; padding: .4rem 0; font-size: .875rem; border-bottom: 1px solid #f8fafc; line-height: 1.5; }
+    li:last-child { border-bottom: none; }
+    .done { color: #64748b; }
+    .done::before { content: '✅'; flex-shrink: 0; }
+    .pending { color: #1e293b; font-weight: 500; }
+    .pending::before { content: '⏳'; flex-shrink: 0; }
+    .blocked { color: #b45309; font-weight: 600; }
+    .blocked::before { content: '🚫'; flex-shrink: 0; }
+    .note { font-size: .8rem; color: #64748b; margin-left: 1.4rem; margin-top: .1rem; }
+    .badge { font-size: .7rem; padding: .15rem .5rem; border-radius: 9999px; font-weight: 700; margin-left: .35rem; }
+    .badge-new { background: #dbeafe; color: #1e40af; }
+    .badge-fix { background: #fef3c7; color: #92400e; }
+    .badge-doc { background: #ede9fe; color: #5b21b6; }
+    a { color: var(--primary); text-decoration: underline; font-size: .8rem; }
+  </style>
 </head>
 <body>
-    <h1>Task List: Push to zheldonzevlag-lgtm/budolEcosystem</h1>
-    <ul>
-        <li class="completed">Phase 0: Baseline & Risk Analysis</li>
-        <li class="pending">Phase 6: Update Versioned Documentation (v1.1)</li>
-        <li class="pending">Phase 9: Update Knowledgebase Archive</li>
-        <li class="pending">Phase 10: Run Jest Integration Tests</li>
-        <li class="pending">Phase 11: Set Remote and Push to zheldonzevlag-lgtm/budolEcosystem</li>
-        <li class="pending">Phase 12: Documentation of Next Steps</li>
-    </ul>
+
+<h1>📋 Task List — v2.2.8 Payment Transaction Cancellation Lifecycle Fix</h1>
+<p class="subtitle">Updated: 2026-04-10 12:35 PHT &nbsp;|&nbsp; Branch: <code>release/v2.2.8</code> &nbsp;|&nbsp; <a href="budolecosystem_docs_2026-04-10_v2.2.8/index.html">v2.2.8 Docs</a></p>
+
+<div class="section">
+  <h2>Phase 0 – Baseline &amp; Risk Analysis</h2>
+  <ul>
+    <li class="done">Identified root cause: budolshap cancel only updated Order table, not gateway Transaction</li>
+    <li class="done">Traced full adapter chain: gateway response → adapter → qrData state → handleQRCancel</li>
+    <li class="done">Identified secondary bug: adapter merged referenceId into paymentIntentId, causing /cancel/null</li>
+    <li class="done">Risk register updated: R-001 through R-005 documented</li>
+  </ul>
+</div>
+
+<div class="section">
+  <h2>Phase 2 – Backend &amp; API Implementation</h2>
+  <ul>
+    <li class="done"><code>POST /cancel/:referenceId</code> added to payment-gateway-service <span class="badge badge-new">NEW</span></li>
+    <li class="done">Dual-lookup: tries referenceId first, then Transaction UUID fallback <span class="badge badge-fix">FIX</span></li>
+    <li class="done">Guard against cancelling COMPLETED transactions (409 Conflict)</li>
+    <li class="done">Idempotent: already-CANCELLED returns 200 gracefully</li>
+    <li class="done">Audit log written via createCentralizedAuditLog (PCI DSS 10.2.4 / BSP 808)</li>
+    <li class="done">Admin real-time notification: notifyAdmin('transaction_cancelled')</li>
+    <li class="done">User real-time notification: notifyUser if senderId is known</li>
+    <li class="done"><code>/api/payment/cancel/route.js</code> proxy added to budolshap <span class="badge badge-new">NEW</span></li>
+    <li class="done">Null/undefined string guard in proxy (prevents /cancel/null calls) <span class="badge badge-fix">FIX</span></li>
+  </ul>
+</div>
+
+<div class="section">
+  <h2>Phase 3 – Frontend / App Implementation</h2>
+  <ul>
+    <li class="done">budolpay-adapter.js: split gatewayReferenceId and gatewayIntentId as separate fields <span class="badge badge-fix">FIX</span></li>
+    <li class="done">budolpay-adapter.js: return both referenceId + paymentIntentId in adapter response</li>
+    <li class="done">OrderSummary.jsx: qrData now stores referenceId from payment response</li>
+    <li class="done">OrderSummary.jsx: handleQRCancel now 2-step (Order cancel + Gateway cancel)</li>
+    <li class="done">Checkout HTML page: close button wired to cancelTransaction() before navigate</li>
+    <li class="done">Checkout HTML page: timer expiry calls cancelTransaction() before redirect</li>
+  </ul>
+</div>
+
+<div class="section">
+  <h2>Phase 5 – Testing</h2>
+  <ul>
+    <li class="done">Jest test suite created: <code>scripts/test_scripts/payment_gateway/cancel.test.js</code> <span class="badge badge-new">NEW</span></li>
+    <li class="done">8 test cases covering: PENDING→CANCELLED, idempotency, UUID fallback, null guard, proxy null guard, proxy forwarding</li>
+    <li class="done">Node syntax check: <code>node --check payment-gateway-service/api/index.js</code> → EXIT:0</li>
+    <li class="pending">Run Jest tests against live local gateway (requires gateway running on :8004)</li>
+  </ul>
+</div>
+
+<div class="section">
+  <h2>Phase 6 – Documentation &amp; Audit</h2>
+  <ul>
+    <li class="done">index.html created <span class="badge badge-doc">DOC</span></li>
+    <li class="done">developer_manual.html created <span class="badge badge-doc">DOC</span></li>
+    <li class="done">system_admin_manual.html created <span class="badge badge-doc">DOC</span></li>
+    <li class="done">user_manual.html created <span class="badge badge-doc">DOC</span></li>
+    <li class="done">risk_register.html created <span class="badge badge-doc">DOC</span></li>
+    <li class="done">mitigation.html created <span class="badge badge-doc">DOC</span></li>
+    <li class="done">issues_and_fixes.html created <span class="badge badge-doc">DOC</span></li>
+    <li class="done">test_results.html created <span class="badge badge-doc">DOC</span></li>
+    <li class="done">future_recommendations.html created <span class="badge badge-doc">DOC</span></li>
+    <li class="done">knowledgebase.html updated with v2.2.8 version card</li>
+  </ul>
+</div>
+
+<div class="section">
+  <h2>Phase 11 – Git &amp; Branch</h2>
+  <ul>
+    <li class="done">Branch <code>release/v2.2.8</code> created from current HEAD</li>
+    <li class="done">Commit 1: feat(v2.2.8) – initial gateway cancel endpoint + checkout HTML fix + proxy + OrderSummary.jsx</li>
+    <li class="done">Commit 2: fix(v2.2.8-hotfix) – adapter ID merge bug, null guard, dual-lookup</li>
+    <li class="done">Commit 3: docs + test script + knowledgebase (pending this session)</li>
+    <li class="pending">Push <code>release/v2.2.8</code> to remote origin</li>
+    <li class="blocked">Merge to main — pending: <strong>PAYMENT_GATEWAY_URL must be set in Vercel budolshap first</strong></li>
+  </ul>
+</div>
+
+<div class="section">
+  <h2>Phase 12 – Next Steps</h2>
+  <ul>
+    <li class="pending">Set <code>PAYMENT_GATEWAY_URL</code> in Vercel → budolshap project → Environment Variables</li>
+    <li class="pending">Run Jest tests: <code>npx jest scripts/test_scripts/payment_gateway/cancel.test.js --runInBand</code></li>
+    <li class="pending">Merge <code>release/v2.2.8</code> → <code>main</code> after Vercel env var is set</li>
+    <li class="pending">Implement CRON job to auto-expire PENDING transactions older than 30 minutes (Risk R-003, R-004)</li>
+    <li class="pending">Add <code>updatedAt</code> field to Transaction schema (needed for CRON cleanup query)</li>
+    <li class="pending">Add Admin Dashboard "Void Transaction" button for manual override by ops</li>
+    <li class="pending">Add real-time transaction status update subscription in Admin Dashboard (listen to 'transaction_cancelled' event)</li>
+  </ul>
+</div>
+
+<p style="font-size:.8rem;color:#94a3b8;margin-top:1.5rem;text-align:center">
+  Prev: <a href="budolecosystem_docs_2026-04-10_v2.2.7/index.html">v2.2.7 Docs</a> &nbsp;|&nbsp;
+  Current: <a href="budolecosystem_docs_2026-04-10_v2.2.8/index.html">v2.2.8 Docs</a>
+</p>
 </body>
 </html>

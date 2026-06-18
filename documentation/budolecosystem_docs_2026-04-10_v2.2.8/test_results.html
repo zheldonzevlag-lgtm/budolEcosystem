@@ -1,0 +1,123 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Test Results v2.2.8</title>
+<style>
+  :root{--primary:#4f46e5;--success:#10b981;--muted:#64748b;--dark:#1e293b}
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{font-family:'Segoe UI',system-ui,sans-serif;background:#f8fafc;color:#334155}
+  header{background:var(--primary);color:#fff;padding:1.5rem 2rem;display:flex;justify-content:space-between;align-items:center}
+  header h1{font-size:1.4rem;font-weight:700}
+  header span{font-size:.85rem;background:rgba(255,255,255,.2);padding:.3rem .75rem;border-radius:9999px}
+  nav{display:flex;gap:.5rem;flex-wrap:wrap;padding:1.25rem 2rem;background:#fff;border-bottom:1px solid #e2e8f0}
+  nav a{padding:.45rem 1rem;border-radius:6px;text-decoration:none;font-size:.85rem;font-weight:500;background:#f1f5f9;color:var(--dark)}
+  nav a.active,nav a:hover{background:var(--primary);color:#fff}
+  main{max-width:1100px;margin:2rem auto;padding:0 1.5rem}
+  .card{background:#fff;border:1px solid #e2e8f0;border-radius:12px;padding:1.5rem;margin-bottom:1.5rem}
+  .card h2{font-size:1.1rem;font-weight:700;color:var(--dark);margin-bottom:.75rem}
+  table{width:100%;border-collapse:collapse;font-size:.875rem}
+  th{background:#f1f5f9;text-align:left;padding:.6rem .75rem;font-weight:600;color:var(--dark);border-bottom:2px solid #e2e8f0}
+  td{padding:.6rem .75rem;border-bottom:1px solid #f1f5f9;vertical-align:top;line-height:1.5}
+  .pass{color:#065f46;font-weight:600}
+  .fail{color:#991b1b;font-weight:600}
+  footer{text-align:center;padding:2rem;font-size:.8rem;color:var(--muted)}
+</style>
+</head>
+<body>
+<header>
+  <h1>✅ Test Results v2.2.8</h1>
+  <span>2026-04-10</span>
+</header>
+<nav>
+  <a href="index.html">Index</a>
+  <a href="developer_manual.html">Developer Manual</a>
+  <a href="system_admin_manual.html">System Admin</a>
+  <a href="user_manual.html">User Manual</a>
+  <a href="risk_register.html">Risk Register</a>
+  <a href="mitigation.html">Mitigation</a>
+  <a href="issues_and_fixes.html">Issues &amp; Fixes</a>
+  <a href="test_results.html" class="active">Test Results</a>
+  <a href="future_recommendations.html">Future Recs</a>
+</nav>
+<main>
+
+  <div class="card">
+    <h2>Manual Test Scenarios – Cancellation Lifecycle</h2>
+    <table>
+      <tr>
+        <th>#</th>
+        <th>Scenario</th>
+        <th>Expected Result</th>
+        <th>Status</th>
+      </tr>
+      <tr>
+        <td>TC-001</td>
+        <td>User selects budolPay QR, clicks "Cancel Payment" link in modal</td>
+        <td>Order → CANCELLED · Gateway Transaction → CANCELLED · Toast shown</td>
+        <td class="pass">✅ PASS</td>
+      </tr>
+      <tr>
+        <td>TC-002</td>
+        <td>User selects budolPay QR, clicks the X (close) button in modal</td>
+        <td>Order → CANCELLED · Gateway Transaction → CANCELLED</td>
+        <td class="pass">✅ PASS</td>
+      </tr>
+      <tr>
+        <td>TC-003</td>
+        <td>User opens the standalone checkout page (budolPay), clicks X</td>
+        <td>Gateway Transaction → CANCELLED, user redirected to cancelUri or /cart</td>
+        <td class="pass">✅ PASS</td>
+      </tr>
+      <tr>
+        <td>TC-004</td>
+        <td>Checkout page 10-minute timer expires</td>
+        <td>Gateway Transaction → CANCELLED, alert shown, user redirected to /cart</td>
+        <td class="pass">✅ PASS</td>
+      </tr>
+      <tr>
+        <td>TC-005</td>
+        <td>Gateway <code>POST /cancel/:referenceId</code> called on already-CANCELLED transaction</td>
+        <td>Returns 200 with <code>{ status: 'CANCELLED', message: 'Already cancelled' }</code> (idempotent)</td>
+        <td class="pass">✅ PASS</td>
+      </tr>
+      <tr>
+        <td>TC-006</td>
+        <td>Attempt to cancel a COMPLETED transaction via gateway endpoint</td>
+        <td>Returns 409 Conflict – "Cannot cancel a completed transaction"</td>
+        <td class="pass">✅ PASS</td>
+      </tr>
+      <tr>
+        <td>TC-007</td>
+        <td>Gateway is offline when user cancels QR modal in budolshap</td>
+        <td>Order still CANCELLED; proxy returns 504; toast still shown; non-blocking</td>
+        <td class="pass">✅ PASS</td>
+      </tr>
+      <tr>
+        <td>TC-008</td>
+        <td>User completes payment (QR scanned) then tries to re-cancel</td>
+        <td>Order already marked PAID; gateway returns 409; no rollback</td>
+        <td class="pass">✅ PASS</td>
+      </tr>
+      <tr>
+        <td>TC-009</td>
+        <td>Admin Dashboard Global Transactions after QR cancel</td>
+        <td>Transaction shows CANCELLED status, not PENDING</td>
+        <td class="pass">✅ PASS</td>
+      </tr>
+    </table>
+  </div>
+
+  <div class="card">
+    <h2>Automated Tests</h2>
+    <p style="font-size:.9rem;color:var(--muted);line-height:1.6">
+      TODO: Add Jest unit tests for the cancel endpoint in <code>scripts/test_scripts/payment_gateway/cancel.test.js</code>.
+      See <a href="future_recommendations.html">Future Recommendations</a>.
+    </p>
+  </div>
+
+</main>
+<footer>BudolEcosystem v2.2.8 Test Results · 2026-04-10</footer>
+</body>
+</html>

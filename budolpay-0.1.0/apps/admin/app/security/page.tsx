@@ -308,7 +308,7 @@ export default function SecurityPage() {
           </div>
           <div className="divide-y divide-slate-100 min-h-[400px]">
             <div className="px-4 py-3 bg-slate-50/80 grid grid-cols-12 gap-4 items-center text-[10px] font-bold text-slate-500 uppercase tracking-wider sticky top-0 backdrop-blur-sm z-10">
-              <div className="col-span-1">Actor</div>
+              <div className="col-span-1">Staff Identity</div>
               <div className="col-span-3">Action</div>
               <div className="col-span-4">Entity Details</div>
               <div className="col-span-3 text-right">Timestamp</div>
@@ -328,13 +328,13 @@ export default function SecurityPage() {
                     log.action.includes('AUDIT') || log.action.includes('REPORT') ? 'bg-green-100 text-green-600' :
                     'bg-slate-100 text-slate-600'
                   }`}>
-                    {log.user?.firstName?.[0] || log.user?.name?.[0] || 'S'}
+                    {log.metadata?.actorName?.[0] || log.user?.firstName?.[0] || log.user?.name?.[0] || 'S'}
                   </div>
                 </div>
                 <div className="col-span-3">
                   <p className="text-xs font-bold text-slate-800 truncate" title={log.action}>{log.action}</p>
                   <p className="text-[10px] text-slate-400 font-medium">
-                    {log.user ? `${log.user.firstName || ''} ${log.user.lastName || ''}`.trim() || log.user.name || log.user.email : 'System'}
+                    {log.metadata?.actorName || (log.user ? `${log.user.firstName || ''} ${log.user.lastName || ''}`.trim() || log.user.name || log.user.email : 'System')}
                   </p>
                 </div>
                 <div className="col-span-4">

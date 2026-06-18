@@ -49,12 +49,19 @@ export async function POST(request: Request) {
         data: { role: newRole as any }
       });
 
+      const actor = await prisma.user.findUnique({
+        where: { id: adminId },
+        select: { id: true, firstName: true, lastName: true, email: true }
+      });
+
       // Log the role update action
       await createAuditLog({
-        action: `ROLE_UPDATED_TO_${newRole} `,
+        action: `ROLE_UPDATED_TO_${newRole}`,
         entity: "User",
         entityId: userId,
         userId: adminId,
+        actorName: actor ? `${actor.firstName || ''} ${actor.lastName || ''}`.trim() || actor.email : undefined,
+        actorEmail: actor?.email,
         newValue: { role: newRole },
         ipAddress: "Internal System"
       });
@@ -169,6 +176,11 @@ export async function POST(request: Request) {
     }
 
     if (action === "RESET_PASSWORD") {
+      const actorInfo = await prisma.user.findUnique({
+        where: { id: adminId },
+        select: { id: true, firstName: true, lastName: true, email: true }
+      });
+
       // Compliance: Admin cannot reset their own password via the Admin Dashboard
       if (adminId === userId) {
         return NextResponse.json({ error: "Self-password reset is prohibited for compliance." }, { status: 403 });
@@ -198,6 +210,8 @@ export async function POST(request: Request) {
         entity: "User",
         entityId: userId,
         userId: adminId,
+        actorName: actorInfo ? `${actorInfo.firstName || ''} ${actorInfo.lastName || ''}`.trim() || actorInfo.email : undefined,
+        actorEmail: actorInfo?.email,
         newValue: { deliveryMethod, deliveryTarget } as any,
         ipAddress: "Internal System"
       });
@@ -214,6 +228,11 @@ export async function POST(request: Request) {
     }
 
     if (action === "DELETE_USER") {
+      const actorInfo = await prisma.user.findUnique({
+        where: { id: adminId },
+        select: { id: true, firstName: true, lastName: true, email: true }
+      });
+
       // Compliance: Admin cannot deactivate their own account
       if (adminId === userId) {
         return NextResponse.json({ error: "Self-deactivation is prohibited for compliance." }, { status: 403 });
@@ -233,6 +252,8 @@ export async function POST(request: Request) {
         entity: "User",
         entityId: userId,
         userId: adminId,
+        actorName: actorInfo ? `${actorInfo.firstName || ''} ${actorInfo.lastName || ''}`.trim() || actorInfo.email : undefined,
+        actorEmail: actorInfo?.email,
         ipAddress: "Internal System"
       });
 
@@ -240,7 +261,20 @@ export async function POST(request: Request) {
     }
 
     if (action === "PROVISION_ACCOUNT") {
-      const { email, firstName, lastName, role, phoneNumber } = await request.json();
+      const { email, firstName, lastName, role, phoneNumber, adminId } = body;
+
+      if (!adminId) {
+        return NextResponse.json({ error: "Admin ID is required for audit consistency." }, { status: 400 });
+      }
+
+      const actor = await prisma.user.findUnique({
+        where: { id: adminId },
+        select: { id: true, firstName: true, lastName: true, email: true }
+      });
+
+      if (!actor) {
+        return NextResponse.json({ error: "Authorized Actor not found in local system." }, { status: 403 });
+      }
 
       // We need to create the user in budolID first (since it's the central authority)
       // For now, we simulate this by creating in local budolPay DB as a placeholder
@@ -261,8 +295,15 @@ export async function POST(request: Request) {
         action: "ACCOUNT_PROVISIONED",
         entity: "User",
         entityId: newUser.id,
+        userId: actor.id,
+        actorName: `${actor.firstName || ''} ${actor.lastName || ''}`.trim() || actor.email,
+        actorEmail: actor.email,
         newValue: { email, role } as any,
-        ipAddress: "Internal System"
+        ipAddress: "Internal System",
+        metadata: {
+          compliance: "BSP Circular 808",
+          pci_dss: "10.2.2"
+        }
       });
 
       return NextResponse.json({ success: true, user: newUser });
@@ -285,7 +326,18 @@ export async function POST(request: Request) {
       otpStore.set(userId, { otp, expiry });
 
       // Dual-Channel Compliance Broadcast
-      await sendDualChannelNotification(user, 'OTP', otp);
+      const notifyResults = await sendDualChannelNotification(user, 'OTP', otp);
+
+      const deliveredChannels = [
+        notifyResults.email ? "EMAIL" : null,
+        notifyResults.sms ? "SMS" : null
+      ].filter(Boolean);
+
+      if (deliveredChannels.length === 0) {
+        return NextResponse.json({
+          error: "OTP generated, but delivery failed on both email and SMS channels."
+        }, { status: 503 });
+      }
 
       // Compliance v2.4.1: Log the MFA request
       await createAuditLog({
@@ -296,12 +348,20 @@ export async function POST(request: Request) {
         actorName: actor ? `${actor.firstName || ''} ${actor.lastName || ''}`.trim() || actor.email : undefined,
         actorEmail: actor?.email || undefined,
         ipAddress: "Internal System",
-        newValue: { channel: "SMS_AND_EMAIL" } as any
+        newValue: {
+          channel: deliveredChannels.join("_AND_"),
+          delivery: notifyResults
+        } as any
       });
 
       return NextResponse.json({
         success: true,
-        message: "OTP sent via SMS and Email.",
+        message: notifyResults.email && notifyResults.sms
+          ? "OTP sent via SMS and Email."
+          : notifyResults.sms
+            ? "OTP sent via SMS only. Email delivery is currently unavailable."
+            : "OTP sent via Email only. SMS delivery is currently unavailable.",
+        delivery: notifyResults,
         // We return OTP in sandbox for testing, though in prod we wait for user output
         _sandbox_debug_otp: otp
       });

@@ -1,11 +1,12 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { Suspense, useState, useEffect } from 'react';
 import { Shield, Loader2, AlertTriangle, Eye, EyeOff } from 'lucide-react';
 import { useRouter, useSearchParams } from 'next/navigation';
+import { Toaster, toast } from 'react-hot-toast';
 import MathCaptcha from '@/components/MathCaptcha';
 
-export default function LoginPage() {
+function LoginForm() {
     const router = useRouter();
     const searchParams = useSearchParams();
     const [isLoading, setIsLoading] = useState(false);
@@ -22,8 +23,8 @@ export default function LoginPage() {
         email: '',
         password: ''
     });
+    const [systemStatus, setSystemStatus] = useState({ status: 'LOADING', color: 'slate' });
 
-    // Prevent usage of 0.0.0.0 which is a bind address, not a visitable address
     useEffect(() => {
         if (typeof window !== 'undefined' && window.location.hostname === '0.0.0.0') {
             const newUrl = window.location.href.replace('0.0.0.0', window.location.hostname === '0.0.0.0' ? 'localhost' : window.location.hostname);
@@ -52,7 +53,19 @@ export default function LoginPage() {
                 setCooldown(60);
             }
         };
+
+        const fetchSystemStatus = async () => {
+            try {
+                const res = await fetch('/api/system/status');
+                const data = await res.json();
+                setSystemStatus(data);
+            } catch (err) {
+                setSystemStatus({ status: 'UNKNOWN', color: 'slate' });
+            }
+        };
+
         initPendingChallenge();
+        fetchSystemStatus();
     }, [searchParams]);
 
     const handleLogin = async (e: React.FormEvent) => {
@@ -70,7 +83,19 @@ export default function LoginPage() {
             const data = await res.json();
 
             if (!res.ok) {
-                throw new Error(data.error || 'Login failed');
+                const errorMsg = data.error || 'Login failed';
+                toast.error(errorMsg, {
+                    position: 'top-center',
+                    duration: 4000,
+                    style: {
+                        borderRadius: '10px',
+                        background: '#333',
+                        color: '#fff',
+                        fontWeight: 'bold'
+                    }
+                });
+                setError(errorMsg);
+                return;
             }
 
             if (data.otpRequired) {
@@ -81,7 +106,11 @@ export default function LoginPage() {
             }
 
         } catch (err: any) {
-            setError(err.message);
+            const errorMsg = err.message || 'An unexpected error occurred';
+            toast.error(errorMsg, {
+                position: 'top-center'
+            });
+            setError(errorMsg);
         } finally {
             setIsLoading(false);
         }
@@ -99,7 +128,9 @@ export default function LoginPage() {
             });
             const data = await res.json();
             if (!res.ok) {
-                throw new Error(data.error || 'OTP verification failed');
+                const errorMsg = data.error || 'OTP verification failed';
+                toast.error(errorMsg, { position: 'top-center' });
+                throw new Error(errorMsg);
             }
             router.push('/');
             router.refresh();
@@ -117,10 +148,13 @@ export default function LoginPage() {
             const res = await fetch('/api/auth/login/resend-otp', { method: 'POST' });
             const data = await res.json();
             if (!res.ok) {
-                throw new Error(data.error || 'Resend failed');
+                const errorMsg = data.error || 'Resend failed';
+                toast.error(errorMsg, { position: 'top-center' });
+                throw new Error(errorMsg);
             }
             setChallenge(data.challenge || null);
             setCooldown(60);
+            toast.success('OTP resent successfully', { position: 'top-center' });
         } catch (err: any) {
             setError(err.message);
         } finally {
@@ -130,6 +164,7 @@ export default function LoginPage() {
 
     return (
         <div className="min-h-screen bg-slate-900 flex items-center justify-center p-4">
+            <Toaster />
             <div className="max-w-md w-full bg-white rounded-2xl shadow-2xl overflow-hidden">
                 <div className="p-8">
                     <div className="flex justify-center mb-6">
@@ -256,7 +291,8 @@ export default function LoginPage() {
                                             const ssoUrl = process.env.NEXT_PUBLIC_SSO_URL || `http://${localIP}:8000`;
                                             const appUrl = process.env.NEXT_PUBLIC_APP_URL || (typeof window !== 'undefined' ? window.location.origin : '');
                                             const redirectUri = `${appUrl}/api/auth/callback`;
-                                            window.location.href = `${ssoUrl}/login?apiKey=bp_key_2025&redirect_uri=${encodeURIComponent(redirectUri)}`;
+                                            const apiKey = process.env.NEXT_PUBLIC_BUDOLPAY_API_KEY || 'bp_b31ea1888dcb2ba76fdbb776ea8f5b7a';
+                                            window.location.href = `${ssoUrl}/login?apiKey=${encodeURIComponent(apiKey)}&redirect_uri=${encodeURIComponent(redirectUri)}`;
                                         }}
                                         className="w-full flex justify-center items-center gap-3 px-4 py-3 border border-slate-200 rounded-xl shadow-sm bg-white text-sm font-medium text-slate-700 hover:bg-slate-50 transition-all active:scale-[0.98]"
                                     >
@@ -265,17 +301,27 @@ export default function LoginPage() {
                                     </button>
                                     <p className="text-[10px] text-slate-400 text-center mt-2 font-semibold">After SSO, OTP verification is still required before access is granted.</p>
                                 </div>
+
                                 <div className="mt-6 text-center">
                                     <button
                                         onClick={() => {
                                             const localIP = typeof window !== 'undefined' ? (window.location.hostname !== '0.0.0.0' ? window.location.hostname : 'localhost') : 'localhost';
                                             const ssoUrl = process.env.NEXT_PUBLIC_SSO_URL || `http://${localIP}:8000`;
-                                            window.location.href = `${ssoUrl}/register?apiKey=bp_key_2025`;
+                                            const apiKey = process.env.NEXT_PUBLIC_BUDOLPAY_API_KEY || 'bp_b31ea1888dcb2ba76fdbb776ea8f5b7a';
+                                            window.location.href = `${ssoUrl}/register?apiKey=${encodeURIComponent(apiKey)}`;
                                         }}
                                         className="text-sm font-bold text-slate-400 hover:text-rose-500 transition-colors"
                                     >
                                         Don't have an account? Create Account
                                     </button>
+                                    <div className="mt-3">
+                                        <a
+                                            href="/forgot-password"
+                                            className="text-xs font-bold text-slate-400 hover:text-rose-500 transition-colors inline-block"
+                                        >
+                                            Forgot Password?
+                                        </a>
+                                    </div>
                                 </div>
                             </div>
                             )}
@@ -285,13 +331,29 @@ export default function LoginPage() {
                 
                 <div className="bg-slate-50 p-4 border-t border-slate-100">
                     <div className="flex items-center justify-center gap-2">
-                        <span className="w-2 h-2 rounded-full bg-rose-500 animate-pulse"></span>
+                        <span className={`w-2 h-2 rounded-full animate-pulse ${
+                            systemStatus.color === 'emerald' ? 'bg-emerald-500' : 
+                            systemStatus.color === 'rose' ? 'bg-rose-500' : 
+                            systemStatus.color === 'amber' ? 'bg-amber-500' : 'bg-slate-400'
+                        }`}></span>
                         <p className="text-[10px] font-bold text-slate-500 uppercase tracking-widest">
-                            System Status: Operational
+                            System Status: {systemStatus.status}
                         </p>
                     </div>
                 </div>
             </div>
         </div>
+    );
+}
+
+export default function LoginPage() {
+    return (
+        <Suspense fallback={
+            <div className="min-h-screen bg-slate-900 flex items-center justify-center">
+                <Loader2 className="w-8 h-8 animate-spin text-white" />
+            </div>
+        }>
+            <LoginForm />
+        </Suspense>
     );
 }

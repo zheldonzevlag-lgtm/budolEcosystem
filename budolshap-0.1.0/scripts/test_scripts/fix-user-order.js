@@ -5,7 +5,7 @@ const https = require('https');
 // Configuration for the specific order from the screenshot
 const CONFIG = {
     webhookUrl: 'https://budulshap.vercel.app/api/shipping/lalamove/webhook',
-    secret: 'lalamove_webhook_secret_budolshap_2025',
+    secret: process.env.LALAMOVE_WEBHOOK_SECRET || '',
     orderId: 'cmit7vnqv0002kz049h850tmh',
     lalamoveOrderId: '3379143481582114331'
 };

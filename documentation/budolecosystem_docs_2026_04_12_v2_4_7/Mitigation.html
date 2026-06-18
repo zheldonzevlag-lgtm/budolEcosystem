@@ -1,0 +1,100 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Mitigation Plan v2.4.7 - BudolPay</title>
+    <link rel="stylesheet" href="../docs_v1.css">
+</head>
+<body>
+    <nav class="sidebar">
+        <h2>BudolPay Docs</h2>
+        <h3>Navigation</h3>
+        <ul>
+            <li><a href="index.html">Release Index</a></li>
+            <li><a href="developer_manual.html">Developer Manual</a></li>
+            <li><a href="system_admin_manual.html">System Admin Manual</a></li>
+            <li><a href="user_manual.html">User Manual</a></li>
+            <li><a href="risk_register.html">Risk Register</a></li>
+            <li><a href="Mitigation.html" class="active">Mitigation Plan</a></li>
+            <li><a href="issues & fixes.html">Issues &amp; Fixes</a></li>
+            <li><a href="test_results.html">Test Results</a></li>
+            <li><a href="future_recommendations.html">Future Recommendations</a></li>
+        </ul>
+    </nav>
+    <main class="content">
+        <header class="header">
+            <h1>Mitigation Plan: v2.4.7</h1>
+            <div class="metadata">
+                <span><strong>Version:</strong> v2.4.7</span>
+                <span><strong>Date:</strong> 2026-04-13</span>
+            </div>
+        </header>
+
+        <section class="section">
+            <h2>Purpose</h2>
+            <p>This document describes the specific mitigations applied for each risk identified in the v2.4.7 Risk Register, including failover strategies and monitoring approaches.</p>
+        </section>
+
+        <section class="section">
+            <h2>Mitigation Details</h2>
+
+            <div class="card">
+                <h3>RSK-001: DRS Heartbeat Failure</h3>
+                <p><strong>Mitigation:</strong> The heartbeat uses <code>setInterval(...).unref()</code> so it does not block process shutdown. The Admin Dashboard DRS shield displays a warning if the last ping is older than 2 minutes, prompting admin action.</p>
+                <p><strong>Failover:</strong> On detection of stale heartbeat, alert is displayed on the Compliance Board. Admins restart the transaction-service via <code>npm start</code> or the service manager.</p>
+                <p><strong>Monitoring:</strong> Query <code>SystemSetting</code> where <code>key = 'drs_heartbeat_last_ping'</code> and alert if <code>updatedAt &lt; NOW() - INTERVAL '2 minutes'</code>.</p>
+            </div>
+
+            <div class="card">
+                <h3>RSK-002: Payment Gateway Offline During Testing</h3>
+                <p><strong>Mitigation:</strong> <code>payment-security.test.js</code> now includes a <code>beforeAll</code> health-check. All 4 integration tests skip gracefully with <code>it.skip()</code> when the gateway is unreachable.</p>
+                <p><strong>Failover:</strong> CI pipeline should run <code>npm start</code> before running the test suite. Docker Compose setup is recommended for v2.4.8.</p>
+            </div>
+
+            <div class="card">
+                <h3>RSK-003: IPv6/IPv4 Localhost Resolution</h3>
+                <p><strong>Mitigation:</strong> All test files now use <code>127.0.0.1</code> explicitly instead of <code>localhost</code>. This is documented as a mandatory standard in the Developer Manual test patterns table.</p>
+                <p><strong>Prevention:</strong> Code review checklist updated: any new test using <code>localhost</code> must be flagged and replaced with <code>127.0.0.1</code>.</p>
+            </div>
+
+            <div class="card">
+                <h3>RSK-005: Cross-Platform Build Failures</h3>
+                <p><strong>Mitigation:</strong> Removed Unix-specific <code>prebuild</code> script (<code>mkdir /tmp/prisma_cache</code>) from <code>apps/admin/package.json</code>. Prisma generate now runs via standard Vercel build hooks.</p>
+                <p><strong>Prevention:</strong> All CI builds run on both Windows and Linux runners to catch cross-platform issues early.</p>
+            </div>
+
+            <div class="card">
+                <h3>RSK-006: AI Anti-Spam False Positives</h3>
+                <p><strong>Mitigation:</strong> EWMA spam score thresholds are configurable via environment variables. Default threshold is 0.6 (60% confidence). Legitimate users with unusual email patterns may contact support for manual review.</p>
+                <p><strong>Next Steps:</strong> Implement an admin override endpoint to whitelist specific registration patterns. See <a href="future_recommendations.html">Future Recommendations</a>.</p>
+            </div>
+
+            <div class="card">
+                <h3>RSK-008: OTP Timing Attack</h3>
+                <p><strong>Mitigation:</strong> Rate limiting is enforced on the OTP verify endpoint (5 attempts / 15 minutes). JWT pre-auth tokens expire in 5 minutes.</p>
+                <p><strong>Monitoring:</strong> Failed OTP attempts are logged to the centralized AuditLog with IP address for forensic review.</p>
+            </div>
+        </section>
+
+        <section class="section">
+            <h2>Open Mitigations (Pending v2.4.8)</h2>
+            <div class="card">
+                <table>
+                    <thead><tr><th>Risk</th><th>Pending Action</th><th>Target Version</th></tr></thead>
+                    <tbody>
+                        <tr><td>RSK-001</td><td>Add Prometheus/Grafana alert for stale DRS heartbeat</td><td>v2.4.8</td></tr>
+                        <tr><td>RSK-002</td><td>Docker Compose integration test environment</td><td>v2.4.8</td></tr>
+                        <tr><td>RSK-006</td><td>Admin spam-score override endpoint</td><td>v2.5.0</td></tr>
+                    </tbody>
+                </table>
+            </div>
+        </section>
+
+        <footer>
+            <hr>
+            <p style="font-size: 12px; color: #6b778c;">&copy; 2026 BudolPay Ecosystem. | <a href="risk_register.html">← Risk Register</a> | <a href="index.html">Index</a></p>
+        </footer>
+    </main>
+</body>
+</html>

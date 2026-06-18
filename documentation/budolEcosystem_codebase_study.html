@@ -1,0 +1,718 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>BudolEcosystem Codebase Study & Security Analysis</title>
+    <style>
+        :root {
+            --primary: #2563eb;
+            --secondary: #475569;
+            --accent: #0ea5e9;
+            --bg: #f8fafc;
+            --surface: #ffffff;
+            --text: #1e293b;
+            --text-light: #64748b;
+            --border: #e2e8f0;
+            --success: #22c55e;
+            --warning: #f59e0b;
+            --danger: #dc2626;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            line-height: 1.7;
+            color: var(--text);
+            background: var(--bg);
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 2rem;
+        }
+
+        header {
+            background: linear-gradient(135deg, var(--primary) 0%, var(--accent) 100%);
+            color: white;
+            padding: 3rem 2rem;
+            margin-bottom: 2rem;
+        }
+
+        h1 {
+            font-size: 2.5rem;
+            font-weight: 700;
+            margin-bottom: 0.5rem;
+        }
+
+        .subtitle {
+            font-size: 1.1rem;
+            opacity: 0.9;
+        }
+
+        h2 {
+            font-size: 1.75rem;
+            font-weight: 600;
+            color: var(--primary);
+            margin: 2.5rem 0 1rem;
+            padding-bottom: 0.5rem;
+            border-bottom: 2px solid var(--border);
+        }
+
+        h3 {
+            font-size: 1.25rem;
+            font-weight: 600;
+            color: var(--text);
+            margin: 1.5rem 0 0.75rem;
+        }
+
+        h4 {
+            font-size: 1rem;
+            font-weight: 600;
+            color: var(--secondary);
+            margin: 1rem 0 0.5rem;
+        }
+
+        p {
+            margin-bottom: 1rem;
+        }
+
+        .card {
+            background: var(--surface);
+            border-radius: 8px;
+            padding: 1.5rem;
+            margin-bottom: 1.5rem;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+        }
+
+        .alert {
+            padding: 1rem;
+            border-radius: 8px;
+            margin-bottom: 1rem;
+            border-left: 4px solid;
+        }
+
+        .alert-critical {
+            background: #fef2f2;
+            border-color: var(--danger);
+            color: #991b1b;
+        }
+
+        .alert-high {
+            background: #fff7ed;
+            border-color: var(--warning);
+            color: #9a3412;
+        }
+
+        .alert-medium {
+            background: #fefce8;
+            border-color: #ca8a04;
+            color: #854d0e;
+        }
+
+        .alert-info {
+            background: #eff6ff;
+            border-color: var(--accent);
+            color: #1e40af;
+        }
+
+        .tag {
+            display: inline-block;
+            padding: 0.25rem 0.75rem;
+            border-radius: 20px;
+            font-size: 0.8rem;
+            font-weight: 600;
+            margin-right: 0.5rem;
+            margin-bottom: 0.5rem;
+        }
+
+        .tag-critical { background: #dc2626; color: white; }
+        .tag-high { background: #f59e0b; color: white; }
+        .tag-medium { background: #ca8a04; color: white; }
+        .tag-info { background: #22c55e; color: white; }
+
+        .grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 1.5rem;
+            margin: 1.5rem 0;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 1rem 0;
+            background: var(--surface);
+            border-radius: 8px;
+            overflow: hidden;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+        }
+
+        th, td {
+            padding: 0.75rem 1rem;
+            text-align: left;
+            border-bottom: 1px solid var(--border);
+        }
+
+        th {
+            background: var(--primary);
+            color: white;
+            font-weight: 600;
+        }
+
+        tr:nth-child(even) {
+            background: #f8fafc;
+        }
+
+        code {
+            background: #f1f5f9;
+            padding: 0.2rem 0.4rem;
+            border-radius: 4px;
+            font-size: 0.9em;
+            color: #dc2626;
+        }
+
+        pre {
+            background: #1e293b;
+            color: #e2e8f0;
+            padding: 1rem;
+            border-radius: 8px;
+            overflow-x: auto;
+            margin: 1rem 0;
+        }
+
+        pre code {
+            background: transparent;
+            color: inherit;
+            padding: 0;
+        }
+
+        .stat-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+            gap: 1rem;
+            margin: 1.5rem 0;
+        }
+
+        .stat-card {
+            background: var(--surface);
+            padding: 1.25rem;
+            border-radius: 8px;
+            text-align: center;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+        }
+
+        .stat-value {
+            font-size: 2rem;
+            font-weight: 700;
+            color: var(--primary);
+        }
+
+        .stat-label {
+            font-size: 0.875rem;
+            color: var(--text-light);
+        }
+
+        .severity-critical { color: var(--danger); font-weight: 700; }
+        .severity-high { color: #ea580c; font-weight: 700; }
+        .severity-medium { color: #ca8a04; font-weight: 700; }
+        .severity-info { color: var(--success); font-weight: 700; }
+
+        .flow-container {
+            background: var(--surface);
+            padding: 1.5rem;
+            border-radius: 8px;
+            margin: 1rem 0;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+        }
+
+        .flow-step {
+            display: flex;
+            align-items: center;
+            padding: 0.75rem 0;
+            border-left: 3px solid var(--primary);
+            margin-left: 0.5rem;
+            padding-left: 1rem;
+        }
+
+        .flow-step::before {
+            content: "→";
+            margin-right: 0.75rem;
+            font-weight: bold;
+            color: var(--primary);
+        }
+
+        ul {
+            margin-left: 1.5rem;
+        }
+
+        li {
+            margin-bottom: 0.5rem;
+        }
+
+        footer {
+            background: var(--text);
+            color: white;
+            padding: 2rem;
+            text-align: center;
+            margin-top: 3rem;
+        }
+
+        .toc {
+            background: var(--surface);
+            padding: 1.5rem;
+            border-radius: 8px;
+            margin-bottom: 2rem;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+        }
+
+        .toc ul {
+            list-style: none;
+            margin-left: 0;
+        }
+
+        .toc li {
+            margin-bottom: 0.5rem;
+        }
+
+        .toc a {
+            color: var(--primary);
+            text-decoration: none;
+        }
+
+        .toc a:hover {
+            text-decoration: underline;
+        }
+
+        @media print {
+            body { background: white; }
+            .card { box-shadow: none; border: 1px solid var(--border); }
+        }
+    </style>
+</head>
+<body>
+    <header>
+        <div class="container">
+            <h1>BudolEcosystem Codebase Study</h1>
+            <p class="subtitle">Comprehensive Analysis & Security Report - June 4, 2026</p>
+        </div>
+    </header>
+
+    <div class="container">
+        <!-- Table of Contents -->
+        <div class="toc">
+            <h3>📋 Table of Contents</h3>
+            <ul>
+                <li><a href="#stats">1. Repository Statistics</a></li>
+                <li><a href="#domains">2. Core Domain Analysis</a></li>
+                <li><a href="#routes">3. API Route Map</a></li>
+                <li><a href="#flows">4. Execution Flows</a></li>
+                <li><a href="#components">5. Component Library</a></li>
+                <li><a href="#security">6. Security Analysis (NEW)</a></li>
+            </ul>
+        </div>
+
+        <!-- Repository Stats -->
+        <div id="stats">
+            <h2>1. Repository Statistics</h2>
+            <div class="stat-grid">
+                <div class="stat-card">
+                    <div class="stat-value">7,367</div>
+                    <div class="stat-label">Files</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-value">25,448</div>
+                    <div class="stat-label">Symbols</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-value">832</div>
+                    <div class="stat-label">Communities</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-value">300</div>
+                    <div class="stat-label">Processes</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-value">100+</div>
+                    <div class="stat-label">API Routes</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-value">214</div>
+                    <div class="stat-label">Components</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Core Domains -->
+        <h2 id="domains">2. Core Domain Analysis</h2>
+
+        <div class="card">
+            <h3>Auth Domain <span class="tag">26 symbols, 13 files</span></h3>
+            <table>
+                <thead>
+                    <tr><th>Component</th><th>File</th><th>Description</th></tr>
+                </thead>
+                <tbody>
+                    <tr><td><code>verifyToken</code></td><td>lib/token.js</td><td>JWT token verification</td></tr>
+                    <tr><td><code>getUserFromRequest</code></td><td>lib/auth.js</td><td>Extract user from request</td></tr>
+                    <tr><td><code>getAuthFromRequest</code></td><td>lib/auth.js</td><td>Auth context extraction</td></tr>
+                    <tr><td><code>verifyAdminAccess</code></td><td>lib/adminAuth.js</td><td>Admin permission verification</td></tr>
+                    <tr><td><code>AuthForm</code></td><td>components/auth/AuthForm.jsx</td><td>Login/Register form (1184 lines!)</td></tr>
+                    <tr><td><code>authService</code></td><td>lib/services/authService.js</td><td>Email verification, password reset</td></tr>
+                </tbody>
+            </table>
+        </div>
+
+        <div class="card">
+            <h3>Payments Domain <span class="tag">28 symbols, 13 files</span></h3>
+            <table>
+                <thead>
+                    <tr><th>Component</th><th>File</th><th>Description</th></tr>
+                </thead>
+                <tbody>
+                    <tr><td><code>createPayment</code></td><td>lib/paymongo.js</td><td>Paymongo payment creation</td></tr>
+                    <tr><td><code>PayMongoAdapter</code></td><td>lib/payment/adapters/paymongo-adapter.js</td><td>Payment adapter (167 lines)</td></tr>
+                    <tr><td><code>PaymentService</code></td><td>lib/payment/service.js</td><td>Payment service</td></tr>
+                    <tr><td><code>initiatePayment</code></td><td>lib/services/paymentService.js</td><td>Initiate payment</td></tr>
+                    <tr><td><code>handlePaymentPaid</code></td><td>app/api/webhooks/paymongo/route.js</td><td>Webhook handling</td></tr>
+                </tbody>
+            </table>
+        </div>
+
+        <div class="card">
+            <h3>Orders Domain <span class="tag">32 symbols, 9 files</span></h3>
+            <table>
+                <thead>
+                    <tr><th>Component</th><th>File</th><th>Description</th></tr>
+                </thead>
+                <tbody>
+                    <tr><td><code>ordersService</code></td><td>lib/services/ordersService.js</td><td>Order service</td></tr>
+                    <tr><td><code>processAutoCompletions</code></td><td>lib/orderAutoComplete.js</td><td>Auto-complete orders</td></tr>
+                    <tr><td><code>cancelOrder</code></td><td>lib/services/ordersService.js</td><td>Cancel order</td></tr>
+                    <tr><td><code>cancelExpiredUnpaidOrders</code></td><td>lib/services/ordersService.js</td><td>Cancel unpaid orders</td></tr>
+                </tbody>
+            </table>
+        </div>
+
+        <!-- API Routes -->
+        <h2 id="routes">3. API Route Map</h2>
+
+        <div class="card">
+            <h3>Major API Routes (100+)</h3>
+            <table>
+                <thead>
+                    <tr><th>Route</th><th>Handler</th><th>Flows</th></tr>
+                </thead>
+                <tbody>
+                    <tr><td><code>/api/orders</code></td><td>app/api/orders/route.js</td><td>GET→NormalizeAccountType, POST→NormalizeAccountType</td></tr>
+                    <tr><td><code>/api/payment/checkout</code></td><td>app/api/payment/checkout/route.js</td><td>POST→FindMany, POST→UpdateCheckoutSession</td></tr>
+                    <tr><td><code>/api/webhooks/paymongo</code></td><td>app/api/webhooks/paymongo/route.js</td><td>POST→$transaction→CreateLedgerEntry</td></tr>
+                    <tr><td><code>/api/webhooks/budolpay</code></td><td>app/api/webhooks/budolpay/route.js</td><td>POST→GetSystemSettings→FormatBrandedText</td></tr>
+                    <tr><td><code>/api/auth/login</code></td><td>app/api/auth/login/route.js</td><td>POST→GetNowUTC→GetSystemSettings→$transaction</td></tr>
+                    <tr><td><code>/api/auth/register</code></td><td>app/api/auth/register/route.js</td><td>POST→GetNowUTC→GetSystemSettings→$transaction</td></tr>
+                    <tr><td><code>/api/cart</code></td><td>app/api/cart/route.js</td><td>(no auth flows)</td></tr>
+                    <tr><td><code>/api/products</code></td><td>app/api/products/route.js</td><td>(no auth flows)</td></tr>
+                    <tr><td><code>/api/categories</code></td><td>app/api/categories/route.js</td><td>(no auth flows)</td></tr>
+                    <tr><td><code>/api/chats</code></td><td>app/api/chats/route.js</td><td>GET→VerifyToken</td></tr>
+                </tbody>
+            </table>
+        </div>
+
+        <div class="card">
+            <h3>Admin Routes</h3>
+            <ul>
+                <li><code>/api/admin/users</code> - User management</li>
+                <li><code>/api/admin/stores</code> - Store management</li>
+                <li><code>/api/admin/orders</code> - Order management</li>
+                <li><code>/api/admin/payouts</code> - Payout management</li>
+                <li><code>/api/admin/returns</code> - Return management</li>
+                <li><code>/api/admin/memberships</code> - Membership management</li>
+                <li><code>/api/admin/webhooks</code> - Webhook management</li>
+                <li><code>/api/admin/security-dashboard</code> - Security dashboard</li>
+            </ul>
+        </div>
+
+        <!-- Execution Flows -->
+        <h2 id="flows">4. Execution Flows Analysis</h2>
+
+        <div class="card">
+            <h3>Checkout & Payment Flow</h3>
+            <div class="flow-container">
+                <h4>Checkout Flow</h4>
+                <div class="flow-step">POST /api/payment/checkout → createCheckoutSession()</div>
+                <div class="flow-step">→ FindMany (cart items)</div>
+                <div class="flow-step">→ UpdateCheckoutSession()</div>
+                <h4>Payment Processing</h4>
+                <div class="flow-step">→ Paymongo / BudolPay</div>
+                <h4>Webhook Processing</h4>
+                <div class="flow-step">→ handleSourceChargeable() → createPayment()</div>
+                <div class="flow-step">→ handlePaymentPaid() → processSuccessfulOrder()</div>
+                <div class="flow-step">→ sendOrderPlacedEmail()</div>
+            </div>
+        </div>
+
+        <div class="card">
+            <h3>Key Execution Processes</h3>
+            <table>
+                <thead>
+                    <tr><th>Process ID</th><th>Description</th><th>Steps</th></tr>
+                </thead>
+                <tbody>
+                    <tr><td>proc_4_post</td><td>POST webhook → GetSystemSettings → FormatBrandedText → $transaction → CreateLedgerEntry → BuildOrderPaymentEntries</td><td>7</td></tr>
+                    <tr><td>proc_121_post</td><td>POST checkout → UpdateCheckoutSession → getCheckoutSession</td><td>4</td></tr>
+                    <tr><td>proc_285_post</td><td>POST webhook → CreatePayment → handleSourceChargeable → createPayment</td><td>3</td></tr>
+                    <tr><td>proc_75_post</td><td>POST cron → processAutoCompletions → GetSystemSettings</td><td>5</td></tr>
+                </tbody>
+            </table>
+        </div>
+
+        <!-- Component Library -->
+        <h2 id="components">5. Component Library Structure</h2>
+
+        <div class="grid">
+            <div class="card">
+                <h3>Components <span class="tag">214 symbols, 87 files</span></h3>
+                <ul>
+                    <li><strong>Auth</strong> (3) - AuthForm (1184 lines!)</li>
+                    <li><strong>Address</strong> (5) - AddressModal, AddressAutocomplete</li>
+                    <li><strong>Payment</strong> (8) - PaymentProofUpload, QRCodeModal</li>
+                    <li><strong>Orders</strong> (4) - OrderSummary, TrackingTimeline</li>
+                    <li><strong>Store</strong> (12+) - AddProductWizard, CategorySelector</li>
+                    <li><strong>Admin</strong> (10+) - AdminLayout, AdminSidebar</li>
+                    <li><strong>Common</strong> (20+) - Navbar, Sidebar, RatingModal</li>
+                </ul>
+            </div>
+
+            <div class="card">
+                <h3>Screen Pages <span class="tag">172 symbols, 27 files</span></h3>
+                <ul>
+                    <li><strong>Public</strong> - Shop, Cart, Orders, Profile, Chat</li>
+                    <li><strong>Store</strong> - Store dashboard, orders, products, settings</li>
+                    <li><strong>Admin</strong> - Admin dashboard, categories, stores, kyc</li>
+                    <li><strong>Payment</strong> - Success, failed, pending, return, QR</li>
+                </ul>
+            </div>
+
+            <div class="card">
+                <h3>Services <span class="tag">247 symbols, 87 files</span></h3>
+                <ul>
+                    <li>checkoutService.js - Create checkout session</li>
+                    <li>paymentService.js - Payment processing</li>
+                    <li>ordersService.js - Order management</li>
+                    <li>authService.js - Authentication service</li>
+                    <li>shippingService.js - Shipping/logistics service</li>
+                    <li>shippingOrderUpdater.js - Shipping status sync</li>
+                </ul>
+            </div>
+        </div>
+
+        <div class="card">
+            <h3>Main Projects</h3>
+            <table>
+                <thead>
+                    <tr><th>Project</th><th>Description</th></tr>
+                </thead>
+                <tbody>
+                    <tr><td>budolshap-0.1.0</td><td>Main Next.js e-commerce web application</td></tr>
+                    <tr><td>budolpay-0.1.0</td><td>Payment service (includes admin, auth-service, api-gateway)</td></tr>
+                    <tr><td>budolAccounting-0.1.0</td><td>Accounting/ledger module</td></tr>
+                    <tr><td>budolPayMobile</td><td>Mobile application (Windows runner)</td></tr>
+                    <tr><td>scripts/</td><td>Test and utility scripts</td></tr>
+                </tbody>
+            </table>
+        </div>
+
+        <!-- SECURITY ANALYSIS SECTION -->
+        <h2 id="security">6. Security Analysis</h2>
+
+        <div class="alert alert-critical">
+            <h3>⚠️ Security Vulnerabilities Found</h3>
+            <p>This analysis identified <strong>14 security issues</strong> including <strong>2 critical</strong> and <strong>4 high</strong> severity vulnerabilities.</p>
+        </div>
+
+        <!-- Critical Issues -->
+        <h3>6.1 Critical Vulnerabilities</h3>
+
+        <div class="alert alert-critical">
+            <h4 class="severity-critical">1.1 Hardcoded JWT Secret</h4>
+            <p><strong>File:</strong> <code>budolshap-0.1.0/lib/token.js</code> (Line 3)</p>
+            <pre><code>const JWT_SECRET = process.env.JWT_SECRET || 'GJ7Lxn0/kdV/KuZJ5xJ7Ip0RvMerrGW5n0gf44mfHgc='</code></pre>
+            <p><strong>Risk:</strong> Attackers can forge JWT tokens and bypass all authentication.</p>
+            <p><strong>Fix:</strong></p>
+            <pre><code>const JWT_SECRET = process.env.JWT_SECRET;
+if (!JWT_SECRET) {
+    throw new Error('CRITICAL: JWT_SECRET environment variable is not set!');
+}</code></pre>
+        </div>
+
+        <div class="alert alert-critical">
+            <h4 class="severity-critical">1.2 Verbose Error Logging Leaking Debug Info</h4>
+            <p><strong>File:</strong> <code>budolshap-0.1.0/lib/token.js</code> (Lines 30-32)</p>
+            <pre><code>// Log the secret being used (masked) for debugging secret mismatch
+const maskedSecret = JWT_SECRET ? `${JWT_SECRET.substring(0, 3)}...` : 'MISSING';
+console.log(`[Token] Using secret: ${maskedSecret}`);</code></pre>
+            <p><strong>Risk:</strong> Partial secret disclosure in server logs.</p>
+            <p><strong>Fix:</strong> Remove this debug logging entirely in production.</p>
+        </div>
+
+        <!-- High Issues -->
+        <h3>6.2 High Severity Issues</h3>
+
+        <div class="alert alert-high">
+            <h4 class="severity-high">2.1 Missing Rate Limiting on Auth Endpoints</h4>
+            <p><strong>Files:</strong> <code>app/api/auth/login/route.js</code>, <code>app/api/auth/register/route.js</code></p>
+            <p><strong>Risk:</strong> Brute-force attacks possible.</p>
+            <p><strong>Fix:</strong> Apply rate limiting to all auth routes:</p>
+            <pre><code>import { rateLimit } from '@/lib/rate-limit';
+
+export async function POST(request) {
+    const { success } = await rateLimit(request);
+    if (!success) {
+        return NextResponse.json(
+            { error: 'Too many requests' },
+            { status: 429 }
+        );
+    }
+    // ... rest of logic
+}</code></pre>
+        </div>
+
+        <div class="alert alert-high">
+            <h4 class="severity-high">2.2 No IP-Based Rate Limiting</h4>
+            <p><strong>File:</strong> <code>lib/rate-limit.js</code></p>
+            <p><strong>Risk:</strong> Can be bypassed by changing IP addresses.</p>
+            <p><strong>Fix:</strong> Implement IP-based rate limiting using Redis.</p>
+        </div>
+
+        <div class="alert alert-high">
+            <h4 class="severity-high">2.3 Insufficient Input Validation on Registration</h4>
+            <p><strong>File:</strong> <code>app/api/auth/register/route.js</code></p>
+            <p><strong>Risk:</strong> No email/password validation before processing.</p>
+            <p><strong>Fix:</strong> Add validation functions with password strength checks.</p>
+        </div>
+
+        <div class="alert alert-high">
+            <h4 class="severity-high">2.4 Missing Admin Access Logging</h4>
+            <p><strong>Files:</strong> <code>app/api/admin/*</code></p>
+            <p><strong>Risk:</strong> Unauthorized access attempts not logged comprehensively.</p>
+            <p><strong>Fix:</strong> Create admin middleware with audit logging.</p>
+        </div>
+
+        <!-- Medium Issues -->
+        <h3>6.3 Medium Severity Issues</h3>
+
+        <div class="alert alert-medium">
+            <h4 class="severity-medium">3.1 Weak Session Configuration</h4>
+            <p><strong>File:</strong> <code>lib/auth.js</code></p>
+            <p>7-day session duration is too long. Reduce to 2 hours for sensitive operations.</p>
+        </div>
+
+        <div class="alert alert-medium">
+            <h4 class="severity-medium">3.2 No CSRF Protection</h4>
+            <p>Application doesn't implement explicit CSRF token validation.</p>
+        </div>
+
+        <div class="alert alert-medium">
+            <h4 class="severity-medium">3.3 Missing Security Headers</h4>
+            <p>No comprehensive security headers set at application level.</p>
+        </div>
+
+        <div class="alert alert-medium">
+            <h4 class="severity-medium">3.4 Payment Webhook Missing IP Whitelist</h4>
+            <p><strong>Files:</strong> <code>app/api/webhooks/paymongo/route.js</code></p>
+            <p>Webhooks should verify source IP addresses.</p>
+        </div>
+
+        <div class="alert alert-medium">
+            <h4 class="severity-medium">3.5 Database Query Lacks Pagination</h4>
+            <p><strong>Files:</strong> <code>app/api/orders/route.js</code></p>
+            <p>Endpoints don't implement pagination - potential DoS.</p>
+        </div>
+
+        <!-- Positive Security -->
+        <h3>6.4 Positive Security Practices</h3>
+
+        <div class="alert alert-info">
+            <h4>✅ Security Features Already Implemented</h4>
+            <table>
+                <thead>
+                    <tr><th>Practice</th><th>File</th><th>Notes</th></tr>
+                </thead>
+                <tbody>
+                    <tr><td>bcrypt hashing (12 rounds)</td><td>lib/auth.js</td><td>PCI DSS compliant</td></tr>
+                    <tr><td>HttpOnly cookies</td><td>lib/auth.js</td><td>XSS protection</td></tr>
+                    <tr><td>No plain text passwords</td><td>lib/auth.js</td><td>Explicitly removed</td></tr>
+                    <tr><td>Audit logging</td><td>lib/audit.js</td><td>Comprehensive</td></tr>
+                    <tr><td>RBAC system</td><td>lib/rbac.js</td><td>Role-based access</td></tr>
+                </tbody>
+            </table>
+        </div>
+
+        <!-- Remediation -->
+        <h3>6.5 Remediation Priority</h3>
+
+        <div class="card">
+            <table>
+                <thead>
+                    <tr><th>#</th><th>Issue</th><th>Severity</th><th>Effort</th></tr>
+                </thead>
+                <tbody>
+                    <tr><td>1</td><td>Remove hardcoded JWT secret</td><td class="severity-critical">CRITICAL</td><td>Low</td></tr>
+                    <tr><td>2</td><td>Remove debug logging</td><td class="severity-critical">CRITICAL</td><td>Low</td></tr>
+                    <tr><td>3</td><td>Add rate limiting to auth routes</td><td class="severity-high">HIGH</td><td>Medium</td></tr>
+                    <tr><td>4</td><td>Add input validation</td><td class="severity-high">HIGH</td><td>Medium</td></tr>
+                    <tr><td>5</td><td>Reduce session duration</td><td class="severity-medium">MEDIUM</td><td>Low</td></tr>
+                    <tr><td>6</td><td>Add CSRF protection</td><td class="severity-medium">MEDIUM</td><td>Medium</td></tr>
+                    <tr><td>7</td><td>Add security headers</td><td class="severity-medium">MEDIUM</td><td>Low</td></tr>
+                    <tr><td>8</td><td>Add webhook IP whitelist</td><td class="severity-medium">MEDIUM</td><td>Low</td></tr>
+                    <tr><td>9</td><td>Add pagination</td><td class="severity-medium">MEDIUM</td><td>Low</td></tr>
+                </tbody>
+            </table>
+        </div>
+
+        <!-- Quick Wins -->
+        <h3>6.6 Quick Wins - Immediate Actions</h3>
+
+        <div class="card">
+            <h4>Fix Critical JWT Secret (1 line change)</h4>
+            <pre><code>// BEFORE (token.js line 3)
+const JWT_SECRET = process.env.JWT_SECRET || 'GJ7Lxn0/kdV/KuZJ5xJ7Ip0RvMerrGW5n0gf44mfHgc='
+
+// AFTER
+const JWT_SECRET = process.env.JWT_SECRET;
+if (!JWT_SECRET) {
+    throw new Error('JWT_SECRET environment variable is required');
+}</code></pre>
+        </div>
+
+        <div class="card">
+            <h4>Security Checklist for Production</h4>
+            <ul>
+                <li>✅ Set strong JWT_SECRET environment variable</li>
+                <li>✅ Remove all hardcoded secrets</li>
+                <li>✅ Enable rate limiting on all auth endpoints</li>
+                <li>✅ Add input validation</li>
+                <li>✅ Configure security headers</li>
+                <li>✅ Set up webhook IP whitelist</li>
+                <li>✅ Enable audit logging</li>
+                <li>✅ Configure session timeouts</li>
+                <li>✅ Enable CSRF protection</li>
+                <li>✅ Configure database connection pooling limits</li>
+                <li>✅ Set up WAF rules</li>
+                <li>✅ Enable DDoS protection</li>
+            </ul>
+        </div>
+    </div>
+
+    <footer>
+        <p>📄 BudolEcosystem Codebase Study & Security Analysis</p>
+        <p>Generated by GitNexus Code Analysis Tool | June 4, 2026</p>
+    </footer>
+</body>
+</html>

@@ -1,4 +1,9 @@
-require('dotenv').config({ path: require('path').resolve(__dirname, '../../../.env'), override: true });
+// Try to load dotenv, but don't fail if .env doesn't exist
+try {
+  require('dotenv').config({ path: require('path').resolve(__dirname, '../../../.env'), override: true });
+} catch (e) {
+  // Ignore - .env may not exist on Vercel
+}
 const IS_VERCEL = process.env.VERCEL === '1' || !!process.env.NEXT_PUBLIC_VERCEL_ENV;
 
 if (IS_VERCEL) {
@@ -15,16 +20,13 @@ const path = require('path');
 const { PrismaClient } = require('@prisma/client');
 
 const getDatabaseUrl = () => {
-  let url = process.env.DATABASE_URL;
-  if (!url || url.trim().length === 0) {
-    // Fallback for build-time static optimization on Vercel
-    return "postgresql://postgres:postgres@localhost:5432/budolpay?schema=public";
+  const url = process.env.BUDOLPAY_DATABASE_URL || process.env.DATABASE_URL;
+  if (!url) {
+    console.error('[Payment-Gateway] FATAL: No database URL configured. Set BUDOLPAY_DATABASE_URL or DATABASE_URL.');
+  } else {
+    console.log('[Payment-Gateway] Using database URL from environment');
   }
-  url = url.trim();
-  const baseUrl = url.split('?')[0];
-  const params = new URLSearchParams(url.split('?')[1] || '');
-  const paramStr = params.toString();
-  return paramStr ? `${baseUrl}?${paramStr}` : baseUrl;
+  return url;
 };
 
 const prisma = new PrismaClient({
@@ -44,17 +46,22 @@ const createCentralizedAuditLog = async (data) => {
  * Date Utilities for Asia/Manila Standard
  */
 const getNowUTC = () => new Date();
-const getLegacyManilaISO = () => new Date().toISOString();
-const getLegacyManilaDate = () => new Date();
+const { generateSecureReferenceId, getLegacyManilaISO, getLegacyManilaDate } = require('./utils');
 
 const app = express();
 const PORT = process.env.PORT || 8004;
 
 // Vercel Support: Handle API prefix
 const router = express.Router();
-router.use(bodyParser.json());
+// WHY: The default body-parser only accepts 'application/json' strictly.
+//      Passing a custom 'type' function allows it to also accept variants like
+//      'application/json; charset=UTF-8' (sent by some clients/reverse proxies),
+//      preventing spurious HTTP 415 Unsupported Media Type rejections.
+router.use(bodyParser.json({ type: (req) => req.headers['content-type']?.startsWith('application/json') }));
 app.use('/api/payment-gw', router);
 app.use('/', router); // Fallback for direct calls
+
+app.get('/', (req, res) => res.json({ status: 'ok', service: 'payment-gateway-service' }));
 
 const LOCAL_IP = process.env.LOCAL_IP;
 
@@ -66,17 +73,19 @@ const IS_DEV = process.env.NODE_ENV !== 'production';
 const GATEWAY_URL = IS_DEV ? `http://${LOCAL_IP || 'localhost'}:8080` : (process.env.GATEWAY_URL || 'https://api.budolpay.com');
 
 // --- STARTUP DIAGNOSTIC (v27.2) ---
-(async () => {
-    console.log('[Payment-Gateway] 🔍 Running Startup Diagnostic...');
-    try {
-        const userCount = await prisma.user.count();
-        console.log(`[Payment-Gateway] ✅ Database Connected. Found ${userCount} users in 'budolpay' schema.`);
-    } catch (err) {
-        console.error('[Payment-Gateway] ❌ CRITICAL: Database Connection Failed during startup!');
-        console.error(`[Payment-Gateway] Error Details: ${err.message}`);
-        console.error(`[Payment-Gateway] Configured URL: ${process.env.DATABASE_URL ? (process.env.DATABASE_URL.split('@')[1] || 'hidden') : 'MISSING'}`);
-    }
-})();
+if (process.env.NODE_ENV !== 'test') {
+  (async () => {
+      console.log('[Payment-Gateway] 🔍 Running Startup Diagnostic...');
+      try {
+          const userCount = await prisma.user.count();
+          console.log(`[Payment-Gateway] ✅ Database Connected. Found ${userCount} users in 'budolpay' schema.`);
+      } catch (err) {
+          console.error('[Payment-Gateway] ❌ CRITICAL: Database Connection Failed during startup!');
+          console.error(`[Payment-Gateway] Error Details: ${err.message}`);
+          console.error(`[Payment-Gateway] Configured URL: ${process.env.DATABASE_URL ? (process.env.DATABASE_URL.split('@')[1] || 'hidden') : 'MISSING'}`);
+      }
+  })();
+}
 
 const notifyAdmin = async (event, data) => {
   try {
@@ -104,26 +113,14 @@ const notifyUser = async (userId, event, data) => {
   }
 };
 
-/**
- * Generate a secure, unique reference ID for transactions
- * Format: JON-YYYYMMDDHHMMSS-RANDOM (8 chars)
- */
-function generateSecureReferenceId() {
-  const timestamp = getLegacyManilaISO()
-    .replace(/[-T:.Z]/g, '') // Remove separators
-    .slice(0, 14); // Keep YYYYMMDDHHMMSS
-  
-  const randomBytes = crypto.randomBytes(4).toString('hex').toUpperCase();
-  return `JON-${timestamp}-${randomBytes}`;
-}
-
 // Health Check
 router.get('/health', (req, res) => {
   res.status(200).json({ status: 'Payment Gateway Service is healthy', timestamp: getLegacyManilaDate() });
 });
 
 // Helper to get transaction table name (Now unified via schema isolation)
-const getTxTableName = () => '"Transaction"';
+// Uses explicit schema prefix to ensure queries hit budolpay."Transaction" regardless of search_path
+const getTxTableName = () => 'budolpay."Transaction"';
 
 // Check Transaction Status
 router.get('/status/:referenceId', async (req, res) => {
@@ -131,19 +128,34 @@ router.get('/status/:referenceId', async (req, res) => {
   try {
     const tableName = getTxTableName();
     let transaction;
-    
+
     if (process.env.VERCEL === '1') {
-      // Use raw SQL on Vercel to avoid schema collision
-      const results = await prisma.$queryRawUnsafe(
-        `SELECT status FROM ${tableName} WHERE "referenceId" = $1 LIMIT 1`,
+      // Strategy 1: Look up by referenceId (JON-xxx format)
+      let results = await prisma.$queryRawUnsafe(
+        `SELECT status, id, "referenceId" FROM ${tableName} WHERE "referenceId" = $1 LIMIT 1`,
         referenceId
       );
       transaction = results && results.length > 0 ? results[0] : null;
+
+      // Strategy 2: Fallback to lookup by id (UUID / paymentIntentId)
+      if (!transaction) {
+        results = await prisma.$queryRawUnsafe(
+          `SELECT status, id, "referenceId" FROM ${tableName} WHERE id = $1 LIMIT 1`,
+          referenceId
+        );
+        transaction = results && results.length > 0 ? results[0] : null;
+        if (transaction) console.log(`[Gateway] Status: Found by UUID id=${referenceId} ref=${transaction.referenceId}`);
+      }
     } else {
-      // Use standard Prisma for local dev
+      // Local dev path
       transaction = await prisma.transaction.findUnique({
         where: { referenceId: referenceId }
       });
+      if (!transaction) {
+        transaction = await prisma.transaction.findUnique({
+          where: { id: referenceId }
+        });
+      }
     }
 
     if (!transaction) return res.status(404).json({ error: 'Transaction not found' });
@@ -152,6 +164,214 @@ router.get('/status/:referenceId', async (req, res) => {
     res.status(500).json({ error: error.message });
   }
 });
+
+/**
+ * Cancel a Payment Intent / Transaction
+ * WHY: When a user abandons checkout (clicks X, Cancel Payment, or timer expires),
+ *      the Transaction in the gateway DB must be explicitly set to CANCELLED.
+ *
+ * LOOKUP STRATEGY (in order of preference):
+ *   1. URL param referenceId → match WHERE "referenceId" = $1
+ *   2. URL param as UUID     → match WHERE id = $1
+ *   3. Body param orderId    → search metadata JSON for orderId (MOST RELIABLE)
+ *
+ * WHY THREE STRATEGIES:
+ *   Frontend identifier passing is fragile across async React state changes.
+ *   Searching by orderId in metadata is the most reliable approach since
+ *   orderId is always embedded in the transaction metadata at creation time.
+ *
+ * COMPLIANCE: PCI DSS Req 10.2.4 / BSP Circular No. 808
+ */
+router.post('/cancel/:referenceId', async (req, res) => {
+  const { referenceId } = req.params;
+  const { reason = 'User cancelled payment', orderId } = req.body || {};
+
+  try {
+    const tableName = getTxTableName();
+    let transaction;
+
+    console.log(`[Gateway] Cancel request: ref=${referenceId} | orderId=${orderId}`);
+
+    // --- LOOKUP STRATEGY 1: by referenceId (JON-xxx string) ---
+    if (process.env.VERCEL === '1') {
+      let results = await prisma.$queryRawUnsafe(
+        `SELECT id, status, type, metadata, "senderId", "receiverId", "referenceId" FROM ${tableName} WHERE "referenceId" = $1 LIMIT 1`,
+        referenceId
+      );
+      transaction = results && results.length > 0 ? results[0] : null;
+
+      // --- LOOKUP STRATEGY 2: by UUID (id field) ---
+      if (!transaction) {
+        results = await prisma.$queryRawUnsafe(
+          `SELECT id, status, type, metadata, "senderId", "receiverId", "referenceId" FROM ${tableName} WHERE id = $1 LIMIT 1`,
+          referenceId
+        );
+        transaction = results && results.length > 0 ? results[0] : null;
+      }
+
+      // --- LOOKUP STRATEGY 3: by orderId in metadata JSON ---
+      // WHY: Most reliable fallback. orderId is always embedded in metadata at creation.
+      //      This catches cases where referenceId/UUID were not correctly passed from frontend.
+      if (!transaction && orderId) {
+        const likePattern = `%"orderId":"${orderId}"%`;
+        results = await prisma.$queryRawUnsafe(
+          `SELECT id, status, type, metadata, "senderId", "receiverId", "referenceId" FROM ${tableName} WHERE status = 'PENDING' AND metadata LIKE $1 ORDER BY "createdAt" DESC LIMIT 1`,
+          likePattern
+        );
+        transaction = results && results.length > 0 ? results[0] : null;
+        if (transaction) console.log(`[Gateway] Cancel: Found via orderId metadata: ${transaction.referenceId}`);
+      }
+    } else {
+      // --- LOCAL DEV PATH ---
+      transaction = await prisma.transaction.findUnique({ where: { referenceId } });
+
+      if (!transaction) {
+        transaction = await prisma.transaction.findUnique({ where: { id: referenceId } });
+      }
+
+      if (!transaction && orderId) {
+        // Search by orderId in metadata
+        transaction = await prisma.transaction.findFirst({
+          where: {
+            status: 'PENDING',
+            metadata: { contains: `"orderId":"${orderId}"` }
+          },
+          orderBy: { createdAt: 'desc' }
+        });
+        if (transaction) console.log(`[Gateway] Cancel: Found via orderId metadata: ${transaction.referenceId}`);
+      }
+    }
+
+    if (!transaction) {
+      console.warn(`[Gateway] Cancel: No transaction found for ref=${referenceId} orderId=${orderId}`);
+      return res.status(404).json({ error: 'Transaction not found' });
+    }
+
+    const txRef = transaction.referenceId || referenceId;
+
+    if (transaction.status === 'COMPLETED') {
+      return res.status(409).json({ error: 'Cannot cancel a completed transaction' });
+    }
+
+    if (transaction.status === 'CANCELLED') {
+      console.log(`[Gateway] Cancel: ${txRef} already CANCELLED (idempotent)`);
+      return res.status(200).json({ success: true, status: 'CANCELLED', message: 'Already cancelled' });
+    }
+
+    // --- UPDATE status ---
+    if (process.env.VERCEL === '1') {
+      await prisma.$executeRawUnsafe(
+        `UPDATE ${tableName} SET status = 'CANCELLED' WHERE id = $1`,
+        transaction.id
+      );
+    } else {
+      await prisma.transaction.update({ where: { id: transaction.id }, data: { status: 'CANCELLED' } });
+    }
+
+    console.log(`[Gateway] ✅ Transaction ${txRef} CANCELLED. Reason: ${reason}`);
+
+    createCentralizedAuditLog({
+      action: 'GATEWAY_PAYMENT_CANCELLED',
+      entity: 'Financial',
+      entityId: transaction.id,
+      userId: transaction.senderId || transaction.receiverId,
+      metadata: { newValue: { referenceId: txRef, reason, type: transaction.type }, compliance: 'BSP Circular No. 808' },
+      ipAddress: req.headers['x-forwarded-for'] || req.socket?.remoteAddress
+    }).catch(e => console.warn('[Gateway] Cancel audit log warning:', e.message));
+
+    notifyAdmin('transaction_cancelled', { referenceId: txRef, status: 'CANCELLED', reason });
+
+    if (transaction.senderId) {
+      notifyUser(transaction.senderId, 'transaction_update', { referenceId: txRef, status: 'CANCELLED', message: 'Your payment was cancelled.' });
+    }
+
+    res.status(200).json({ success: true, status: 'CANCELLED', referenceId: txRef });
+  } catch (error) {
+    console.error('[Gateway] Cancel Transaction Error:', error.message);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+/**
+ * Cancel ALL PENDING Transactions for a given orderId
+ * WHY: Bulletproof cancel that does not depend on referenceId/UUID being passed correctly.
+ *      Uses orderId (always in metadata) to find and cancel ALL PENDING transactions
+ *      for that order. Handles the case where a user retried payment multiple times,
+ *      leaving multiple PENDING records for the same order.
+ *
+ * Called by: budolshap /api/payment/cancel proxy (always alongside the referenceId cancel)
+ * COMPLIANCE: PCI DSS Req 10.2.4 / BSP Circular No. 808
+ */
+router.post('/cancel-by-order/:orderId', async (req, res) => {
+  const { orderId } = req.params;
+  const { reason = 'User cancelled payment' } = req.body || {};
+
+  if (!orderId || orderId === 'null' || orderId === 'undefined') {
+    return res.status(400).json({ error: 'orderId is required' });
+  }
+
+  try {
+    const tableName = getTxTableName();
+    const likePattern = `%"orderId":"${orderId}"%`;
+    let transactions = [];
+
+    if (process.env.VERCEL === '1') {
+      transactions = await prisma.$queryRawUnsafe(
+        `SELECT id, status, "referenceId" FROM ${tableName} WHERE status = 'PENDING' AND metadata LIKE $1`,
+        likePattern
+      );
+    } else {
+      transactions = await prisma.transaction.findMany({
+        where: {
+          status: 'PENDING',
+          metadata: { contains: `"orderId":"${orderId}"` }
+        },
+        select: { id: true, status: true, referenceId: true }
+      });
+    }
+
+    if (!transactions || transactions.length === 0) {
+      console.log(`[Gateway] cancel-by-order: No PENDING transactions found for orderId=${orderId}`);
+      return res.status(200).json({ success: true, cancelled: 0, message: 'No PENDING transactions found for this order' });
+    }
+
+    const ids = transactions.map(t => t.id);
+    console.log(`[Gateway] cancel-by-order: Cancelling ${ids.length} PENDING transaction(s) for orderId=${orderId}:`, ids);
+
+    // Bulk cancel all
+    if (process.env.VERCEL === '1') {
+      for (const tx of transactions) {
+        await prisma.$executeRawUnsafe(
+          `UPDATE ${tableName} SET status = 'CANCELLED' WHERE id = $1`,
+          tx.id
+        );
+        notifyAdmin('transaction_cancelled', { referenceId: tx.referenceId, status: 'CANCELLED', reason });
+        createCentralizedAuditLog({
+          action: 'GATEWAY_PAYMENT_CANCELLED',
+          entity: 'Financial',
+          entityId: tx.id,
+          metadata: { newValue: { referenceId: tx.referenceId, orderId, reason }, compliance: 'BSP Circular No. 808' },
+          ipAddress: req.headers['x-forwarded-for'] || req.socket?.remoteAddress
+        }).catch(() => {});
+      }
+    } else {
+      await prisma.transaction.updateMany({
+        where: { id: { in: ids } },
+        data: { status: 'CANCELLED' }
+      });
+      for (const tx of transactions) {
+        notifyAdmin('transaction_cancelled', { referenceId: tx.referenceId, status: 'CANCELLED', reason });
+      }
+    }
+
+    console.log(`[Gateway] ✅ cancel-by-order: Cancelled ${ids.length} transaction(s) for orderId=${orderId}`);
+    res.status(200).json({ success: true, cancelled: ids.length, referenceIds: transactions.map(t => t.referenceId) });
+  } catch (error) {
+    console.error('[Gateway] cancel-by-order Error:', error.message);
+    res.status(500).json({ error: error.message });
+  }
+});
+
 
 // Create a Payment Intent (Standardized for budol ecosystem)
 router.post('/create-intent', async (req, res) => {
@@ -188,7 +408,10 @@ router.post('/create-intent', async (req, res) => {
       if (existing && existing.length > 0) {
         const existingTx = existing[0];
         console.log(`[PaymentGW] Found existing pending tx for order ${orderId}: ${existingTx.referenceId}`);
-        const baseUrl = process.env.BASE_URL || `https://payment-gateway-service-two.vercel.app`;
+        if (!process.env.BASE_URL) {
+          console.error('[PaymentGW] BASE_URL env var not set — checkout URLs may be incorrect');
+        }
+        const baseUrl = process.env.BASE_URL;
         return res.status(200).json({
           success: true,
           id: existingTx.id,
@@ -252,7 +475,10 @@ router.post('/create-intent', async (req, res) => {
     }).catch(e => console.warn('[PaymentGW] Audit log warning:', e.message));
 
     // 2. Build provider response
-    const baseUrl = process.env.BASE_URL || `https://payment-gateway-service-two.vercel.app`;
+    if (!process.env.BASE_URL) {
+      console.error('[PaymentGW] BASE_URL env var not set — checkout URLs may be incorrect');
+    }
+    const baseUrl = process.env.BASE_URL;
     let providerResponse = null;
     let qrCode = null;
 
@@ -552,6 +778,31 @@ router.get('/checkout/:referenceId', async (req, res) => {
             if (error) console.error(error);
           });
 
+          // WHY: The referenceId is embedded in the page so client-side JS 
+          //      can call the cancel endpoint without a round-trip to the store.
+          const referenceId = '${referenceId}';
+          const cancelUri   = '${metadata.cancelUri || ''}';
+          const redirectUri = '${metadata.redirectUri || ''}';
+
+          /**
+           * cancelTransaction
+           * WHAT: Calls the gateway's own /cancel endpoint so the Transaction
+           *       record is set to CANCELLED before navigating away.
+           *       This is the fix for stale PENDING transactions.
+           * @param {string} reason - Human-readable reason for the audit log
+           */
+          async function cancelTransaction(reason) {
+            try {
+              await fetch('/cancel/' + referenceId, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ reason })
+              });
+            } catch (e) {
+              console.error('Failed to cancel transaction on gateway:', e);
+            }
+          }
+
           // Timer logic
           let timeLeft = 600; // 10 minutes
           const timerElement = document.getElementById('timer');
@@ -565,10 +816,17 @@ router.get('/checkout/:referenceId', async (req, res) => {
               timerElement.classList.add('warning');
             }
             
+            // WHY: When the timer expires, cancel the transaction automatically
+            //      so it does not remain PENDING in the ledger.
             if (timeLeft <= 0) {
               clearInterval(timerInterval);
-              alert('Payment session expired. Please refresh the page.');
-              window.location.reload();
+              clearInterval(pollInterval);
+              cancelTransaction('Payment session expired').then(() => {
+                alert('Payment session expired. Please try again.');
+                const fallback = cancelUri || ('http://' + window.location.hostname + ':3001/cart');
+                window.location.href = fallback;
+              });
+              return;
             }
             timeLeft--;
           };
@@ -576,8 +834,17 @@ router.get('/checkout/:referenceId', async (req, res) => {
           const timerInterval = setInterval(updateTimer, 1000);
           updateTimer();
 
+          // WHY: When the user clicks the X or "Cancel Payment" button we must 
+          //      call /cancel before closing so the record is not left PENDING.
+          document.querySelector('.close-btn').addEventListener('click', async () => {
+            clearInterval(timerInterval);
+            clearInterval(pollInterval);
+            await cancelTransaction('User closed checkout page');
+            const fallback = cancelUri || ('http://' + window.location.hostname + ':3001/cart');
+            window.location.href = fallback;
+          });
+
           // Polling for transaction status
-          const referenceId = '${referenceId}';
           const checkStatus = async () => {
             try {
               const response = await fetch('/status/' + referenceId);
@@ -592,11 +859,14 @@ router.get('/checkout/:referenceId', async (req, res) => {
                 document.getElementById('success-view').style.display = 'block';
                 
                 setTimeout(() => {
-                  window.location.href = '${metadata.redirectUri}' || ('http://' + window.location.hostname + ':3000/payment-success');
+                  const dest = redirectUri || ('http://' + window.location.hostname + ':3001/payment-success');
+                  window.location.href = dest;
                 }, 2000);
               } else if (data.status === 'FAILED' || data.status === 'CANCELLED') {
-                alert('Payment ' + data.status.toLowerCase());
-                window.location.href = '${metadata.cancelUri}' || ('http://' + window.location.hostname + ':3000/payment-failed');
+                clearInterval(timerInterval);
+                clearInterval(pollInterval);
+                const dest = cancelUri || ('http://' + window.location.hostname + ':3001/cart');
+                window.location.href = dest;
               }
             } catch (err) {
               console.error('Error checking status:', err);
@@ -882,4 +1152,5 @@ if (!IS_VERCEL && process.env.NODE_ENV !== 'test') {
   });
 }
 
+// For Vercel: export the Express app directly
 module.exports = app;

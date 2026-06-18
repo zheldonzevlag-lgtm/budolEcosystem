@@ -139,7 +139,7 @@ const server = http.createServer((req, res) => {
             console.log('[Mock Gateway] Request Body:', body);
             
             const apiKey = req.headers['x-api-key'];
-            if (!apiKey || apiKey !== 'bs_key_2025') {
+            if (!apiKey || apiKey !== 'bs_ac2bca9790f9b70f4e21c8a3c2812917') {
                 console.log('[Mock Gateway] ❌ Invalid API Key');
                 res.writeHead(403, { 'Content-Type': 'application/json' });
                 res.end(JSON.stringify({ error: 'Forbidden: Invalid API Key' }));

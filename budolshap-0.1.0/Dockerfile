@@ -32,6 +32,10 @@ ENV NEXT_PUBLIC_SSO_URL="https://budolid.duckdns.org"
 ENV DATABASE_URL="postgresql://dummy:dummy@localhost:5432/dummy"
 RUN npm run build
 
+# Run as non-root user
+RUN addgroup --system appgroup && adduser --system --ingroup appgroup appuser
+USER appuser
+
 # Expose port
 EXPOSE 3000
 

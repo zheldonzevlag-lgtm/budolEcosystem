@@ -4,13 +4,13 @@ const prisma = new PrismaClient();
 async function main() {
     // Update budolPay
     await prisma.ecosystemApp.update({
-        where: { apiKey: 'bp_key_2025' },
+        where: { apiKey: 'bp_b31ea1888dcb2ba76fdbb776ea8f5b7a' },
         data: { redirectUri: 'http://localhost:3000/api/auth/callback' }
     });
 
     // Update budolShap
     await prisma.ecosystemApp.update({
-        where: { apiKey: 'bs_key_2025' },
+        where: { apiKey: 'bs_ac2bca9790f9b70f4e21c8a3c2812917' },
         data: { redirectUri: 'http://localhost:3001/api/auth/sso/callback' }
     });
 

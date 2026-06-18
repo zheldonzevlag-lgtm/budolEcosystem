@@ -81,7 +81,11 @@ export async function POST(request) {
         } else if (!baseUrl && host) {
             baseUrl = `${protocol}://${host}`;
         } else if (!baseUrl) {
-            baseUrl = process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : 'https://budolshap-v3.vercel.app';
+            baseUrl = process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : process.env.NEXT_PUBLIC_BASE_URL;
+        }
+
+        if (!baseUrl) {
+            console.error('[GCash] No base URL available. Set NEXT_PUBLIC_BASE_URL or ensure host header is present.');
         }
 
         const redirectUrl = {

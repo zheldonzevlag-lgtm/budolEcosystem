@@ -9,11 +9,56 @@ import { triggerRealtimeEvent } from '@/lib/realtime'
 import { registerWithBudolId, loginWithBudolId } from '@/lib/api/budolIdClient'
 import { normalizePhone } from '@/lib/utils/phone-utils'
 import { createAuditLog } from '@/lib/audit'
+import { checkSecurityThreat, sanitizeInput } from '@/lib/security'
+
+// Input validation functions
+function validateRegistrationInput(data) {
+    const errors = []
+    
+    // Email validation
+    if (!data.email) {
+        errors.push('Email is required')
+    } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(data.email)) {
+        errors.push('Invalid email format')
+    } else if (data.email.length > 254) {
+        errors.push('Email is too long')
+    }
+    
+    // Password strength validation
+    if (!data.password) {
+        errors.push('Password is required')
+    } else {
+        if (data.password.length < 8) {
+            errors.push('Password must be at least 8 characters')
+        }
+        if (!/[A-Z]/.test(data.password)) {
+            errors.push('Password must contain at least one uppercase letter')
+        }
+        if (!/[0-9]/.test(data.password)) {
+            errors.push('Password must contain at least one number')
+        }
+    }
+    
+    // Name validation
+    if (!data.name || data.name.trim().length < 2) {
+        errors.push('Name must be at least 2 characters')
+    }
+    
+    // Phone validation (Philippines format)
+    if (data.phoneNumber) {
+        const normalizedPhone = normalizePhone(data.phoneNumber)
+        if (!normalizedPhone) {
+            errors.push('Invalid Philippine phone number format')
+        }
+    }
+    
+    return { valid: errors.length === 0, errors }
+}
 
 export async function POST(request) {
     try {
         const body = await request.json()
-        let { name, email, password, phoneNumber, deviceFingerprint, image, registrationType, _honey } = body
+        let { name, email, password, phoneNumber, deviceFingerprint, image, registrationType, _honey, captchaSessionId, captchaAnswer } = body
 
         // Anti-spam: Honeypot check
         if (_honey) {
@@ -25,6 +70,38 @@ export async function POST(request) {
             });
             return NextResponse.json({ error: 'Invalid request' }, { status: 400 });
         }
+
+        // Server-side CAPTCHA validation
+        if (!captchaSessionId || captchaAnswer === undefined) {
+            return NextResponse.json({ error: 'CAPTCHA required' }, { status: 400 });
+        }
+        const captchaStore = globalThis.__captchaStore || {};
+        const captcha = captchaStore[captchaSessionId];
+        if (!captcha || Date.now() - captcha.created > 300000) {
+            delete captchaStore[captchaSessionId];
+            return NextResponse.json({ error: 'CAPTCHA expired' }, { status: 400 });
+        }
+        delete captchaStore[captchaSessionId];
+        const expectedCaptchaAnswer =
+            captcha.operator === '-'
+                ? captcha.a - captcha.b
+                : captcha.a + captcha.b;
+        if (expectedCaptchaAnswer !== Number(captchaAnswer)) {
+            return NextResponse.json({ error: 'Invalid CAPTCHA answer' }, { status: 400 });
+        }
+        
+        // Security: Check for injection and XSS attempts
+        const threatCheck = await checkSecurityThreat(request, { name, email, phoneNumber });
+        if (threatCheck.blocked) {
+            console.warn(`[Security] Threat detected in registration: ${threatCheck.threats.join(', ')}`);
+            return NextResponse.json(
+                { error: 'Invalid characters detected in input' },
+                { status: 400 }
+            );
+        }
+        
+        // Sanitize inputs
+        name = sanitizeInput(name);
 
         // Normalize phone number for consistent storage
         const normalizedPhone = normalizePhone(phoneNumber);
@@ -46,6 +123,15 @@ export async function POST(request) {
             if (!name || !email || !password || !phoneNumber) {
                 return NextResponse.json(
                     { error: 'Missing required fields (Name, Email, Password, Phone Number)' },
+                    { status: 400 }
+                )
+            }
+            
+            // Enhanced input validation (non-quick registration)
+            const validation = validateRegistrationInput({ name, email, password, phoneNumber })
+            if (!validation.valid) {
+                return NextResponse.json(
+                    { error: 'Validation failed', details: validation.errors },
                     { status: 400 }
                 )
             }

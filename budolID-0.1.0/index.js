@@ -5,8 +5,21 @@ const { triggerRealtimeEvent } = require('./utils/realtime');
 const jwt = require('jsonwebtoken');
 const bcrypt = require('bcryptjs');
 const cors = require('cors');
+const helmet = require('helmet');
+const rateLimit = require('express-rate-limit');
 const { normalizePhilippinePhone, isValidE164Phone } = require('./utils/phoneNormalization');
 
+function escapeHtml(str) {
+    if (!str) return '';
+    return String(str)
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#039;');
+}
+
+const crypto = require('crypto');
 const prisma = new PrismaClient({
     datasources: {
         db: {
@@ -14,7 +27,11 @@ const prisma = new PrismaClient({
         }
     }
 });
-const BUDOLPAY_DATABASE_URL = process.env.BUDOLPAY_DATABASE_URL || 'postgresql://postgres:r00t@localhost:5432/budolpay?schema=public';
+const BUDOLPAY_DATABASE_URL = process.env.BUDOLPAY_DATABASE_URL;
+if (!BUDOLPAY_DATABASE_URL) {
+    console.error('FATAL: BUDOLPAY_DATABASE_URL environment variable is required');
+    process.exit(1);
+}
 const budolPayPrisma = new PrismaClient({
     datasources: {
         db: {
@@ -35,13 +52,13 @@ prisma.$connect()
         const coreApps = [
             { 
                 name: 'budolPay', 
-                apiKey: 'bp_key_2025', 
+                apiKey: process.env.BUDOLPAY_API_KEY || crypto.randomBytes(16).toString('hex'), 
                 redirectUri: isProd ? 'https://budolpay.vercel.app/api/auth/callback' : `http://${localIP}:3000/api/auth/callback` 
             },
             { 
                 name: 'budolShap', 
-                apiKey: 'bs_key_2025', 
-                redirectUri: isProd ? 'https://budolshap.vercel.app/auth/callback' : `http://${localIP}:3001/auth/callback` 
+                apiKey: process.env.BUDOLSHAP_API_KEY || crypto.randomBytes(16).toString('hex'), 
+                redirectUri: isProd ? 'https://budolshap-kappa.vercel.app/auth/callback' : `http://${localIP}:3001/auth/callback` 
             }
         ];
 
@@ -91,7 +108,26 @@ prisma.$connect()
     });
 const app = express();
 const PORT = process.env.PORT || 8000;
-const JWT_SECRET = process.env.JWT_SECRET || 'GJ7Lxn0/kdV/KuZJ5xJ7Ip0RvMerrGW5n0gf44mfHgc=';
+
+// Security headers
+app.use(helmet({
+    contentSecurityPolicy: false,
+    crossOriginEmbedderPolicy: false,
+}));
+
+// Rate Limiting
+const loginLimiter = rateLimit({
+    windowMs: 15 * 60 * 1000,
+    max: 5,
+    message: { error: 'Too many login attempts. Please try again later.' },
+    standardHeaders: true,
+    legacyHeaders: false,
+});
+if (!process.env.JWT_SECRET) {
+    console.error('FATAL: JWT_SECRET environment variable is required');
+    process.exit(1);
+}
+const JWT_SECRET = process.env.JWT_SECRET;
 
 // NPC Compliance: PII Masking Helper
 const maskPII = (str, type = 'AUTO') => {
@@ -252,6 +288,10 @@ app.use((req, res, next) => {
 });
 
 // Health check endpoint
+app.get('/', (req, res) => {
+    res.status(200).json({ status: 'ok', service: 'budolID SSO', endpoints: ['/api/health', '/login', '/register'] });
+});
+
 app.get('/api/health', (req, res) => {
     res.status(200).json({ status: 'UP', service: 'budolID', timestamp: new Date().toISOString() });
 });
@@ -260,30 +300,25 @@ app.get('/api/health', (req, res) => {
 app.get('/login', (req, res) => {
     const { apiKey, redirect_uri, error, email, password } = req.query;
     console.log(`[GET /login] apiKey: ${apiKey}, error: ${error}, email: ${email}`);
-    const activeApiKey = apiKey || 'bp_key_2025';
+    const activeApiKey = apiKey || process.env.BUDOLPAY_API_KEY || 'bp_b31ea1888dcb2ba76fdbb776ea8f5b7a';
     const activeRedirectUri = redirect_uri || '';
     const preservedEmail = email || '';
     const preservedPassword = password || '';
 
-    const errorToast = error ? `
-        <div id="toast-error" class="fixed top-6 left-1/2 -translate-x-1/2 z-[100] flex items-center w-full max-w-xs p-4 text-gray-500 bg-white rounded-xl shadow-2xl border border-gray-100 animate-in slide-in-from-top-10 duration-500" role="alert">
-            <div class="inline-flex items-center justify-center flex-shrink-0 w-10 h-10 text-red-500 bg-red-50 rounded-lg">
-                <svg class="w-5 h-5" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5"><path stroke-linecap="round" stroke-linejoin="round" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/></svg>
+    const errorBanner = error ? `
+        <div class="login-alert" role="alert" aria-live="polite">
+            <div class="login-alert-icon" aria-hidden="true">
+                <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M12 9v4"></path>
+                    <path d="M12 17h.01"></path>
+                    <path d="M10.29 3.86 1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0Z"></path>
+                </svg>
             </div>
-            <div class="ml-4 text-sm font-bold text-gray-800">Invalid credentials.</div>
-            <button type="button" class="ml-auto p-1.5 text-gray-400 hover:text-gray-900 rounded-lg" onclick="document.getElementById('toast-error').remove()">
-                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
-            </button>
+            <div>
+                <strong>Invalid credentials.</strong>
+                <span>Check your email and password, then try again.</span>
+            </div>
         </div>
-        <script>
-            setTimeout(() => {
-                const toast = document.getElementById('toast-error');
-                if (toast) {
-                    toast.classList.add('transition-all', 'duration-500', 'opacity-0', '-translate-y-full');
-                    setTimeout(() => toast.remove(), 500);
-                }
-            }, 4000);
-        </script>
     ` : '';
 
     res.send(`
@@ -293,110 +328,333 @@ app.get('/login', (req, res) => {
             <meta charset="UTF-8">
             <meta name="viewport" content="width=device-width, initial-scale=1.0">
             <title>budolID Login</title>
-            <script src="https://cdn.tailwindcss.com"></script>
             <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
             <style>
-                body { font-family: 'Inter', sans-serif; }
+                :root {
+                    color-scheme: light;
+                    --page-bg-start: #020617;
+                    --page-bg-end: #0f172a;
+                    --card-bg: rgba(255, 255, 255, 0.96);
+                    --card-border: rgba(148, 163, 184, 0.18);
+                    --muted: #64748b;
+                    --text: #0f172a;
+                    --primary: #2563eb;
+                    --primary-dark: #1d4ed8;
+                    --primary-soft: rgba(37, 99, 235, 0.12);
+                    --surface: #f8fafc;
+                    --field-border: #cbd5e1;
+                    --field-focus: rgba(37, 99, 235, 0.2);
+                    --danger-bg: #fff1f2;
+                    --danger-border: #fecdd3;
+                    --danger-text: #be123c;
+                }
+
+                * {
+                    box-sizing: border-box;
+                }
+
+                body {
+                    margin: 0;
+                    min-height: 100vh;
+                    font-family: 'Inter', Arial, sans-serif;
+                    color: var(--text);
+                    background:
+                        radial-gradient(circle at top, rgba(37, 99, 235, 0.18), transparent 34%),
+                        linear-gradient(180deg, var(--page-bg-start) 0%, var(--page-bg-end) 100%);
+                }
+
+                .login-page {
+                    min-height: 100vh;
+                    display: flex;
+                    align-items: center;
+                    justify-content: center;
+                    padding: 16px;
+                }
+
+                .login-shell {
+                    width: 100%;
+                    max-width: 400px;
+                    background: var(--card-bg);
+                    border: 1px solid var(--card-border);
+                    border-radius: 24px;
+                    box-shadow: 0 30px 60px rgba(15, 23, 42, 0.38);
+                    overflow: hidden;
+                    backdrop-filter: blur(12px);
+                }
+
+                .login-body {
+                    padding: 24px 20px 20px;
+                }
+
+                .brand-badge {
+                    width: 60px;
+                    height: 60px;
+                    margin: 0 auto 14px;
+                    border-radius: 999px;
+                    display: flex;
+                    align-items: center;
+                    justify-content: center;
+                    background: linear-gradient(135deg, rgba(37, 99, 235, 0.16), rgba(14, 165, 233, 0.16));
+                    color: var(--primary);
+                    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.9);
+                }
+
+                .brand-title {
+                    margin: 0;
+                    text-align: center;
+                    font-size: 1.75rem;
+                    line-height: 1.1;
+                    font-weight: 900;
+                    letter-spacing: -0.04em;
+                }
+
+                .brand-title span {
+                    color: var(--primary);
+                }
+
+                .brand-copy {
+                    margin: 8px 0 0;
+                    text-align: center;
+                    color: var(--muted);
+                    font-size: 0.875rem;
+                    line-height: 1.5;
+                }
+
+                .login-alert {
+                    display: flex;
+                    gap: 10px;
+                    align-items: flex-start;
+                    padding: 12px 14px;
+                    margin: 18px 0 18px;
+                    border-radius: 14px;
+                    border: 1px solid var(--danger-border);
+                    background: var(--danger-bg);
+                    color: var(--danger-text);
+                }
+
+                .login-alert-icon {
+                    width: 30px;
+                    height: 30px;
+                    border-radius: 999px;
+                    flex: 0 0 auto;
+                    display: flex;
+                    align-items: center;
+                    justify-content: center;
+                    background: rgba(244, 63, 94, 0.12);
+                }
+
+                .login-alert strong,
+                .login-alert span {
+                    display: block;
+                }
+
+                .login-alert strong {
+                    font-size: 0.875rem;
+                    margin-bottom: 2px;
+                }
+
+                .login-alert span {
+                    font-size: 0.75rem;
+                    line-height: 1.5;
+                }
+
+                .login-form {
+                    margin-top: 20px;
+                }
+
+                .field-group + .field-group,
+                .login-submit {
+                    margin-top: 14px;
+                }
+
+                .field-label {
+                    display: block;
+                    margin-bottom: 6px;
+                    color: var(--muted);
+                    font-size: 0.6875rem;
+                    font-weight: 800;
+                    letter-spacing: 0.12em;
+                    text-transform: uppercase;
+                }
+
+                .field-input {
+                    width: 100%;
+                    padding: 12px 14px;
+                    border-radius: 14px;
+                    border: 1px solid var(--field-border);
+                    background: #ffffff;
+                    color: var(--text);
+                    font: inherit;
+                    transition: border-color 0.2s ease, box-shadow 0.2s ease, transform 0.2s ease;
+                }
+
+                .field-input::placeholder {
+                    color: #94a3b8;
+                }
+
+                .field-input:focus {
+                    outline: none;
+                    border-color: var(--primary);
+                    box-shadow: 0 0 0 4px var(--field-focus);
+                    transform: translateY(-1px);
+                }
+
+                .login-submit {
+                    width: 100%;
+                    border: 0;
+                    border-radius: 16px;
+                    padding: 13px 16px;
+                    background: linear-gradient(135deg, var(--primary) 0%, #3b82f6 100%);
+                    color: #ffffff;
+                    font: inherit;
+                    font-weight: 800;
+                    font-size: 0.9375rem;
+                    cursor: pointer;
+                    box-shadow: 0 18px 30px rgba(37, 99, 235, 0.28);
+                    transition: transform 0.2s ease, box-shadow 0.2s ease, background 0.2s ease;
+                }
+
+                .login-submit:hover {
+                    background: linear-gradient(135deg, var(--primary-dark) 0%, #2563eb 100%);
+                    transform: translateY(-1px);
+                    box-shadow: 0 20px 34px rgba(37, 99, 235, 0.34);
+                }
+
+                .login-submit:focus {
+                    outline: none;
+                    box-shadow: 0 0 0 4px var(--field-focus), 0 18px 30px rgba(37, 99, 235, 0.28);
+                }
+
+                .login-footer {
+                    margin-top: 22px;
+                    padding-top: 18px;
+                    border-top: 1px solid rgba(226, 232, 240, 0.9);
+                    text-align: center;
+                }
+
+                .support-link,
+                .signup-link {
+                    color: var(--primary);
+                    text-decoration: none;
+                    font-weight: 700;
+                }
+
+                .support-link:hover,
+                .signup-link:hover {
+                    text-decoration: underline;
+                }
+
+                .support-link {
+                    display: inline-block;
+                    margin-bottom: 10px;
+                    font-size: 0.875rem;
+                }
+
+                .support-copy {
+                    margin: 0;
+                    color: #94a3b8;
+                    font-size: 0.75rem;
+                    line-height: 1.5;
+                }
+
+                .shield-footer {
+                    padding: 14px 20px 16px;
+                    text-align: center;
+                    background: var(--surface);
+                    border-top: 1px solid rgba(226, 232, 240, 0.9);
+                    color: #94a3b8;
+                    font-size: 0.7rem;
+                    font-weight: 800;
+                    letter-spacing: 0.18em;
+                    text-transform: uppercase;
+                }
+
+                .shield-footer span {
+                    color: var(--primary);
+                }
+
+                @media (max-width: 480px) {
+                    .login-page {
+                        padding: 12px;
+                    }
+
+                    .login-body {
+                        padding: 20px 16px 18px;
+                    }
+
+                    .brand-title {
+                        font-size: 1.5rem;
+                    }
+                }
             </style>
         </head>
-        <body class="min-h-screen bg-slate-900 flex items-center justify-center p-4">
-            <div class="max-w-md w-full bg-white rounded-2xl shadow-2xl overflow-hidden">
-                <div class="p-8">
-                    <div class="flex justify-center mb-6">
-                        <div class="bg-blue-500/10 p-4 rounded-full">
-                            <svg xmlns="http://www.w3.org/2000/svg" width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="text-blue-500"><path d="M20 13c0 5-3.5 7.5-7.66 8.95a1 1 0 0 1-.67-.01C7.5 20.5 4 18 4 13V6a1 1 0 0 1 1-1c2 0 4.5-1.2 6.24-2.72a1.17 1.17 0 0 1 1.52 0C14.51 3.81 17 5 19 5a1 1 0 0 1 1 1z"/></svg>
-                        </div>
-                    </div>
-                    
-                    <h1 class="text-2xl font-black text-center text-slate-900 mb-2">
-                        budol<span class="text-blue-500">ID</span>
-                    </h1>
-                    <p class="text-slate-500 text-center text-sm mb-8">
-                        The secure universal identity for the ecosystem.
-                    </p>
-
-                    <form action="/auth/sso/login-form" method="POST" class="space-y-4">
-                        <input type="hidden" name="apiKey" value="${activeApiKey}" />
-                        <input type="hidden" name="redirect_uri" value="${activeRedirectUri}" />
-                        
-                        <div>
-                            <label class="block text-xs font-bold text-slate-500 uppercase mb-1">Email Address</label>
-                            <input 
-                                type="email" 
-                                name="email"
-                                value="${preservedEmail}"
-                                required
-                                class="w-full p-3 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500/50 text-slate-900"
-                                placeholder="juan@budolpay.com"
-                            />
+        <body>
+            <main class="login-page">
+                <section class="login-shell">
+                    <div class="login-body">
+                        <div class="brand-badge" aria-hidden="true">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M20 13c0 5-3.5 7.5-7.66 8.95a1 1 0 0 1-.67-.01C7.5 20.5 4 18 4 13V6a1 1 0 0 1 1-1c2 0 4.5-1.2 6.24-2.72a1.17 1.17 0 0 1 1.52 0C14.51 3.81 17 5 19 5a1 1 0 0 1 1 1z"/></svg>
                         </div>
 
-                        <div>
-                            <label class="block text-xs font-bold text-slate-500 uppercase mb-1">Password</label>
-                            <div class="relative group">
+                        <h1 class="brand-title">budol<span>ID</span></h1>
+                        <p class="brand-copy">The secure universal identity for the ecosystem.</p>
+
+                        ${errorBanner}
+
+                        <form action="/auth/sso/login-form" method="POST" class="login-form">
+                            <input type="hidden" name="apiKey" value="${escapeHtml(activeApiKey)}" />
+                            <input type="hidden" name="redirect_uri" value="${escapeHtml(activeRedirectUri)}" />
+
+                            <div class="field-group">
+                                <label class="field-label" for="emailInput">Email Address</label>
+                                <input 
+                                    id="emailInput"
+                                    type="email" 
+                                    name="email"
+                                    value="${escapeHtml(preservedEmail)}"
+                                    required
+                                    autocomplete="email"
+                                    class="field-input"
+                                    placeholder="juan@budolpay.com"
+                                />
+                            </div>
+
+                            <div class="field-group">
+                                <label class="field-label" for="passwordInput">Password</label>
                                 <input 
                                     type="password" 
                                     name="password"
                                     id="passwordInput"
-                                    value="${preservedPassword}"
+                                    value="${escapeHtml(preservedPassword)}"
                                     required
-                                    class="w-full p-3 pr-12 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500/50 text-slate-900"
+                                    autocomplete="current-password"
+                                    class="field-input"
                                     placeholder="••••••••"
                                 />
-                                <button
-                                    type="button"
-                                    onclick="togglePassword('passwordInput', this)"
-                                    class="absolute right-3 top-1/2 -translate-y-1/2 p-1.5 text-slate-400 hover:text-blue-500 transition-colors"
-                                >
-                                    <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="eye-icon"><path d="M2 12s3-7 10-7 10 7 10 7-3 7-10 7-10-7-10-7Z"/><circle cx="12" cy="12" r="3"/></svg>
-                                    <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="eye-off-icon hidden"><path d="M9.88 9.88a3 3 0 1 0 4.24 4.24"/><path d="M10.73 5.08A10.43 10.43 0 0 1 12 5c7 0 10 7 10 7a13.16 13.16 0 0 1-1.67 2.68"/><path d="M6.61 6.61A13.52 13.52 0 0 0 2 12s3 7 10 7a9.74 9.74 0 0 0 5.39-1.61"/><line x1="2" y1="2" x2="22" y2="22"/></svg>
-                                </button>
                             </div>
-                        </div>
 
-                        <button 
-                            type="submit" 
-                            class="w-full bg-blue-500 text-white p-4 rounded-xl font-bold hover:bg-blue-600 transition-colors shadow-lg shadow-blue-500/30"
-                        >
-                            Sign In
-                        </button>
-                    </form>
+                            <button 
+                                type="submit" 
+                                class="login-submit"
+                            >
+                                Sign In
+                            </button>
+                        </form>
+                    </div>
 
-                    <div class="mt-8 pt-6 border-t border-slate-100 text-center space-y-3">
-                        <a href="/forgot-password?apiKey=${activeApiKey}" class="block text-sm font-semibold text-blue-500 hover:text-blue-600 transition-colors">
-                            Forgot your password?
-                        </a>
-                        <p class="text-xs text-slate-400">
-                            Don't have an account? 
-                            <a href="/register?apiKey=${activeApiKey}" class="ml-1 font-bold text-blue-500 hover:underline">Create Account</a>
+                    <div class="login-footer">
+                        <a href="/forgot-password?apiKey=${escapeHtml(activeApiKey)}" class="support-link">Forgot your password?</a>
+                        <p class="support-copy">
+                            Don't have an account?
+                            <a href="/register?apiKey=${escapeHtml(activeApiKey)}" class="signup-link">Create Account</a>
                         </p>
                     </div>
-                </div>
-                <div class="bg-slate-50 px-8 py-4 text-center">
-                    <p class="text-[10px] text-slate-400 font-bold uppercase tracking-widest">
-                        Protected by budol<span class="text-blue-500">Shield</span>
-                    </p>
-                </div>
-            </div>
 
-            <script>
-                function togglePassword(inputId, btn) {
-                    const input = document.getElementById(inputId);
-                    const eyeIcon = btn.querySelector('.eye-icon');
-                    const eyeOffIcon = btn.querySelector('.eye-off-icon');
-                    
-                    if (input.type === 'password') {
-                        input.type = 'text';
-                        eyeIcon.classList.add('hidden');
-                        eyeOffIcon.classList.remove('hidden');
-                    } else {
-                        input.type = 'password';
-                        eyeIcon.classList.remove('hidden');
-                        eyeOffIcon.classList.add('hidden');
-                    }
-                }
-            </script>
-            ${errorToast}
+                    <div class="shield-footer">
+                        Protected by budol<span>Shield</span>
+                    </div>
+                </section>
+            </main>
         </body>
         </html>
     `);
@@ -405,10 +663,10 @@ app.get('/login', (req, res) => {
 // 0.1 Serve Register Page
 app.get('/register', (req, res) => {
     const { apiKey } = req.query;
-    const isBudolPay = apiKey === 'bp_key_2025';
+    const isBudolPay = apiKey === (process.env.BUDOLPAY_API_KEY || 'bp_b31ea1888dcb2ba76fdbb776ea8f5b7a');
     const primaryColor = isBudolPay ? 'rose' : 'blue';
     const brandName = isBudolPay ? 'Pay' : 'ID';
-    const activeApiKey = apiKey || 'bp_key_2025';
+    const activeApiKey = apiKey || process.env.BUDOLPAY_API_KEY || 'bp_b31ea1888dcb2ba76fdbb776ea8f5b7a';
 
     res.send(`
         <!DOCTYPE html>
@@ -417,58 +675,444 @@ app.get('/register', (req, res) => {
             <meta charset="UTF-8">
             <meta name="viewport" content="width=device-width, initial-scale=1.0">
             <title>Create Account - budol${brandName}</title>
-            <script src="https://cdn.tailwindcss.com"></script>
             <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
             <style>
-                body { font-family: 'Inter', sans-serif; }
+                :root {
+                    --primary: ${primaryColor === 'rose' ? '#e11d48' : '#2563eb'};
+                    --primary-dark: ${primaryColor === 'rose' ? '#be123c' : '#1d4ed8'};
+                    --primary-soft: ${primaryColor === 'rose' ? 'rgba(225, 29, 72, 0.14)' : 'rgba(37, 99, 235, 0.14)'};
+                    --ring: ${primaryColor === 'rose' ? 'rgba(225, 29, 72, 0.2)' : 'rgba(37, 99, 235, 0.2)'};
+                }
+
+                * { box-sizing: border-box; }
+
+                body {
+                    margin: 0;
+                    min-height: 100vh;
+                    display: flex;
+                    align-items: center;
+                    justify-content: center;
+                    padding: 16px;
+                    font-family: 'Inter', Arial, sans-serif;
+                    color: #0f172a;
+                    background:
+                        radial-gradient(circle at top, var(--primary-soft), transparent 34%),
+                        linear-gradient(180deg, #020617 0%, #0f172a 100%);
+                }
+
+                body > div {
+                    width: 100%;
+                    max-width: 420px;
+                    background: rgba(255, 255, 255, 0.97);
+                    border: 1px solid rgba(148, 163, 184, 0.18);
+                    border-radius: 24px;
+                    box-shadow: 0 30px 60px rgba(15, 23, 42, 0.38);
+                    overflow: hidden;
+                }
+
+                body > div > div:first-child {
+                    padding: 24px 20px 20px;
+                }
+
+                body > div > div:last-child {
+                    padding: 14px 20px 16px;
+                    text-align: center;
+                    background: #f8fafc;
+                    border-top: 1px solid #e2e8f0;
+                    color: #94a3b8;
+                    font-size: 0.7rem;
+                    font-weight: 800;
+                    letter-spacing: 0.18em;
+                    text-transform: uppercase;
+                }
+
+                body > div > div:last-child span {
+                    color: var(--primary);
+                }
+
+                body > div > div:first-child > div:first-child {
+                    display: flex;
+                    justify-content: center;
+                    margin-bottom: 16px;
+                }
+
+                body > div > div:first-child > div:first-child > div {
+                    width: 64px;
+                    height: 64px;
+                    display: flex;
+                    align-items: center;
+                    justify-content: center;
+                    border-radius: 999px;
+                    background: linear-gradient(135deg, var(--primary-soft), rgba(14, 165, 233, 0.08));
+                    border: 1px solid rgba(148, 163, 184, 0.16);
+                    color: var(--primary);
+                    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.9);
+                }
+
+                h1 {
+                    margin: 0;
+                    text-align: center;
+                    font-size: 1.75rem;
+                    line-height: 1.1;
+                    font-weight: 900;
+                    letter-spacing: -0.04em;
+                    color: #0f172a;
+                }
+
+                h1 span {
+                    color: var(--primary);
+                }
+
+                body > div > div:first-child > p {
+                    margin: 8px 0 0;
+                    text-align: center;
+                    color: #64748b;
+                    font-size: 0.875rem;
+                    line-height: 1.5;
+                }
+
+                #captcha-container > div {
+                    margin-top: 20px;
+                    background: #f8fafc;
+                    border: 1px solid #e2e8f0;
+                    border-radius: 20px;
+                    padding: 16px;
+                    max-width: 320px;
+                    margin-left: auto;
+                    margin-right: auto;
+                }
+
+                #captcha-container > div > div:first-child {
+                    display: flex;
+                    align-items: center;
+                    gap: 10px;
+                    margin-bottom: 12px;
+                }
+
+                #captcha-container > div > div:first-child > div {
+                    width: 36px;
+                    height: 36px;
+                    display: flex;
+                    align-items: center;
+                    justify-content: center;
+                    border-radius: 10px;
+                    color: var(--primary);
+                }
+
+                #captcha-container h3 {
+                    margin: 0;
+                    font-size: 0.875rem;
+                    letter-spacing: 0.02em;
+                    text-transform: uppercase;
+                    color: #0a58d4ff;
+                }
+
+                #captcha-container > div > p:first-of-type {
+                    margin: 0 0 12px;
+                    font-size: 0.6875rem;
+                    font-weight: 600;
+                    letter-spacing: 0.12em;
+                    text-transform: uppercase;
+                    color: #64748b;
+                }
+
+                #captcha-container .space-y-4 > * + * {
+                    margin-top: 12px;
+                }
+
+                #captcha-container .space-y-4 > div:first-child {
+                    display: flex;
+                    align-items: center;
+                    justify-content: center;
+                    gap: 6px;
+                    background: #ffffff;
+                    padding: 6px 10px;
+                    border-radius: 10px;
+                    border: 1px solid #e2e8f0;
+                    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.95);
+                    color: #1349c5ff;
+                    font-size: 1.375rem;
+                    font-weight: 700;
+                }
+
+                #captcha-input {
+                    width: 18px;
+                    padding: 5px 6px;
+                    border-radius: 8px;
+                    border: 1px solid #cbd5e1;
+                    background: #f8fafc;
+                    text-align: center;
+                    font: inherit;
+                    color: #1349c5ff;
+                    font-size: 1rem;
+                }
+
+                #registerForm {
+                    margin-top: 16px;
+                }
+
+                #registerForm > * + *,
+                #captcha-container + #registerForm > * + * {
+                    margin-top: 12px;
+                }
+
+                .grid.grid-cols-2 {
+                    display: grid;
+                    grid-template-columns: repeat(2, minmax(0, 1fr));
+                    gap: 12px;
+                }
+
+                #registerForm label,
+                #captcha-container label {
+                    display: block;
+                    margin-bottom: 6px;
+                    color: #64748b;
+                    font-size: 0.6875rem;
+                    font-weight: 800;
+                    letter-spacing: 0.12em;
+                    text-transform: uppercase;
+                }
+
+                #registerForm input[type="text"],
+                #registerForm input[type="email"],
+                #registerForm input[type="tel"],
+                #registerForm input[type="password"],
+                #registerForm input[type="number"],
+                #captcha-input {
+                    width: 100%;
+                    padding: 11px 14px;
+                    border-radius: 14px;
+                    border: 1px solid #cbd5e1;
+                    background: #ffffff;
+                    color: #0f172a;
+                    font: inherit;
+                    transition: border-color 0.2s ease, box-shadow 0.2s ease, transform 0.2s ease;
+                }
+
+                #registerForm input[type="password"] {
+                    padding-right: 42px;
+                }
+
+                #registerForm input::placeholder,
+                #captcha-input::placeholder {
+                    color: #94a3b8ff;
+                }
+
+                #registerForm input:focus,
+                #captcha-input:focus {
+                    outline: none;
+                    border-color: var(--primary);
+                    box-shadow: 0 0 0 3px var(--ring);
+                    transform: translateY(-1px);
+                }
+
+                #registerForm .relative {
+                    position: relative;
+                }
+
+                #registerForm button[onclick^="togglePassword"] {
+                    position: absolute;
+                    right: 10px;
+                    top: 50%;
+                    transform: translateY(-50%);
+                    border: 0;
+                    padding: 5px;
+                    border-radius: 10px;
+                    background: transparent;
+                    color: #94a3b8;
+                    cursor: pointer;
+                }
+
+                #emailSpinner,
+                #emailStatus,
+                #phoneSpinner,
+                #phoneStatus,
+                #confirmPasswordSpinner,
+                #confirmPasswordStatus {
+                    position: absolute;
+                    top: 50%;
+                    transform: translateY(-50%);
+                    right: 10px;
+                }
+
+                #confirmPasswordSpinner,
+                #confirmPasswordStatus {
+                    right: 38px;
+                }
+
+                #verify-captcha-btn,
+                #submitBtn {
+                    width: 100%;
+                    border: 0;
+                    border-radius: 16px;
+                    padding: 12px 16px;
+                    background: linear-gradient(135deg, var(--primary) 0%, var(--primary-dark) 100%);
+                    color: #ffffff;
+                    font: inherit;
+                    font-weight: 700;
+                    cursor: pointer;
+                    box-shadow: 0 18px 30px color-mix(in srgb, var(--primary) 28%, transparent);
+                    transition: transform 0.2s ease, box-shadow 0.2s ease, filter 0.2s ease;
+                }
+
+                #verify-captcha-btn {
+                    display: flex;
+                    align-items: center;
+                    justify-content: center;
+                    gap: 10px;
+                }
+
+                #verify-captcha-btn svg {
+                    width: 18px;
+                    height: 18px;
+                    flex: 0 0 18px;
+                }
+
+                #verify-captcha-btn:hover,
+                #submitBtn:hover {
+                    transform: translateY(-1px);
+                    filter: brightness(0.98);
+                }
+
+                #submitBtn:disabled {
+                    opacity: 0.55;
+                    cursor: not-allowed;
+                    box-shadow: none;
+                }
+
+                #captcha-error,
+                #emailError,
+                #phoneError,
+                #confirmPasswordError {
+                    margin-top: 6px;
+                    font-size: 0.6875rem;
+                    font-weight: 700;
+                    color: #dc2626;
+                }
+
+                .flex.items-start.gap-3.py-2 {
+                    display: flex;
+                    align-items: flex-start;
+                    gap: 10px;
+                    padding: 6px 0;
+                }
+
+                #terms {
+                    width: 16px;
+                    height: 16px;
+                    margin-top: 3px;
+                    accent-color: var(--primary);
+                }
+
+                label[for="terms"] {
+                    margin: 0;
+                    font-size: 0.6875rem;
+                    line-height: 1.5;
+                    text-transform: none;
+                    letter-spacing: 0;
+                    font-weight: 500;
+                    color: #64748b;
+                }
+
+                #message {
+                    margin-top: 12px;
+                    text-align: center;
+                    font-size: 0.875rem;
+                    font-weight: 600;
+                }
+
+                #message + div {
+                    margin-top: 20px;
+                    padding-top: 18px;
+                    border-top: 1px solid #e2e8f0;
+                    text-align: center;
+                }
+
+                #message + div p {
+                    margin: 0;
+                    color: #64748b;
+                    font-size: 0.875rem;
+                }
+
+                a {
+                    color: var(--primary);
+                    text-decoration: none;
+                    font-weight: 700;
+                }
+
+                a:hover {
+                    text-decoration: underline;
+                }
+
                 .spinner {
                     animation: spin 1s linear infinite;
                     border: 2px solid #e2e8f0;
-                    border-top: 2px solid #ef4444; /* Start Red as requested */
+                    border-top: 2px solid #ef4444;
                     border-radius: 50%;
-                    width: 20px;
-                    height: 20px;
+                    width: 18px;
+                    height: 18px;
                 }
+
                 .spinner-valid { border-top-color: #10b981 !important; }
+
                 @keyframes spin {
                     0% { transform: rotate(0deg); }
                     100% { transform: rotate(360deg); }
                 }
+
                 .input-valid { border-color: #10b981 !important; }
                 .input-invalid { border-color: #ef4444 !important; }
+                .border-red-500 { border-color: #ef4444 !important; }
+                .bg-red-50 { background: #fef2f2 !important; }
+                .text-red-500 { color: #ef4444 !important; }
+                .text-green-500 { color: #22c55e !important; }
+                .text-red-600 { color: #dc2626 !important; }
+                .text-green-600 { color: #16a34a !important; }
+                .font-semibold { font-weight: 600 !important; }
+                .hidden { display: none !important; }
+
+                @media (max-width: 480px) {
+                    body { padding: 12px; }
+                    body > div > div:first-child { padding: 20px 16px 18px; }
+                    .grid.grid-cols-2 { grid-template-columns: 1fr; }
+                    #captcha-container .space-y-4 > div:first-child {
+                        gap: 10px;
+                        font-size: 1rem;
+                    }
+                }
             </style>
         </head>
-        <body class="min-h-screen bg-slate-900 flex items-center justify-center p-4">
-            <div class="max-w-md w-full bg-white rounded-2xl shadow-2xl overflow-hidden">
-                <div class="p-8">
-                    <div class="flex justify-center mb-6">
-                        <div class="bg-${primaryColor}-500/10 p-6 rounded-full border-4 border-${primaryColor}-500/5 shadow-inner">
-                            <svg xmlns="http://www.w3.org/2000/svg" width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" class="text-${primaryColor}-500"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+        <body class="min-h-screen bg-slate-700 flex items-center justify-center p-4">
+            <div>
+                <div>
+                    <div class="flex justify-center mb-4">
+                        <div>
+                            <svg xmlns="http://www.w3.org/2000/svg" width="32" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
                         </div>
                     </div>
                     
-                    <h1 class="text-2xl font-black text-center text-slate-900 mb-2">
-                        budol<span class="text-${primaryColor}-500">${brandName}</span>
+                    <h1 class="font-family-poppins">
+                        <span class="color-primary">budol</span>${brandName}
                     </h1>
-                    <p class="text-slate-500 text-center text-sm mb-8">
+                    <p>
                         Create your universal ecosystem account.
                     </p>
 
                     <div id="captcha-container">
-                        <div class="p-6 bg-slate-50 rounded-xl border-2 border-slate-100 mb-4 animate-in fade-in slide-in-from-bottom-4 duration-500">
-                            <div class="flex items-center gap-2 mb-4">
-                                <div class="p-2 rounded-lg bg-${primaryColor}-100 text-${primaryColor}-600">
-                                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <div>
+                            <div>
+                                <div>
+                                    <svg width="20" height="20" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
                                     </svg>
                                 </div>
-                                <h3 class="font-bold text-slate-800 uppercase tracking-tight">Security Gatekeeper</h3>
+                                <h3>Security Gatekeeper</h3>
                             </div>
                             
-                            <p class="text-xs text-slate-500 mb-4 font-bold uppercase tracking-wider">Shield Challenge: Solve to proceed</p>
+                            <p>Shield Challenge: Solve to proceed</p>
                             
                             <div class="space-y-4">
-                                <div class="flex items-center justify-center gap-4 text-3xl font-black text-slate-900 bg-white p-4 rounded-xl border-2 border-slate-100 shadow-inner">
+                                <div>
                                     <span id="captcha-n1">0</span>
                                     <span id="captcha-op" class="text-slate-300">+</span>
                                     <span id="captcha-n2">0</span>
@@ -476,140 +1120,135 @@ app.get('/register', (req, res) => {
                                     <input
                                         type="number"
                                         id="captcha-input"
-                                        class="w-24 text-center border-3 border-transparent bg-slate-50 rounded-lg focus:outline-none focus:bg-white focus:border-${primaryColor}-500 transition-all text-slate-900"
                                         placeholder="?"
                                         required
                                     />
                                 </div>
                                 
-                                <p id="captcha-error" class="text-xs text-red-500 text-center font-bold hidden animate-bounce">Verification failed. Try again.</p>
+                                <p id="captcha-error" class="hidden">Verification failed. Try again.</p>
                                 
                                 <button
                                     type="button"
                                     id="verify-captcha-btn"
-                                    class="w-full py-4 bg-${primaryColor}-600 hover:bg-${primaryColor}-700 text-white font-black rounded-xl transition-all shadow-lg shadow-${primaryColor}-500/20 flex items-center justify-center gap-3 group"
                                 >
                                     <span>Verify Challenge</span>
-                                    <svg class="w-5 h-5 group-hover:translate-x-1 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M14 5l7 7-7 7" />
+                                    <svg width="18" height="15" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14 5l7 7-7 7" />
                                     </svg>
                                 </button>
                             </div>
-                            
-                            <p class="text-[9px] text-slate-400 mt-4 text-center uppercase tracking-[0.2em] font-black">Powered by Budol Shield v1.0</p>
+
                         </div>
                     </div>
 
-                    <form id="registerForm" class="space-y-4 hidden">
-                        <input type="hidden" name="apiKey" value="${activeApiKey}" />
+                    <form id="registerForm" class="hidden">
+                        <input type="hidden" name="apiKey" value="${escapeHtml(activeApiKey)}" />
                         
-                        <div class="grid grid-cols-2 gap-4">
+                        <div class="grid grid-cols-2">
                             <div>
-                                <label class="block text-xs font-bold text-slate-500 uppercase mb-1">First Name</label>
-                                <input type="text" id="firstName" required class="w-full p-3 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-${primaryColor}-500/50 text-slate-900" placeholder="Juan">
+                                <label>First Name</label>
+                                <input type="text" id="firstName" required placeholder="Juan">
                             </div>
                             <div>
-                                <label class="block text-xs font-bold text-slate-500 uppercase mb-1">Last Name</label>
-                                <input type="text" id="lastName" required class="w-full p-3 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-${primaryColor}-500/50 text-slate-900" placeholder="Dela Cruz">
+                                <label>Last Name</label>
+                                <input type="text" id="lastName" required placeholder="Dela Cruz">
                             </div>
                         </div>
 
                         <div>
-                            <label class="block text-xs font-bold text-slate-500 uppercase mb-1">Email Address</label>
+                            <label>Email Address</label>
                             <div class="relative">
-                                <input type="email" id="email" required class="w-full p-3 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-${primaryColor}-500/50 text-slate-900" placeholder="juan@budolpay.com">
-                                <div id="emailSpinner" class="absolute right-3 top-1/2 -translate-y-1/2 hidden">
+                                <input type="email" id="email" required placeholder="jon@budolpay.com">
+                                <div id="emailSpinner" class="hidden">
                                     <div class="spinner"></div>
                                 </div>
-                                <div id="emailStatus" class="absolute right-3 top-1/2 -translate-y-1/2 hidden">
+                                <div id="emailStatus" class="hidden">
                                     <svg class="w-5 h-5 text-green-500 hidden" id="emailValidIcon" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path></svg>
                                     <svg class="w-5 h-5 text-red-500 hidden" id="emailInvalidIcon" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
                                 </div>
                             </div>
-                            <p id="emailError" class="text-[10px] text-red-500 mt-1 font-bold hidden"></p>
+                            <p id="emailError" class="hidden"></p>
                         </div>
 
                         <div>
-                            <label class="block text-xs font-bold text-slate-500 uppercase mb-1">Phone Number</label>
+                            <label>Phone Number</label>
                             <div class="relative">
-                                <input type="tel" id="phoneNumber" required class="w-full p-3 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-${primaryColor}-500/50 text-slate-900" placeholder="09123456789">
-                                <div id="phoneSpinner" class="absolute right-3 top-1/2 -translate-y-1/2 hidden">
+                                <input type="tel" id="phoneNumber" required placeholder="09123456789">
+                                <div id="phoneSpinner" class="hidden">
                                     <div class="spinner"></div>
                                 </div>
-                                <div id="phoneStatus" class="absolute right-3 top-1/2 -translate-y-1/2 hidden">
+                                <div id="phoneStatus" class="hidden">
                                     <svg class="w-5 h-5 text-green-500 hidden" id="phoneValidIcon" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path></svg>
                                     <svg class="w-5 h-5 text-red-500 hidden" id="phoneInvalidIcon" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
                                 </div>
                             </div>
-                            <p id="phoneError" class="text-[10px] text-red-500 mt-1 font-bold hidden"></p>
+                            <p id="phoneError" class="hidden"></p>
                         </div>
 
                         <div>
-                            <label class="block text-xs font-bold text-slate-500 uppercase mb-1">Password</label>
-                            <div class="relative group">
+                            <label>Password</label>
+                            <div class="relative">
                                 <input 
                                     type="password" 
                                     id="password" 
                                     required 
-                                    class="w-full p-3 pr-12 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-${primaryColor}-500/50 text-slate-900" 
                                     placeholder="••••••••"
                                 >
-                                <button type="button" onclick="togglePassword('password', this)" class="absolute right-3 top-1/2 -translate-y-1/2 p-1.5 text-slate-400 hover:text-${primaryColor}-500 transition-colors">
-                                    <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="eye-icon"><path d="M2 12s3-7 10-7 10 7 10 7-3 7-10 7-10-7-10-7Z"/><circle cx="12" cy="12" r="3"/></svg>
-                                    <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="eye-off-icon hidden"><path d="M9.88a3 3 0 1 0 4.24 4.24"/><path d="M10.73 5.08A10.43 10.43 0 0 1 12 5c7 0 10 7 10 7a13.16 13.16 0 0 1-1.67 2.68"/><path d="M6.61 6.61A13.52 13.52 0 0 0 2 12s3 7 10 7a9.74 9.74 0 0 0 5.39-1.61"/><line x1="2" y1="2" x2="22" y2="22"/></svg>
+                                <button type="button" onclick="togglePassword('password', this)">
+                                    <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="eye-icon"><path d="M2 12s3-7 10-7 10 7 10 7-3 7-10 7-10-7-10-7Z"/><circle cx="12" cy="12" r="3"/></svg>
+                                    <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="eye-off-icon hidden"><path d="M9.88a3 3 0 1 0 4.24 4.24"/><path d="M10.73 5.08A10.43 10.43 0 0 1 12 5c7 0 10 7 10 7a13.16 13.16 0 0 1-1.67 2.68"/><path d="M6.61 6.61A13.52 13.52 0 0 0 2 12s3 7 10 7a9.74 9.74 0 0 0 5.39-1.61"/><line x1="2" y1="2" x2="22" y2="22"/></svg>
                                 </button>
                             </div>
                         </div>
 
                         <div>
-                            <label class="block text-xs font-bold text-slate-500 uppercase mb-1">Confirm Password</label>
-                            <div class="relative group">
+                            <label>Confirm Password</label>
+                            <div class="relative">
                                 <input 
                                     type="password" 
                                     id="confirmPassword" 
                                     required 
-                                    class="w-full p-3 pr-12 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-${primaryColor}-500/50 text-slate-900" 
                                     placeholder="••••••••"
                                 >
-                                <button type="button" onclick="togglePassword('confirmPassword', this)" class="absolute right-3 top-12/2 -translate-y-1/2 p-1.5 text-slate-400 hover:text-${primaryColor}-500 transition-colors" style="top: 50%;">
-                                    <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="eye-icon"><path d="M2 12s3-7 10-7 10 7 10 7-3 7-10 7-10-7-10-7Z"/><circle cx="12" cy="12" r="3"/></svg>
-                                    <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="eye-off-icon hidden"><path d="M9.88a3 3 0 1 0 4.24 4.24"/><path d="M10.73 5.08A10.43 10.43 0 0 1 12 5c7 0 10 7 10 7a13.16 13.16 0 0 1-1.67 2.68"/><path d="M6.61 6.61A13.52 13.52 0 0 0 2 12s3 7 10 7a9.74 9.74 0 0 0 5.39-1.61"/><line x1="2" y1="2" x2="22" y2="22"/></svg>
+                                <button type="button" onclick="togglePassword('confirmPassword', this)">
+                                    <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="eye-icon"><path d="M2 12s3-7 10-7 10 7 10 7-3 7-10 7-10-7-10-7Z"/><circle cx="12" cy="12" r="3"/></svg>
+                                    <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="eye-off-icon hidden"><path d="M9.88a3 3 0 1 0 4.24 4.24"/><path d="M10.73 5.08A10.43 10.43 0 0 1 12 5c7 0 10 7 10 7a13.16 13.16 0 0 1-1.67 2.68"/><path d="M6.61 6.61A13.52 13.52 0 0 0 2 12s3 7 10 7a9.74 9.74 0 0 0 5.39-1.61"/><line x1="2" y1="2" x2="22" y2="22"/></svg>
                                 </button>
-                                <div id="confirmPasswordSpinner" class="absolute right-10 top-1/2 -translate-y-1/2 hidden" style="right: 2.5rem;">
+                                <div id="confirmPasswordSpinner" class="hidden">
                                     <div class="spinner"></div>
                                 </div>
-                                <div id="confirmPasswordStatus" class="absolute right-10 top-1/2 -translate-y-1/2 hidden" style="right: 2.5rem;">
+                                <div id="confirmPasswordStatus" class="hidden">
                                     <svg class="w-5 h-5 text-green-500 hidden" id="confirmPasswordValidIcon" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path></svg>
                                     <svg class="w-5 h-5 text-red-500 hidden" id="confirmPasswordInvalidIcon" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
                                 </div>
                             </div>
-                            <p id="confirmPasswordError" class="text-[10px] text-red-500 mt-1 font-bold hidden"></p>
+                            <p id="confirmPasswordError" class="hidden"></p>
                         </div>
 
                         <div class="flex items-start gap-3 py-2">
-                            <input type="checkbox" id="terms" required class="mt-1 w-4 h-4 rounded border-slate-300 text-${primaryColor}-500 focus:ring-${primaryColor}-500/50">
-                            <label for="terms" class="text-[10px] text-slate-500 leading-tight">
-                                I agree to the <a href="#" class="font-bold text-${primaryColor}-500 hover:underline">Terms of Service</a> and <a href="#" class="font-bold text-${primaryColor}-500 hover:underline">Privacy Policy</a>. I understand my data is protected under the <span class="font-bold">Philippine Data Privacy Act of 2012</span>.
+                            <input type="checkbox" id="terms" required>
+                            <label for="terms">
+                                I agree to the <a href="#">Terms of Service</a> and <a href="#">Privacy Policy</a>. I understand my data is protected under the <span>Philippine Data Privacy Act of 2012</span>.
                             </label>
                         </div>
 
-                        <button type="submit" id="submitBtn" class="w-full bg-${primaryColor}-500 text-white p-4 rounded-xl font-bold hover:bg-${primaryColor}-600 transition-colors shadow-lg shadow-${primaryColor}-500/30 disabled:opacity-50">
+                        <button type="submit" id="submitBtn">
                             Create Account
                         </button>
                     </form>
 
-                    <div id="message" class="mt-4 text-center text-sm font-semibold hidden"></div>
+                    <div id="message" class="hidden"></div>
 
-                    <div class="mt-8 pt-6 border-t border-slate-100 text-center">
-                        <p class="text-sm text-slate-500">
+                    <div>
+                        <p>
                             Already have an account? 
-                            <a href="/login?apiKey=${activeApiKey}" class="ml-1 font-bold text-${primaryColor}-500 hover:underline">Sign In</a>
+                            <a href="/login?apiKey=${escapeHtml(activeApiKey)}">Sign In</a>
                         </p>
                     </div>
                 </div>
-                <div class="bg-slate-50 px-8 py-4 text-center">
-                    <p class="text-[10px] text-slate-400 font-bold uppercase tracking-widest">
-                        Protected by budol<span class="text-${primaryColor}-500">Shield</span>
+                <div>
+                    <p>
+                        Protected by budol<span>Shield</span>
                     </p>
                 </div>
             </div>
@@ -618,7 +1257,7 @@ app.get('/register', (req, res) => {
                 document.addEventListener('DOMContentLoaded', () => {
                     console.log('BudolID Registration Script Initialized');
                     
-                    // --- CAPTCHA Logic ---
+                    // --- CAPTCHA Logic (Server-Side) ---
                     const captchaContainer = document.getElementById('captcha-container');
                     const registerForm = document.getElementById('registerForm');
                     const captchaN1 = document.getElementById('captcha-n1');
@@ -628,41 +1267,55 @@ app.get('/register', (req, res) => {
                     const verifyBtn = document.getElementById('verify-captcha-btn');
                     const captchaError = document.getElementById('captcha-error');
 
-                    let correctAnswer = 0;
+                    let currentCaptchaToken = '';
 
-                    function generateChallenge() {
-                        const n1 = Math.floor(Math.random() * 9) + 1;
-                        const n2 = Math.floor(Math.random() * 9) + 1;
-                        const op = Math.random() > 0.5 ? '+' : '-';
-                        
-                        let finalN1 = n1;
-                        let finalN2 = n2;
-
-                        if (op === '-' && n1 < n2) {
-                            finalN1 = n2;
-                            finalN2 = n1;
+                    async function generateChallenge() {
+                        try {
+                            const res = await fetch('/auth/captcha/generate');
+                            const data = await res.json();
+                            currentCaptchaToken = data.token;
+                            captchaN1.textContent = data.n1;
+                            captchaN2.textContent = data.n2;
+                            captchaOp.textContent = data.op;
+                            captchaInput.value = '';
+                            captchaError.classList.add('hidden');
+                            captchaInput.classList.remove('border-red-500', 'bg-red-50');
+                        } catch (err) {
+                            console.error('Failed to load CAPTCHA:', err);
                         }
-
-                        captchaN1.textContent = finalN1;
-                        captchaN2.textContent = finalN2;
-                        captchaOp.textContent = op;
-                        correctAnswer = op === '+' ? finalN1 + finalN2 : finalN1 - finalN2;
-                        captchaInput.value = '';
-                        captchaError.classList.add('hidden');
-                        captchaInput.classList.remove('border-red-500', 'bg-red-50');
                     }
 
-                    verifyBtn.addEventListener('click', () => {
-                        if (parseInt(captchaInput.value) === correctAnswer) {
-                            captchaContainer.classList.add('hidden');
-                            registerForm.classList.remove('hidden');
-                            window.scrollTo({ top: 0, behavior: 'smooth' });
-                        } else {
+                    verifyBtn.addEventListener('click', async () => {
+                        try {
+                            const res = await fetch('/auth/captcha/verify', {
+                                method: 'POST',
+                                headers: { 'Content-Type': 'application/json' },
+                                body: JSON.stringify({ token: currentCaptchaToken, answer: parseInt(captchaInput.value) })
+                            });
+                            const data = await res.json();
+                            if (data.valid) {
+                                captchaContainer.classList.add('hidden');
+                                registerForm.classList.remove('hidden');
+                                // Store verified token in hidden field
+                                let tokenInput = document.getElementById('captchaVerifiedToken');
+                                if (!tokenInput) {
+                                    tokenInput = document.createElement('input');
+                                    tokenInput.type = 'hidden';
+                                    tokenInput.name = 'captchaToken';
+                                    tokenInput.id = 'captchaVerifiedToken';
+                                    document.getElementById('registerForm').appendChild(tokenInput);
+                                }
+                                tokenInput.value = data.verifiedToken;
+                                window.scrollTo({ top: 0, behavior: 'smooth' });
+                            } else {
+                                captchaError.textContent = data.error || 'Verification failed. Try again.';
+                                captchaError.classList.remove('hidden');
+                                captchaInput.classList.add('border-red-500', 'bg-red-50');
+                                setTimeout(() => { generateChallenge(); }, 1000);
+                            }
+                        } catch (err) {
+                            captchaError.textContent = 'Network error. Try again.';
                             captchaError.classList.remove('hidden');
-                            captchaInput.classList.add('border-red-500', 'bg-red-50');
-                            setTimeout(() => {
-                                generateChallenge();
-                            }, 1000);
                         }
                     });
 
@@ -950,7 +1603,7 @@ app.get('/register', (req, res) => {
                         validateConfirmPassword();
                     });
 
-                    document.getElementById('registerForm').addEventListener('submit', async (e) => {
+                        document.getElementById('registerForm').addEventListener('submit', async (e) => {
                         e.preventDefault();
                         const messageDiv = document.getElementById('message');
                         const formData = {
@@ -958,7 +1611,8 @@ app.get('/register', (req, res) => {
                             lastName: document.getElementById('lastName').value,
                             email: document.getElementById('email').value,
                             phoneNumber: document.getElementById('phoneNumber').value,
-                            password: document.getElementById('password').value
+                            password: document.getElementById('password').value,
+                            captchaToken: document.getElementById('captchaVerifiedToken')?.value
                         };
                         try {
                             const res = await fetch('/auth/register', {
@@ -1008,7 +1662,7 @@ app.get('/register', (req, res) => {
 // Serve Forgot Password Page
 app.get('/forgot-password', (req, res) => {
     const { apiKey } = req.query;
-    const activeApiKey = apiKey || 'bp_key_2025';
+    const activeApiKey = apiKey || process.env.BUDOLPAY_API_KEY || 'bp_b31ea1888dcb2ba76fdbb776ea8f5b7a';
 
     res.send(`
         <!DOCTYPE html>
@@ -1017,10 +1671,171 @@ app.get('/forgot-password', (req, res) => {
             <meta charset="UTF-8">
             <meta name="viewport" content="width=device-width, initial-scale=1.0">
             <title>Forgot Password - budolID</title>
-            <script src="https://cdn.tailwindcss.com"></script>
             <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
             <style>
-                body { font-family: 'Inter', sans-serif; }
+                * { box-sizing: border-box; }
+
+                body {
+                    margin: 0;
+                    min-height: 100vh;
+                    display: flex;
+                    align-items: center;
+                    justify-content: center;
+                    padding: 24px;
+                    font-family: 'Inter', Arial, sans-serif;
+                    color: #0f172a;
+                    background:
+                        radial-gradient(circle at top, rgba(37, 99, 235, 0.16), transparent 34%),
+                        linear-gradient(180deg, #020617 0%, #0f172a 100%);
+                }
+
+                body > div {
+                    width: 100%;
+                    max-width: 440px;
+                    background: rgba(255, 255, 255, 0.97);
+                    border: 1px solid rgba(148, 163, 184, 0.18);
+                    border-radius: 28px;
+                    box-shadow: 0 30px 60px rgba(15, 23, 42, 0.38);
+                    overflow: hidden;
+                }
+
+                body > div > div:first-child {
+                    padding: 36px 32px 28px;
+                }
+
+                body > div > div:last-child {
+                    padding: 18px 24px 22px;
+                    text-align: center;
+                    background: #f8fafc;
+                    border-top: 1px solid #e2e8f0;
+                    color: #94a3b8;
+                    font-size: 0.7rem;
+                    font-weight: 800;
+                    letter-spacing: 0.18em;
+                    text-transform: uppercase;
+                }
+
+                body > div > div:last-child span { color: #2563eb; }
+
+                body > div > div:first-child > div:first-child {
+                    display: flex;
+                    justify-content: center;
+                    margin-bottom: 24px;
+                }
+
+                body > div > div:first-child > div:first-child > div {
+                    width: 72px;
+                    height: 72px;
+                    display: flex;
+                    align-items: center;
+                    justify-content: center;
+                    border-radius: 999px;
+                    background: linear-gradient(135deg, rgba(37, 99, 235, 0.16), rgba(14, 165, 233, 0.16));
+                    color: #2563eb;
+                }
+
+                h1 {
+                    margin: 0;
+                    text-align: center;
+                    font-size: 2rem;
+                    line-height: 1.1;
+                    font-weight: 900;
+                    letter-spacing: -0.04em;
+                    color: #0f172a;
+                }
+
+                h1 span { color: #2563eb; }
+
+                body > div > div:first-child > p {
+                    margin: 10px 0 0;
+                    text-align: center;
+                    color: #64748b;
+                    font-size: 0.96rem;
+                    line-height: 1.6;
+                }
+
+                #forgotForm {
+                    margin-top: 28px;
+                }
+
+                #forgotForm > * + * {
+                    margin-top: 18px;
+                }
+
+                #forgotForm label {
+                    display: block;
+                    margin-bottom: 8px;
+                    color: #64748b;
+                    font-size: 0.72rem;
+                    font-weight: 800;
+                    letter-spacing: 0.12em;
+                    text-transform: uppercase;
+                }
+
+                #forgotForm input {
+                    width: 100%;
+                    padding: 14px 16px;
+                    border-radius: 16px;
+                    border: 1px solid #cbd5e1;
+                    background: #ffffff;
+                    color: #0f172a;
+                    font: inherit;
+                    transition: border-color 0.2s ease, box-shadow 0.2s ease, transform 0.2s ease;
+                }
+
+                #forgotForm input::placeholder { color: #94a3b8; }
+
+                #forgotForm input:focus {
+                    outline: none;
+                    border-color: #2563eb;
+                    box-shadow: 0 0 0 4px rgba(37, 99, 235, 0.2);
+                    transform: translateY(-1px);
+                }
+
+                #forgotForm button {
+                    width: 100%;
+                    border: 0;
+                    border-radius: 18px;
+                    padding: 15px 18px;
+                    background: linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%);
+                    color: #ffffff;
+                    font: inherit;
+                    font-weight: 800;
+                    cursor: pointer;
+                    box-shadow: 0 18px 30px rgba(37, 99, 235, 0.28);
+                }
+
+                #message {
+                    margin-top: 16px;
+                    text-align: center;
+                    font-size: 0.92rem;
+                    font-weight: 600;
+                }
+
+                .text-red-600 { color: #dc2626 !important; }
+                .text-green-600 { color: #16a34a !important; }
+                .hidden { display: none !important; }
+
+                #message + div {
+                    margin-top: 28px;
+                    padding-top: 24px;
+                    border-top: 1px solid #e2e8f0;
+                    text-align: center;
+                }
+
+                #message + div a {
+                    color: #64748b;
+                    text-decoration: none;
+                    font-size: 0.92rem;
+                    font-weight: 700;
+                }
+
+                #message + div a:hover { color: #2563eb; }
+
+                @media (max-width: 480px) {
+                    body { padding: 16px; }
+                    body > div > div:first-child { padding: 28px 22px 22px; }
+                }
             </style>
         </head>
         <body class="min-h-screen bg-slate-900 flex items-center justify-center p-4">
@@ -1032,11 +1847,11 @@ app.get('/forgot-password', (req, res) => {
                         </div>
                     </div>
                     
-                    <h1 class="text-2xl font-black text-center text-slate-900 mb-2">
+                    <h1 class="text-xl font-black text-center text-slate-700 mb-2">
                         Reset <span class="text-blue-500">Password</span>
                     </h1>
                     <p class="text-slate-500 text-center text-sm mb-8">
-                        Enter your email to receive a 6-digit OTP via SMS and Email.
+                        Enter your email to receive a 6-digit OTP for password reset.
                     </p>
 
                     <form id="forgotForm" class="space-y-4">
@@ -1062,7 +1877,7 @@ app.get('/forgot-password', (req, res) => {
                     <div id="message" class="mt-4 text-center text-sm font-semibold hidden"></div>
 
                     <div class="mt-8 pt-6 border-t border-slate-100 text-center">
-                        <a href="/login?apiKey=${activeApiKey}" class="text-sm font-semibold text-slate-400 hover:text-slate-600 transition-colors">
+                        <a href="/login?apiKey=${escapeHtml(activeApiKey)}" class="text-sm font-semibold text-slate-400 hover:text-slate-600 transition-colors">
                             &larr; Back to Login
                         </a>
                     </div>
@@ -1088,8 +1903,10 @@ app.get('/forgot-password', (req, res) => {
                         });
                         const data = await res.json();
                         
-                        messageDiv.textContent = data.message;
-                        messageDiv.className = 'mt-4 text-center text-sm font-semibold text-green-600';
+                        messageDiv.textContent = data.message || data.error;
+                        messageDiv.className = res.ok
+                            ? 'mt-4 text-center text-sm font-semibold text-green-600'
+                            : 'mt-4 text-center text-sm font-semibold text-red-600';
                         messageDiv.classList.remove('hidden');
                         
                         if (res.ok) {
@@ -1112,7 +1929,7 @@ app.get('/forgot-password', (req, res) => {
 // Serve Reset Password Page (OTP + New Password)
 app.get('/reset-password', (req, res) => {
     const { email, apiKey } = req.query;
-    const activeApiKey = apiKey || 'bp_key_2025';
+    const activeApiKey = apiKey || process.env.BUDOLPAY_API_KEY || 'bp_b31ea1888dcb2ba76fdbb776ea8f5b7a';
 
     res.send(`
         <!DOCTYPE html>
@@ -1121,10 +1938,202 @@ app.get('/reset-password', (req, res) => {
             <meta charset="UTF-8">
             <meta name="viewport" content="width=device-width, initial-scale=1.0">
             <title>Verify OTP - budolID</title>
-            <script src="https://cdn.tailwindcss.com"></script>
             <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
             <style>
-                body { font-family: 'Inter', sans-serif; }
+                * { box-sizing: border-box; }
+
+                body {
+                    margin: 0;
+                    min-height: 100vh;
+                    display: flex;
+                    align-items: center;
+                    justify-content: center;
+                    padding: 24px;
+                    font-family: 'Inter', Arial, sans-serif;
+                    color: #0f172a;
+                    background:
+                        radial-gradient(circle at top, rgba(37, 99, 235, 0.16), transparent 34%),
+                        linear-gradient(180deg, #020617 0%, #0f172a 100%);
+                }
+
+                body > div {
+                    width: 100%;
+                    max-width: 440px;
+                    background: rgba(255, 255, 255, 0.97);
+                    border: 1px solid rgba(148, 163, 184, 0.18);
+                    border-radius: 28px;
+                    box-shadow: 0 30px 60px rgba(15, 23, 42, 0.38);
+                    overflow: hidden;
+                }
+
+                body > div > div:first-child {
+                    padding: 36px 32px 28px;
+                }
+
+                body > div > div:last-child {
+                    padding: 18px 24px 22px;
+                    text-align: center;
+                    background: #f8fafc;
+                    border-top: 1px solid #e2e8f0;
+                    color: #94a3b8;
+                    font-size: 0.7rem;
+                    font-weight: 800;
+                    letter-spacing: 0.18em;
+                    text-transform: uppercase;
+                }
+
+                body > div > div:last-child span { color: #2563eb; }
+
+                body > div > div:first-child > div:first-child {
+                    display: flex;
+                    justify-content: center;
+                    margin-bottom: 24px;
+                }
+
+                body > div > div:first-child > div:first-child > div {
+                    width: 72px;
+                    height: 72px;
+                    display: flex;
+                    align-items: center;
+                    justify-content: center;
+                    border-radius: 999px;
+                    background: linear-gradient(135deg, rgba(37, 99, 235, 0.16), rgba(14, 165, 233, 0.16));
+                    color: #2563eb;
+                }
+
+                h1 {
+                    margin: 0;
+                    text-align: center;
+                    font-size: 2rem;
+                    line-height: 1.1;
+                    font-weight: 900;
+                    letter-spacing: -0.04em;
+                    color: #0f172a;
+                }
+
+                h1 span { color: #2563eb; }
+
+                body > div > div:first-child > p {
+                    margin: 10px 0 0;
+                    text-align: center;
+                    color: #64748b;
+                    font-size: 0.96rem;
+                    line-height: 1.6;
+                }
+
+                #otpForm {
+                    margin-top: 28px;
+                }
+
+                #otpForm > * + * {
+                    margin-top: 18px;
+                }
+
+                #otpForm label {
+                    display: block;
+                    margin-bottom: 8px;
+                    color: #64748b;
+                    font-size: 0.72rem;
+                    font-weight: 800;
+                    letter-spacing: 0.12em;
+                    text-transform: uppercase;
+                }
+
+                #otpForm input[type="text"],
+                #otpForm input[type="password"] {
+                    width: 100%;
+                    padding: 14px 16px;
+                    border-radius: 16px;
+                    border: 1px solid #cbd5e1;
+                    background: #ffffff;
+                    color: #0f172a;
+                    font: inherit;
+                    transition: border-color 0.2s ease, box-shadow 0.2s ease, transform 0.2s ease;
+                }
+
+                #otp {
+                    text-align: center;
+                    font-size: 2rem;
+                    font-weight: 900;
+                    letter-spacing: 0.45em;
+                    padding-left: 1.2em;
+                }
+
+                #otpForm input[type="password"] {
+                    padding-right: 46px;
+                }
+
+                #otpForm input::placeholder { color: #94a3b8; }
+
+                #otpForm input:focus {
+                    outline: none;
+                    border-color: #2563eb;
+                    box-shadow: 0 0 0 4px rgba(37, 99, 235, 0.2);
+                    transform: translateY(-1px);
+                }
+
+                #otpForm .relative {
+                    position: relative;
+                }
+
+                #otpForm button[onclick^="togglePassword"] {
+                    position: absolute;
+                    right: 12px;
+                    top: 50%;
+                    transform: translateY(-50%);
+                    border: 0;
+                    padding: 6px;
+                    border-radius: 10px;
+                    background: transparent;
+                    color: #94a3b8;
+                    cursor: pointer;
+                }
+
+                #otpForm button[type="submit"] {
+                    width: 100%;
+                    border: 0;
+                    border-radius: 18px;
+                    padding: 15px 18px;
+                    background: linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%);
+                    color: #ffffff;
+                    font: inherit;
+                    font-weight: 800;
+                    cursor: pointer;
+                    box-shadow: 0 18px 30px rgba(37, 99, 235, 0.28);
+                }
+
+                #message {
+                    margin-top: 16px;
+                    text-align: center;
+                    font-size: 0.92rem;
+                    font-weight: 600;
+                }
+
+                .text-red-600 { color: #dc2626 !important; }
+                .text-green-600 { color: #16a34a !important; }
+                .hidden { display: none !important; }
+
+                #message + div {
+                    margin-top: 28px;
+                    padding-top: 24px;
+                    border-top: 1px solid #e2e8f0;
+                    text-align: center;
+                }
+
+                #message + div a {
+                    color: #64748b;
+                    text-decoration: none;
+                    font-size: 0.92rem;
+                    font-weight: 700;
+                }
+
+                #message + div a:hover { color: #2563eb; }
+
+                @media (max-width: 480px) {
+                    body { padding: 16px; }
+                    body > div > div:first-child { padding: 28px 22px 22px; }
+                    #otp { font-size: 1.7rem; letter-spacing: 0.32em; }
+                }
             </style>
         </head>
         <body class="min-h-screen bg-slate-900 flex items-center justify-center p-4">
@@ -1144,7 +2153,7 @@ app.get('/reset-password', (req, res) => {
                     </p>
 
                     <form id="otpForm" class="space-y-4">
-                        <input type="hidden" id="email" value="${email}" />
+                        <input type="hidden" id="email" value="${escapeHtml(email)}" />
                         
                         <div>
                             <label class="block text-xs font-bold text-slate-500 uppercase mb-1">One-Time Password</label>
@@ -1190,7 +2199,7 @@ app.get('/reset-password', (req, res) => {
                     <div id="message" class="mt-4 text-center text-sm font-semibold hidden"></div>
 
                     <div class="mt-8 pt-6 border-t border-slate-100 text-center">
-                        <a href="/login?apiKey=${activeApiKey}" class="text-sm font-semibold text-slate-400 hover:text-slate-600 transition-colors">
+                        <a href="/login?apiKey=${escapeHtml(activeApiKey)}" class="text-sm font-semibold text-slate-400 hover:text-slate-600 transition-colors">
                             &larr; Back to Login
                         </a>
                     </div>
@@ -1276,11 +2285,11 @@ app.get('/reset-password', (req, res) => {
 
 // Helper for form submission
 app.use(express.urlencoded({ extended: true }));
-app.post('/auth/sso/login-form', async (req, res) => {
+app.post('/auth/sso/login-form', loginLimiter, async (req, res) => {
     const { email, password, apiKey, redirect_uri } = req.body;
 
     // Ensure we have an apiKey, default to budolPay for ecosystem access
-    const activeApiKey = apiKey || 'bp_key_2025';
+    const activeApiKey = apiKey || process.env.BUDOLPAY_API_KEY || 'bp_b31ea1888dcb2ba76fdbb776ea8f5b7a';
 
     try {
         const ecosystemApp = await prisma.ecosystemApp.findUnique({ where: { apiKey: activeApiKey } });
@@ -1290,7 +2299,7 @@ app.post('/auth/sso/login-form', async (req, res) => {
         // WHY: Schema uses 'passwordHash' not 'password' — budolID stores bcrypt hashes
         if (!user || !(await bcrypt.compare(password, user.passwordHash))) {
             console.log(`[POST /auth/sso/login-form] Login failed for ${email}. Redirecting with error=1`);
-            return res.redirect(`/login?apiKey=${activeApiKey}&redirect_uri=${encodeURIComponent(redirect_uri || '')}&error=1&email=${encodeURIComponent(email)}&password=${encodeURIComponent(password)}`);
+            return res.redirect(`/login?apiKey=${activeApiKey}&redirect_uri=${encodeURIComponent(redirect_uri || '')}&error=1&email=${encodeURIComponent(email)}`);
         }
 
         const token = jwt.sign(
@@ -1303,7 +2312,7 @@ app.post('/auth/sso/login-form', async (req, res) => {
                 iss: 'budolID'
             },
             JWT_SECRET,
-            { expiresIn: '7d' }
+            { expiresIn: '1d' }
         );
 
         await prisma.session.create({
@@ -1311,7 +2320,7 @@ app.post('/auth/sso/login-form', async (req, res) => {
                 userId: user.id,
                 appId: ecosystemApp.id,
                 token,
-                expiresAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000)
+                expiresAt: new Date(Date.now() + 24 * 60 * 60 * 1000)
             }
         });
 
@@ -1338,8 +2347,7 @@ app.post('/auth/sso/login-form', async (req, res) => {
                 if (requestedHostname === allowedHostname || 
                     requestedHostname.endsWith('.' + allowedHostname) ||
                     requestedHostname === 'localhost' ||
-                    requestedHostname.startsWith('192.168.') ||
-                    requestedHostname.endsWith('.vercel.app')) {
+                    requestedHostname.startsWith('192.168.')) {
                     targetRedirectUri = redirect_uri;
                     console.log(`[SSO Login] Using dynamic redirect_uri: ${targetRedirectUri}`);
                 } else {
@@ -1365,7 +2373,7 @@ app.post('/auth/forgot-password', async (req, res) => {
         const user = await prisma.user.findUnique({ where: { email } });
         if (!user) {
             // Standard security practice: don't reveal if user exists
-            return res.json({ message: "If an account exists, an OTP has been sent via SMS and Email." });
+            return res.json({ message: "If an account exists, an OTP has been sent." });
         }
 
         const otp = Math.floor(100000 + Math.random() * 900000).toString();
@@ -1377,13 +2385,39 @@ app.post('/auth/forgot-password', async (req, res) => {
             data: { otpCode: otp, otpExpiresAt: otpExpires }
         });
 
-        // SIMULATED DUAL-CHANNEL DELIVERY (PCI DSS & BSP Compliant)
-        console.log(`\n--- [SSPR DUAL-CHANNEL DELIVERY] ---`);
-        console.log(`[EMAIL] To: ${maskPII(email)} | Subject: budolID Password Reset | Body: Your OTP is \x1b[33m${otp}\x1b[0m`);
-        console.log(`[SMS] To: ${maskPII(user.phoneNumber)} | Body: budolID: Your password reset OTP is \x1b[33m${otp}\x1b[0m. Valid for 5m.`);
-        console.log(`------------------------------------\n`);
+        // Send OTP via budolpay admin notification endpoint (reads SMTP settings from DB)
+        try {
+            const notifyUrl = process.env.BUDOLPAY_NOTIFY_URL || 'https://budolpay.vercel.app/api/auth/forgot-password/notify';
+            const notifyRes = await fetch(notifyUrl, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    email: email,
+                    phone: user.phoneNumber,
+                    otp: otp,
+                    name: user.firstName || user.name || 'User'
+                })
+            });
+            const notifyData = await notifyRes.json().catch(() => ({}));
+            if (notifyRes.ok && (notifyData?.delivery?.email || notifyData?.delivery?.sms)) {
+                console.log(`[ForgotPassword] OTP sent to ${maskPII(email)} via notification endpoint`);
+            } else {
+                console.error(`[ForgotPassword] Notification endpoint returned ${notifyRes.status}`);
+                return res.status(503).json({
+                    error: notifyData?.error || 'OTP delivery is currently unavailable. Please try again later.'
+                });
+            }
+        } catch (notifyError) {
+            console.error(`[ForgotPassword] Failed to call notification endpoint: ${notifyError.message}`);
+            return res.status(503).json({
+                error: 'OTP delivery is currently unavailable. Please try again later.'
+            });
+        }
 
-        res.json({ message: "If an account exists, an OTP has been sent via SMS and Email." });
+        // Log SMS (SIMULATED - actual SMS requires Twilio/Semaphore integration)
+        console.log(`[ForgotPassword] SMS to ${maskPII(user.phoneNumber)}: Your budolID OTP is ${otp}. Valid for 5m.`);
+
+        res.json({ message: "If an account exists, an OTP has been sent." });
     } catch (error) {
         res.status(500).json({ error: error.message });
     }
@@ -1559,13 +2593,71 @@ app.get('/auth/check-phone', async (req, res) => {
     }
 });
 
+// Server-side CAPTCHA Store (in-memory with expiration)
+const captchaStore = new Map();
+
+function generateCaptchaChallenge() {
+    const n1 = Math.floor(Math.random() * 9) + 1;
+    const n2 = Math.floor(Math.random() * 9) + 1;
+    const op = Math.random() > 0.5 ? '+' : '-';
+    let finalN1 = n1;
+    let finalN2 = n2;
+    if (op === '-' && n1 < n2) {
+        finalN1 = n2;
+        finalN2 = n1;
+    }
+    const answer = op === '+' ? finalN1 + finalN2 : finalN1 - finalN2;
+    const token = require('crypto').randomBytes(32).toString('hex');
+    captchaStore.set(token, { answer, createdAt: Date.now() });
+    // Cleanup expired tokens (5 min TTL)
+    for (const [key, val] of captchaStore) {
+        if (Date.now() - val.createdAt > 5 * 60 * 1000) captchaStore.delete(key);
+    }
+    return { token, n1: finalN1, n2: finalN2, op };
+}
+
+// CAPTCHA: Generate Challenge
+app.get('/auth/captcha/generate', (req, res) => {
+    const challenge = generateCaptchaChallenge();
+    res.json({ token: challenge.token, n1: challenge.n1, n2: challenge.n2, op: challenge.op });
+});
+
+// CAPTCHA: Verify Answer
+app.post('/auth/captcha/verify', (req, res) => {
+    const { token, answer } = req.body;
+    const stored = captchaStore.get(token);
+    if (!stored) {
+        return res.status(400).json({ valid: false, error: 'CAPTCHA expired or invalid' });
+    }
+    captchaStore.delete(token); // One-time use
+    if (parseInt(answer) === stored.answer) {
+        // Issue a verified CAPTCHA token (valid for 5 minutes)
+        const verifiedToken = require('crypto').randomBytes(32).toString('hex');
+        captchaStore.set(verifiedToken, { verified: true, createdAt: Date.now() });
+        res.json({ valid: true, verifiedToken });
+    } else {
+        res.json({ valid: false, error: 'Incorrect answer' });
+    }
+});
+
 // 2. User Registration (Centralized)
 app.post('/auth/register', async (req, res) => {
-    const { email, password, firstName, lastName, phoneNumber } = req.body;
+    const { email, password, firstName, lastName, phoneNumber, captchaToken } = req.body;
     try {
-        // 1. CyberSecurity: Password Complexity Validation (BSP/PCI DSS)
-        // Skip for Quick Registration (Phone Only) where password is auto-generated
+        // 0. CAPTCHA Verification (skip for quick registration and API calls)
         const isQuickReg = req.body.isQuickReg === true || req.body.registrationType === 'phone_only';
+        if (!isQuickReg && !req.headers['x-api-key']) {
+            if (!captchaToken) {
+                return res.status(400).json({ error: 'CAPTCHA verification required' });
+            }
+            const captchaData = captchaStore.get(captchaToken);
+            if (!captchaData || !captchaData.verified) {
+                return res.status(400).json({ error: 'CAPTCHA expired or invalid. Please refresh and try again.' });
+            }
+            captchaStore.delete(captchaToken); // One-time use
+        }
+
+        // 1. CyberSecurity: Password Complexity Validation (BSP/PCI DSS)
         const passwordRegex = /^(?=.*\d)(?=.*[!@#$%^&*])(?=.*[a-z])(?=.*[A-Z]).{8,}$/;
         if (!isQuickReg && !passwordRegex.test(password)) {
             return res.status(400).json({ error: `SSO-SECURE: Password must be at least 8 characters and include uppercase, lowercase, number, and special character. (Debug: isQuickReg=${isQuickReg}, type=${req.body.registrationType})` });
@@ -1757,7 +2849,7 @@ app.post('/auth/register/quick', async (req, res) => {
 });
 
 // 3. SSO Login (The main entry point for all apps)
-app.post('/auth/sso/login', async (req, res) => {
+app.post('/auth/sso/login', loginLimiter, async (req, res) => {
     const { email, password, apiKey } = req.body;
     console.log('[SSO Login API] Attempt for:', email, 'with apiKey:', apiKey);
 
@@ -1818,7 +2910,7 @@ app.post('/auth/sso/login', async (req, res) => {
                 loginMethod: identifierType
             },
             JWT_SECRET,
-            { expiresIn: '7d' }
+            { expiresIn: '1d' }
         );
 
         // Record the session
@@ -1827,7 +2919,7 @@ app.post('/auth/sso/login', async (req, res) => {
                 userId: user.id,
                 appId: ecosystemApp.id,
                 token,
-                expiresAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000)
+                expiresAt: new Date(Date.now() + 24 * 60 * 60 * 1000)
             }
         });
 

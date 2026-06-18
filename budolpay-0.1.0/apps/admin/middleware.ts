@@ -6,7 +6,7 @@ export function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;
 
   // Define public paths that don't require authentication
-  const isPublicPath = pathname === '/login' || pathname.startsWith('/api/auth') || pathname.startsWith('/_next') || pathname.includes('.');
+  const isPublicPath = pathname === '/login' || pathname === '/forgot-password' || pathname.startsWith('/api/auth') || pathname.startsWith('/_next') || pathname.includes('.');
 
   if (!token && !isPublicPath) {
     console.log('[Middleware] No token found, redirecting to login. Path:', pathname);

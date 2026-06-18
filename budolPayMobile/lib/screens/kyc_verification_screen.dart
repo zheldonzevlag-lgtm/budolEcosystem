@@ -13,6 +13,9 @@ import 'package:latlong2/latlong.dart';
 import '../utils/timezone_utils.dart';
 import '../widgets/map_picker.dart';
 import 'kyc_capture_screen.dart';
+import 'package:geocoding/geocoding.dart';
+import 'package:connectivity_plus/connectivity_plus.dart';
+import 'dart:convert';
 
 
 class KYCVerificationScreen extends StatefulWidget {
@@ -79,6 +82,20 @@ class _KYCVerificationScreenState extends State<KYCVerificationScreen> {
   }
 
   Future<void> _pinAddress() async {
+    // Phase 1: Connectivity Check (Budol standard requirement for v2.4.5)
+    final List<ConnectivityResult> connectivityResult = await Connectivity().checkConnectivity();
+    if (connectivityResult.contains(ConnectivityResult.none)) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Internet required to resolve address. Please check your connection.'),
+          backgroundColor: Color(0xFFF43F5E),
+        ),
+      );
+      return;
+    }
+
+    if (!mounted) return;
     final apiService = Provider.of<ApiService>(context, listen: false);
     final LatLng? result = await Navigator.push(
       context,
@@ -89,12 +106,70 @@ class _KYCVerificationScreenState extends State<KYCVerificationScreen> {
 
     if (result != null) {
       if (!mounted) return;
-      setState(() {
-        _addressController.text = "${result.latitude.toStringAsFixed(6)}, ${result.longitude.toStringAsFixed(6)}";
-      });
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Location pinned successfully!')),
-      );
+      setState(() => _isProcessingML = true);
+      
+      try {
+        String formattedAddress = '';
+        try {
+          List<Placemark> placemarks = await placemarkFromCoordinates(
+            result.latitude, 
+            result.longitude,
+          );
+          
+          if (placemarks.isNotEmpty) {
+            final place = placemarks.first;
+            
+            // Phase 3: Full Detail Address Assembly (User requirement)
+            final addressParts = [
+              place.street,
+              place.subLocality,
+              place.locality,
+              place.administrativeArea,
+              place.postalCode,
+              place.country,
+            ].where((part) => part != null && part.isNotEmpty).toList();
+            
+            formattedAddress = addressParts.join(', ');
+          }
+        } catch (_) {
+          // Native geocoding failed, fallback to OSM Nominatim
+        }
+
+        if (formattedAddress.isEmpty) {
+          final url = Uri.parse('https://nominatim.openstreetmap.org/reverse?lat=${result.latitude}&lon=${result.longitude}&format=json');
+          final response = await http.get(url, headers: {'User-Agent': 'budolPayApp/1.0'});
+          if (response.statusCode == 200) {
+            final data = json.decode(response.body);
+            if (data != null && data['display_name'] != null) {
+              formattedAddress = data['display_name'];
+            }
+          }
+        }
+        
+        if (formattedAddress.isNotEmpty) {
+          setState(() {
+            _addressController.text = formattedAddress;
+            _isProcessingML = false;
+          });
+          
+          if (!mounted) return;
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('Location pinned successfully!')),
+          );
+        } else {
+          throw Exception('Unable to resolve address components.');
+        }
+      } catch (e) {
+        if (!mounted) return;
+        setState(() => _isProcessingML = false);
+        debugPrint('[KYC] Geocoding Error: $e');
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Failed to resolve address: $e'),
+            backgroundColor: const Color(0xFFF43F5E),
+          ),
+        );
+      }
     }
   }
 

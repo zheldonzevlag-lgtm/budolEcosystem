@@ -1,8 +1,9 @@
+require('dotenv').config();
 const jwt = require('jsonwebtoken');
 const path = require('path');
 const fs = require('fs');
 
-const JWT_SECRET = "GJ7Lxn0/kdV/KuZJ5xJ7Ip0RvMerrGW5n0gf44mfHgc=";
+const JWT_SECRET = process.env.JWT_SECRET;
 
 console.log('--- JWT Synchronization Verification ---');
 

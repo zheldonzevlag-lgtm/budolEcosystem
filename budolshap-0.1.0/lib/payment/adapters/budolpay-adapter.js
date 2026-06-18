@@ -8,36 +8,23 @@ export class BudolPayAdapter extends BasePaymentAdapter {
     constructor() {
         super();
         
-        // --- AGGRESSIVE PRODUCTION MIRROR LOGIC ---
-        // 1. Get raw URL from environment
-        const rawUrl = process.env.PAYMENT_GATEWAY_URL || 'http://localhost:8080/pg';
-        
-        // 2. Determine if we must override
         const isVercel = process.env.VERCEL === '1' || !!process.env.NEXT_PUBLIC_VERCEL_ENV;
-        const isStaleDuck = rawUrl.includes('duckdns.org');
-        
-        if (!process.env.PAYMENT_GATEWAY_URL && isVercel) {
-            console.warn('[BudolPay Adapter] ⚠️ CRITICAL: PAYMENT_GATEWAY_URL is not set in Vercel. Falling back to localhost (this will likely fail in production).');
+
+        let rawUrl = process.env.PAYMENT_GATEWAY_URL || process.env.NEXT_PUBLIC_PAYMENT_GATEWAY_URL || process.env.MONOLITH_URL;
+
+        if (!rawUrl) {
+            console.error('[BudolPayAdapter] FATAL: No gateway URL configured. Set PAYMENT_GATEWAY_URL, NEXT_PUBLIC_PAYMENT_GATEWAY_URL, or MONOLITH_URL.');
         }
 
-        if (isStaleDuck) {
-            console.log(`[BudolPay Adapter] 🏗️ Stale Gateway Detected. (URL: ${rawUrl})`);
-            this.gatewayUrl = rawUrl;
-        } else {
-            this.gatewayUrl = rawUrl;
-        }
+        this.gatewayUrl = rawUrl.replace(/\/$/, '');
 
-        console.log(`[BudolPayAdapter] Initialized. Gateway: ${this.gatewayUrl} | Env Vercel: ${process.env.VERCEL}`);
-        
-        this.apiKey = process.env.BUDOLPAY_API_KEY || 'bs_key_2025';
-        
-        // Legacy logic: only append /payments if it's a specific older gateway format
-        // We SKIP this for the Vercel healthy mirror to avoid double /payments or incorrect paths
         const isLegacyGateway = (this.gatewayUrl.includes(':8080') || this.gatewayUrl.includes('duckdns.org')) && 
                                 !this.gatewayUrl.includes('vercel.app');
         
-        if (isLegacyGateway && !this.gatewayUrl.includes('/payments')) {
-            console.log(`[BudolPay Adapter] 🌐 Legacy Gateway detected (${this.gatewayUrl}). Adding /payments prefix.`);
+        if (!isLegacyGateway && !this.gatewayUrl.includes('/api/payment-gw')) {
+            this.gatewayUrl = `${this.gatewayUrl}/api/payment-gw`;
+        } else if (isLegacyGateway && !this.gatewayUrl.includes('/payments')) {
+            console.log(`[BudolPay Adapter] Legacy Gateway detected (${this.gatewayUrl}). Adding /payments prefix.`);
             this.gatewayUrl = this.gatewayUrl.endsWith('/') 
                 ? `${this.gatewayUrl}payments` 
                 : `${this.gatewayUrl}/payments`;
@@ -136,7 +123,15 @@ export class BudolPayAdapter extends BasePaymentAdapter {
                 }
             }
 
-            const paymentIntentId = data.referenceId || data.id || data.paymentIntentId || data.reference;
+            // WHY: The gateway returns two different identifiers:
+            //   data.referenceId  → JON-YYYYMMDD-XXXXX (human-readable reference, used in URLs)
+            //   data.id           → UUID (internal primary key, used in DB queries)
+            // Both must be preserved separately so the cancel flow can use the correct one.
+            // Previously this adapter stored referenceId as paymentIntentId, losing the UUID.
+            const gatewayReferenceId = data.referenceId || data.reference || null;
+            const gatewayIntentId = data.id || data.paymentIntentId || data.transactionId || gatewayReferenceId;
+
+            console.log(`[BudolPay Adapter] ✅ Intent created. UUID=${gatewayIntentId} | Ref=${gatewayReferenceId}`);
 
             return {
                 checkoutUrl: checkoutUrl,
@@ -146,12 +141,16 @@ export class BudolPayAdapter extends BasePaymentAdapter {
                         orderId: options.orderId,
                         amount: amount / 100,
                         storeName: options.storeName || 'budolShap Store',
-                        paymentIntentId: paymentIntentId
+                        paymentIntentId: gatewayIntentId,
+                        referenceId: gatewayReferenceId
                     }))}`,
                     amount: amount,
                     label: options.storeName || 'budolShap Store'
                 },
-                paymentIntentId: paymentIntentId,
+                paymentIntentId: gatewayIntentId,
+                // WHY: referenceId is the gateway's canonical cancel/status lookup key.
+                //      Exposing it here allows OrderSummary.jsx to pass it to /api/payment/cancel.
+                referenceId: gatewayReferenceId,
                 status: data.status || 'pending',
                 originalResponse: data
             };

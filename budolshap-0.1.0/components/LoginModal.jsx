@@ -111,17 +111,13 @@ const LoginModal = () => {
                 </div>
 
                 <div className="mt-2 text-slate-700">
-                    {!isLogin && !isCaptchaSolved ? (
-                        <MathCaptcha onSolve={() => setIsCaptchaSolved(true)} primaryColor="blue" />
-                    ) : (
-                        <AuthForm
-                            mode={isLogin ? 'login' : 'register'}
-                            onSuccess={handleLoginSuccess}
-                            onToggleMode={() => setIsLogin(true)} // Switch to login after successful register
-                            isModal={true}
-                            submitLabel={loginType === 'session_expired' && "Restore Session"}
-                        />
-                    )}
+                    <AuthForm
+                        mode={isLogin ? 'login' : 'register'}
+                        onSuccess={handleLoginSuccess}
+                        onToggleMode={() => setIsLogin(true)} // Switch to login after successful register
+                        isModal={true}
+                        submitLabel={loginType === 'session_expired' && "Restore Session"}
+                    />
                 </div>
 
                 <div className="text-center text-sm text-slate-500 border-t border-slate-100 pt-5">

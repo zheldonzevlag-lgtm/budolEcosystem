@@ -1,5 +1,5 @@
 generator client {
-  provider = "prisma-client-js"
+  provider      = "prisma-client-js"
   binaryTargets = ["native", "rhel-openssl-3.0.x"]
 }
 
@@ -18,7 +18,7 @@ model User {
   image                String
   cart                 Json             @default("{}")
   accountType          AccountType      @default(BUYER)
-  emailVerified        Boolean          @default(false)
+  emailVerified        Boolean         @default(false)
   isAdmin              Boolean          @default(false)
   isMember             Boolean          @default(false)
   isCoopMember         Boolean          @default(false)
@@ -27,14 +27,17 @@ model User {
   emailVerifyToken     String?
   resetToken           String?
   resetTokenExpiry     DateTime?
-  role                 String           @default("USER")
-  permissions          Json?            @default("[]")
-  metadata             Json?            @default("{}")
   createdAt            DateTime         @default(now())
   updatedAt            DateTime         @updatedAt
-  deletedAt            DateTime?
   buyerReturnRate      Float?           @default(0.0)
   codUnpaidCount       Int?             @default(0)
+  permissions          Json?            @default("[]")
+  role                 String           @default("USER")
+  metadata             Json?            @default("{}")
+  deletedAt            DateTime?
+  // Security fields for account lockout
+  failedAttempts      Int?             @default(0)
+  lockedUntil         DateTime?
   Address              Address[]
   auditLogs            AuditLog[]
   Cart                 Cart?
@@ -44,6 +47,7 @@ model User {
   buyerOrders          Order[]          @relation("BuyerRelation")
   ratings              Rating[]
   store                Store?
+  sessions             Session[]
 }
 
 model Category {
@@ -73,7 +77,6 @@ model Product {
   videos           Json?       @default("[]")
   category         String?
   categoryId       String?
-  categoryData     Category?   @relation("CategoryToProduct", fields: [categoryId], references: [id])
   inStock          Boolean     @default(true)
   stock            Int         @default(0)
   weight           Float       @default(0.0)
@@ -90,9 +93,10 @@ model Product {
   createdAt        DateTime    @default(now())
   updatedAt        DateTime    @updatedAt
   cartItems        CartItem[]
-  orderItems   OrderItem[]
-  store        Store       @relation(fields: [storeId], references: [id], onDelete: Cascade)
-  rating       Rating[]
+  orderItems       OrderItem[]
+  categoryData     Category?   @relation("CategoryToProduct", fields: [categoryId], references: [id])
+  store            Store       @relation(fields: [storeId], references: [id], onDelete: Cascade)
+  rating           Rating[]
 }
 
 model Order {
@@ -119,32 +123,31 @@ model Order {
   coupon              Json          @default("{}")
   shipping            Json?
   isGuaranteeExtended Boolean       @default(false)
+  checkoutId          String?
   address             Address       @relation(fields: [addressId], references: [id])
   store               Store         @relation(fields: [storeId], references: [id])
   user                User          @relation("BuyerRelation", fields: [userId], references: [id])
   orderItems          OrderItem[]
   paymentProof        PaymentProof?
   returns             Return[]
-  checkoutId          String?
 }
 
 model Checkout {
   id              String    @id @default(cuid())
   userId          String
   total           Float
-  currency        String    @default("PHP")
   status          String    @default("PENDING")
-  expiresAt       DateTime?
-  sessionId       String?   @unique
-  metadata        String?   @db.Text
-  attemptCount    Int       @default(0)
-  paymentId       String?
-  paymentProvider String?
-  expiredAt       DateTime?
   createdAt       DateTime  @default(now())
   updatedAt       DateTime  @updatedAt
+  attemptCount    Int       @default(0)
+  currency        String    @default("PHP")
+  expiredAt       DateTime?
+  expiresAt       DateTime?
+  metadata        String?
+  paymentId       String?
+  paymentProvider String?
+  sessionId       String?   @unique
 }
-
 
 model OrderItem {
   id          String  @id @default(cuid())
@@ -194,10 +197,10 @@ model Address {
   buildingName String?
   floorUnit    String?
   notes        String?
-  label        String?  @default("")
-  isDefault    Boolean  @default(false)
   createdAt    DateTime @default(now())
   updatedAt    DateTime @updatedAt
+  isDefault    Boolean  @default(false)
+  label        String?  @default("")
   user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
   Order        Order[]
 }
@@ -258,12 +261,12 @@ model StoreAddress {
   zip             String
   country         String   @default("Philippines")
   notes           String?
-  label           String?  @default("")
   latitude        Float?
   longitude       Float?
   isDefault       Boolean  @default(false)
   createdAt       DateTime @default(now())
   updatedAt       DateTime @updatedAt
+  label           String?  @default("")
   store           Store    @relation(fields: [storeId], references: [id], onDelete: Cascade)
 
   @@index([storeId])
@@ -406,7 +409,6 @@ model SystemSettings {
   pusherAppId                String?
   pusherSecret               String?
   socketUrl                  String?
-  swrPollingInterval         Int      @default(10000)
   sessionTimeout             Int      @default(15)
   sessionWarning             Int      @default(1)
   loginLimit                 Int      @default(10)
@@ -419,7 +421,6 @@ model SystemSettings {
   quickInstallerEnabled      Boolean  @default(true)
   adDisplayMode              String   @default("SEQUENCE")
   selectedMarketingAds       String[] @default([])
-  marketingAdConfigs         Json?    @default("[]")
   errorTrackingEnabled       Boolean  @default(false)
   sentryDsn                  String?
   sentryEnvironment          String?  @default("production")
@@ -437,30 +438,42 @@ model SystemSettings {
   radarApiKey                String?
   maxProductImages           Int      @default(12)
   maxProductVideos           Int      @default(0)
-  
-  // Email Provider Settings (Added in v19)
+  swrPollingInterval         Int      @default(10000)
+  marketingAdConfigs         Json?    @default("[]")
   emailProvider              String?  @default("CONSOLE")
   smtpHost                   String?
-  smtpPort                   Int?
   smtpUser                   String?
   smtpPass                   String?
   smtpFrom                   String?
   brevoApiKey                String?
   gmassApiKey                String?
-  
-  // SMS Provider Settings (Added in v19)
   smsProvider                String?  @default("CONSOLE")
   zerixApiKey                String?
   itextmoApiKey              String?
   itextmoClientCode          String?
   viberApiKey                String?
   brevoSmsApiKey             String?
+  smtpPort                   Int?
 }
 
 model RateLimit {
   key      String @id
   points   Int    @default(0)
   expireAt BigInt
+}
+
+model Session {
+  id        String   @id @default(cuid())
+  userId    String
+  expiresAt DateTime
+  ip       String?
+  userAgent String?
+  isActive Boolean  @default(true)
+  createdAt DateTime @default(now())
+  user     User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([expiresAt])
 }
 
 model VerificationCode {
@@ -476,11 +489,6 @@ model AuditLog {
   id        String   @id @default(cuid())
   userId    String?
   action    String
-  entity    String?
-  entityId  String?
-  details   String?
-  status    String?  @default("SUCCESS")
-  metadata  Json?    @default("{}")
   ipAddress String?
   latitude  String?
   longitude String?
@@ -489,6 +497,11 @@ model AuditLog {
   device    String?
   userAgent String?
   createdAt DateTime @default(now())
+  details   String?
+  entity    String?
+  entityId  String?
+  metadata  Json?    @default("{}")
+  status    String?  @default("SUCCESS")
   user      User?    @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@index([userId])
@@ -576,9 +589,6 @@ enum ReturnType {
 enum ReturnSellerAction {
   ACCEPT
   REJECT
-
   OFFER_PARTIAL
   REQUEST_RETURN
 }
-
-

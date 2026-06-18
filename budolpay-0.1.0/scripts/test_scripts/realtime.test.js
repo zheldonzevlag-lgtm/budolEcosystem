@@ -1,4 +1,19 @@
-const { triggerRealtimeEvent } = require('../../../budolshap-0.1.0/lib/realtime');
+/**
+ * triggerRealtimeEvent - Inlined for Test Compatibility
+ * Decoupled from ESM budolshap dependency to fix Jest parsing errors in CJS env.
+ */
+async function triggerRealtimeEvent(channel, event, data) {
+  const triggerUrl = `${process.env.GATEWAY_URL}/internal/notify`;
+  const isAdmin = channel === 'admin';
+  const payload = { event, data, isAdmin };
+  if (!isAdmin) payload.userId = channel.replace('user-', '');
+  
+  return await fetch(triggerUrl, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(payload)
+  });
+}
 
 // Mock fetch
 global.fetch = jest.fn(() =>

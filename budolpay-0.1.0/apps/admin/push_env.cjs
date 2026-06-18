@@ -1,15 +1,16 @@
+require('dotenv').config();
 const { execSync } = require('child_process');
 
 const envs = {
-    "DATABASE_URL": "postgresql://neondb_owner:npg_1XunT0SskIwa@ep-bitter-wildflower-a1y0z1id-pooler.ap-southeast-1.aws.neon.tech/budolpay?sslmode=require&schema=budolpay",
-    "DIRECT_URL": "postgresql://neondb_owner:npg_1XunT0SskIwa@ep-bitter-wildflower-a1y0z1id-pooler.ap-southeast-1.aws.neon.tech/budolpay?sslmode=require&schema=budolpay",
+    "DATABASE_URL": process.env.DATABASE_URL + '&schema=budolpay',
+    "DIRECT_URL": process.env.DATABASE_URL + '&schema=budolpay',
     "NEXT_PUBLIC_SSO_URL": "https://budol-id-sso.onrender.com",
     "SSO_URL": "https://budol-id-sso.onrender.com",
     "BUDOLACCOUNTING_URL": "https://budolaccounting.onrender.com", 
     "NEXT_PUBLIC_SOCKET_URL": "https://budol-websocket-server.onrender.com",
-    "JWT_SECRET": "GJ7Lxn0/kdV/KuZJ5xJ7Ip0RvMerrGW5n0gf44mfHgc=",
-    "CLOUDINARY_API_KEY": "537684148625265",
-    "CLOUDINARY_API_SECRET": "USb6SDEDehMLyw9_HlFC1wDqlDE",
+    "JWT_SECRET": process.env.JWT_SECRET,
+    "CLOUDINARY_API_KEY": process.env.CLOUDINARY_API_KEY,
+    "CLOUDINARY_API_SECRET": process.env.CLOUDINARY_API_SECRET,
     "NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME": "dasfwpg7x",
     "NEXT_PUBLIC_CURRENCY_SYMBOL": "₱",
     "NEXT_PUBLIC_GATEWAY_URL": "https://payment-gateway-service-two.vercel.app"

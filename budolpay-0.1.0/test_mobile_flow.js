@@ -1,3 +1,4 @@
+require('dotenv').config();
 const axios = require('axios');
 const jwt = require('jsonwebtoken');
 
@@ -28,7 +29,7 @@ async function testMobileFlow() {
 
         console.log('\n--- Step 2: Verify PIN (SKIPPED - Generating Token Manually) ---');
         // Generate a token manually to bypass PIN check
-        const JWT_SECRET = 'GJ7Lxn0/kdV/KuZJ5xJ7Ip0RvMerrGW5n0gf44mfHgc='; // From auth-service/index.js
+        const JWT_SECRET = process.env.JWT_SECRET;
         const token = jwt.sign(
             { 
                 userId: userId, 

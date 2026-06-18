@@ -6,7 +6,7 @@ const axios = require('axios');
  * to verify the AI Anti-Spam Engine logic.
  */
 
-const AUTH_SERVICE_URL = 'http://localhost:8001';
+const AUTH_SERVICE_URL = 'http://127.0.0.1:8001';
 
 describe('AI Anti-Spam Engine Integration', () => {
     const timestamp = Date.now();

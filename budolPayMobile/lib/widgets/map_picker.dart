@@ -2,6 +2,9 @@ import 'package:flutter/material.dart';
 import 'package:flutter_map/flutter_map.dart';
 import 'package:latlong2/latlong.dart';
 import 'package:geolocator/geolocator.dart';
+import 'package:geocoding/geocoding.dart';
+import 'package:http/http.dart' as http;
+import 'dart:convert';
 
 class MapPicker extends StatefulWidget {
   final LatLng? initialLocation;
@@ -16,6 +19,7 @@ class MapPicker extends StatefulWidget {
 class _MapPickerState extends State<MapPicker> {
   late LatLng _selectedLocation;
   final MapController _mapController = MapController();
+  final TextEditingController _searchController = TextEditingController();
   bool _isLoading = false;
 
   String get _tileUrl {
@@ -40,6 +44,86 @@ class _MapPickerState extends State<MapPicker> {
   void initState() {
     super.initState();
     _selectedLocation = widget.initialLocation ?? const LatLng(14.5995, 120.9842); // Default to Manila
+    _reverseGeocodeCoordinate(_selectedLocation);
+  }
+
+  Future<void> _reverseGeocodeCoordinate(LatLng latLng) async {
+    try {
+      try {
+        List<Placemark> placemarks = await placemarkFromCoordinates(
+          latLng.latitude, 
+          latLng.longitude,
+        );
+        if (placemarks.isNotEmpty) {
+          final p = placemarks.first;
+          final address = [p.street, p.subLocality, p.locality, p.administrativeArea, p.country]
+              .where((part) => part != null && part.isNotEmpty)
+              .join(', ');
+          if (address.isNotEmpty) {
+            _searchController.text = address;
+            return;
+          }
+        }
+      } catch (_) {
+        // Native geocoding failed, fallback to OSM Nominatim
+      }
+
+      // OSM Fallback
+      final url = Uri.parse('https://nominatim.openstreetmap.org/reverse?lat=${latLng.latitude}&lon=${latLng.longitude}&format=json');
+      final response = await http.get(url, headers: {'User-Agent': 'budolPayApp/1.0'});
+      if (response.statusCode == 200) {
+        final data = json.decode(response.body);
+        if (data != null && data['display_name'] != null) {
+          _searchController.text = data['display_name'];
+        }
+      }
+    } catch (e) {
+      debugPrint('Reverse geocode error: $e');
+    }
+  }
+
+  Future<void> _geocodeAddress(String query) async {
+    if (query.isEmpty) return;
+    setState(() => _isLoading = true);
+    try {
+      LatLng? resultLatLng;
+      
+      try {
+        List<Location> locations = await locationFromAddress(query);
+        if (locations.isNotEmpty) {
+          resultLatLng = LatLng(locations.first.latitude, locations.first.longitude);
+        }
+      } catch (_) {
+        // Native geocoding failed, fallback to OSM Nominatim
+        final url = Uri.parse('https://nominatim.openstreetmap.org/search?q=${Uri.encodeComponent(query)}&format=json&limit=1');
+        final response = await http.get(url, headers: {'User-Agent': 'budolPayApp/1.0'});
+        if (response.statusCode == 200) {
+          final data = json.decode(response.body) as List;
+          if (data.isNotEmpty) {
+            resultLatLng = LatLng(double.parse(data[0]['lat']), double.parse(data[0]['lon']));
+          }
+        }
+      }
+
+      if (resultLatLng != null) {
+        final loc = resultLatLng;
+        setState(() {
+          _selectedLocation = loc;
+        });
+        _mapController.move(loc, 15.0);
+        await _reverseGeocodeCoordinate(loc);
+      } else {
+        throw Exception('Location not found');
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Address not found')),
+        );
+      }
+    } finally {
+      if (mounted) setState(() => _isLoading = false);
+    }
   }
 
   Future<void> _getCurrentLocation() async {
@@ -69,6 +153,7 @@ class _MapPickerState extends State<MapPicker> {
         _selectedLocation = currentLatLng;
       });
       _mapController.move(currentLatLng, 15.0);
+      _reverseGeocodeCoordinate(currentLatLng);
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
@@ -105,6 +190,7 @@ class _MapPickerState extends State<MapPicker> {
                 setState(() {
                   _selectedLocation = latLng;
                 });
+                _reverseGeocodeCoordinate(latLng);
               },
             ),
             children: [
@@ -151,17 +237,30 @@ class _MapPickerState extends State<MapPicker> {
               ],
             ),
           ),
-          const Positioned(
+          Positioned(
             top: 20,
             left: 20,
             right: 20,
             child: Card(
+              elevation: 4,
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
               child: Padding(
-                padding: EdgeInsets.all(12.0),
-                child: Text(
-                  'Tap on the map to pin your exact location',
-                  textAlign: TextAlign.center,
-                  style: TextStyle(fontSize: 14, fontWeight: FontWeight.w500),
+                padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 4.0),
+                child: TextField(
+                  controller: _searchController,
+                  textInputAction: TextInputAction.search,
+                  decoration: InputDecoration(
+                    hintText: 'Search for places...',
+                    border: InputBorder.none,
+                    icon: const Icon(Icons.search, color: Color(0xFFF43F5E)),
+                    suffixIcon: IconButton(
+                      icon: const Icon(Icons.clear, color: Colors.grey),
+                      onPressed: () {
+                        _searchController.clear();
+                      },
+                    ),
+                  ),
+                  onSubmitted: _geocodeAddress,
                 ),
               ),
             ),

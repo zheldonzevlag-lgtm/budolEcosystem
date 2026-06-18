@@ -175,6 +175,9 @@ class RealtimeService {
       transports: ["websocket"],
       reconnectionAttempts: 5,
       timeout: 5000,
+      auth: {
+        token: typeof window !== "undefined" ? localStorage.getItem("token") : null
+      }
     });
 
     this.socket.on("connect", () => {

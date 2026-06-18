@@ -34,23 +34,32 @@ export async function POST(request: Request) {
             try {
                 const decoded: any = jwt.decode(token);
                 if (decoded) {
-                    userId = decoded.id || decoded.userId || decoded.sub || 'SYSTEM';
+                    const ssoUserId = decoded.id || decoded.userId || decoded.sub || 'SYSTEM';
                     email = decoded.email || 'unknown';
+                    
                     // Try to look up the actual user to get their display name for forensic logs
-                    // WHY: v45.1 - actorName is stored in metadata to bypass FK schema constraint
-                    if (userId !== 'SYSTEM') {
+                    // FIX: (v45.2) Fallback to email lookup if ssoUserId (from token) does not match local Admin UUID
+                    if (ssoUserId !== 'SYSTEM') {
                         try {
-                            const user = await prisma.user.findUnique({
-                                where: { id: userId },
-                                select: { firstName: true, lastName: true, email: true }
+                            const user = await prisma.user.findFirst({
+                                where: { 
+                                    OR: [
+                                        { id: ssoUserId },
+                                        { email: email }
+                                    ]
+                                },
+                                select: { id: true, firstName: true, lastName: true, email: true }
                             });
+                            
                             if (user) {
+                                userId = user.id; // Map to local Admin UUID for the audit link
                                 actorName = `${user.firstName || ''} ${user.lastName || ''}`.trim() || user.email || email;
                                 email = user.email || email;
                             } else {
                                 actorName = decoded.name || email;
                             }
-                        } catch {
+                        } catch (err) {
+                            console.error('[Logout API] DB Lookup failed', err);
                             actorName = decoded.name || email;
                         }
                     }

@@ -1,0 +1,70 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>BudolPay Release v2.4.8 - Developer Manual</title>
+    <style>
+        body { font-family: 'Segoe UI', sans-serif; line-height: 1.6; max-width: 1200px; margin: 40px auto; padding: 20px; background: #fff; }
+        .back { color: #f43f5e; text-decoration: none; font-weight: bold; }
+        h1, h2 { color: #1e293b; border-bottom: 2px solid #f43f5e; padding-bottom: 10px; }
+        .code-block { background: #1e293b; color: #f8fafc; padding: 20px; border-radius: 8px; font-family: 'Consolas', monospace; overflow-x: auto; margin: 15px 0; border-left: 5px solid #f43f5e; }
+        .file-link { background: #f1f5f9; padding: 10px; border-radius: 4px; display: inline-block; margin: 5px 0; color: #f43f5e; text-decoration: none; font-weight: bold; }
+        .file-link:hover { background: #e2e8f0; }
+        .note { background: #fff7ed; border-left: 5px solid #f97316; padding: 15px; margin: 20px 0; color: #7c2d12; }
+    </style>
+</head>
+<body>
+    <a href="index.html" class="back">← Back to Index</a>
+    <h1>Developer Manual (v2.4.8)</h1>
+
+    <h2>Technical Overview</h2>
+    <p>Version v2.4.8 focuses on resolving high-priority stability issues in the Flutter Mobile application and data integrity in the Forensic Audit Trail.</p>
+
+    <h2>1. Mobile Stability: The 'toDouble' Utility</h2>
+    <p><strong>Problem:</strong> Backend JSON responses for numeric fields (like wallet balances) sometimes return as <code>String</code> types. Direct calls to <code>.toDouble()</code> in Dart result in a crash.</p>
+    <p><strong>Solution:</strong> Implemented a robust <code>AmountUtils.toDouble()</code> helper that handles <code>num</code>, <code>String</code>, and <code>null</code> values safely.</p>
+    
+    <div class="code-block">
+static double toDouble(dynamic value) {
+  if (value == null) return 0.0;
+  if (value is double) return value;
+  if (value is int) return value.toDouble();
+  if (value is String) {
+    if (value.isEmpty) return 0.0;
+    final clean = value.replaceAll(',', '');
+    return double.tryParse(clean) ?? 0.0;
+  }
+  return 0.0;
+}
+    </div>
+
+    <h3>Code References:</h3>
+    <ul>
+        <li><a class="file-link" href="file:///D:/IT%20Projects/clone/budolEcosystem/budolPayMobile/lib/utils/formatters.dart">lib/utils/formatters.dart</a> - Utility Implementation</li>
+        <li><a class="file-link" href="file:///D:/IT%20Projects/clone/budolEcosystem/budolPayMobile/lib/screens/cash_in_screen.dart">lib/screens/cash_in_screen.dart</a> - Limit Check logic</li>
+        <li><a class="file-link" href="file:///D:/IT%20Projects/clone/budolEcosystem/budolPayMobile/lib/services/api_service.dart">lib/services/api_service.dart</a> - Balance parsing</li>
+    </ul>
+
+    <h2>2. Admin Login: MathCaptcha Hydration</h2>
+    <p><strong>Problem:</strong> React hydration errors due to <code>Math.random()</code> calling during render, causing SSR/Client mismatch.</p>
+    <p><strong>Solution:</strong> Deployed captcha generation inside a <code>useEffect</code> hook, ensuring it only runs on the client. Replaced 0-init with <code>null</code> to handle placeholder states.</p>
+
+    <h3>Code References:</h3>
+    <ul>
+        <li><a class="file-link" href="file:///D:/IT%20Projects/clone/budolEcosystem/budolpay-0.1.0/apps/admin/components/MathCaptcha.tsx">apps/admin/components/MathCaptcha.tsx</a></li>
+    </ul>
+
+    <h2>3. Backend: Forensic Audit Trail Unification</h2>
+    <p><strong>Problem:</strong> Duplicate <code>P2P_TRANSFER_COMPLETED</code> logs due to redundant calls in the transfer handler.</p>
+    <p><strong>Solution:</strong> Removed manual <code>prisma.auditLog.create</code> and consolidated all logging into the shared <code>createAuditLog</code> helper.</p>
+
+    <h3>Code References:</h3>
+    <ul>
+        <li><a class="file-link" href="file:///D:/IT%20Projects/clone/budolEcosystem/budolpay-0.1.0/services/transaction-service/index.js">services/transaction-service/index.js</a></li>
+    </ul>
+
+    <div class="note">
+        <strong>Compliance Check:</strong> All logging changes adhere to BSP Circular 808 standards for non-repudiation and accurate event sequencing.
+    </div>
+</body>
+</html>

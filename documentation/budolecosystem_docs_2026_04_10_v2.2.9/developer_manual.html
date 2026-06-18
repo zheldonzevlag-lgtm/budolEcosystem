@@ -1,0 +1,55 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Developer Manual - v2.2.9</title>
+    <link rel="stylesheet" href="index.html"> <!-- Styling shortcut assumption but I will put inline for consistency -->
+    <style>
+        body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; background: #f4f5f7; color: #172b4d; padding: 40px; margin: 0; }
+        .main-content { background: #ffffff; padding: 40px; max-width: 1000px; margin: 0 auto; border-radius: 4px; box-shadow: 0 1px 3px rgba(0,0,0,0.1); }
+        h1, h2, h3 { color: #0747a6; }
+        pre, code { background-color: #f4f5f7; border-radius: 3px; font-family: monospace; }
+        pre { padding: 15px; overflow-x: auto; font-size: 13px; line-height: 1.5; border: 1px solid #dfe1e6; }
+        a { color: #0052cc; text-decoration: none; }
+        a:hover { text-decoration: underline; }
+    </style>
+</head>
+<body>
+    <div class="main-content">
+        <a href="index.html">← Back to Index</a>
+        <h1>Developer Manual</h1>
+        <p><strong>Version:</strong> 2.2.9 | <strong>Date:</strong> 2026-04-10</p>
+        
+        <h2>Purpose & Rationale</h2>
+        <p>The BudolPay Mobile App authenticates via the Auth Service, expecting OTP verification at <code>/login/mobile/verify-otp</code>. However, the backend only supported <code>/verify-otp</code>, causing 404 HTML fallback responses on mobile. Furthermore, system logout functionality and forensic logs used the `email` directly rather than presenting the `firstName` + `lastName` for Staff Identity validation. This patch synchronizes endpoints and expands audit metadata to fulfill UX error handling (via toast notifications) and audit trace denormalization.</p>
+
+        <h2>Technical Explanation & Code Details</h2>
+        
+        <h3>1. Mobile Auth Endpoint Binding</h3>
+        <p>Location: <a href="file:///d:/IT%20Projects/clone/budolEcosystem/budolpay-0.1.0/services/auth-service/index.js">auth-service/index.js</a></p>
+        <p>We attached an array of paths to the express POST handler. This aligns the BudolPay Mobile App's expectation without breaking the web expectation.</p>
+        <pre><code>
+// Verify OTP (Universal Endpoint for Mobile & Web)
+app.post(['/verify-otp', '/login/mobile/verify-otp'], async (req, res) => { ... }
+        </code></pre>
+
+        <h3>2. Forensic Audit Identity Logging</h3>
+        <p>Location: <a href="file:///d:/IT%20Projects/clone/budolEcosystem/budolpay-0.1.0/apps/admin/app/security/page.tsx">apps/admin/app/security/page.tsx</a> and <a href="file:///d:/IT%20Projects/clone/budolEcosystem/budolpay-0.1.0/apps/admin/lib/audit.ts">apps/admin/lib/audit.ts</a></p>
+        <p>Prior to this version, if the User foreign key lookup failed (common with mobile cross-app boundaries), the audit log silently omitted the user's name. We modified the table column from <strong>Actor</strong> to <strong>Staff Identity</strong> and implemented a fallback that consumes denormalized <code>metadata.actorName</code>.</p>
+        <pre><code>
+{log.metadata?.actorName || (log.user ? `${log.user.firstName || ''} ${log.user.lastName || ''}`.trim() || log.user.name || log.user.email : 'System')}
+        </code></pre>
+
+        <h3>3. UX Enhancement: Non-Destructive Credentials</h3>
+        <p>Location: <a href="file:///d:/IT%20Projects/clone/budolEcosystem/budolpay-0.1.0/apps/admin/app/login/page.tsx">apps/admin/app/login/page.tsx</a></p>
+        <p>Implemented `react-hot-toast` for `top-center` notifications, allowing standard error messages over clearing the component's state variables (formData.email/password), enabling the user to immediately retry without re-typing their password.</p>
+
+        <h2>Dependencies</h2>
+        <ul>
+            <li><code>react-hot-toast</code> in Admin App</li>
+            <li>Prisma ORM for database schemas</li>
+        </ul>
+    </div>
+</body>
+</html>

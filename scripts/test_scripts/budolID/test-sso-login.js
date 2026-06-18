@@ -4,7 +4,7 @@ async function testLogin() {
   const loginData = {
     email: 'test@example.com',
     password: 'password123',
-    apiKey: 'bp_key_2025' // budolPay API Key
+    apiKey: 'bp_b31ea1888dcb2ba76fdbb776ea8f5b7a' // budolPay API Key
   };
 
   console.log('Testing SSO Login with:', loginData);

@@ -1,120 +1,66 @@
 import { NextResponse } from "next/server";
-import { prisma } from "@/lib/prisma";
-import axios from "axios";
+
+function getWalletServiceUrl(): string {
+    const isVercel = process.env.VERCEL === '1' || !!process.env.NEXT_PUBLIC_VERCEL_ENV;
+
+    // Priority: explicit env var > monolith URL (for consolidated deployments) > error
+    if (process.env.WALLET_SERVICE_URL) {
+        return process.env.WALLET_SERVICE_URL;
+    }
+    if (process.env.MONOLITH_URL) {
+        return process.env.MONOLITH_URL;
+    }
+    if (isVercel && process.env.VERCEL_PROJECT_PRO_URL) {
+        return process.env.VERCEL_PROJECT_PRO_URL;
+    }
+
+    throw new Error(
+        '[Wallet Proxy] No wallet service URL configured. Set WALLET_SERVICE_URL, MONOLITH_URL, or VERCEL_PROJECT_PRO_URL environment variable.'
+    );
+}
 
 export async function POST(req: Request) {
     try {
         const body = await req.json();
-        const { userId, qrData } = body;
-        
-        if (!userId || !qrData || !qrData.paymentIntentId || !qrData.amount) {
-            return NextResponse.json({ error: "Invalid QR data: Missing required fields" }, { status: 400 });
+        const walletBaseUrl = getWalletServiceUrl();
+
+        const headers: Record<string, string> = {
+            'Content-Type': 'application/json',
+            'x-bypass-auth': 'true',
+        };
+        const authHeader = req.headers.get('authorization');
+        if (authHeader) {
+            headers['Authorization'] = authHeader;
         }
 
-        const amountToPay = parseFloat(qrData.amount);
-        if (isNaN(amountToPay) || amountToPay <= 0) {
-            return NextResponse.json({ error: "Invalid amount in QR data" }, { status: 400 });
-        }
+        const targetUrl = `${walletBaseUrl}/api/wallet/process-qr`;
+        console.log(`[Wallet Proxy] Forwarding POST to ${targetUrl}`);
 
-        // 1. Find the transaction
-        let transaction = await prisma.transaction.findUnique({
-            where: { id: qrData.paymentIntentId }
+        const response = await fetch(targetUrl, {
+            method: 'POST',
+            headers,
+            body: JSON.stringify(body),
+            signal: AbortSignal.timeout(15000),
         });
 
-        if (!transaction) {
-            transaction = await prisma.transaction.findUnique({
-                where: { referenceId: qrData.paymentIntentId }
-            });
+        const data = await response.json().catch(() => ({}));
+
+        if (!response.ok) {
+            return NextResponse.json(
+                { error: data.error || `Wallet service error: ${response.status}` },
+                { status: response.status }
+            );
         }
 
-        if (!transaction) {
-            return NextResponse.json({ error: 'Transaction not found' }, { status: 404 });
-        }
-
-        if (Math.abs(parseFloat(transaction.amount.toString()) - amountToPay) > 0.01) {
-            return NextResponse.json({ error: 'Amount mismatch' }, { status: 400 });
-        }
-
-        if (transaction.status !== 'PENDING') {
-            return NextResponse.json({ error: `Transaction already ${transaction.status}` }, { status: 400 });
-        }
-
-        // 2. Check Wallet
-        let wallet = await prisma.wallet.findUnique({ where: { userId } });
-        if (!wallet) {
-            return NextResponse.json({ error: "Wallet not found" }, { status: 404 });
-        }
-
-        if (parseFloat(wallet.balance.toString()) < amountToPay) {
-            return NextResponse.json({ error: "Insufficient funds" }, { status: 400 });
-        }
-
-        const metadata = transaction.metadata ? JSON.parse(transaction.metadata) : {};
-        const storeName = qrData.storeName || qrData.merchant || metadata.storeName || metadata.merchantName || 'Unknown Merchant';
-        const orderId = qrData.orderId || metadata.orderId || 'N/A';
-
-        // 3. Process Transaction Atoms
-        const result = await prisma.$transaction(async (tx) => {
-            // Deduct
-            const updatedWallet = await tx.wallet.update({
-                where: { userId },
-                data: { balance: { decrement: amountToPay } }
-            });
-
-            // Mark complete
-            const completedTransaction = await tx.transaction.update({
-                where: { id: transaction.id },
-                data: { 
-                    senderId: userId,
-                    status: 'COMPLETED',
-                    completedAt: new Date(),
-                    storeId: qrData.storeId || null,
-                    storeName: qrData.storeName || null
-                }
-            });
-
-            // Audit
-            await tx.auditLog.create({
-                data: {
-                    userId: userId,
-                    action: 'QR_PAYMENT_COMPLETED',
-                    entity: 'Financial',
-                    entityId: transaction.id,
-                    newValue: {
-                        amount: completedTransaction.amount,
-                        referenceId: completedTransaction.referenceId,
-                        type: completedTransaction.type,
-                        merchant: storeName,
-                        newBalance: updatedWallet.balance
-                    },
-                    metadata: {
-                        compliance: 'BSP Circular No. 808',
-                        standard: 'Financial Transaction Audit',
-                        timestamp: new Date().toISOString()
-                    }
-                }
-            });
-
-            return { updatedWallet, completedTransaction };
-        });
-
-        return NextResponse.json({ 
-            success: true, 
-            message: 'Payment processed successfully',
-            newBalance: Number(result.updatedWallet.balance),
-            transaction: {
-                id: result.completedTransaction.id,
-                reference: result.completedTransaction.referenceId,
-                orderId: orderId,
-                amount: Number(result.completedTransaction.amount),
-                storeName: storeName,
-                date: new Date().toISOString(),
-                status: 'COMPLETED'
-            }
-        });
-
+        return NextResponse.json(data);
     } catch (error: any) {
-        console.error('[QR Processing API] Error:', error.message);
-        return NextResponse.json({ error: error.message }, { status: 500 });
+        if (error.name === 'TimeoutError' || error.name === 'AbortError') {
+            return NextResponse.json(
+                { error: 'Wallet service timeout' },
+                { status: 504 }
+            );
+        }
+        console.error('[Wallet Proxy] Error:', error.message);
+        return NextResponse.json({ error: error.message || 'Internal Server Error' }, { status: 500 });
     }
 }

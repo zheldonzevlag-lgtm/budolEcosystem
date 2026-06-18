@@ -96,8 +96,8 @@ async function main() {
 
   // SSO Ecosystem Apps
   const apps = [
-    { name: 'budolPay', apiKey: 'bp_key_2025', apiSecret: 'bp_secret_2025', redirectUri: `http://${localIP}:3000/auth/callback` },
-    { name: 'budolShap', apiKey: 'bs_key_2025', apiSecret: 'bs_secret_2025', redirectUri: `http://${localIP}:3001/auth/callback` },
+{ name: 'budolPay', apiKey: 'bp_b31ea1888dcb2ba76fdbb776ea8f5b7a', apiSecret: 'bp_secret_2025', redirectUri: `http://${localIP}:3000/auth/callback` },
+        { name: 'budolShap', apiKey: 'bs_ac2bca9790f9b70f4e21c8a3c2812917', apiSecret: 'bs_secret_2025', redirectUri: `http://${localIP}:3001/auth/callback` },
     { name: 'budolExpress', apiKey: 'be_key_2025', apiSecret: 'be_secret_2025', redirectUri: `http://${localIP}:3002/auth/callback` },
   ];
 

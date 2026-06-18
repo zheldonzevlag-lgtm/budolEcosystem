@@ -7,6 +7,7 @@ const { PERMISSIONS } = require('@budolpay/database/rbac');
 const { createAuditLog: createCentralizedAuditLog } = require('@budolpay/audit');
 const { v4: uuidv4 } = require('uuid');
 const path = require('path');
+const { calculateAnomalyScore } = require('./riskEngine');
 
 /**
  * Date Utilities for Asia/Manila Standard
@@ -24,12 +25,14 @@ const PORT = process.env.PORT || 8003;
 // 1. Middleware (MUST come before routes)
 app.use(cors());
 app.use(express.json());
-// app.use(verifyToken);
+app.use(verifyToken);
 
 // 2. Vercel Support: Handle API prefix
 const router = express.Router();
 app.use('/api/tx', router);
 app.use('/', router);
+
+app.get('/', (req, res) => res.json({ status: 'ok', service: 'transaction-service' }));
 
 const LOCAL_IP = process.env.LOCAL_IP;
 
@@ -71,6 +74,29 @@ const notifyAdmin = async (event, data) => {
     }
 };
 
+// Helper to generate search variants for phone numbers (v2.4.2)
+const getPhoneVariants = (input) => {
+    if (!input || typeof input !== 'string') return [];
+    
+    // If it looks like an email, return as-is
+    if (input.includes('@')) return [input];
+    
+    const clean = input.replace(/\D/g, '');
+    
+    // Standard PH Mobile (10 digits after prefix)
+    if (clean.length === 10) { // e.g., 9484099400
+        return [`0${clean}`, `+63${clean}`];
+    }
+    if (clean.length === 11 && clean.startsWith('0')) { // e.g., 09484099400
+        return [clean, `+63${clean.slice(1)}`];
+    }
+    if (clean.length === 12 && clean.startsWith('63')) { // e.g., 639484099400
+        return [`0${clean.slice(2)}`, `+${clean}`, `+${clean}`];
+    }
+    
+    return [input, clean]; // Fallback
+};
+
 // Helper to create forensic audit logs using centralized audit helper
 const createAuditLog = async (req, userId, action, metadata = {}, entity = 'Financial', entityId = null) => {
     try {
@@ -109,6 +135,172 @@ const createAuditLog = async (req, userId, action, metadata = {}, entity = 'Fina
     }
 };
 
+/**
+ * Behavioral Scoring Engine (v2.4.0)
+ * Integrates with riskEngine for dynamic baselining.
+ */
+/**
+ * Monthly Cumulative Volume Tracker (v2.4.4)
+ * WHY: This code exists to enforce BSP-compliant tiered limits for BASIC accounts, ensuring that non-verified users operate within established regulatory ceilings.
+ * WHAT: Calculates the total volume of COMPLETED transactions for a user within the current calendar month by performing a Prisma aggregate sum.
+ * TODO: Integrate with a caching layer (Redis) if transaction volume scales to avoid frequent DB aggregation.
+ * @param {string} userId - The user ID to check.
+ * @param {string} type - 'INBOUND' (Received) or 'OUTBOUND' (Sent).
+ * @returns {Promise<number>} - The total amount as a float.
+ */
+const getMonthlyCumulativeVolume = async (userId, type) => {
+    try {
+        const startOfMonth = new Date();
+        startOfMonth.setDate(1);
+        startOfMonth.setHours(0, 0, 0, 0);
+
+        const filter = type === 'OUTBOUND' 
+            ? { senderId: userId } 
+            : { receiverId: userId };
+
+        const agg = await prisma.transaction.aggregate({
+            where: {
+                ...filter,
+                status: 'COMPLETED',
+                createdAt: { gte: startOfMonth }
+            },
+            _sum: { amount: true }
+        });
+
+        return parseFloat(agg._sum.amount || 0);
+    } catch (err) {
+        console.error(`[Compliance] Monthly volume calculation failed for ${userId}:`, err.message);
+        return 0;
+    }
+};
+
+const calculateRiskScore = async (userId, currentAmount) => {
+    try {
+        const amount = parseFloat(currentAmount);
+        
+        // 1. Fetch last 10 completed transactions
+        const history = await prisma.transaction.findMany({
+            where: { senderId: userId, status: 'COMPLETED' },
+            orderBy: { createdAt: 'desc' },
+            take: 10
+        });
+
+        // Use the Risk Engine (EWMA logic)
+        const { score, baseline, deviation, method } = calculateAnomalyScore(amount, history);
+
+        return { 
+            score, 
+            metadata: { 
+                baseline: Math.round(baseline * 100) / 100, 
+                deviation: Math.round(deviation * 100) / 100,
+                method 
+            } 
+        };
+    } catch (err) {
+        console.error('[DRS] Scoring failure:', err.message);
+        return { score: 0, metadata: { error: 'Calculation failed' } };
+    }
+};
+
+/**
+ * Automated Compliance Monitoring Engine (AML/BSP Shield)
+ * Checks for: High Value (500k), Velocity (5 tx/hr), Aggregate (1M/day), and Dynamic Risk (DRS)
+ */
+const checkComplianceLimits = async (userId, transaction) => {
+    try {
+        const amount = parseFloat(transaction.amount);
+        const now = new Date();
+        const oneHourAgo = new Date(now.getTime() - 60 * 60 * 1000);
+        const twentyFourHoursAgo = new Date(now.getTime() - 24 * 60 * 60 * 1000);
+
+        const flags = [];
+
+        // 1. Static Rule: High Value Transaction (HVT) - BSP Standard
+        if (amount >= 500000) {
+            flags.push({ rule: 'HVT', severity: 'HIGH', message: 'Transaction exceeds PHP 500,000 threshold (BSP CTR).' });
+        }
+
+        // 2. Static Rule: Velocity Check
+        const recentTxCount = await prisma.transaction.count({
+            where: {
+                senderId: userId,
+                createdAt: { gte: oneHourAgo },
+                status: 'COMPLETED'
+            }
+        });
+        if (recentTxCount > 5) {
+            flags.push({ rule: 'VELOCITY', severity: 'MEDIUM', message: `High frequency activity: ${recentTxCount} transfers in 1 hour.` });
+        }
+
+        // 3. Static Rule: Daily Aggregate Limit
+        const dailyAgg = await prisma.transaction.aggregate({
+            where: {
+                senderId: userId,
+                createdAt: { gte: twentyFourHoursAgo },
+                status: 'COMPLETED'
+            },
+            _sum: { amount: true }
+        });
+        const totalDaily = parseFloat(dailyAgg._sum.amount || 0);
+        if (totalDaily >= 1000000) {
+            flags.push({ rule: 'AGGREGATE', severity: 'HIGH', message: `Cumulative daily volume exceeds PHP 1M limit.` });
+        }
+
+        // 4. Dynamic Rule: AI Behavioral Anomaly (v2.4.0)
+        const { score, metadata } = await calculateRiskScore(userId, amount);
+        if (score >= 50) {
+            const severity = score >= 90 ? 'CRITICAL' : (score >= 75 ? 'HIGH' : 'MEDIUM');
+            flags.push({ rule: 'ANOMALY', severity, message: `Behavioral Outlier: Score ${score} (${metadata.method}).` });
+        }
+
+        // Update transaction with Risk Score
+        await prisma.transaction.update({
+            where: { id: transaction.id },
+            data: { riskScore: score, riskMetadata: metadata }
+        });
+
+        if (flags.length > 0) {
+            console.log(`[Compliance] ${flags.length} rules triggered for user ${userId} | AI Score: ${score}`);
+            
+            // Create Compliance-specific Audit Log
+            const complianceLog = await prisma.auditLog.create({
+                data: {
+                    userId,
+                    action: 'COMPLIANCE_FLAG_TRIGGERED',
+                    entity: 'Compliance',
+                    entityId: transaction.id,
+                    newValue: { 
+                        flags, 
+                        transactionId: transaction.id, 
+                        referenceId: transaction.referenceId,
+                        riskScore: score,
+                        riskMetadata: metadata
+                    },
+                    metadata: {
+                        isComplianceFlag: true,
+                        rulesTriggered: flags.map(f => f.rule),
+                        aiWeightedScore: score,
+                        severity: flags.some(f => f.severity === 'CRITICAL' || f.severity === 'HIGH') ? 'HIGH' : 'MEDIUM'
+                    }
+                },
+                include: { user: { select: { email: true, firstName: true, lastName: true, kycTier: true } } }
+            });
+
+            // Notify Admin Board
+            notifyAdmin('COMPLIANCE_ALERT', complianceLog);
+            
+            // Phase 8 Rule: Block if Critical Anomaly
+            if (score >= 90) return 'BLOCK';
+            return 'FLAG';
+        }
+
+        return 'PASS';
+    } catch (err) {
+        console.error('[Compliance] Monitoring failure:', err.message);
+        return 'PASS';
+    }
+};
+
 // Health Check
 router.get('/health', (req, res) => {
     res.status(200).json({ status: 'Transaction Service is healthy', timestamp: getNowUTC() });
@@ -131,16 +323,19 @@ router.post('/transfer', async (req, res, next) => {
         let resolvedReceiverId = receiverId;
         
         if (!resolvedReceiverId && recipient) {
+            const variants = getPhoneVariants(recipient);
+            
             const recipientUser = await prisma.user.findFirst({
                 where: {
                     OR: [
                         { email: recipient },
-                        { phoneNumber: recipient }
+                        { phoneNumber: { in: variants } }
                     ]
                 }
             });
             
             if (!recipientUser) {
+                console.warn(`[Transfer] Recipient not found for input: ${recipient} | Variants: ${variants.join(', ')}`);
                 throw new Error(`Recipient not found: ${recipient}`);
             }
             resolvedReceiverId = recipientUser.id;
@@ -168,12 +363,19 @@ router.post('/transfer', async (req, res, next) => {
 
         if (!sender) throw new Error('Sender not found');
 
-        // Enforcement of tiered limits
+        // Enforcement of tiered limits (Aligned with GCash Basic - v2.4.4)
+        // WHY: Prevents high-volume outbound P2P transfers from non-verified accounts to mitigate money laundering risks (AML Compliance).
+        // WHAT: Checks the cumulative monthly outbound volume against a PHP 5,000 ceiling for Users in the 'BASIC' KYC tier.
+        // TODO: Move the PHP 5,000 threshold to an environmental variable or dynamic config table.
         if (sender.kycTier === 'BASIC') {
-            throw new Error('Verification required: BASIC accounts cannot send money P2P. Please upgrade to FULLY VERIFIED.');
+            const monthlyOutbound = await getMonthlyCumulativeVolume(senderId, 'OUTBOUND');
+            const newTotal = monthlyOutbound + parseFloat(amount);
+            
+            if (newTotal > 5000) {
+                throw new Error(`Limit Exceeded: BASIC accounts have a PHP 5,000 monthly outbound limit. Current Month: ₱${monthlyOutbound}. Requested: ₱${amount}. Please upgrade to FULLY VERIFIED for higher limits.`);
+            }
         }
 
-        // 2. Create pending transaction record
         const transaction = await prisma.transaction.create({
             data: {
                 amount,
@@ -187,7 +389,30 @@ router.post('/transfer', async (req, res, next) => {
             }
         });
 
-        // 3. Deduct from sender
+        // 3. Automated Compliance & Risk Check (v2.4.0)
+        // Perform check BEFORE fund processing to allow for HELD_FOR_REVIEW state
+        const complianceResult = await checkComplianceLimits(senderId, transaction);
+        
+        if (complianceResult === 'BLOCK') {
+            await prisma.transaction.update({
+                where: { id: transaction.id },
+                data: { status: 'FLAGGED_REVIEW' }
+            });
+            
+            await createAuditLog(req, senderId, 'P2P_TRANSFER_HELD', {
+                reason: 'Critical Anomaly Detected',
+                transactionId: transaction.id,
+                referenceId
+            }, 'Compliance', transaction.id);
+
+            return res.json({ 
+                message: 'Transaction held for secondary regulatory review. Please wait for institutional clearance.', 
+                status: 'HELD',
+                referenceId 
+            });
+        }
+
+        // 4. Deduct from sender
         const deductRes = await axios.post(`${WALLET_SERVICE_URL}/update-balance`, {
             userId: senderId,
             amount,
@@ -256,39 +481,24 @@ router.post('/transfer', async (req, res, next) => {
             }
         });
 
-        // 5.1 Create Compliance Audit Log (BSP Circular 808)
-        const auditLog = await prisma.auditLog.create({
-            data: {
-                userId: senderId,
-                action: 'P2P_TRANSFER_COMPLETED',
-                entity: 'Financial',
-                entityId: completedTransaction.id,
-                newValue: {
-                    amount: completedTransaction.amount,
-                    referenceId: completedTransaction.referenceId,
-                    type: completedTransaction.type,
-                    receiverId: completedTransaction.receiverId
-                },
-                metadata: {
-                    compliance: 'BSP Circular No. 808',
-                    standard: 'Financial Transaction Audit',
-                    timestamp: new Date().toISOString()
-                }
-            },
-            include: {
-                user: {
-                    select: {
-                        id: true,
-                        firstName: true,
-                        lastName: true,
-                        email: true
-                    }
-                }
-            }
-        });
+        // 5.1 WHY: Only ONE audit log is created here using the centralized createAuditLog() helper.
+        //      The previous direct prisma.auditLog.create() call was REMOVED because it duplicated
+        //      the audit entry — both writes used action: 'P2P_TRANSFER_COMPLETED' for the same
+        //      transaction, causing double entries in the Forensic Audit Trail.
+        //      createAuditLog() is the canonical path (includes IP, device, compliance metadata).
+        const completedAuditLog = await createAuditLog(req, senderId, 'P2P_TRANSFER_COMPLETED', {
+            transactionId: completedTransaction.id,
+            receiverId: resolvedReceiverId,
+            amount,
+            referenceId,
+            type: completedTransaction.type,
+            compliance: 'BSP Circular No. 808'
+        }, 'Financial', completedTransaction.id);
 
-        // 5.2 Notify Admin in Real-time (AUDIT_LOG_CREATED)
-        notifyAdmin('AUDIT_LOG_CREATED', auditLog);
+        // 5.2 Notify Admin in Real-time with the single audit log entry
+        if (completedAuditLog) {
+            notifyAdmin('AUDIT_LOG_CREATED', completedAuditLog);
+        }
 
         // 6. Notify Parties in Real-time
         const receiverName = `${completedTransaction.receiver.firstName || ''} ${completedTransaction.receiver.lastName || ''}`.trim() || completedTransaction.receiver.email;
@@ -306,13 +516,8 @@ router.post('/transfer', async (req, res, next) => {
         // 7. Notify Admin in Real-time
         notifyAdmin('new_transaction', completedTransaction);
 
-        // 8. Create forensic audit log for completion
-        await createAuditLog(req, senderId, 'P2P_TRANSFER_COMPLETED', {
-            transactionId: completedTransaction.id,
-            receiverId: resolvedReceiverId,
-            amount,
-            referenceId
-        }, 'Financial', completedTransaction.id);
+        // 9. Static thresholds check (already handled by refined engine above in Step 3)
+        // Leaving as placeholder for future route-specific rules
 
         res.json({ message: 'Transfer successful', transaction: completedTransaction });
     } catch (error) {
@@ -382,17 +587,26 @@ router.post('/cash-in', async (req, res) => {
 
         if (!user) throw new Error('User not found');
 
-        // Enforcement of BASIC limits (₱5,000 max balance)
+        // Enforcement of BASIC limits (Aligned with GCash Basic - v2.4.4)
+        // Wallet Ceiling: ₱10,000 | Monthly Influx: ₱5,000
         if (user.kycTier === 'BASIC') {
             const currentBalance = user.wallet ? parseFloat(user.wallet.balance) : 0;
-            const newBalance = currentBalance + parseFloat(amount);
+            const newBalanceValue = currentBalance + parseFloat(amount);
             
-            if (newBalance > 5000) {
-                throw new Error(`Limit Exceeded: BASIC accounts have a maximum wallet balance of ₱5,000. Current: ₱${currentBalance}. Requested: ₱${amount}.`);
+            // 1. Check Wallet Ceiling (10k)
+            if (newBalanceValue > 10000) {
+                throw new Error(`Wallet Limit Exceeded: BASIC accounts have a maximum balance of ₱10,000. Current: ₱${currentBalance}. Requested: ₱${amount}.`);
+            }
+
+            // 2. Check Monthly Inbound Flow (5k)
+            const monthlyInbound = await getMonthlyCumulativeVolume(userId, 'INBOUND');
+            const newInboundTotal = monthlyInbound + parseFloat(amount);
+
+            if (newInboundTotal > 5000) {
+                throw new Error(`Incoming Limit Exceeded: BASIC accounts have a PHP 5,000 monthly cash-in limit. Current Month: ₱${monthlyInbound}. Requested: ₱${amount}.`);
             }
         }
 
-        // 1. Create pending transaction record
         const transaction = await prisma.transaction.create({
             data: {
                 amount,
@@ -406,7 +620,21 @@ router.post('/cash-in', async (req, res) => {
             }
         });
 
-        // 2. Add to user's wallet
+        // 2. Behavioral Compliance Check (v2.4.0)
+        const complianceResult = await checkComplianceLimits(userId, transaction);
+        if (complianceResult === 'BLOCK') {
+            await prisma.transaction.update({
+                where: { id: transaction.id },
+                data: { status: 'FLAGGED_REVIEW' }
+            });
+            return res.json({ 
+                message: 'Deposit flagged for institutional review. Funds will be credited upon clearance.', 
+                status: 'HELD',
+                referenceId 
+            });
+        }
+
+        // 3. Add to user's wallet
         const addRes = await axios.post(`${WALLET_SERVICE_URL}/update-balance`, {
             userId: userId,
             amount,
@@ -503,6 +731,9 @@ router.post('/cash-in', async (req, res) => {
         // 6. Notify Admin in Real-time
         notifyAdmin('new_transaction', completedTransaction);
 
+        // 7. Automated Compliance Check
+        await checkComplianceLimits(userId, completedTransaction);
+
         res.json({ message: 'Cash in successful', transaction: completedTransaction });
     } catch (error) {
         console.error('[Transaction] Cash In Error:', error.message);
@@ -577,7 +808,6 @@ router.post('/cash-out', async (req, res) => {
             throw new Error(`Insufficient Balance: Available balance (₱${currentBalance}) is less than requested amount (₱${amount}).`);
         }
 
-        // 1. Create pending transaction record
         const transaction = await prisma.transaction.create({
             data: {
                 amount,
@@ -591,7 +821,22 @@ router.post('/cash-out', async (req, res) => {
             }
         });
 
-        // 2. Deduct from user's wallet
+        // 2. Automated Compliance & Risk Check (v2.4.0)
+        // Check BEFORE fund deduction
+        const complianceResult = await checkComplianceLimits(userId, transaction);
+        if (complianceResult === 'BLOCK') {
+            await prisma.transaction.update({
+                where: { id: transaction.id },
+                data: { status: 'FLAGGED_REVIEW' }
+            });
+            return res.json({ 
+                message: 'Withdrawal held for institutional review. Please wait for clearance.', 
+                status: 'HELD',
+                referenceId 
+            });
+        }
+
+        // 3. Deduct from user's wallet
         const totalToDeduct = parseFloat(amount) + 15.0;
         const deductRes = await axios.post(`${WALLET_SERVICE_URL}/update-balance`, {
             userId: userId,
@@ -703,6 +948,9 @@ router.post('/cash-out', async (req, res) => {
         // 6. Notify Admin in Real-time
         notifyAdmin('new_transaction', completedTransaction);
 
+        // 7. Automated Compliance Check
+        await checkComplianceLimits(userId, completedTransaction);
+
         res.json({ message: 'Cash out successful', transaction: completedTransaction });
     } catch (error) {
         console.error('[Transaction] Cash Out Error:', error.message);
@@ -754,6 +1002,155 @@ router.post('/cash-out', async (req, res) => {
     }
 });
 
+// Resolve Flagged Transaction (Manual Override)
+router.post('/resolve', async (req, res) => {
+    const { transactionId, action, reason, adminId, adminRole } = req.body; // adminRole: 'MANAGER' or 'GENERAL_MANAGER'
+    
+    try {
+        const tx = await prisma.transaction.findUnique({
+            where: { id: transactionId },
+            include: { sender: true, receiver: true }
+        });
+
+        if (!tx || tx.status !== 'FLAGGED_REVIEW') {
+            return res.status(400).json({ error: 'Transaction not in flagged state' });
+        }
+
+        // INSTITUTIONAL CHECK: Four-Eyes Principle (Maker-Checker)
+        if (adminRole === 'MANAGER') {
+            // Maker Step: Propose Resolution
+            await prisma.transaction.update({
+                where: { id: transactionId },
+                data: {
+                    riskMetadata: { 
+                        ...tx.riskMetadata, 
+                        proposedAction: action, 
+                        proposedBy: adminId, 
+                        proposedAt: new Date().toISOString(),
+                        resolutionNote: reason 
+                    }
+                }
+            });
+
+            // Log Proposal
+            await createAuditLog(req, adminId, 'TX_RESOLUTION_PROPOSED', {
+                action,
+                reason,
+                proposedBy: adminId
+            }, 'Financial', transactionId);
+
+            return res.json({ 
+                message: `Resolution (${action}) proposed and awaiting General Manager authorization.`, 
+                status: 'PROPOSED' 
+            });
+        }
+
+        if (adminRole === 'GENERAL_MANAGER' || adminRole === 'ADMIN') {
+            // Checker Step: Finalize Resolution
+            if (action === 'APPROVE') {
+                // 1. Process fund movement (Critical: Must happen on authorization)
+                if (tx.type === 'P2P_TRANSFER' || tx.type === 'P2P') {
+                    // a) Subtract from sender (HELD_FOR_REVIEW didn't deduct yet)
+                    await axios.post(`${WALLET_SERVICE_URL}/update-balance`, {
+                        userId: tx.senderId,
+                        amount: tx.amount,
+                        type: 'subtract'
+                    });
+
+                    // b) Add to receiver
+                    await axios.post(`${WALLET_SERVICE_URL}/update-balance`, {
+                        userId: tx.receiverId,
+                        amount: tx.amount,
+                        type: 'add'
+                    });
+
+                    // c) Create Ledger Entries (Core Accounting Compliance)
+                    const walletAccount = await prisma.chartOfAccount.findUnique({ where: { code: '1010' } });
+                    if (walletAccount) {
+                        await prisma.ledgerEntry.createMany({
+                            data: [
+                                {
+                                    accountId: walletAccount.id,
+                                    transactionId: tx.id,
+                                    referenceId: tx.referenceId,
+                                    description: `P2P Resolved (Approved): ${tx.description}`,
+                                    debit: tx.amount,
+                                    credit: 0
+                                },
+                                {
+                                    accountId: walletAccount.id,
+                                    transactionId: tx.id,
+                                    referenceId: tx.referenceId,
+                                    description: `P2P Resolved (Approved): ${tx.description}`,
+                                    debit: 0,
+                                    credit: tx.amount
+                                }
+                            ]
+                        });
+                    }
+                } else if (tx.type === 'CASH_IN') {
+                    await axios.post(`${WALLET_SERVICE_URL}/update-balance`, {
+                        userId: tx.receiverId,
+                        amount: tx.amount,
+                        type: 'add'
+                    });
+                }
+
+                // 2. Update status to COMPLETED
+                await prisma.transaction.update({
+                    where: { id: transactionId },
+                    data: { 
+                        status: 'COMPLETED',
+                        completedAt: getLegacyManilaDate(),
+                        riskMetadata: { 
+                            ...tx.riskMetadata, 
+                            resolution: 'APPROVED', 
+                            authorizedBy: adminId, 
+                            authorizedAt: new Date().toISOString(),
+                            finalReason: reason || tx.riskMetadata?.resolutionNote
+                        }
+                    }
+                });
+
+                // Audit Final Clearance
+                await createAuditLog(req, adminId, 'TX_RESOLUTION_AUTHORIZED', {
+                    action: 'CLEARANCE_GRANTED',
+                    authorizedBy: adminId
+                }, 'Financial', transactionId);
+
+                return res.json({ message: "Transaction authorized and funds dispersed successfully." });
+            } else {
+                // REJECT Workflow
+                await prisma.transaction.update({
+                    where: { id: transactionId },
+                    data: { 
+                        status: 'FAILED',
+                        riskMetadata: { 
+                            ...tx.riskMetadata, 
+                            resolution: 'REJECTED', 
+                            authorizedBy: adminId,
+                            authorizedAt: new Date().toISOString(),
+                            finalReason: reason || tx.riskMetadata?.resolutionNote
+                        }
+                    }
+                });
+
+                await createAuditLog(req, adminId, 'TX_RESOLUTION_REJECTED', {
+                    action: 'BLOCK_FINALIZED',
+                    authorizedBy: adminId
+                }, 'Financial', transactionId);
+
+                return res.json({ message: "Transaction blocked and rejection finalized." });
+            }
+        }
+
+        return res.status(403).json({ error: 'Unauthorized: General Manager or ADMIN clearance required for final resolution.' });
+    } catch (error) {
+        console.error('[Transaction] Resolution Error:', error.message);
+        res.status(500).json({ error: 'Failed to resolve transaction: ' + error.message });
+    }
+});
+
 // Get Transaction History for a User
 router.get('/history/:userId', async (req, res) => {
     const { userId } = req.params;
@@ -781,27 +1178,52 @@ router.get('/history/:userId', async (req, res) => {
 
 // Global Error Handler (Ensures JSON instead of HTML)
 app.use((err, req, res, next) => {
-    console.error('[Transaction Service] Global Error:', err.stack);
+    console.error('[Transaction Service] Global Error:', err.message);
+    const safeMessage = process.env.NODE_ENV === 'production'
+        ? 'An unexpected error occurred in the Transaction Service'
+        : err.message;
     res.status(err.status || 500).json({
         error: err.name || 'InternalServerError',
-        message: err.message || 'An unexpected error occurred',
-        path: req.path
+        message: safeMessage,
+        timestamp: getLegacyManilaISO()
     });
 });
 
-// Global Error Handler
-app.use((err, req, res, next) => {
-    console.error(`[Transaction Service Error] ${err.stack}`);
-    res.status(err.status || 500).json({
-        error: err.name || 'InternalServerError',
-        message: err.message || 'An unexpected error occurred in the Transaction Service',
-        timestamp: getLegacyManilaISO(),
-        path: req.path
+const startDrsHeartbeat = async () => {
+    console.log('[DRS Engine] Initializing Pulse Heartbeat...');
+    
+    const sendPulse = async () => {
+        try {
+            await prisma.systemSetting.upsert({
+                where: { key: 'DRS_ENGINE_HEARTBEAT' },
+                update: { value: new Date().toISOString() },
+                create: { 
+                    key: 'DRS_ENGINE_HEARTBEAT', 
+                    value: new Date().toISOString(),
+                    group: 'SYSTEM_HEALTH',
+                    description: 'Last reported heartbeat from the Transaction/DRS Service'
+                }
+            });
+            console.log(`[DRS Engine] Pulse updated at ${new Date().toLocaleTimeString()}`);
+        } catch (err) {
+            console.error('[DRS Engine] Heartbeat failure:', err.message);
+        }
+    };
+
+    // Trigger immediately on startup
+    await sendPulse();
+
+    const heartbeat = setInterval(sendPulse, 30000); // 30 seconds
+    
+    // Ensure the heartbeat does not block process exit (especially in tests)
+    if (heartbeat.unref) heartbeat.unref();
+};
+
+if (require.main === module) {
+    app.listen(PORT, '0.0.0.0', () => {
+        console.log(`[Transaction] Service running on http://0.0.0.0:${PORT} (LAN-accessible)`);
+        startDrsHeartbeat();
     });
-});
+}
 
-app.listen(PORT, '0.0.0.0', () => {
-    console.log(`[Transaction] Service running on http://0.0.0.0:${PORT} (LAN-accessible)`);
-});
-
-module.exports = app;
+module.exports = { app, calculateRiskScore, checkComplianceLimits };

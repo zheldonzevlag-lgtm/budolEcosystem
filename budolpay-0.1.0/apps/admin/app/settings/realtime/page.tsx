@@ -172,7 +172,11 @@ export default async function RealtimeSettingsPage() {
         />
 
         <div className="pt-6 flex flex-col gap-6">
-          <SubmitButton className="w-full py-4 rounded-xl bg-slate-900 text-white text-sm font-black uppercase tracking-[0.1em] shadow-lg shadow-slate-200">
+          <SubmitButton 
+            type="submit"
+            loadingText="SAVING CONFIGURATION..."
+            className="w-full py-4 rounded-xl bg-slate-900 text-white text-sm font-black uppercase tracking-[0.1em] shadow-lg shadow-slate-200"
+          >
             Save Configuration
           </SubmitButton>
           <p className="text-[11px] text-slate-400 font-bold text-center">Changes apply immediately to new connections.</p>

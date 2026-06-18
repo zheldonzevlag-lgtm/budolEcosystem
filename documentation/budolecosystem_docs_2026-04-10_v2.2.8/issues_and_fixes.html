@@ -1,0 +1,104 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Issues &amp; Fixes v2.2.8</title>
+<style>
+  :root{--primary:#4f46e5;--danger:#ef4444;--success:#10b981;--warn:#f59e0b;--muted:#64748b;--dark:#1e293b}
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{font-family:'Segoe UI',system-ui,sans-serif;background:#f8fafc;color:#334155}
+  header{background:var(--primary);color:#fff;padding:1.5rem 2rem;display:flex;justify-content:space-between;align-items:center}
+  header h1{font-size:1.4rem;font-weight:700}
+  header span{font-size:.85rem;background:rgba(255,255,255,.2);padding:.3rem .75rem;border-radius:9999px}
+  nav{display:flex;gap:.5rem;flex-wrap:wrap;padding:1.25rem 2rem;background:#fff;border-bottom:1px solid #e2e8f0}
+  nav a{padding:.45rem 1rem;border-radius:6px;text-decoration:none;font-size:.85rem;font-weight:500;background:#f1f5f9;color:var(--dark)}
+  nav a.active,nav a:hover{background:var(--primary);color:#fff}
+  main{max-width:1100px;margin:2rem auto;padding:0 1.5rem}
+  .card{background:#fff;border:1px solid #e2e8f0;border-radius:12px;padding:1.5rem;margin-bottom:1.5rem}
+  .card h2{font-size:1.1rem;font-weight:700;color:var(--dark);margin-bottom:.75rem}
+  .badge{font-size:.72rem;padding:.2rem .6rem;border-radius:9999px;font-weight:600}
+  .badge-red{background:#fee2e2;color:#991b1b}
+  .badge-green{background:#d1fae5;color:#065f46}
+  table{width:100%;border-collapse:collapse;font-size:.875rem;margin-top:.5rem}
+  th{background:#f1f5f9;text-align:left;padding:.6rem .75rem;font-weight:600;color:var(--dark);border-bottom:2px solid #e2e8f0}
+  td{padding:.6rem .75rem;border-bottom:1px solid #f1f5f9;vertical-align:top;line-height:1.5}
+  footer{text-align:center;padding:2rem;font-size:.8rem;color:var(--muted)}
+</style>
+</head>
+<body>
+<header>
+  <h1>🐛 Issues &amp; Fixes v2.2.8</h1>
+  <span>2026-04-10</span>
+</header>
+<nav>
+  <a href="index.html">Index</a>
+  <a href="developer_manual.html">Developer Manual</a>
+  <a href="system_admin_manual.html">System Admin</a>
+  <a href="user_manual.html">User Manual</a>
+  <a href="risk_register.html">Risk Register</a>
+  <a href="mitigation.html">Mitigation</a>
+  <a href="issues_and_fixes.html" class="active">Issues &amp; Fixes</a>
+  <a href="test_results.html">Test Results</a>
+  <a href="future_recommendations.html">Future Recs</a>
+</nav>
+<main>
+
+  <div class="card">
+    <h2>Issue #001 – Cancelled Payments Leave Gateway Transaction in PENDING State</h2>
+    <table>
+      <tr><th>Field</th><th>Details</th></tr>
+      <tr><td>Status</td><td><span class="badge badge-green">✅ FIXED</span></td></tr>
+      <tr><td>Severity</td><td>High – Financial data integrity</td></tr>
+      <tr><td>Discovered</td><td>2026-04-10 – Admin Dashboard showed PENDING transactions for orders that were clearly cancelled by the user</td></tr>
+      <tr><td>Root Cause</td>
+        <td>
+          The cancellation flow in <code>OrderSummary.jsx</code> only called <code>POST /api/orders/{id}/cancel</code>
+          (budolshap's own DB).  The <code>Transaction</code> table in the <em>budolPay payment-gateway</em> database
+          has no foreign-key link to the <code>Order</code> table — it is a separate bounded context with its own
+          lifecycle.  No code path existed to update the gateway's Transaction status on user-initiated cancellations.
+        </td>
+      </tr>
+      <tr><td>Impact</td>
+        <td>
+          <ul style="padding-left:1.25rem;font-size:.85rem;line-height:1.8">
+            <li>Admin Dashboard "Global Transactions" table: cancelled orders showed PENDING payment</li>
+            <li>Financial reconciliation CSV exports contained inaccurate PENDING records</li>
+            <li>BSP Circular 808 ledger accuracy requirement violated</li>
+            <li>Checkout page "X" button and 10-min timer also did not cancel the gateway transaction</li>
+            <tr>
+              <td><span class="status-badge in-progress">Resolved</span></td>
+              <td>Vercel Production Lambda Routing Failure</td>
+              <td>In Vercel production, default PAYMENT_GATEWAY_URL fell back to localhost, causing empty lambda containers to query themselves instead of the deployed gateway.</td>
+              <td>Synchronized environment logic in budolpay-adapter.js and proxy route.js to automatically route to remote production Vercel gateway or local IPs dynamically.</td>
+              <td>2026-04-10</td>
+            </tr>
+          </ul>
+        </td>
+      </tr>
+      <tr><td>Fix Applied</td>
+        <td>
+          <ol style="padding-left:1.25rem;font-size:.85rem;line-height:1.8">
+            <li>Added <code>POST /cancel/:referenceId</code> endpoint to payment-gateway-service</li>
+            <li>Checkout HTML page's close button and timer-expiry now call <code>/cancel/:referenceId</code> before redirecting</li>
+            <li>Created <code>budolshap/app/api/payment/cancel/route.js</code> proxy route</li>
+            <li>Updated <code>handleQRCancel</code> in <code>OrderSummary.jsx</code> to also call the proxy</li>
+            <li>Added <code>referenceId</code> to the <code>qrData</code> state object for cancel call availability</li>
+          </ol>
+        </td>
+      </tr>
+      <tr><td>Files Changed</td>
+        <td>
+          payment-gateway-service/api/index.js<br>
+          budolshap/app/api/payment/cancel/route.js (NEW)<br>
+          budolshap/components/OrderSummary.jsx
+        </td>
+      </tr>
+      <tr><td>Tested</td><td>See <a href="test_results.html">Test Results</a></td></tr>
+    </table>
+  </div>
+
+</main>
+<footer>BudolEcosystem v2.2.8 Issues &amp; Fixes · 2026-04-10</footer>
+</body>
+</html>

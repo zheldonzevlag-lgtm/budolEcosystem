@@ -43,7 +43,7 @@ async function testSSPR() {
             body: new URLSearchParams({
                 email: TEST_EMAIL,
                 password: 'NewSecurePassword123!',
-                apiKey: 'bp_key_2025'
+                apiKey: 'bp_b31ea1888dcb2ba76fdbb776ea8f5b7a'
             })
         });
         

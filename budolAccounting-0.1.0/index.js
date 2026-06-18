@@ -59,6 +59,10 @@ app.use(cors());
 app.use(express.json());
 
 // Health Check
+router.get('/', (req, res) => {
+    res.status(200).json({ status: 'ok', service: 'budolAccounting' });
+});
+
 router.get('/health', (req, res) => {
     res.status(200).json({ 
         status: 'Accounting Service is healthy', 
@@ -136,10 +140,12 @@ router.get('/balance/:accountCode', async (req, res) => {
     }
 });
 
-app.listen(PORT, '0.0.0.0', () => {
-    const LOCAL_IP = process.env.LOCAL_IP || 'localhost';
-    console.log(`budolAccounting Service running on http://0.0.0.0:${PORT}`);
-    console.log(`Local LAN access at http://${LOCAL_IP}:${PORT}`);
-});
+if (require.main === module) {
+    app.listen(PORT, '0.0.0.0', () => {
+        const LOCAL_IP = process.env.LOCAL_IP || 'localhost';
+        console.log(`budolAccounting Service running on http://0.0.0.0:${PORT}`);
+        console.log(`Local LAN access at http://${LOCAL_IP}:${PORT}`);
+    });
+}
 
 module.exports = app;

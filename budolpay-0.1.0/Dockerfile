@@ -21,20 +21,28 @@ RUN npx prisma generate --schema=packages/database/prisma/schema.prisma
 
 # --- Target: API Gateway ---
 FROM base AS gateway
+RUN groupadd -r appgroup && useradd -r -g appgroup appuser
+USER appuser
 EXPOSE 8080
 CMD ["node", "services/api-gateway/index.js"]
 
 # --- Target: Auth Service ---
 FROM base AS auth
+RUN groupadd -r appgroup && useradd -r -g appgroup appuser
+USER appuser
 EXPOSE 8001
 CMD ["node", "services/auth-service/index.js"]
 
 # --- Target: Wallet Service ---
 FROM base AS wallet
+RUN groupadd -r appgroup && useradd -r -g appgroup appuser
+USER appuser
 EXPOSE 8002
 CMD ["node", "services/wallet-service/index.js"]
 
 # --- Target: Transaction Service ---
 FROM base AS transaction
+RUN groupadd -r appgroup && useradd -r -g appgroup appuser
+USER appuser
 EXPOSE 8003
 CMD ["node", "services/transaction-service/index.js"]

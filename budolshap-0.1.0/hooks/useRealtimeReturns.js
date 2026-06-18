@@ -86,7 +86,10 @@ export function useRealtimeReturns({ storeId, page = 1, limit = 20, initialData 
             reconnectionAttempts: 3,
             timeout: 5000,
             reconnectionDelay: 1000,
-            reconnectionDelayMax: 5000
+            reconnectionDelayMax: 5000,
+            auth: {
+                token: typeof window !== 'undefined' ? localStorage.getItem('token') : null
+            }
         });
 
         socket.on('connect', () => {

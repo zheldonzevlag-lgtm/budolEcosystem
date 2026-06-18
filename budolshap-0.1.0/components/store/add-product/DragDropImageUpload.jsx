@@ -63,14 +63,15 @@ function SortableImage({ id, src, uploading, error, onRemove, onUpdate, allImage
 
         if (imageObj && imageObj.file) {
           // Upload the local file with background removal in one step
-          const formData = new FormData();
-          formData.append('file', imageObj.file);
-          formData.append('removeBackground', 'true');
-          formData.append('type', 'product');
-
+          const base64 = await new Promise((resolve) => {
+            const reader = new FileReader();
+            reader.onload = (e) => resolve(e.target.result);
+            reader.readAsDataURL(imageObj.file);
+          });
           const response = await fetch('/api/upload', {
             method: 'POST',
-            body: formData,
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ image: base64, removeBackground: true, type: 'product' }),
           });
 
           const data = await response.json();

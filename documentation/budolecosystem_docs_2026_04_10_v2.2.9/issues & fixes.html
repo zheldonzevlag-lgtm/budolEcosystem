@@ -1,0 +1,62 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Issues & Fixes - v2.2.9</title>
+    <style>
+        body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; background: #f4f5f7; color: #172b4d; padding: 40px; margin: 0; }
+        .main-content { background: #ffffff; padding: 40px; max-width: 1000px; margin: 0 auto; border-radius: 4px; box-shadow: 0 1px 3px rgba(0,0,0,0.1); }
+        h1, h2, h3 { color: #0747a6; }
+        pre, code { background-color: #f4f5f7; border-radius: 3px; font-family: monospace; }
+        pre { padding: 15px; overflow-x: auto; font-size: 13px; line-height: 1.5; border: 1px solid #dfe1e6; }
+        a { color: #0052cc; text-decoration: none; }
+        table { width: 100%; border-collapse: collapse; margin-top: 20px; }
+        th, td { border: 1px solid #dfe1e6; padding: 10px; text-align: left; }
+        th { background-color: #f4f5f7; }
+    </style>
+</head>
+<body>
+    <div class="main-content">
+        <a href="index.html">← Back to Index</a>
+        <h1>Issues & Fixes</h1>
+        <p><strong>Version:</strong> 2.2.9 | <strong>Date:</strong> 2026-04-10</p>
+        
+        <h2>Resolved Issues Log</h2>
+        <table>
+            <thead>
+                <tr>
+                    <th>ID</th>
+                    <th>Subsystem</th>
+                    <th>Issue Description</th>
+                    <th>Root Cause</th>
+                    <th>Fix Applied</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td>ISS-229-01</td>
+                    <td>Auth API</td>
+                    <td>Mobile app received HTML error page on OTP submission.</td>
+                    <td>The mobile App hit <code>/login/mobile/verify-otp</code>, but Express only routed <code>/verify-otp</code>. An unhandled 404 fell back to the root HTML response.</td>
+                    <td>Bound <code>['/verify-otp', '/login/mobile/verify-otp']</code> to the same POST handler.</td>
+                </tr>
+                <tr>
+                    <td>ISS-229-02</td>
+                    <td>Admin Security UI</td>
+                    <td>"System" or missing identities in the Forensic Audit Logs during user logouts.</td>
+                    <td>Database schema missing OTP fields in the Admin local schema, and missing related User objects when dealing with external auth identities (via SSO), causing fallback logic to drop names.</td>
+                    <td>Modified <code>lib/audit.ts</code> to denormalize <code>actorName</code> and <code>actorEmail</code> into metadata JSON, and updated the frontend to parse these securely.</td>
+                </tr>
+                <tr>
+                    <td>ISS-229-03</td>
+                    <td>Admin Login UX</td>
+                    <td>Error strings during failed logins cleared user credentials instead of preserving them.</td>
+                    <td>State overwrite logic inherently reset input variables on catch.</td>
+                    <td>Implemented <code>react-hot-toast</code> to display stackable non-intrusive alert popups.</td>
+                </tr>
+            </tbody>
+        </table>
+    </div>
+</body>
+</html>

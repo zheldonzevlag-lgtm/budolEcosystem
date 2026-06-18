@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { Zap, Server, RefreshCw } from "lucide-react";
 import { realtime } from "@/lib/realtime";
 
@@ -11,15 +11,21 @@ interface Props {
 
 export default function RealtimeMethodSelector({ initialMethod, settings }: Props) {
   const [method, setMethod] = useState(initialMethod);
+  const isMounted = useRef(false);
+  const settingsString = JSON.stringify(settings);
 
   // Re-initialize realtime service when settings change (after server action revalidates)
   useEffect(() => {
+    if (!isMounted.current) {
+      isMounted.current = true;
+      return;
+    }
     const reinit = async () => {
       console.log("[Realtime] Detected settings change, re-initializing...");
       await realtime.reinit();
     };
     reinit();
-  }, [initialMethod, settings]);
+  }, [initialMethod, settingsString]);
 
   const methods = [
     {
@@ -84,100 +90,94 @@ export default function RealtimeMethodSelector({ initialMethod, settings }: Prop
       </div>
 
       <div className="bg-white rounded-lg border border-gray-200 p-6 shadow-sm">
-        {method === "PUSHER" && (
-          <div className="space-y-4 animate-in fade-in slide-in-from-top-2 duration-300">
-            <h3 className="font-medium text-gray-900 flex items-center gap-2">
-              <Zap className="w-4 h-4 text-purple-600" />
-              Pusher Configuration
-            </h3>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div className="space-y-1">
-                <label className="text-xs font-medium text-gray-500 uppercase">App ID</label>
-                <input
-                  type="text"
-                  name="pusherAppId"
-                  defaultValue={settings['REALTIME_PUSHER_APP_ID']}
-                  className="w-full px-3 py-2 text-sm border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-purple-500/20 focus:border-purple-500"
-                  placeholder="e.g. 1234567"
-                />
-              </div>
-              <div className="space-y-1">
-                <label className="text-xs font-medium text-gray-500 uppercase">Cluster</label>
-                <input
-                  type="text"
-                  name="pusherCluster"
-                  defaultValue={settings['REALTIME_PUSHER_CLUSTER']}
-                  className="w-full px-3 py-2 text-sm border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-purple-500/20 focus:border-purple-500"
-                  placeholder="e.g. ap1"
-                />
-              </div>
-              <div className="space-y-1">
-                <label className="text-xs font-medium text-gray-500 uppercase">Key</label>
-                <input
-                  type="text"
-                  name="pusherKey"
-                  defaultValue={settings['REALTIME_PUSHER_KEY']}
-                  className="w-full px-3 py-2 text-sm border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-purple-500/20 focus:border-purple-500"
-                  placeholder="e.g. a1b2c3d4e5"
-                />
-              </div>
-              <div className="space-y-1">
-                <label className="text-xs font-medium text-gray-500 uppercase">Secret</label>
-                <input
-                  type="password"
-                  name="pusherSecret"
-                  defaultValue={settings['REALTIME_PUSHER_SECRET']}
-                  className="w-full px-3 py-2 text-sm border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-purple-500/20 focus:border-purple-500"
-                  placeholder="••••••••••••"
-                />
-              </div>
-            </div>
-          </div>
-        )}
-
-        {method === "SOCKETIO" && (
-          <div className="space-y-4 animate-in fade-in slide-in-from-top-2 duration-300">
-            <h3 className="font-medium text-gray-900 flex items-center gap-2">
-              <Server className="w-4 h-4 text-blue-600" />
-              Socket.io Configuration
-            </h3>
+        <div className={`space-y-4 animate-in fade-in slide-in-from-top-2 duration-300 ${method === "PUSHER" ? "block" : "hidden"}`}>
+          <h3 className="font-medium text-gray-900 flex items-center gap-2">
+            <Zap className="w-4 h-4 text-purple-600" />
+            Pusher Configuration
+          </h3>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div className="space-y-1">
-              <label className="text-xs font-medium text-gray-500 uppercase">Socket Server URL</label>
+              <label className="text-xs font-medium text-gray-500 uppercase">App ID</label>
               <input
-                type="url"
-                name="socketioUrl"
-                defaultValue={settings['REALTIME_SOCKETIO_URL']}
-                className="w-full px-3 py-2 text-sm border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500"
-                placeholder="http://localhost:3001"
+                type="text"
+                name="pusherAppId"
+                defaultValue={settings['REALTIME_PUSHER_APP_ID']}
+                className="w-full px-3 py-2 text-sm border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-purple-500/20 focus:border-purple-500"
+                placeholder="e.g. 1234567"
               />
-              <p className="text-xs text-gray-400">
-                Must be accessible from the client's browser.
-              </p>
             </div>
-          </div>
-        )}
-
-        {method === "SWR" && (
-          <div className="space-y-4 animate-in fade-in slide-in-from-top-2 duration-300">
-            <h3 className="font-medium text-gray-900 flex items-center gap-2">
-              <RefreshCw className="w-4 h-4 text-orange-600" />
-              SWR Polling Configuration
-            </h3>
             <div className="space-y-1">
-              <label className="text-xs font-medium text-gray-500 uppercase">Refresh Interval (ms)</label>
+              <label className="text-xs font-medium text-gray-500 uppercase">Cluster</label>
               <input
-                type="number"
-                name="swrInterval"
-                defaultValue={settings['REALTIME_SWR_REFRESH_INTERVAL'] || "10000"}
-                className="w-full px-3 py-2 text-sm border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-orange-500/20 focus:border-orange-500"
-                placeholder="10000"
+                type="text"
+                name="pusherCluster"
+                defaultValue={settings['REALTIME_PUSHER_CLUSTER']}
+                className="w-full px-3 py-2 text-sm border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-purple-500/20 focus:border-purple-500"
+                placeholder="e.g. ap1"
               />
-              <p className="text-xs text-gray-400">
-                Lower values increase server load. Recommended: 5000-10000ms.
-              </p>
+            </div>
+            <div className="space-y-1">
+              <label className="text-xs font-medium text-gray-500 uppercase">Key</label>
+              <input
+                type="text"
+                name="pusherKey"
+                defaultValue={settings['REALTIME_PUSHER_KEY']}
+                className="w-full px-3 py-2 text-sm border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-purple-500/20 focus:border-purple-500"
+                placeholder="e.g. a1b2c3d4e5"
+              />
+            </div>
+            <div className="space-y-1">
+              <label className="text-xs font-medium text-gray-500 uppercase">Secret</label>
+              <input
+                type="password"
+                name="pusherSecret"
+                defaultValue={settings['REALTIME_PUSHER_SECRET']}
+                className="w-full px-3 py-2 text-sm border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-purple-500/20 focus:border-purple-500"
+                placeholder="••••••••••••"
+              />
             </div>
           </div>
-        )}
+        </div>
+
+        <div className={`space-y-4 animate-in fade-in slide-in-from-top-2 duration-300 ${method === "SOCKETIO" ? "block" : "hidden"}`}>
+          <h3 className="font-medium text-gray-900 flex items-center gap-2">
+            <Server className="w-4 h-4 text-blue-600" />
+            Socket.io Configuration
+          </h3>
+          <div className="space-y-1">
+            <label className="text-xs font-medium text-gray-500 uppercase">Socket Server URL</label>
+            <input
+              type="url"
+              name="socketioUrl"
+              defaultValue={settings['REALTIME_SOCKETIO_URL']}
+              className="w-full px-3 py-2 text-sm border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500"
+              placeholder="http://localhost:3001"
+            />
+            <p className="text-xs text-gray-400">
+              Must be accessible from the client's browser.
+            </p>
+          </div>
+        </div>
+
+        <div className={`space-y-4 animate-in fade-in slide-in-from-top-2 duration-300 ${method === "SWR" ? "block" : "hidden"}`}>
+          <h3 className="font-medium text-gray-900 flex items-center gap-2">
+            <RefreshCw className="w-4 h-4 text-orange-600" />
+            SWR Polling Configuration
+          </h3>
+          <div className="space-y-1">
+            <label className="text-xs font-medium text-gray-500 uppercase">Refresh Interval (ms)</label>
+            <input
+              type="number"
+              name="swrInterval"
+              defaultValue={settings['REALTIME_SWR_REFRESH_INTERVAL'] || "10000"}
+              className="w-full px-3 py-2 text-sm border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-orange-500/20 focus:border-orange-500"
+              placeholder="10000"
+            />
+            <p className="text-xs text-gray-400">
+              Lower values increase server load. Recommended: 5000-10000ms.
+            </p>
+          </div>
+        </div>
       </div>
     </div>
   );

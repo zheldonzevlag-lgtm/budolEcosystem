@@ -3,7 +3,7 @@ const http = require('http');
 const data = JSON.stringify({
     email: 'tony.stark@budolshap.com',
     password: 'budolshap',
-    apiKey: 'bs_key_2025'
+    apiKey: 'bs_ac2bca9790f9b70f4e21c8a3c2812917'
 });
 
 const options = {

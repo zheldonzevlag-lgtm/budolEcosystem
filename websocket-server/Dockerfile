@@ -1,4 +1,4 @@
-FROM node:18-alpine
+FROM node:20-alpine
 
 # Create app directory
 WORKDIR /app
@@ -9,6 +9,10 @@ RUN npm install --production
 
 # Bundle app source
 COPY . .
+
+# Run as non-root user
+RUN addgroup -S appgroup && adduser -S appuser -G appgroup
+USER appuser
 
 # Expose the port the app runs on
 EXPOSE 4000

@@ -15,6 +15,8 @@ export default function OTPVerificationModal({ isOpen, onClose, onVerified, user
     const [isSending, setIsSending] = useState(false);
     const [isVerifying, setIsVerifying] = useState(false);
     const [error, setError] = useState<string | null>(null);
+    const [notice, setNotice] = useState<string | null>(null);
+    const [delivery, setDelivery] = useState<{ email: boolean; sms: boolean } | null>(null);
     const [cooldown, setCooldown] = useState(0);
     const [actor, setActor] = useState<any>(null);
 
@@ -47,6 +49,7 @@ export default function OTPVerificationModal({ isOpen, onClose, onVerified, user
     const handleSendOTP = async () => {
         setIsSending(true);
         setError(null);
+        setNotice(null);
         try {
             const res = await fetch('/api/employees', {
                 method: 'POST',
@@ -59,14 +62,23 @@ export default function OTPVerificationModal({ isOpen, onClose, onVerified, user
             });
             if (res.ok) {
                 const data = await res.json();
+                setDelivery(data.delivery || null);
                 if (data._sandbox_debug_otp) {
                     console.log(`%c[SSO-MFA] Sandbox OTP: ${data._sandbox_debug_otp}`, 'color: #0052cc; font-weight: bold; font-size: 14px;');
+                }
+                if (data.delivery?.email === false && data.delivery?.sms === true) {
+                    setNotice('Email delivery is unavailable right now. Please use the OTP sent to your phone.');
+                } else if (data.delivery?.email === true && data.delivery?.sms === false) {
+                    setNotice('SMS delivery is unavailable right now. Please use the OTP sent to your email.');
+                } else if (data.message) {
+                    setNotice(data.message);
                 }
                 setCooldown(60);
                 // Clear inputs
                 setOtpValue(['', '', '', '', '', '']);
             } else {
                 const data = await res.json();
+                setDelivery(data.delivery || null);
                 setError(data.error || "Failed to send OTP.");
             }
         } catch (err) {
@@ -130,6 +142,16 @@ export default function OTPVerificationModal({ isOpen, onClose, onVerified, user
 
     if (!isOpen || !user) return null;
 
+    const showEmailChip = delivery ? delivery.email : Boolean(user.email);
+    const showSmsChip = delivery ? delivery.sms : Boolean(user.phoneNumber);
+    const targetCopy = delivery
+        ? delivery.email && delivery.sms
+            ? 'To authorize this administrative action, an OTP has been sent to:'
+            : delivery.email
+                ? 'To authorize this administrative action, an OTP has been sent to your email:'
+                : 'To authorize this administrative action, an OTP has been sent to your phone:'
+        : 'To authorize this administrative action, an OTP is being sent to:';
+
     return (
         <div className="fixed inset-0 z-[150] flex items-center justify-center bg-slate-900/60 backdrop-blur-md p-4">
             <div className="bg-white w-full max-w-md rounded-2xl shadow-[0_20px_50px_rgba(0,0,0,0.3)] border border-slate-200 overflow-hidden animate-in fade-in zoom-in duration-300">
@@ -150,16 +172,20 @@ export default function OTPVerificationModal({ isOpen, onClose, onVerified, user
 
                 <div className="p-6 space-y-6">
                     <div className="text-center space-y-2">
-                        <p className="text-sm text-slate-500">To authorize this administrative action, an OTP has been sent to:</p>
-                        <div className="flex justify-center gap-4 py-2">
+                        <p className="text-sm text-slate-500">{targetCopy}</p>
+                        <div className="flex justify-center gap-4 py-2 flex-wrap">
+                            {showEmailChip && user.email && (
                             <div className="bg-indigo-50 px-3 py-1.5 rounded-full flex items-center gap-2 border border-indigo-100">
                                 <Mail className="w-3.5 h-3.5 text-indigo-500" />
                                 <span className="text-[11px] font-mono font-bold text-indigo-700">{user.email.replace(/^(.)(.*)(.@.*)$/, "$1***$3")}</span>
                             </div>
+                            )}
+                            {showSmsChip && user.phoneNumber && (
                             <div className="bg-budolshap-primary/5 px-3 py-1.5 rounded-full flex items-center gap-2 border border-budolshap-primary/10">
                                 <Phone className="w-3.5 h-3.5 text-budolshap-primary" />
                                 <span className="text-[11px] font-mono font-bold text-budolshap-primary">{user.phoneNumber.replace(/^(\+\d{2})(\d+)(\d{4})$/, "$1***$3")}</span>
                             </div>
+                            )}
                         </div>
                     </div>
 
@@ -183,6 +209,13 @@ export default function OTPVerificationModal({ isOpen, onClose, onVerified, user
                         <div className="bg-red-50 text-red-600 p-3 rounded-xl flex items-start gap-2 border border-red-100 animate-in slide-in-from-top-2">
                             <ShieldAlert className="w-4 h-4 shrink-0 mt-0.5" />
                             <p className="text-xs font-bold uppercase tracking-tight">{error}</p>
+                        </div>
+                    )}
+
+                    {notice && !error && (
+                        <div className="bg-amber-50 text-amber-700 p-3 rounded-xl flex items-start gap-2 border border-amber-100 animate-in slide-in-from-top-2">
+                            <ShieldAlert className="w-4 h-4 shrink-0 mt-0.5" />
+                            <p className="text-xs font-bold tracking-tight">{notice}</p>
                         </div>
                     )}
 

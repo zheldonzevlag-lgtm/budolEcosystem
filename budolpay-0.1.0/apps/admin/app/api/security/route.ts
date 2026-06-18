@@ -32,6 +32,16 @@ export async function GET(request: Request) {
           { action: { contains: "CASH_OUT" } }
         ]
       };
+    } else if (filter === "Compliance") {
+      where = {
+        OR: [
+          { entity: "Compliance" },
+          { action: { contains: "COMPLIANCE" } },
+          { action: { contains: "AML" } },
+          { action: { contains: "KYC" } },
+          { action: { contains: "FLAG" } }
+        ]
+      };
     } else if (filter === "System") {
       where = {
         OR: [
@@ -60,7 +70,14 @@ export async function GET(request: Request) {
 
 export async function POST(request: Request) {
   try {
-    const { action } = await request.json();
+    const { action, adminId } = await request.json();
+
+    const actor = adminId
+      ? await prisma.user.findUnique({
+        where: { id: adminId },
+        select: { id: true, firstName: true, lastName: true, email: true }
+      })
+      : null;
 
     if (action === "RUN_AUDIT") {
       // Simulate a comprehensive security audit scan
@@ -80,6 +97,9 @@ export async function POST(request: Request) {
         action: "FULL_SECURITY_AUDIT_COMPLETE",
         entity: "SecurityGateway",
         entityId: `AUDIT-${Date.now()}`,
+        userId: actor?.id,
+        actorName: actor ? `${actor.firstName || ''} ${actor.lastName || ''}`.trim() || actor.email : undefined,
+        actorEmail: actor?.email,
         newValue: scanResults as any,
         ipAddress: process.env.LOCAL_IP || "localhost",
       });
@@ -109,6 +129,9 @@ export async function POST(request: Request) {
         action: "REGULATORY_REPORT_GENERATED",
         entity: "Regulatory",
         entityId: reportId,
+        userId: actor?.id,
+        actorName: actor ? `${actor.firstName || ''} ${actor.lastName || ''}`.trim() || actor.email : undefined,
+        actorEmail: actor?.email,
         newValue: reportData as any,
         ipAddress: process.env.LOCAL_IP || "localhost",
       });

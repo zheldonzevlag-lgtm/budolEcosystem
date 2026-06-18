@@ -10,7 +10,7 @@ const EXPECTED_PORTS = {
     'Auth Service': { port: 8001, path: 'budolpay-0.1.0/services/auth-service/index.js' },
     'Wallet Service': { port: 8002, path: 'budolpay-0.1.0/services/wallet-service/index.js' },
     'Transaction Service': { port: 8003, path: 'budolpay-0.1.0/services/transaction-service/index.js' },
-    'Payment Gateway': { port: 8004, path: 'budolpay-0.1.0/services/payment-gateway-service/index.js' },
+    'Payment Gateway': { port: 8004, path: 'budolpay-0.1.0/services/payment-gateway-service/api/index.js' },
     'BudolAccounting': { port: 8005, path: 'budolAccounting-0.1.0/index.js' },
     'Verification (KYC)': { port: 8006, path: 'budolpay-0.1.0/services/verification-service/index.js' },
     'Settlement Service': { port: 8007, path: 'budolpay-0.1.0/services/settlement-service/index.js' },
@@ -18,7 +18,7 @@ const EXPECTED_PORTS = {
     'Socket.io Server': { port: 4000, path: 'websocket-server/server.js' }
 };
 
-const rootDir = 'd:/IT Projects/budolEcosystem';
+const rootDir = path.resolve(__dirname, '../../../');
 
 describe('Infrastructure Port Audit', () => {
     Object.entries(EXPECTED_PORTS).forEach(([name, info]) => {

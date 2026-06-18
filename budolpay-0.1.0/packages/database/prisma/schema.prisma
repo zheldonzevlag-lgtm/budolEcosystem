@@ -1,5 +1,6 @@
 generator client {
   provider = "prisma-client-js"
+  binaryTargets = ["native", "rhel-openssl-3.0.x"]
 }
 
 datasource db {
@@ -38,31 +39,33 @@ model LedgerEntry {
 model User {
   id                 String                 @id @default(uuid())
   email              String                 @unique
-  passwordHash       String
   phoneNumber        String                 @unique
+  passwordHash       String
   firstName          String?
   lastName           String?
   role               UserRole               @default(USER)
-  department         String?
+  kycStatus          KYCStatus              @default(NONE)
+  kycData            Json?
   createdAt          DateTime               @default(now())
   updatedAt          DateTime               @updatedAt
-  isFaceVerified     Boolean                @default(false)
-  kycData            Json?
-  kycStatus          KYCStatus              @default(NONE)
-  kycTier            KYCTier                @default(BASIC)
-  otpCode            String?
-  otpExpiresAt       DateTime?
-  otpUpdatedAt       DateTime?
-  emailVerified      Boolean                @default(false)
-  phoneVerified      Boolean                @default(false)
   avatarUrl          String?
-  faceTemplate       String?
-  lastLoginAt        DateTime?
-  pinHash            String?
   biometricKeyId     String?
   biometricPublicKey Bytes?
+  emailVerified      Boolean                @default(false)
+  faceTemplate       String?
+  isFaceVerified     Boolean                @default(false)
+  kycTier            KYCTier                @default(BASIC)
+  lastLoginAt        DateTime?
+  otpCode            String?
+  otpExpiresAt       DateTime?
+  phoneVerified      Boolean                @default(false)
+  pinHash            String?
   trustedDevices     String?
+  department         String?
+  otpUpdatedAt       DateTime?
   auditLogs          AuditLog[]
+  checkerRequests    ChangeRequest[]        @relation("CheckerRequests")
+  makerRequests      ChangeRequest[]        @relation("MakerRequests")
   favoritedBy        FavoriteRecipient[]    @relation("RecipientFavorites")
   favorites          FavoriteRecipient[]    @relation("UserFavorites")
   sessions           Session[]
@@ -70,8 +73,6 @@ model User {
   transactions       Transaction[]          @relation("UserTransactions")
   verificationDocs   VerificationDocument[]
   wallet             Wallet?
-  makerRequests      ChangeRequest[]        @relation("MakerRequests")
-  checkerRequests    ChangeRequest[]        @relation("CheckerRequests")
 }
 
 model FavoriteRecipient {
@@ -108,8 +109,8 @@ model VerificationDocument {
 model Session {
   id        String        @id @default(uuid())
   userId    String
-  appId     String?
   token     String        @unique
+  appId     String?
   expiresAt DateTime
   createdAt DateTime      @default(now())
   app       EcosystemApp? @relation(fields: [appId], references: [id])
@@ -120,9 +121,9 @@ model EcosystemApp {
   id          String    @id @default(uuid())
   name        String    @unique
   apiKey      String    @unique
-  apiSecret   String    @unique
   redirectUri String
   createdAt   DateTime  @default(now())
+  apiSecret   String    @unique
   sessions    Session[]
 }
 
@@ -143,14 +144,16 @@ model Transaction {
   description  String?
   senderId     String?
   receiverId   String?
-  storeId      String?
-  storeName    String?
   referenceId  String            @unique
-  metadata     String?
   fee          Decimal           @default(0.0) @db.Decimal(18, 2)
   createdAt    DateTime          @default(now())
   completedAt  DateTime?
   settlementId String?
+  metadata     String?
+  storeId      String?
+  storeName    String?
+  riskMetadata Json?
+  riskScore    Float?
   dispute      Dispute?
   receiver     User?             @relation("ReceivedTransactions", fields: [receiverId], references: [id])
   sender       User?             @relation("UserTransactions", fields: [senderId], references: [id])
@@ -169,11 +172,11 @@ model Settlement {
   amount       Decimal       @db.Decimal(18, 2)
   feeDeducted  Decimal       @db.Decimal(18, 2)
   netAmount    Decimal       @db.Decimal(18, 2)
-  status       String        @default("PENDING")
   periodStart  DateTime
   periodEnd    DateTime
   createdAt    DateTime      @default(now())
   updatedAt    DateTime      @updatedAt
+  status       String        @default("PENDING")
   transactions Transaction[]
 
   @@index([merchantId])
@@ -193,19 +196,19 @@ model AuditLog {
   id        String   @id @default(uuid())
   userId    String?
   action    String
-  metadata  Json?
+  entity    String?
+  entityId  String?
+  oldValue  Json?
+  newValue  Json?
+  ipAddress String?
+  userAgent String?
   createdAt DateTime @default(now())
   city      String?
   country   String?
   device    String?
-  entity    String?
-  entityId  String?
-  ipAddress String?
   latitude  String?
   longitude String?
-  newValue  Json?
-  oldValue  Json?
-  userAgent String?
+  metadata  Json?
   user      User?    @relation(fields: [userId], references: [id])
 
   @@index([userId])
@@ -214,17 +217,17 @@ model AuditLog {
 
 model ChangeRequest {
   id        String              @id @default(uuid())
-  entity    String // e.g., "User"
+  entity    String
   entityId  String
-  details   Json // Stores { field: newValue } or multiple fields
+  details   Json
   makerId   String
   checkerId String?
   status    ChangeRequestStatus @default(PENDING)
   reason    String?
   createdAt DateTime            @default(now())
   updatedAt DateTime            @updatedAt
-  maker     User                @relation("MakerRequests", fields: [makerId], references: [id])
   checker   User?               @relation("CheckerRequests", fields: [checkerId], references: [id])
+  maker     User                @relation("MakerRequests", fields: [makerId], references: [id])
 
   @@index([entity, entityId])
   @@index([makerId])
@@ -236,13 +239,13 @@ model SystemSetting {
   id          String   @id @default(uuid())
   key         String   @unique
   value       String
-  group       String?
-  createdAt   DateTime @default(now())
+  isSecret    Boolean  @default(false)
+  description String?
   updatedAt   DateTime @updatedAt
   appId       String?
-  description String?
+  createdAt   DateTime @default(now())
+  group       String?
   isActive    Boolean  @default(true)
-  isSecret    Boolean  @default(false)
 }
 
 model RateLimit {
@@ -275,6 +278,8 @@ enum ChangeRequestStatus {
 enum UserRole {
   USER
   ADMIN
+  MANAGER
+  GENERAL_MANAGER
   MERCHANT
   DRIVER
   STAFF
@@ -282,10 +287,10 @@ enum UserRole {
 }
 
 enum KYCStatus {
-  NONE
   PENDING
   VERIFIED
   REJECTED
+  NONE
 }
 
 enum KYCTier {
@@ -299,8 +304,8 @@ enum TransactionType {
   CASH_OUT
   P2P_TRANSFER
   MERCHANT_PAYMENT
-  FEE
   REFUND
+  FEE
 }
 
 enum TransactionStatus {
@@ -308,6 +313,7 @@ enum TransactionStatus {
   COMPLETED
   FAILED
   CANCELLED
+  FLAGGED_REVIEW
 }
 
 enum DisputeStatus {

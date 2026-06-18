@@ -1,6 +1,11 @@
 import jwt from 'jsonwebtoken'
 
-const JWT_SECRET = process.env.JWT_SECRET || 'GJ7Lxn0/kdV/KuZJ5xJ7Ip0RvMerrGW5n0gf44mfHgc='
+// JWT_SECRET - require environment variable
+const JWT_SECRET = process.env.JWT_SECRET
+if (!JWT_SECRET) {
+    console.error('FATAL: JWT_SECRET environment variable is required');
+    process.exit(1);
+}
 const JWT_EXPIRES_IN = process.env.JWT_EXPIRES_IN || '7d'
 
 // Generate JWT token
@@ -27,9 +32,10 @@ export function verifyToken(token) {
         return decoded
     } catch (error) {
         console.error(`[Token] Verification error: ${error.message}`);
-        // Log the secret being used (masked) for debugging secret mismatch
-        const maskedSecret = JWT_SECRET ? `${JWT_SECRET.substring(0, 3)}...${JWT_SECRET.substring(JWT_SECRET.length - 3)}` : 'MISSING';
-        console.log(`[Token] Using secret: ${maskedSecret}`);
+        // Development-only debugging - never in production
+        if (process.env.NODE_ENV !== 'production') {
+            console.log('[Token] JWT_SECRET is configured');
+        }
         return null
     }
 }

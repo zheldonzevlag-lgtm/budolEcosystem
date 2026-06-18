@@ -6,7 +6,7 @@ const axios = require('axios');
  * to verify the AI Anti-Spam Engine logic.
  */
 
-const AUTH_SERVICE_URL = 'http://localhost:8001';
+const AUTH_SERVICE_URL = 'http://127.0.0.1:8001';
 
 describe('AI Anti-Spam Engine Integration', () => {
     const timestamp = Date.now();
@@ -17,7 +17,7 @@ describe('AI Anti-Spam Engine Integration', () => {
             firstName: 'Spam',
             lastName: 'User',
             phoneNumber: `0912${Math.floor(Math.random() * 1000000)}`,
-            password: 'password123'
+            password: 'BudolPay@2026!'
         };
 
         const response = await axios.post(`${AUTH_SERVICE_URL}/register`, data, {
@@ -34,7 +34,7 @@ describe('AI Anti-Spam Engine Integration', () => {
             firstName: 'X',
             lastName: 'X',
             phoneNumber: `0912${Math.floor(Math.random() * 1000000)}`,
-            password: 'password123'
+            password: 'BudolPay@2026!'
         };
 
         const response = await axios.post(`${AUTH_SERVICE_URL}/register`, data, {
@@ -51,7 +51,7 @@ describe('AI Anti-Spam Engine Integration', () => {
             firstName: 'John',
             lastName: 'Doe',
             phoneNumber: `09${Math.floor(100000000 + Math.random() * 900000000)}`,
-            password: 'password123'
+            password: 'BudolPay@2026!'
         };
 
         const response = await axios.post(`${AUTH_SERVICE_URL}/register`, data, {

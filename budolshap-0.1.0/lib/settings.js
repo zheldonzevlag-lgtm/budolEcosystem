@@ -9,7 +9,7 @@ export const DEFAULT_SETTINGS = {
     id: "default",
     realtimeProvider: "SOCKET_IO",
     pusherSecret: null,
-    socketUrl: "https://budolws.duckdns.org",
+    socketUrl: "https://websocket-budol.vercel.app",
     swrPollingInterval: 10000,
     sessionTimeout: 15,
     sessionWarning: 1,

@@ -1,0 +1,146 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>System Admin Manual v2.2.8</title>
+<style>
+  :root{--primary:#4f46e5;--accent:#10b981;--warn:#f59e0b;--muted:#64748b;--dark:#1e293b}
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{font-family:'Segoe UI',system-ui,sans-serif;background:#f8fafc;color:#334155}
+  header{background:var(--primary);color:#fff;padding:1.5rem 2rem;display:flex;justify-content:space-between;align-items:center}
+  header h1{font-size:1.4rem;font-weight:700}
+  header span{font-size:.85rem;background:rgba(255,255,255,.2);padding:.3rem .75rem;border-radius:9999px}
+  nav{display:flex;gap:.5rem;flex-wrap:wrap;padding:1.25rem 2rem;background:#fff;border-bottom:1px solid #e2e8f0}
+  nav a{padding:.45rem 1rem;border-radius:6px;text-decoration:none;font-size:.85rem;font-weight:500;background:#f1f5f9;color:var(--dark)}
+  nav a.active,nav a:hover{background:var(--primary);color:#fff}
+  main{max-width:1100px;margin:2rem auto;padding:0 1.5rem}
+  .card{background:#fff;border:1px solid #e2e8f0;border-radius:12px;padding:1.5rem;margin-bottom:1.5rem}
+  .card h2{font-size:1.1rem;font-weight:700;color:var(--dark);margin-bottom:.75rem}
+  .card h3{font-size:.95rem;font-weight:600;color:var(--dark);margin:.75rem 0 .4rem}
+  pre{background:#1e293b;color:#e2e8f0;border-radius:8px;padding:1rem;overflow-x:auto;font-size:.8rem;line-height:1.6;margin:.5rem 0}
+  table{width:100%;border-collapse:collapse;font-size:.875rem;margin-top:.5rem}
+  th{background:#f1f5f9;text-align:left;padding:.6rem .75rem;font-weight:600;color:var(--dark);border-bottom:2px solid #e2e8f0}
+  td{padding:.6rem .75rem;border-bottom:1px solid #f1f5f9;vertical-align:top;line-height:1.5}
+  .alert{border-radius:8px;padding:.9rem 1rem;font-size:.875rem;margin:.75rem 0;line-height:1.6}
+  .alert-warn{background:#fef3c7;border-left:4px solid var(--warn);color:#78350f}
+  .alert-info{background:#dbeafe;border-left:4px solid #3b82f6;color:#1e3a8a}
+  ul{padding-left:1.5rem;margin:.5rem 0}
+  li{margin:.35rem 0;font-size:.9rem;color:var(--muted);line-height:1.5}
+  footer{text-align:center;padding:2rem;font-size:.8rem;color:var(--muted)}
+</style>
+</head>
+<body>
+<header>
+  <h1>⚙️ System Admin Manual v2.2.8</h1>
+  <span>Payment Cancellation Lifecycle Fix</span>
+</header>
+<nav>
+  <a href="index.html">Index</a>
+  <a href="developer_manual.html">Developer Manual</a>
+  <a href="system_admin_manual.html" class="active">System Admin</a>
+  <a href="user_manual.html">User Manual</a>
+  <a href="risk_register.html">Risk Register</a>
+  <a href="mitigation.html">Mitigation</a>
+  <a href="issues_and_fixes.html">Issues &amp; Fixes</a>
+  <a href="test_results.html">Test Results</a>
+  <a href="future_recommendations.html">Future Recs</a>
+</nav>
+<main>
+
+  <div class="card">
+    <h2>🚀 Deployment Checklist for v2.2.8</h2>
+
+    <div class="alert alert-warn">
+      ⚠️ <strong>CRITICAL (Pre-deploy):</strong> Ensure <code>PAYMENT_GATEWAY_URL</code> is set in the <strong>budolshap</strong> Vercel project environment variables before merging. Without it, the cancel proxy falls back to localhost:8004 and all cancel calls will silently fail in production.
+    </div>
+
+    <table>
+      <tr><th>#</th><th>Step</th><th>Service</th><th>Action</th></tr>
+      <tr>
+        <td>1</td>
+        <td>Set <code>PAYMENT_GATEWAY_URL</code> env var</td>
+        <td>budolshap (Vercel)</td>
+        <td>Go to Vercel → budolshap project → Settings → Environment Variables → Add <code>PAYMENT_GATEWAY_URL = https://payment-gateway-service-two.vercel.app</code></td>
+      </tr>
+      <tr>
+        <td>2</td>
+        <td>Merge <code>release/v2.2.8</code> → <code>main</code></td>
+        <td>All</td>
+        <td>Create PR, get review, merge. Vercel auto-deploys on merge.</td>
+      </tr>
+      <tr>
+        <td>3</td>
+        <td>Monitor payment-gateway-service logs</td>
+        <td>payment-gateway-service</td>
+        <td>Watch for <code>[Gateway] ✅ Transaction XXX CANCELLED</code> logs after first user cancellation</td>
+      </tr>
+      <tr>
+        <td>4</td>
+        <td>Verify Admin Dashboard Transaction status</td>
+        <td>budolpay Admin</td>
+        <td>Cancel a test QR payment and confirm the Admin Dashboard shows CANCELLED, not PENDING</td>
+      </tr>
+    </table>
+  </div>
+
+  <div class="card">
+    <h2>🔑 Environment Variables</h2>
+    <table>
+      <tr><th>Variable</th><th>Service</th><th>Value (Production)</th><th>Purpose</th></tr>
+      <tr>
+        <td><code>PAYMENT_GATEWAY_URL</code></td>
+        <td>budolshap</td>
+        <td><code>https://payment-gateway-service-two.vercel.app</code></td>
+        <td><strong>CRITICAL</strong> – Points the cancel proxy to the gateway. Missing = all cancel calls fail.</td>
+      </tr>
+      <tr>
+        <td><code>PAYMENT_GATEWAY_URL</code></td>
+        <td>budolpay-admin</td>
+        <td><code>https://payment-gateway-service-two.vercel.app</code></td>
+        <td>Used for the gateway base URL in local dev</td>
+      </tr>
+      <tr>
+        <td><code>BUDOLSHAP_URL</code></td>
+        <td>payment-gateway-service</td>
+        <td><code>https://budolshap-v3.vercel.app</code></td>
+        <td>Where the gateway sends success webhooks back to the store</td>
+      </tr>
+    </table>
+  </div>
+
+  <div class="card">
+    <h2>🩺 Health Verification</h2>
+    <h3>Test the new cancel endpoint is live:</h3>
+    <pre><code># Ping health
+curl https://payment-gateway-service-two.vercel.app/health
+
+# Test cancel (expect 404 – no such ref)
+curl -X POST https://payment-gateway-service-two.vercel.app/cancel/JON-TEST-NOT-EXIST \
+  -H "Content-Type: application/json" \
+  -d '{"reason":"smoke test"}'
+# Expected: {"error": "Transaction not found"} with 404</code></pre>
+  </div>
+
+  <div class="card">
+    <h2>📋 Monitoring – What to Watch</h2>
+    <ul>
+      <li><strong>Gateway logs</strong>: Look for <code>[Gateway] ✅ Transaction XXX CANCELLED</code> on every user cancellation</li>
+      <li><strong>Gateway logs</strong>: Any <code>[Gateway] Cancel: Transaction not found</code> warrants investigation if frequent</li>
+      <li><strong>Admin Dashboard</strong>: Spot-check that cancelled orders show CANCELLED (not PENDING) in Global Transactions</li>
+      <li><strong>Risk R-003</strong>: If gateway is unreachable, PENDING transactions will accumulate. Monitor pending count &gt; 30 min old and alert ops.</li>
+    </ul>
+  </div>
+
+  <div class="card">
+    <h2>🔄 Rollback Plan</h2>
+    <p style="font-size:.9rem;color:var(--muted);line-height:1.6">The changes are additive — a new endpoint and a new API route. Rolling back means reverting the <code>release/v2.2.8</code> merge. Transactions that were correctly CANCELLED before rollback will remain CANCELLED. No data migration required.</p>
+    <div class="alert alert-info">
+      ℹ️ The dual-lookup in the gateway cancel endpoint (by referenceId then by UUID) is backward-compatible and does not change any existing endpoint behaviour.
+    </div>
+  </div>
+
+</main>
+<footer>BudolEcosystem v2.2.8 System Admin Manual · 2026-04-10</footer>
+</body>
+</html>

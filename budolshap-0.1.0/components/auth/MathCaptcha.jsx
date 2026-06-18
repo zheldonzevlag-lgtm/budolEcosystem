@@ -3,33 +3,39 @@ import React, { useState, useEffect } from 'react';
 
 /**
  * MathCaptcha component
- * WHY: To prevent automated registrations (bots) by requiring a simple math challenge.
- * WHAT: Generates a single-digit addition or subtraction problem.
- * TODO: Add a "Refresh" button for the challenge.
+ * Server-side CAPTCHA: fetches challenge from /api/auth/captcha/generate
+ * and passes sessionId + answer to onSolve callback.
  */
 export default function MathCaptcha({ onSolve, primaryColor = 'blue' }) {
     const [num1, setNum1] = useState(0);
     const [num2, setNum2] = useState(0);
     const [operator, setOperator] = useState('+');
+    const [sessionId, setSessionId] = useState(null);
     const [userAnswer, setUserAnswer] = useState('');
     const [error, setError] = useState(false);
+    const [loading, setLoading] = useState(true);
 
-    const generateChallenge = () => {
-        const n1 = Math.floor(Math.random() * 9) + 1;
-        const n2 = Math.floor(Math.random() * 9) + 1;
-        const op = Math.random() > 0.5 ? '+' : '-';
-        
-        // Ensure result is not negative for simplicity
-        if (op === '-' && n1 < n2) {
-            setNum1(n2);
-            setNum2(n1);
-        } else {
-            setNum1(n1);
-            setNum2(n2);
+    const generateChallenge = async () => {
+        setLoading(true);
+        try {
+            const res = await fetch('/api/auth/captcha/generate');
+            const data = await res.json();
+            setNum1(data.a);
+            setNum2(data.b);
+            setOperator(data.operator);
+            setSessionId(data.sessionId);
+        } catch {
+            // Fallback to client-side if server unavailable
+            const n1 = Math.floor(Math.random() * 9) + 1;
+            const n2 = Math.floor(Math.random() * 9) + 1;
+            const op = Math.random() > 0.5 ? '+' : '-';
+            setNum1(op === '-' && n1 < n2 ? n2 : n1);
+            setNum2(op === '-' && n1 < n2 ? n1 : n2);
+            setOperator(op);
         }
-        setOperator(op);
         setUserAnswer('');
         setError(false);
+        setLoading(false);
     };
 
     useEffect(() => {
@@ -37,9 +43,9 @@ export default function MathCaptcha({ onSolve, primaryColor = 'blue' }) {
     }, []);
 
     const verifyAnswer = () => {
-        const correctAnswer = operator === '+' ? num1 + num2 : num1 - num2;
+        const correctAnswer = operator === '-' ? num1 - num2 : num1 + num2;
         if (parseInt(userAnswer) === correctAnswer) {
-            onSolve();
+            onSolve({ sessionId, answer: Number(userAnswer) });
         } else {
             setError(true);
             setTimeout(() => setError(false), 2000);
@@ -50,6 +56,15 @@ export default function MathCaptcha({ onSolve, primaryColor = 'blue' }) {
         blue: 'bg-blue-600 hover:bg-blue-700',
         rose: 'bg-rose-600 hover:bg-rose-700',
     };
+
+    if (loading) {
+        return (
+            <div className="p-6 bg-slate-50 rounded-xl border-2 border-slate-100 mb-4 animate-pulse">
+                <div className="h-8 bg-slate-200 rounded w-48 mx-auto mb-4"></div>
+                <div className="h-12 bg-slate-200 rounded w-full mb-4"></div>
+            </div>
+        );
+    }
 
     return (
         <div className="p-6 bg-slate-50 rounded-xl border-2 border-slate-100 mb-4 animate-in fade-in slide-in-from-bottom-4 duration-500">

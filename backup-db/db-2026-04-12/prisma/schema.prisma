@@ -1,0 +1,323 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL")
+}
+
+model ChartOfAccount {
+  id            String        @id @default(uuid())
+  code          String        @unique
+  name          String
+  type          AccountType
+  description   String?
+  isActive      Boolean       @default(true)
+  createdAt     DateTime      @default(now())
+  ledgerEntries LedgerEntry[]
+}
+
+model LedgerEntry {
+  id            String         @id @default(uuid())
+  accountId     String
+  transactionId String?
+  referenceId   String
+  description   String
+  debit         Decimal        @default(0.0) @db.Decimal(18, 2)
+  credit        Decimal        @default(0.0) @db.Decimal(18, 2)
+  createdAt     DateTime       @default(now())
+  account       ChartOfAccount @relation(fields: [accountId], references: [id])
+
+  @@index([accountId])
+  @@index([transactionId])
+  @@index([referenceId])
+}
+
+model User {
+  id                 String                 @id @default(uuid())
+  email              String                 @unique
+  phoneNumber        String                 @unique
+  passwordHash       String
+  firstName          String?
+  lastName           String?
+  role               UserRole               @default(USER)
+  kycStatus          KYCStatus              @default(NONE)
+  kycData            Json?
+  createdAt          DateTime               @default(now())
+  updatedAt          DateTime               @updatedAt
+  avatarUrl          String?
+  biometricKeyId     String?
+  biometricPublicKey Bytes?
+  emailVerified      Boolean                @default(false)
+  faceTemplate       String?
+  isFaceVerified     Boolean                @default(false)
+  kycTier            KYCTier                @default(BASIC)
+  lastLoginAt        DateTime?
+  otpCode            String?
+  otpExpiresAt       DateTime?
+  phoneVerified      Boolean                @default(false)
+  pinHash            String?
+  trustedDevices     String?
+  department         String?
+  otpUpdatedAt       DateTime?
+  auditLogs          AuditLog[]
+  checkerRequests    ChangeRequest[]        @relation("CheckerRequests")
+  makerRequests      ChangeRequest[]        @relation("MakerRequests")
+  favoritedBy        FavoriteRecipient[]    @relation("RecipientFavorites")
+  favorites          FavoriteRecipient[]    @relation("UserFavorites")
+  sessions           Session[]
+  receivedTrans      Transaction[]          @relation("ReceivedTransactions")
+  transactions       Transaction[]          @relation("UserTransactions")
+  verificationDocs   VerificationDocument[]
+  wallet             Wallet?
+}
+
+model FavoriteRecipient {
+  id          String   @id @default(uuid())
+  userId      String
+  recipientId String
+  alias       String?
+  createdAt   DateTime @default(now())
+  recipient   User     @relation("RecipientFavorites", fields: [recipientId], references: [id])
+  user        User     @relation("UserFavorites", fields: [userId], references: [id])
+
+  @@unique([userId, recipientId])
+  @@index([userId])
+}
+
+model VerificationDocument {
+  id           String   @id @default(uuid())
+  userId       String
+  type         String
+  documentType String
+  faceTemplate String?
+  status       String   @default("PENDING")
+  blobData     Bytes?
+  remoteUrl    String?
+  ocrData      Json?
+  rotation     Int      @default(0)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+  user         User     @relation(fields: [userId], references: [id])
+
+  @@index([userId])
+}
+
+model Session {
+  id        String        @id @default(uuid())
+  userId    String
+  token     String        @unique
+  appId     String?
+  expiresAt DateTime
+  createdAt DateTime      @default(now())
+  app       EcosystemApp? @relation(fields: [appId], references: [id])
+  user      User          @relation(fields: [userId], references: [id])
+}
+
+model EcosystemApp {
+  id          String    @id @default(uuid())
+  name        String    @unique
+  apiKey      String    @unique
+  redirectUri String
+  createdAt   DateTime  @default(now())
+  apiSecret   String    @unique
+  sessions    Session[]
+}
+
+model Wallet {
+  id        String   @id @default(uuid())
+  userId    String   @unique
+  balance   Decimal  @default(0.0) @db.Decimal(18, 2)
+  currency  String   @default("PHP")
+  updatedAt DateTime @updatedAt
+  user      User     @relation(fields: [userId], references: [id])
+}
+
+model Transaction {
+  id           String            @id @default(uuid())
+  amount       Decimal           @db.Decimal(18, 2)
+  type         TransactionType
+  status       TransactionStatus @default(PENDING)
+  description  String?
+  senderId     String?
+  receiverId   String?
+  referenceId  String            @unique
+  fee          Decimal           @default(0.0) @db.Decimal(18, 2)
+  createdAt    DateTime          @default(now())
+  completedAt  DateTime?
+  settlementId String?
+  metadata     String?
+  storeId      String?
+  storeName    String?
+  riskMetadata Json?
+  riskScore    Float?
+  dispute      Dispute?
+  receiver     User?             @relation("ReceivedTransactions", fields: [receiverId], references: [id])
+  sender       User?             @relation("UserTransactions", fields: [senderId], references: [id])
+  settlement   Settlement?       @relation(fields: [settlementId], references: [id])
+
+  @@index([senderId])
+  @@index([receiverId])
+  @@index([referenceId])
+  @@index([settlementId])
+  @@index([storeId])
+}
+
+model Settlement {
+  id           String        @id @default(uuid())
+  merchantId   String
+  amount       Decimal       @db.Decimal(18, 2)
+  feeDeducted  Decimal       @db.Decimal(18, 2)
+  netAmount    Decimal       @db.Decimal(18, 2)
+  periodStart  DateTime
+  periodEnd    DateTime
+  createdAt    DateTime      @default(now())
+  updatedAt    DateTime      @updatedAt
+  status       String        @default("PENDING")
+  transactions Transaction[]
+
+  @@index([merchantId])
+}
+
+model Dispute {
+  id            String        @id @default(uuid())
+  transactionId String        @unique
+  reason        String
+  status        DisputeStatus @default(OPEN)
+  createdAt     DateTime      @default(now())
+  resolvedAt    DateTime?
+  transaction   Transaction   @relation(fields: [transactionId], references: [id])
+}
+
+model AuditLog {
+  id        String   @id @default(uuid())
+  userId    String?
+  action    String
+  entity    String?
+  entityId  String?
+  oldValue  Json?
+  newValue  Json?
+  ipAddress String?
+  userAgent String?
+  createdAt DateTime @default(now())
+  city      String?
+  country   String?
+  device    String?
+  latitude  String?
+  longitude String?
+  metadata  Json?
+  user      User?    @relation(fields: [userId], references: [id])
+
+  @@index([userId])
+  @@index([entity])
+}
+
+model ChangeRequest {
+  id        String              @id @default(uuid())
+  entity    String
+  entityId  String
+  details   Json
+  makerId   String
+  checkerId String?
+  status    ChangeRequestStatus @default(PENDING)
+  reason    String?
+  createdAt DateTime            @default(now())
+  updatedAt DateTime            @updatedAt
+  checker   User?               @relation("CheckerRequests", fields: [checkerId], references: [id])
+  maker     User                @relation("MakerRequests", fields: [makerId], references: [id])
+
+  @@index([entity, entityId])
+  @@index([makerId])
+  @@index([checkerId])
+  @@index([status])
+}
+
+model SystemSetting {
+  id          String   @id @default(uuid())
+  key         String   @unique
+  value       String
+  isSecret    Boolean  @default(false)
+  description String?
+  updatedAt   DateTime @updatedAt
+  appId       String?
+  createdAt   DateTime @default(now())
+  group       String?
+  isActive    Boolean  @default(true)
+}
+
+model RateLimit {
+  id        String   @id @default(uuid())
+  key       String   @unique
+  hits      Int      @default(1)
+  expiresAt DateTime
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([key])
+  @@index([expiresAt])
+}
+
+enum AccountType {
+  ASSET
+  LIABILITY
+  EQUITY
+  REVENUE
+  EXPENSE
+}
+
+enum ChangeRequestStatus {
+  PENDING
+  APPROVED
+  REJECTED
+  CANCELLED
+}
+
+enum UserRole {
+  USER
+  ADMIN
+  MANAGER
+  GENERAL_MANAGER
+  MERCHANT
+  DRIVER
+  STAFF
+  DEACTIVATED
+}
+
+enum KYCStatus {
+  PENDING
+  VERIFIED
+  REJECTED
+  NONE
+}
+
+enum KYCTier {
+  BASIC
+  SEMI_VERIFIED
+  FULLY_VERIFIED
+}
+
+enum TransactionType {
+  CASH_IN
+  CASH_OUT
+  P2P_TRANSFER
+  MERCHANT_PAYMENT
+  REFUND
+  FEE
+}
+
+enum TransactionStatus {
+  PENDING
+  COMPLETED
+  FAILED
+  CANCELLED
+  FLAGGED_REVIEW
+}
+
+enum DisputeStatus {
+  OPEN
+  IN_PROGRESS
+  RESOLVED
+  CLOSED
+}
