@@ -1,0 +1,73 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>BudolEcosystem v1.3.96 – Developer Manual</title>
+<style>
+body{font-family:'Segoe UI',Tahoma,Geneva,Verdana,sans-serif;margin:0;padding:0;background:#f4f5f7;color:#172b4d}
+.header{background:linear-gradient(135deg,#0052cc,#00875a);color:#fff;padding:32px 48px}
+.header h1{margin:0;font-size:28px}
+.header p{margin:8px 0 0;opacity:.85}
+.nav-bar{background:#fff;border-bottom:1px solid #dfe1e6;padding:12px 48px;display:flex;gap:16px;flex-wrap:wrap}
+.nav-bar a{color:#0052cc;text-decoration:none;font-size:14px;padding:6px 12px;border-radius:4px;transition:background .2s}
+.nav-bar a:hover{background:#deebff}
+.content{max-width:960px;margin:32px auto;padding:0 24px}
+.card{background:#fff;border-radius:8px;box-shadow:0 1px 3px rgba(0,0,0,.12);padding:24px;margin-bottom:24px}
+.card h2{margin-top:0;color:#0052cc;border-bottom:2px solid #0052cc;padding-bottom:8px}
+.code-block{background:#1e1e1e;color:#d4d4d4;font-family:Consolas,Monaco,monospace;padding:16px;border-radius:6px;overflow-x:auto;margin:16px 0}
+.code-added{background:#104010;display:block}
+.code-removed{background:#401010;display:block}
+a.code-link{color:#0052cc;font-weight:600;text-decoration:underline}
+a.code-link:hover{color:#00875a}
+.footer{text-align:center;padding:24px;color:#6b778c;font-size:13px}
+</style>
+</head>
+<body>
+<div class="header">
+<h1>BudolEcosystem Documentation – Developer Manual</h1>
+<p>Version v1.3.96 | Technical Reference & Code Changes</p>
+</div>
+<div class="nav-bar">
+<a href="index.html">Index</a>
+<a href="task.html">Task List</a>
+<a href="workflow.html">Workflow</a>
+<a href="developer_manual.html"><strong>Developer Manual (Current)</strong></a>
+<a href="system_admin_manual.html">System Admin Manual</a>
+<a href="user_manual.html">User Manual</a>
+<a href="risk_register.html">Risk Register</a>
+<a href="Mitigation.html">Mitigation</a>
+<a href="issues & fixes.html">Issues & Fixes</a>
+<a href="test_results.html">Test Results</a>
+<a href="future_recommendations.html">Future Recommendations</a>
+<a href="../../knowledgebase.html">Knowledgebase</a>
+</div>
+<div class="content">
+<div class="card">
+<h2>Code Location Reference</h2>
+<p>The core z-index adjustment was introduced directly inside the <code>CategorySelector</code> client-side dropdown panel definition.</p>
+<p>
+<strong>Source File:</strong>
+<a class="code-link" href="file:///d:/IT Projects/clone/budolEcosystem/budolshap-0.1.0/components/store/add-product/CategorySelector.jsx#L222-L224">CategorySelector.jsx (Lines 222-224)</a>
+</p>
+</div>
+
+<div class="card">
+<h2>Technical Explanation of the Change</h2>
+<p>In <code>AddProductWizard.jsx</code>, the StickyFooter has a fixed layout positioning setting <code>z-index: 50</code> (Tailwind <code>z-50</code>). The CategorySelector dropdown also defaulted to <code>z-50</code>. Since StickyFooter was rendered later in the DOM tree, it created a new stacking context that stacked above the dropdown panel.</p>
+<p>This layout overlap prevented click interactions on elements positioned at the bottom of the scroll viewport, such as the 12th category "Toys, Games & Collectibles". Raising the dropdown z-index to <code>z-[60]</code> causes the browser layout engine to paint the dropdown layer on top of the StickyFooter panel, restoring complete pointer-events registration.</p>
+
+<div class="code-block">
+<code>
+  <span>// CategorySelector.jsx - Dropdown Panel</span><br>
+  <span>{isOpen && (</span><br>
+  <span class="code-removed">-     &lt;div className="absolute z-50 w-full mt-2 bg-white border border-slate-200 rounded-2xl shadow-xl overflow-hidden"&gt;</span><br>
+  <span class="code-added">+     /* z-[60] ensures dropdown renders above StickyFooter (z-50) so bottom items like "Toys, Games & Collectibles" remain clickable */</span><br>
+  <span class="code-added">+     &lt;div className="absolute z-[60] w-full mt-2 bg-white border border-slate-200 rounded-2xl shadow-xl overflow-hidden"&gt;</span><br>
+</code>
+</div>
+</div>
+</div>
+<div class="footer">BudolEcosystem v1.3.96 – PCI DSS / BSP / NPC Compliant | Generated 2026-06-18</div>
+</body>
+</html>

@@ -530,8 +530,8 @@ export default function AddProductWizard({ initialData, storeId }) {
                             const cloudinaryUrl = await uploadVideo(video.file);
                             return cloudinaryUrl;
                         } catch (error) {
-                            console.error('Failed to upload video:', error);
-                            throw new Error(error.message || `Failed to upload video: ${video.fileName || 'unknown'}`);
+                            console.error('The video is too large to process. Maximum upload size is 3.3MB:', error);
+                            throw new Error(error.message || `The video is too large to process. Maximum upload size is 3.3MB: ${video.fileName || 'unknown'}`);
                         }
                     }
                     if (typeof video === 'string') {

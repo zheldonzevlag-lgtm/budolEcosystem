@@ -10,6 +10,10 @@
  * TODO: Re-run this script whenever new documentation folders are added.
  */
 const DOCS_MANIFEST = [
+    // 2026-06-18 (1 versions)
+    "budolecosystem_docs_2026-06-18_v1.3.96",
+    // 2026-06-08 (1 versions)
+    "budolecosystem_docs_2026-06-08_v1_api_upload",
     // 2026-04-12 (2 versions)
     "budolecosystem_docs_2026_04_12_v2_4_5",
     "budolecosystem_docs_2026_04_12_v2_4_4",

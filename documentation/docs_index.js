@@ -1,4 +1,6 @@
-﻿const ALL_DOCS = ["budolecosystem_docs_2026-03-02_v5.1.4",
+const ALL_DOCS = ["budolecosystem_docs_2026-06-18_v1.3.96",
+    "budolecosystem_docs_2026-06-08_v1_api_upload",
+    "budolecosystem_docs_2026-03-02_v5.1.4",
     "budolecosystem_docs_2026-03-02_v5.1.3",
     "budolecosystem_docs_2026-03-02_v5.1.2",
     "budolecosystem_docs_2026-03-02_v5.1.1",

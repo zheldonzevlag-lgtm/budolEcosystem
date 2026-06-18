@@ -220,7 +220,8 @@ export default function CategorySelector({ value, onChange, error, fallbackName 
 
             {/* Dropdown panel */}
             {isOpen && (
-                <div className="absolute z-50 w-full mt-2 bg-white border border-slate-200 rounded-2xl shadow-xl overflow-hidden">
+                /* z-[60] ensures dropdown renders above StickyFooter (z-50) so bottom items like "Toys, Games & Collectibles" remain clickable */
+                <div className="absolute z-[60] w-full mt-2 bg-white border border-slate-200 rounded-2xl shadow-xl overflow-hidden">
                     {/* Search bar */}
                     <div className="p-3 border-b border-slate-100">
                         <div className="relative">
